@@ -1,5 +1,5 @@
 {
-  "name": "whatsapi",
+  "name": "zap-fly",
   "version": "1.0.0",
   "description": "WhatsApp Bot with Baileys",
   "main": "index.js",

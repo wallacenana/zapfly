@@ -553,7 +553,7 @@ const Chat = () => {
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '10px' }}>TAGS</label>
                 <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                  <span className="badge badge-warning" style={{ fontSize: '10px' }}>Cliente WhatsAPI</span>
+                  <span className="badge badge-warning" style={{ fontSize: '10px' }}>Cliente ZAP Fly</span>
                 </div>
               </div>
             </div>

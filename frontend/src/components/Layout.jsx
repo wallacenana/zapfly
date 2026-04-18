@@ -13,7 +13,7 @@ const Layout = () => {
     if (path.includes('/agenda')) return 'Agenda / Pedidos';
     if (path.includes('/connections')) return 'Conexões / Números';
     if (path.includes('/settings')) return 'Configurações';
-    return 'WhatsAPI';
+    return 'ZAP Fly';
   };
 
   return (
@@ -32,7 +32,7 @@ const Layout = () => {
           }}>
             <MessageSquare size={18} color="#fff" />
           </div>
-          <span style={{ letterSpacing: '-0.02em' }}>ZapAlpha</span>
+          <span style={{ letterSpacing: '-0.02em' }}>ZAP Fly</span>
         </div>
         
         <nav className="sidebar-nav">

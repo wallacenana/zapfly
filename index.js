@@ -62,7 +62,7 @@ async function initInstance(instanceId) {
         version,
         auth: state,
         printQRInTerminal: false,
-        browser: ['ZapAlpha', 'Chrome', '1.0.0'],
+        browser: ['ZAP Fly', 'Chrome', '1.0.0'],
         logger: pino({ level: 'silent' }),
         syncFullHistory: true
     });
