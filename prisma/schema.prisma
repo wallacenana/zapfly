@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Instance {
+  id        String    @id @default(uuid())
+  name      String
+  status    String    @default("disconnected")
+  color     String    @default("#3b82f6")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  botPrompt String?   @default("Você é um assistente virtual prestativo.")
+  flows     Flow[]
+  chats     Chat[]
+  messages  Message[]
+}
+
+model Flow {
+  id         String    @id @default(uuid())
+  name       String
+  trigger    String    @default("whatsapp.inbound")
+  status     String    @default("Rascunho")
+  data       String
+  instanceId String?
+  instance   Instance? @relation(fields: [instanceId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Chat {
+  id          String   @id @default(uuid())
+  instanceId  String
+  jid         String
+  name        String?
+  unreadCount Int      @default(0)
+  lastMsg     String?
+  lastMsgTime String?
+  aiEnabled   Boolean  @default(false)
+  updatedAt   DateTime @updatedAt
+  instance    Instance @relation(fields: [instanceId], references: [id])
+  messages    Message[]
+
+  @@unique([instanceId, jid])
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  msgId      String   @unique
+  instanceId String
+  jid        String
+  text       String
+  fromMe     Boolean
+  timestamp  DateTime @default(now())
+  status     String   @default("sent")
+  instance   Instance @relation(fields: [instanceId], references: [id])
+  chat       Chat     @relation(fields: [instanceId, jid], references: [instanceId, jid])
+
+  @@index([instanceId, jid])
+}
+
+model CakeOrder {
+  id           Int      @id @default(autoincrement())
+  clientName   String
+  deliveryDate String
+  cakeType     String
+  quantity     String?
+  sender       String?
+  createdAt    DateTime @default(now())
+}
+
+model Setting {
+  id          String   @id @default("global")
+  openaiKey   String?
+  claudeKey   String?
+  activeModel String   @default("openai")
+}

@@ -1,0 +1,33 @@
+{
+  "keys": {
+    "openai": "",
+    "claude": "",
+    "activeModel": "openai"
+  },
+  "instances": [
+    {
+      "id": "inst_1776478089349",
+      "name": "Linda Cake",
+      "status": "disconnected"
+    }
+  ],
+  "flows": [
+    {
+      "id": "1",
+      "name": "Boas Vindas Global",
+      "trigger": "whatsapp.inbound",
+      "status": "Ativo",
+      "updatedAt": "03/10/2025 16:23",
+      "instanceId": "inst_1"
+    },
+    {
+      "id": "2",
+      "name": "Atendimento IA",
+      "trigger": "Não definido",
+      "status": "Rascunho",
+      "updatedAt": "20/09/2025 15:57",
+      "instanceId": "inst_2"
+    }
+  ],
+  "cakeOrders": []
+}

@@ -1,0 +1,10 @@
+node_modules
+.env
+dev.db
+dev.db-journal
+sessions/
+auth_info_baileys/
+dist/
+.vscode/
+frontend/node_modules/
+frontend/dist/
