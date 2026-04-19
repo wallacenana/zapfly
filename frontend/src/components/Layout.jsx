@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, GitMerge, MessageSquare, Megaphone, Users, Calendar, Settings, Smartphone } from 'lucide-react';
+import { LayoutDashboard, GitMerge, MessageSquare, Megaphone, Users, Calendar, Settings, Smartphone, Bot, PackageOpen } from 'lucide-react';
 
 const Layout = () => {
   const location = useLocation();
@@ -10,9 +10,11 @@ const Layout = () => {
     const path = location.pathname;
     if (path.includes('/dashboard')) return 'Dashboard';
     if (path.includes('/flows')) return 'Fluxos de Automação';
-    if (path.includes('/agenda')) return 'Agenda / Pedidos';
+    if (path.includes('/agenda')) return 'Agenda de Pedidos';
+    if (path.includes('/estoque')) return 'Estoque & Disponibilidade';
     if (path.includes('/connections')) return 'Conexões / Números';
     if (path.includes('/settings')) return 'Configurações';
+    if (path.includes('/prompts')) return 'Prompts e Inteligência';
     return 'ZAP Fly';
   };
 
@@ -47,6 +49,11 @@ const Layout = () => {
             <MessageSquare size={18} />
             Atendimento
           </NavLink>
+
+          <NavLink to="/prompts" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+            <Bot size={18} />
+            Prompts da IA
+          </NavLink>
           
           <NavLink to="/flows" className={({isActive}) => isActive || location.pathname.includes('/flows') ? "nav-item active" : "nav-item"}>
             <GitMerge size={18} />
@@ -56,6 +63,11 @@ const Layout = () => {
           <NavLink to="/agenda" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
             <Calendar size={18} />
             Agenda de Pedidos
+          </NavLink>
+
+          <NavLink to="/estoque" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+            <PackageOpen size={18} />
+            Estoque & Receitas
           </NavLink>
 
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', margin: '25px 0 10px 15px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Configurações</div>

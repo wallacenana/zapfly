@@ -1,23 +1,37 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  Search, 
-  Send, 
-  Paperclip, 
-  Mic, 
-  MoreVertical, 
-  Phone, 
-  Video, 
-  User, 
-  Info, 
+import {
+  Search,
+  Send,
+  Paperclip,
+  Mic,
+  MoreVertical,
+  Phone,
+  Video,
+  User,
+  Info,
   X,
   MessageSquare,
   Check,
   CheckCheck,
   Smartphone,
-  Bot
+  Bot,
+  Users
 } from 'lucide-react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
+import Swal from 'sweetalert2';
+
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true,
+  didOpen: (toast) => {
+    toast.onmouseenter = Swal.stopTimer;
+    toast.onmouseleave = Swal.resumeTimer;
+  }
+});
 
 const socket = io('http://localhost:3001');
 
@@ -29,10 +43,19 @@ const Chat = () => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [showContactInfo, setShowContactInfo] = useState(true);
+  const [filterType, setFilterType] = useState('all');
   const [loadingChats, setLoadingChats] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  
+  const [presences, setPresences] = useState({});
+  const [chatPage, setChatPage] = useState(0);
+  const [hasMoreChats, setHasMoreChats] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [contextMenu, setContextMenu] = useState(null); // { x, y, type, data }
+
+  const sentinelRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const PAGE_SIZE = 40;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -53,47 +76,110 @@ const Chat = () => {
         const text = data.message.message?.conversation || data.message.message?.extendedTextMessage?.text;
 
         // 1. Update/Refresh contact list for ANY new message
-        fetchChats(activeInstance.id);
+        // Instead of refetching full list, we just update the local order or fetch page 0
+        fetchChats(activeInstance.id, true);
 
         // 2. Update message window if it's the current chat
         if (activeContact && activeContact.jid === msgJid) {
-            if (text) {
-                setMessages(prev => {
-                    // Prevent duplicates
-                    if (prev.some(m => m.id === msgId)) return prev;
-                    
-                    return [...prev, {
-                        id: msgId,
-                        text,
-                        fromMe: data.message.key.fromMe,
-                        time: new Date(data.message.messageTimestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                        status: 'received'
-                    }];
-                });
-            }
+          if (text) {
+            setMessages(prev => {
+              // Prevent duplicates
+              if (prev.some(m => m.id === msgId)) return prev;
+
+              return [...prev, {
+                id: msgId,
+                text,
+                fromMe: data.message.key.fromMe,
+                time: new Date(data.message.messageTimestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                status: 'received'
+              }];
+            });
+          }
         }
+      }
+    });
+
+    socket.on('presence_update', (data) => {
+      setPresences(prev => ({ ...prev, [data.jid]: { status: data.status, lastSeen: data.lastSeen } }));
+    });
+
+    socket.on('message_status_update', (data) => {
+      if (activeInstance && data.instanceId === activeInstance.id) {
+        setMessages(prev => prev.map(m =>
+          m.id === data.msgId ? { ...m, status: data.status } : m
+        ));
       }
     });
 
     return () => {
       socket.off('new_message');
+      socket.off('presence_update');
+      socket.off('message_status_update');
     };
   }, [activeInstance, activeContact]);
 
   useEffect(() => {
     if (activeInstance) {
-      fetchChats(activeInstance.id);
-      setActiveContact(null);
-      setMessages([]);
+      // Só dispara a busca se tiver 3+ caracteres ou se estiver limpando (vazio)
+      if (searchTerm.length === 0 || searchTerm.length >= 3) {
+        fetchChats(activeInstance.id, true);
+        setActiveContact(null);
+        setMessages([]);
+      }
     }
-  }, [activeInstance]);
+  }, [activeInstance, filterType, searchTerm]);
+
+  // IntersectionObserver — carrega mais ao chegar no fim da lista
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && hasMoreChats && !loadingMore && !loadingChats && activeInstance) {
+        setLoadingMore(true);
+        setChatPage(p => {
+          const nextPage = p + 1;
+          const actualSearch = searchTerm.length >= 3 ? searchTerm : '';
+          axios.get(`http://localhost:3001/instances/${activeInstance.id}/chats`, {
+            params: { skip: nextPage * PAGE_SIZE, take: PAGE_SIZE, search: actualSearch }
+          }).then(res => {
+            const { chats, hasMore } = res.data;
+            setContacts(prev => {
+              const newItems = chats.filter(c => !prev.some(p => p.id === c.id));
+              return [...prev, ...newItems];
+            });
+            setHasMoreChats(hasMore);
+          }).catch(console.error).finally(() => setLoadingMore(false));
+          return nextPage;
+        });
+      }
+    }, { threshold: 0.1 });
+    observer.observe(sentinelRef.current);
+    return () => observer.disconnect();
+  }, [hasMoreChats, loadingMore, loadingChats, activeInstance]);
 
   // Auto-fetch messages when active contact changes
   useEffect(() => {
     if (activeContact && activeInstance) {
       fetchMessages(activeInstance.id, activeContact.jid);
+      
+      // Marcar como lido ao abrir
+      const lastReceived = messages.filter(m => !m.fromMe).slice(-1)[0];
+      if (lastReceived) {
+        axios.post(`http://localhost:3001/instances/${activeInstance.id}/chats/read`, {
+          jid: activeContact.jid,
+          msgId: lastReceived.id
+        });
+        // Update local UI
+        setContacts(prev => prev.map(c => c.id === activeContact.id ? { ...c, unread: 0 } : c));
+      }
     }
   }, [activeContact, activeInstance]);
+
+  // Handle Global Click to close context menu
+  useEffect(() => {
+    const handleGlobalClick = () => setContextMenu(null);
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
 
   const fetchInstances = async () => {
     try {
@@ -105,15 +191,32 @@ const Chat = () => {
     }
   };
 
-  const fetchChats = async (instanceId) => {
-    setLoadingChats(true);
+  const fetchChats = async (instanceId, reset = false) => {
+    if (reset) {
+      setContacts([]);
+      setChatPage(0);
+      setHasMoreChats(true);
+    }
+    const skip = reset ? 0 : chatPage * PAGE_SIZE;
+    setLoadingChats(reset);
     try {
-      const res = await axios.get(`http://localhost:3001/instances/${instanceId}/chats`);
-      setContacts(res.data);
+      const isGroup = filterType === 'groups' ? true : filterType === 'private' ? false : undefined;
+      const actualSearch = searchTerm.length >= 3 ? searchTerm : '';
+      const params = { skip, take: PAGE_SIZE, search: actualSearch, ...(isGroup !== undefined && { group: isGroup }) };
+      const res = await axios.get(`http://localhost:3001/instances/${instanceId}/chats`, { params });
+      const { chats, hasMore } = res.data;
+      setContacts(prev => {
+        if (reset) return chats;
+        const newItems = chats.filter(c => !prev.some(p => p.id === c.id));
+        return [...prev, ...newItems];
+      });
+      setHasMoreChats(hasMore);
+      if (!reset) setChatPage(p => p + 1);
     } catch (err) {
       console.error(err);
     } finally {
       setLoadingChats(false);
+      setLoadingMore(false);
     }
   };
 
@@ -131,7 +234,7 @@ const Chat = () => {
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || !activeContact || !activeInstance) return;
-    
+
     const textToSend = inputMessage;
     setInputMessage('');
 
@@ -140,10 +243,10 @@ const Chat = () => {
         jid: activeContact.jid, // Use real WhatsApp JID
         text: textToSend
       });
-      
+
       // Local update for immediate feedback using the REAL ID from WhatsApp
       const realId = response.data.key.id;
-      
+
       setMessages(prev => {
         if (prev.some(m => m.id === realId)) return prev;
         return [...prev, {
@@ -155,7 +258,10 @@ const Chat = () => {
         }];
       });
     } catch (err) {
-      alert('Erro ao enviar mensagem');
+      Toast.fire({
+        icon: 'error',
+        title: 'Erro ao enviar mensagem'
+      });
       setInputMessage(textToSend);
     }
   };
@@ -175,15 +281,111 @@ const Chat = () => {
     }
   };
 
+  const getProfilePic = async (jid) => {
+    try {
+      const res = await axios.get(`http://localhost:3001/instances/${activeInstance.id}/profile-pic/${jid}`);
+      return res.data.url;
+    } catch {
+      return null;
+    }
+  };
+
+  const MessageAvatar = ({ jid }) => {
+    const [url, setUrl] = useState(null);
+    useEffect(() => {
+      getProfilePic(jid).then(setUrl);
+    }, [jid]);
+
+    return (
+      <div style={{
+        width: '32px',
+        height: '32px',
+        borderRadius: '50%',
+        backgroundColor: 'var(--bg-tertiary)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        border: '1px solid var(--border-color)'
+      }}>
+        {url ? <img src={url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" /> : <User size={18} color="var(--text-muted)" />}
+      </div>
+    );
+  };
+
+  const formatMessage = (text) => {
+    if (!text) return '';
+
+    // 1. Handle markdown links: [text](url)
+    let formatted = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" style="color: inherit; text-decoration: underline; font-weight: bold;">$1</a>');
+
+    // 2. Handle raw URLs (that are not already inside an <a> tag)
+    formatted = formatted.replace(/(?<!href=")(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color: inherit; text-decoration: underline;">$1</a>');
+
+    // 3. Handle WhatsApp bold (*text*)
+    formatted = formatted.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+
+    return <div dangerouslySetInnerHTML={{ __html: formatted.replace(/\n/g, '<br/>') }} />;
+  };
+
+  const handleMessageContextMenu = (e, msg) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.pageX,
+      y: e.pageY,
+      type: 'message',
+      data: msg
+    });
+  };
+
+  const handleChatContextMenu = (e, contact) => {
+    e.preventDefault();
+    setContextMenu({
+      x: e.pageX,
+      y: e.pageY,
+      type: 'chat',
+      data: contact
+    });
+  };
+
+  const deleteMessage = async (forEveryone) => {
+    if (!contextMenu?.data) return;
+    const msg = contextMenu.data;
+    try {
+      await axios.post(`http://localhost:3001/instances/${activeInstance.id}/messages/delete`, {
+        jid: activeContact.jid,
+        msgId: msg.id,
+        fromMe: msg.fromMe,
+        forEveryone
+      });
+      setMessages(prev => prev.filter(m => m.id !== msg.id));
+      Toast.fire({ icon: 'success', title: 'Mensagem apagada' });
+    } catch (err) {
+      Toast.fire({ icon: 'error', title: 'Erro ao apagar mensagem' });
+    }
+    setContextMenu(null);
+  };
+
+  const markAsUnread = async (contact) => {
+    try {
+      await axios.patch(`http://localhost:3001/instances/${activeInstance.id}/chats/${contact.jid}/unread`);
+      setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, unread: 1 } : c));
+      Toast.fire({ icon: 'success', title: 'Marcado como não lido' });
+    } catch (err) {
+      console.error(err);
+    }
+    setContextMenu(null);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: 'var(--bg-primary)' }}>
       {/* Horizontal Instance Tabs */}
-      <div style={{ 
-        height: '65px', 
-        backgroundColor: 'var(--bg-secondary)', 
-        borderBottom: '1px solid var(--border-color)', 
-        display: 'flex', 
-        alignItems: 'center', 
+      <div style={{
+        height: '65px',
+        backgroundColor: 'var(--bg-secondary)',
+        borderBottom: '1px solid var(--border-color)',
+        display: 'flex',
+        alignItems: 'center',
         padding: '0 20px',
         gap: '12px',
         overflowX: 'auto',
@@ -207,12 +409,12 @@ const Chat = () => {
           }
         `}</style>
         {instances.map(inst => (
-          <div 
+          <div
             key={inst.id}
             onClick={() => setActiveInstance(inst)}
-            style={{ 
-              padding: '8px 20px', 
-              borderRadius: '20px', 
+            style={{
+              padding: '8px 20px',
+              borderRadius: '20px',
               backgroundColor: activeInstance?.id === inst.id ? inst.color : `${inst.color}15`,
               color: activeInstance?.id === inst.id ? '#fff' : inst.color,
               display: 'flex',
@@ -227,10 +429,10 @@ const Chat = () => {
               transform: activeInstance?.id === inst.id ? 'scale(1.05)' : 'scale(1)'
             }}
           >
-            <div style={{ 
-              width: '8px', 
-              height: '8px', 
-              borderRadius: '50%', 
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
               backgroundColor: inst.status === 'connected' ? (activeInstance?.id === inst.id ? '#fff' : '#10b981') : (activeInstance?.id === inst.id ? 'rgba(255,255,255,0.5)' : '#71717a'),
               boxShadow: inst.status === 'connected' ? `0 0 5px ${activeInstance?.id === inst.id ? '#fff' : '#10b981'}` : 'none'
             }}></div>
@@ -241,9 +443,9 @@ const Chat = () => {
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Contacts List */}
-        <div style={{ 
-          width: '320px', 
-          backgroundColor: 'var(--bg-secondary)', 
+        <div style={{
+          width: '320px',
+          backgroundColor: 'var(--bg-secondary)',
           borderRight: '1px solid var(--border-color)',
           display: 'flex',
           flexDirection: 'column'
@@ -255,13 +457,15 @@ const Chat = () => {
             </div>
             <div style={{ position: 'relative' }}>
               <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input 
+              <input
                 placeholder="Buscar contatos..."
-                style={{ 
-                  width: '100%', 
-                  padding: '10px 10px 10px 40px', 
-                  borderRadius: '10px', 
-                  border: '1px solid var(--border-color)', 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '10px 10px 10px 40px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color)',
                   backgroundColor: 'var(--bg-tertiary)',
                   color: '#fff',
                   fontSize: '14px',
@@ -269,79 +473,121 @@ const Chat = () => {
                 }}
               />
             </div>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+              <button
+                onClick={() => setFilterType('all')}
+                style={{ flex: 1, padding: '6px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', border: 'none', backgroundColor: filterType === 'all' ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: filterType === 'all' ? '#fff' : 'var(--text-secondary)' }}>
+                Todos
+              </button>
+              <button
+                onClick={() => setFilterType('private')}
+                style={{ flex: 1, padding: '6px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', border: 'none', backgroundColor: filterType === 'private' ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: filterType === 'private' ? '#fff' : 'var(--text-secondary)' }}>
+                Privado
+              </button>
+              <button
+                onClick={() => setFilterType('groups')}
+                style={{ flex: 1, padding: '6px', borderRadius: '8px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', border: 'none', backgroundColor: filterType === 'groups' ? 'var(--accent-primary)' : 'var(--bg-tertiary)', color: filterType === 'groups' ? '#fff' : 'var(--text-secondary)' }}>
+                Grupos
+              </button>
+            </div>
           </div>
-          
+
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {loadingChats ? (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
-                    <div className="animate-spin" style={{ width: '20px', height: '20px', border: '2px solid var(--accent-primary)', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
-                </div>
-            ) : contacts.length === 0 ? (
-                <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
-                    Nenhuma conversa encontrada nesta instância.
-                </div>
-            ) : contacts.map(contact => (
-              <div 
-                key={contact.id}
-                onClick={() => setActiveContact(contact)}
-                style={{ 
-                  padding: '15px 20px', 
-                  display: 'flex', 
-                  gap: '15px', 
-                  cursor: 'pointer',
-                  backgroundColor: activeContact?.id === contact.id ? 'var(--bg-tertiary)' : 'transparent',
-                  borderLeft: activeContact?.id === contact.id ? `4px solid ${activeInstance?.color || 'var(--accent-primary)'}` : '4px solid transparent',
-                  transition: 'all 0.1s'
-                }}
-                className="contact-item"
-              >
-                <div style={{ 
-                  width: '45px', 
-                  height: '45px', 
-                  borderRadius: '50%', 
-                  backgroundColor: 'var(--bg-primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0
-                }}>
-                  <div style={{ position: 'relative' }}>
-                    <User size={20} color="var(--text-muted)" />
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                <div className="animate-spin" style={{ width: '20px', height: '20px', border: '2px solid var(--accent-primary)', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
+              </div>
+            ) : (contacts?.length === 0 || !contacts) ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
+                Nenhuma conversa encontrada nesta instância.
+              </div>
+            ) : contacts
+              .filter(c => {
+                if (filterType === 'private') return !c.isGroup;
+                if (filterType === 'groups') return c.isGroup;
+                return true;
+              })
+              .map(contact => (
+                <div
+                  key={contact.id}
+                  onClick={() => setActiveContact(contact)}
+                  onContextMenu={(e) => handleChatContextMenu(e, contact)}
+                  style={{
+                    padding: '15px 20px',
+                    display: 'flex',
+                    gap: '15px',
+                    cursor: 'pointer',
+                    backgroundColor: activeContact?.id === contact.id ? 'var(--bg-tertiary)' : 'transparent',
+                    borderLeft: activeContact?.id === contact.id ? `4px solid ${activeInstance?.color || 'var(--accent-primary)'}` : '4px solid transparent',
+                    transition: 'all 0.1s'
+                  }}
+                  className="contact-item"
+                >
+                  <div style={{
+                    width: '45px',
+                    height: '45px',
+                    borderRadius: '12px',
+                    backgroundColor: contact.isGroup ? 'rgba(59, 130, 246, 0.2)' : 'var(--bg-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: contact.isGroup ? '#3b82f6' : 'var(--text-muted)',
+                    position: 'relative',
+                    flexShrink: 0
+                  }}>
+                    {contact.isGroup ? <Users size={20} /> : <User size={20} />}
                     {contact.aiEnabled && (
-                      <div className="pulse-green" style={{ 
-                        position: 'absolute', 
-                        bottom: '-2px', 
-                        right: '-2px', 
-                        width: '12px', 
+                      <div className="pulse-green" style={{
+                        position: 'absolute',
+                        bottom: '-2px',
+                        right: '-2px',
+                        width: '12px',
                         height: '12px',
                         border: '2px solid var(--bg-secondary)'
                       }}></div>
                     )}
                   </div>
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{contact.name}</span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{contact.time}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{contact.lastMsg || contact.id.split('@')[0]}</p>
-                    {contact.unread > 0 && (
-                      <span style={{ 
-                        backgroundColor: activeInstance?.color || 'var(--accent-primary)', 
-                        color: '#fff', 
-                        fontSize: '10px', 
-                        fontWeight: 800, 
-                        padding: '2px 6px', 
-                        borderRadius: '10px' 
-                      }}>
-                        {contact.unread}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {contact.name || contact.jid?.split('@')[0] || '—'}
                       </span>
-                    )}
+                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{contact.time}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{contact.lastMsg || contact.jid?.split('@')[0] || '—'}</p>
+                      {contact.unread > 0 && (
+                        <span style={{
+                          backgroundColor: activeInstance?.color || 'var(--accent-primary)',
+                          color: '#fff',
+                          fontSize: '10px',
+                          fontWeight: 800,
+                          padding: '2px 6px',
+                          borderRadius: '10px'
+                        }}>
+                          {contact.unread}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))}
+
+              {/* Sentinel — dispara o IntersectionObserver */}
+              <div ref={sentinelRef} style={{ height: '1px' }} />
+
+              {/* Loading more indicator */}
+              {loadingMore && (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '12px' }}>
+                  <div className="animate-spin" style={{ width: '16px', height: '16px', border: '2px solid var(--accent-primary)', borderTopColor: 'transparent', borderRadius: '50%' }} />
+                </div>
+              )}
+
+              {!hasMoreChats && contacts.length > 0 && (
+                <div style={{ textAlign: 'center', padding: '12px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                  Todas as conversas carregadas
+                </div>
+              )}
           </div>
         </div>
 
@@ -350,10 +596,10 @@ const Chat = () => {
           {activeContact ? (
             <>
               {/* Chat Header */}
-              <div style={{ 
-                height: '70px', 
-                padding: '0 25px', 
-                backgroundColor: 'rgba(18, 18, 20, 0.8)', 
+              <div style={{
+                height: '70px',
+                padding: '0 25px',
+                backgroundColor: 'rgba(18, 18, 20, 0.8)',
                 backdropFilter: 'blur(10px)',
                 borderBottom: '1px solid var(--border-color)',
                 display: 'flex',
@@ -366,14 +612,14 @@ const Chat = () => {
                   </div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{activeContact.name}</h3>
+                      <h3 style={{ fontSize: '15px', fontWeight: 700 }}>{activeContact.name || activeContact.jid?.split('@')[0]}</h3>
                       {activeContact.aiEnabled && (
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '6px', 
-                          backgroundColor: 'rgba(16, 185, 129, 0.1)', 
-                          padding: '2px 8px', 
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                          padding: '2px 8px',
                           borderRadius: '12px',
                           border: '1px solid rgba(16, 185, 129, 0.2)'
                         }}>
@@ -382,16 +628,29 @@ const Chat = () => {
                         </div>
                       )}
                     </div>
-                    <p style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 600 }}>online</p>
+                    {(() => {
+                      const p = presences[activeContact?.jid];
+                      if (!p || p.status === 'unavailable') {
+                        return p?.lastSeen
+                          ? <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                              visto por último {new Date(p.lastSeen * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            </p>
+                          : <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>offline</p>;
+                      }
+                      if (p.status === 'composing') return <p style={{ fontSize: '11px', color: '#10b981', fontWeight: 600 }}>digitando...</p>;
+                      if (p.status === 'recording') return <p style={{ fontSize: '11px', color: '#10b981', fontWeight: 600 }}>gravando áudio...</p>;
+                      if (p.status === 'available') return <p style={{ fontSize: '11px', color: 'var(--success)', fontWeight: 600 }}>online</p>;
+                      return <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>offline</p>;
+                    })()}
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <div 
+                  <div
                     onClick={toggleAI}
-                    style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '8px', 
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
                       cursor: 'pointer',
                       padding: '6px 12px',
                       borderRadius: '8px',
@@ -400,10 +659,10 @@ const Chat = () => {
                       transition: 'all 0.2s'
                     }}
                   >
-                    <input 
-                      type="checkbox" 
-                      checked={activeContact.aiEnabled || false} 
-                      onChange={() => {}} // Controlled by div click
+                    <input
+                      type="checkbox"
+                      checked={activeContact.aiEnabled || false}
+                      onChange={() => { }} // Controlled by div click
                       style={{ cursor: 'pointer' }}
                     />
                     <span style={{ fontSize: '12px', fontWeight: 700, color: activeContact.aiEnabled ? '#10b981' : 'var(--text-secondary)' }}>
@@ -421,40 +680,93 @@ const Chat = () => {
               {/* Messages Area */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '30px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {loadingMessages && messages.length === 0 ? (
-                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <div className="animate-spin" style={{ width: '30px', height: '30px', border: '3px solid var(--accent-primary)', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
-                    </div>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="animate-spin" style={{ width: '30px', height: '30px', border: '3px solid var(--accent-primary)', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
+                  </div>
                 ) : messages.map(msg => (
-                  <div 
+                  <div
                     key={msg.id}
-                    style={{ 
+                    onContextMenu={(e) => handleMessageContextMenu(e, msg)}
+                    style={{
                       alignSelf: msg.fromMe ? 'flex-end' : 'flex-start',
                       maxWidth: '70%',
                       display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: msg.fromMe ? 'flex-end' : 'flex-start'
+                      gap: '8px',
+                      alignItems: 'flex-start'
                     }}
                   >
-                    <div style={{ 
-                      padding: '10px 15px', 
-                      borderRadius: msg.fromMe ? '16px 16px 0 16px' : '16px 16px 16px 0',
-                      backgroundColor: msg.fromMe ? (activeInstance?.color || 'var(--accent-primary)') : 'var(--bg-secondary)',
-                      color: msg.fromMe ? '#fff' : 'var(--text-primary)',
-                      fontSize: '14px',
-                      boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
-                      border: msg.fromMe ? 'none' : '1px solid var(--border-color)'
-                    }}>
-                      {msg.text}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px' }}>
-                      <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{msg.time}</span>
-                      {msg.fromMe && (
-                        <span style={{ color: msg.status === 'read' || msg.status === 4 ? '#34b7f1' : 'var(--text-muted)' }}>
-                          {(msg.status === 'sent' || msg.status === 2) && <Check size={12} />}
-                          {(msg.status === 'delivered' || msg.status === 3) && <CheckCheck size={12} />}
-                          {(msg.status === 'read' || msg.status === 4) && <CheckCheck size={12} />}
-                        </span>
-                      )}
+                    {!msg.fromMe && activeContact?.isGroup && (
+                      <div style={{ marginTop: '4px', flexShrink: 0 }}>
+                        <MessageAvatar jid={msg.participant} />
+                      </div>
+                    )}
+
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: msg.fromMe ? 'flex-end' : 'flex-start' }}>
+                      <div style={{
+                        padding: '8px 12px',
+                        borderRadius: msg.fromMe ? '16px 16px 0 16px' : '16px 16px 16px 0',
+                        backgroundColor: msg.fromMe ? (activeInstance?.color || 'var(--accent-primary)') : 'var(--bg-secondary)',
+                        color: msg.fromMe ? '#fff' : 'var(--text-primary)',
+                        fontSize: '14px',
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                        border: msg.fromMe ? 'none' : '1px solid var(--border-color)',
+                        whiteSpace: 'pre-wrap',
+                        wordBreak: 'break-word',
+                        position: 'relative'
+                      }}>
+                        {/* SENDER INFO */}
+                        {msg.participant && !msg.fromMe && activeContact?.isGroup && (
+                          <div
+                            onClick={() => {
+                              // Logic to switch to private chat
+                              const privateJid = msg.participant.includes(':') ? msg.participant.split(':')[0] + '@s.whatsapp.net' : msg.participant;
+                              const existing = contacts.find(c => c.jid === privateJid);
+                              if (existing) {
+                                setActiveContact(existing);
+                              } else {
+                                Toast.fire({ icon: 'info', title: 'Iniciando conversa privada...' });
+                                // We'd need a way to create a temporary contact or wait for a message
+                              }
+                            }}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', cursor: 'pointer' }}
+                          >
+                            <span style={{ fontWeight: 800, color: '#ff8a00', fontSize: '12px' }}>{msg.senderName || 'Membro'}</span>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '10px' }}>~{msg.participant.split('@')[0]}</span>
+                          </div>
+                        )}
+
+                        {/* QUOTED MESSAGE */}
+                        {msg.quotedText && (
+                          <div style={{
+                            padding: '8px 10px',
+                            backgroundColor: 'rgba(0,0,0,0.05)',
+                            borderLeft: '4px solid var(--accent-primary)',
+                            borderRadius: '4px',
+                            marginBottom: '8px',
+                            fontSize: '12px',
+                            opacity: 0.8
+                          }}>
+                            <div style={{ fontWeight: 800, marginBottom: '2px', color: 'var(--accent-primary)' }}>
+                              {msg.quotedParticipant?.split('@')[0] || 'Resposta'}
+                            </div>
+                            <div style={{ color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                              {msg.quotedText}
+                            </div>
+                          </div>
+                        )}
+
+                        {formatMessage(msg.text)}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px' }}>
+                        <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{msg.time}</span>
+                        {msg.fromMe && (
+                          <span style={{ display: 'flex', alignItems: 'center', color: (msg.status === 'read' || msg.status === 4) ? '#34b7f1' : 'var(--text-muted)' }}>
+                            {(msg.status === 'sent' || msg.status === 2)
+                              ? <Check size={12} />
+                              : <CheckCheck size={12} />}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -463,40 +775,40 @@ const Chat = () => {
 
               {/* Input Area */}
               <div style={{ padding: '20px 25px', backgroundColor: 'var(--bg-secondary)', borderTop: '1px solid var(--border-color)' }}>
-                <form 
-                    onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-                    style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '15px', 
-                        backgroundColor: 'var(--bg-tertiary)', 
-                        padding: '8px 15px', 
-                        borderRadius: '14px',
-                        border: '1px solid var(--border-color)'
-                    }}
+                <form
+                  onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '15px',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    padding: '8px 15px',
+                    borderRadius: '14px',
+                    border: '1px solid var(--border-color)'
+                  }}
                 >
                   <button type="button" className="btn-icon"><Paperclip size={20} /></button>
-                  <input 
+                  <input
                     placeholder="Escreva sua mensagem..."
                     value={inputMessage}
                     onChange={(e) => setInputMessage(e.target.value)}
-                    style={{ 
-                      flex: 1, 
-                      backgroundColor: 'transparent', 
-                      border: 'none', 
-                      outline: 'none', 
-                      color: '#fff', 
+                    style={{
+                      flex: 1,
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      outline: 'none',
+                      color: '#fff',
                       fontSize: '14px',
                       padding: '8px 0'
                     }}
                   />
                   <button type="button" className="btn-icon"><Mic size={20} /></button>
-                  <button 
+                  <button
                     type="submit"
-                    style={{ 
-                      width: '40px', 
-                      height: '40px', 
-                      borderRadius: '50%', 
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
                       backgroundColor: activeInstance?.color || 'var(--accent-primary)',
                       color: '#fff',
                       display: 'flex',
@@ -527,9 +839,9 @@ const Chat = () => {
 
         {/* Right Sidebar (Contact Info) */}
         {showContactInfo && activeContact && (
-          <div style={{ 
-            width: '300px', 
-            backgroundColor: 'var(--bg-secondary)', 
+          <div style={{
+            width: '300px',
+            backgroundColor: 'var(--bg-secondary)',
             borderLeft: '1px solid var(--border-color)',
             display: 'flex',
             flexDirection: 'column'
@@ -560,8 +872,71 @@ const Chat = () => {
           </div>
         )}
       </div>
+
+      {/* CONTEXT MENU */}
+      {contextMenu && (
+        <div style={{
+          position: 'fixed',
+          top: contextMenu.y,
+          left: contextMenu.x,
+          backgroundColor: 'var(--bg-secondary)',
+          border: '1px solid var(--border-color)',
+          borderRadius: '8px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+          zIndex: 9999,
+          minWidth: '180px',
+          padding: '5px'
+        }}>
+          {contextMenu.type === 'message' && (
+            <>
+              <div onClick={() => {
+                Swal.fire({
+                  title: 'Apagar mensagem?',
+                  text: contextMenu.data.fromMe ? "Deseja apagar para todos ou apenas para você?" : "Deseja apagar esta mensagem?",
+                  icon: 'warning',
+                  showCancelButton: true,
+                  showDenyButton: contextMenu.data.fromMe,
+                  confirmButtonText: 'Apagar para mim',
+                  denyButtonText: 'Apagar para todos',
+                  cancelButtonText: 'Cancelar',
+                  customClass: {
+                    popup: 'swal2-dark-popup'
+                  }
+                }).then((result) => {
+                  if (result.isConfirmed) deleteMessage(false);
+                  else if (result.isDenied) deleteMessage(true);
+                });
+              }} style={contextMenuStyle}>Apagar mensagem</div>
+              <div style={contextMenuStyle}>Encaminhar</div>
+            </>
+          )}
+          {contextMenu.type === 'chat' && (
+            <div onClick={() => markAsUnread(contextMenu.data)} style={contextMenuStyle}>
+              Marcar como não lida
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
+
+const contextMenuStyle = {
+  padding: '10px 15px',
+  fontSize: '13px',
+  cursor: 'pointer',
+  borderRadius: '4px',
+  transition: 'background 0.2s',
+  color: 'var(--text-primary)',
+  ':hover': { backgroundColor: 'var(--bg-tertiary)' }
+};
+
+// CSS inline para hover no menu de contexto
+const styleTag = document.createElement("style");
+styleTag.innerHTML = `
+  .swal2-dark-popup { background: #1e1e20 !important; color: #fff !important; }
+  div[onClick]:hover { background-color: rgba(255,255,255,0.05) !important; }
+`;
+document.head.appendChild(styleTag);
 
 export default Chat;

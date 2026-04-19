@@ -1,8 +1,18 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { Smartphone, RefreshCw, Trash2, Plus, Loader2, QrCode, X, Edit3 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import { QRCodeCanvas } from 'qrcode.react';
 import axios from 'axios';
+import Swal from 'sweetalert2';
+
+const Toast = Swal.mixin({
+  toast: true,
+  position: 'top-end',
+  showConfirmButton: false,
+  timer: 3000,
+  timerProgressBar: true
+});
 
 const socket = io('http://localhost:3001');
 
@@ -58,7 +68,6 @@ const Connections = () => {
   };
 
   const handleOpenEditModal = (inst) => {
-    setEditingInstance(inst);
     setFormName(inst.name);
     setFormColor(inst.color);
     setShowModal(true);
@@ -76,7 +85,7 @@ const Connections = () => {
       setShowModal(false);
       fetchInstances();
     } catch (err) {
-      alert('Erro ao salvar instância');
+      Toast.fire({ icon: 'error', title: 'Erro ao salvar instância' });
     } finally {
       setLoading(false);
     }
@@ -86,20 +95,34 @@ const Connections = () => {
     e.stopPropagation();
     try {
       await axios.post(`http://localhost:3001/instances/${id}/restart`);
-      alert('Reiniciando instância...');
+      Toast.fire({ icon: 'info', title: 'Reiniciando instância...' });
     } catch (err) {
-      alert('Erro ao reiniciar');
+      Toast.fire({ icon: 'error', title: 'Erro ao reiniciar' });
     }
   };
 
   const handleDelete = async (e, id) => {
     e.stopPropagation();
-    if (!window.confirm('Tem certeza que deseja remover esta conexão?')) return;
-    try {
-      await axios.delete(`http://localhost:3001/instances/${id}`);
-      fetchInstances();
-    } catch (err) {
-      alert('Erro ao excluir');
+    
+    const result = await Swal.fire({
+      title: 'Tem certeza?',
+      text: "Você não poderá reverter isso!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sim, excluir!',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axios.delete(`http://localhost:3001/instances/${id}`);
+        fetchInstances();
+        Toast.fire({ icon: 'success', title: 'Conexão removida' });
+      } catch (err) {
+        Toast.fire({ icon: 'error', title: 'Erro ao excluir' });
+      }
     }
   };
 
@@ -228,18 +251,21 @@ const Connections = () => {
       </div>
 
       {/* Modal para Adicionar/Editar */}
-      {showModal && (
+      {showModal && ReactDOM.createPortal(
         <div style={{ 
           position: 'fixed', 
-          top: 0, left: 0, right: 0, bottom: 0, 
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
           backgroundColor: 'rgba(0,0,0,0.85)', 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
-          zIndex: 1000,
+          zIndex: 9999,
           backdropFilter: 'blur(5px)'
         }}>
-          <div className="card" style={{ width: '420px', padding: '30px', animation: 'fadeIn 0.2s ease-out' }}>
+          <div className="card" style={{ width: '420px', padding: '30px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
                <h3 style={{ fontSize: '20px', fontWeight: 700 }}>{editingInstance ? 'Editar Conexão' : 'Nova Conexão'}</h3>
                <button onClick={() => setShowModal(false)} className="btn-icon"><X size={20} /></button>
@@ -283,12 +309,6 @@ const Connections = () => {
                     }}
                   />
                 ))}
-                <input 
-                  type="color" 
-                  value={formColor} 
-                  onChange={(e) => setFormColor(e.target.value)}
-                  style={{ width: '34px', height: '34px', border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
-                />
               </div>
             </div>
 
@@ -300,7 +320,7 @@ const Connections = () => {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
     </div>
   );
 };

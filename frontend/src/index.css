@@ -225,8 +225,13 @@ h1, h2, h3, h4 {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.page-content > * {
+.page-content > *:not(.modal-overlay) {
   animation: fadeIn 0.4s ease-out forwards;
+}
+
+.modal-overlay {
+  animation: none !important;
+  transform: none !important;
 }
 
 .animate-spin {

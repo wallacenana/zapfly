@@ -15,6 +15,7 @@ model Instance {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   botPrompt String?   @default("Você é um assistente virtual prestativo.")
+  knowledge String?   @default("[]")
   flows     Flow[]
   chats     Chat[]
   messages  Message[]
@@ -41,6 +42,7 @@ model Chat {
   lastMsg     String?
   lastMsgTime String?
   aiEnabled   Boolean  @default(false)
+  isGroup     Boolean  @default(false)
   updatedAt   DateTime @updatedAt
   instance    Instance @relation(fields: [instanceId], references: [id])
   messages    Message[]
@@ -49,20 +51,90 @@ model Chat {
 }
 
 model Message {
-  id         String   @id @default(uuid())
-  msgId      String   @unique
-  instanceId String
-  jid        String
-  text       String
-  fromMe     Boolean
-  timestamp  DateTime @default(now())
-  status     String   @default("sent")
-  instance   Instance @relation(fields: [instanceId], references: [id])
-  chat       Chat     @relation(fields: [instanceId, jid], references: [instanceId, jid])
+  id                String   @id @default(uuid())
+  msgId             String   @unique
+  instanceId        String
+  jid               String
+  text              String
+  fromMe            Boolean
+  participant       String?
+  senderName        String?
+  quotedText        String?
+  quotedParticipant String?
+  timestamp         DateTime @default(now())
+  status            String   @default("sent")
+  instance          Instance @relation(fields: [instanceId], references: [id])
+  chat              Chat     @relation(fields: [instanceId, jid], references: [instanceId, jid])
 
   @@index([instanceId, jid])
 }
 
+// Agendamentos / Pedidos
+model Order {
+  id              String   @id @default(cuid())
+  instanceId      String
+  clientName      String?
+  clientJid       String?
+  product         String
+  quantity        String?
+  notes           String?
+  scheduledDate   String
+  scheduledTime   String
+  status          String   @default("pending")
+  calendarEventId String?
+  type            String   @default("order")
+  deliveryAddress String?
+  forwardedTo     String?
+  createdAt       DateTime @default(now())
+}
+
+// Estoque
+model StockItem {
+  id          String       @id @default(cuid())
+  name        String
+  unit        String       @default("kg")
+  quantity    Float        @default(0)
+  minQuantity Float        @default(1)
+  ingredients Ingredient[]
+}
+
+model Product {
+  id          String       @id @default(cuid())
+  name        String
+  unit        String       @default("unidade")
+  ingredients Ingredient[]
+}
+
+model Ingredient {
+  id          String    @id @default(cuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  stockItemId String
+  stockItem   StockItem @relation(fields: [stockItemId], references: [id])
+  quantityPer Float
+}
+
+// Disponibilidade de horários
+model AvailableSlot {
+  id        String @id @default(cuid())
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  maxOrders Int    @default(3)
+}
+
+// Cache local dos eventos do Google Calendar
+model CalendarEvent {
+  id          String   @id
+  title       String
+  description String?
+  startAt     DateTime
+  endAt       DateTime
+  allDay      Boolean  @default(false)
+  syncedAt    DateTime @default(now())
+}
+
+// Legado
 model CakeOrder {
   id           Int      @id @default(autoincrement())
   clientName   String
@@ -74,8 +146,23 @@ model CakeOrder {
 }
 
 model Setting {
-  id          String   @id @default("global")
-  openaiKey   String?
-  claudeKey   String?
-  activeModel String   @default("openai")
+  id              String  @id @default("global")
+  openaiKey       String?
+  claudeKey       String?
+  activeModel     String  @default("openai")
+  // Google Calendar OAuth
+  gcalEnabled     Boolean @default(false)
+  gcalClientId    String?
+  gcalClientSecret String?
+  gcalAccessToken  String?
+  gcalRefreshToken String?
+  gcalTokenExpiry  String?
+  gcalCalendarId  String?
+  gcalSyncHour    Int     @default(6)
+  // Negócio
+  businessName    String?
+  managerJid      String?
+  deliveryJid     String?
+  reportEnabled   Boolean @default(false)
+  reportHour      Int     @default(7)
 }
