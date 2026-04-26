@@ -19,6 +19,8 @@ model Instance {
   chats     Chat[]
   flows     Flow[]
   messages  Message[]
+
+  @@map("instance")
 }
 
 model Flow {
@@ -31,6 +33,8 @@ model Flow {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   instance   Instance? @relation(fields: [instanceId], references: [id])
+
+  @@map("flow")
 }
 
 model Chat {
@@ -49,6 +53,7 @@ model Chat {
   messages    Message[]
 
   @@unique([instanceId, jid])
+  @@map("chat")
 }
 
 model Message {
@@ -68,6 +73,7 @@ model Message {
   instance          Instance @relation(fields: [instanceId], references: [id])
 
   @@index([instanceId, jid])
+  @@map("message")
 }
 
 model Order {
@@ -90,6 +96,7 @@ model Order {
   totalValue      Float    @default(0)
   createdAt       DateTime @default(now())
   productRelation Product? @relation(fields: [productId], references: [id])
+  @@map("order")
 }
 
 model StockItem {
@@ -99,6 +106,7 @@ model StockItem {
   quantity    Float        @default(0)
   minQuantity Float        @default(1)
   ingredients Ingredient[]
+  @@map("stockitem")
 }
 
 model Product {
@@ -115,6 +123,7 @@ model Product {
   comboItems   String?      @default("[]") @db.Text
   ingredients  Ingredient[]
   orders       Order[]
+  @@map("product")
 }
 
 model Ingredient {
@@ -124,6 +133,7 @@ model Ingredient {
   quantityPer Float
   stockItem   StockItem @relation(fields: [stockItemId], references: [id])
   product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  @@map("ingredient")
 }
 
 model AvailableSlot {
@@ -132,6 +142,7 @@ model AvailableSlot {
   startTime String
   endTime   String
   maxOrders Int    @default(3)
+  @@map("availableslot")
 }
 
 model CalendarEvent {
@@ -142,6 +153,7 @@ model CalendarEvent {
   endAt       DateTime
   allDay      Boolean  @default(false)
   syncedAt    DateTime @default(now())
+  @@map("calendarevent")
 }
 
 model CakeOrder {
@@ -152,6 +164,7 @@ model CakeOrder {
   quantity     String?
   sender       String?
   createdAt    DateTime @default(now())
+  @@map("cakeorder")
 }
 
 model Setting {
@@ -180,6 +193,7 @@ model Setting {
   reportEnabled      Boolean @default(false)
   reportHour         Int     @default(7)
   reminderHours      Int     @default(2)
+  @@map("setting")
 }
 
 model MarketingAsset {
@@ -187,6 +201,7 @@ model MarketingAsset {
   name      String   // Nome que você usará para pedir à Lily (ex: "Vulcão")
   path      String   // Caminho da imagem no servidor
   createdAt DateTime @default(now())
+  @@map("marketingasset")
 }
 
 model FlowState {
@@ -199,4 +214,5 @@ model FlowState {
   updatedAt     DateTime  @updatedAt
 
   @@unique([instanceId, jid])
+  @@map("flowstate")
 }
