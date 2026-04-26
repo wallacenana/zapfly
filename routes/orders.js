@@ -15,37 +15,61 @@ const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 async function getGoogleCalendar() {
   try {
     const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
-    if (!settings?.gcalClientId || !settings?.gcalClientSecret || !settings?.gcalRefreshToken) return null;
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    
+    console.log('[GCal Debug] ClientID:', clientId ? 'OK (Inicia com ' + clientId.slice(0, 5) + '...)' : 'AUSENTE');
+    console.log('[GCal Debug] Secret:', clientSecret ? 'OK' : 'AUSENTE');
+    console.log('[GCal Debug] Refresh Token no DB:', settings?.gcalRefreshToken ? 'PRESENTE' : 'AUSENTE');
+
+    if (!clientId || !clientSecret || !settings?.gcalRefreshToken) {
+      console.error('[GCal] Interrompendo: Faltam credenciais no .env ou no banco.');
+      return null;
+    }
 
     const { google } = require('googleapis');
     const oauth2Client = new google.auth.OAuth2(
-      settings.gcalClientId,
-      settings.gcalClientSecret,
+      clientId,
+      clientSecret,
       'http://localhost:3001/auth/google/callback'
     );
 
     oauth2Client.setCredentials({
       refresh_token: settings.gcalRefreshToken,
       access_token: settings.gcalAccessToken,
-      expiry_date: settings.gcalTokenExpiry ? parseInt(settings.gcalTokenExpiry) : undefined,
+      expiry_date: settings.gcalTokenExpiry ? parseInt(settings.gcalTokenExpiry) : null
     });
 
-    // Auto-refresh e salva novo token se expirado
-    oauth2Client.on('tokens', async (tokens) => {
+    // Usa getAccessToken() que lida com o refresh automaticamente se houver refresh_token
+    console.log('[GCal] Validando acesso...');
+    const { token } = await oauth2Client.getAccessToken();
+    
+    if (!token) {
+      throw new Error('Não foi possível obter um Access Token válido.');
+    }
+
+    // Se o access_token mudou, atualiza no banco
+    if (token !== settings.gcalAccessToken) {
+      console.log('[GCal] Novo Access Token gerado via Auto-Refresh.');
       await prisma.setting.update({
         where: { id: 'global' },
         data: {
-          gcalAccessToken: tokens.access_token,
-          gcalTokenExpiry: tokens.expiry_date?.toString(),
-        },
+          gcalAccessToken: token,
+          gcalTokenExpiry: oauth2Client.credentials.expiry_date?.toString()
+        }
       });
-    });
+    }
 
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
     const calendarId = settings.gcalCalendarId || 'primary';
     return { calendar, calendarId };
   } catch (e) {
-    console.error('[GCal] Erro ao autenticar:', e.message);
+    if (e.message.includes('invalid_grant') || e.code === 401) {
+      console.error('[GCal] Acesso revogado ou credenciais inválidas no Google Cloud.');
+      console.error('[GCal] Erro Técnico:', e.message);
+    } else {
+      console.error('[GCal] Erro ao autenticar:', e.message);
+    }
     return null;
   }
 }
@@ -53,15 +77,20 @@ async function getGoogleCalendar() {
 // Sincroniza eventos do Google Calendar para o banco local
 async function syncCalendarEvents() {
   const gcal = await getGoogleCalendar();
-  if (!gcal) return;
+  if (!gcal) {
+    console.error('[GCal Sync] Falha: Calendário não conectado ou credenciais ausentes.');
+    throw new Error('Google Calendar não conectado. Por favor, conecte sua conta nas configurações.');
+  }
 
   try {
     const now = new Date();
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0); // Começa do início do dia atual
     const inThirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     const response = await gcal.calendar.events.list({
       calendarId: gcal.calendarId,
-      timeMin: now.toISOString(),
+      timeMin: startOfDay.toISOString(),
       timeMax: inThirtyDays.toISOString(),
       singleEvents: true,
       orderBy: 'startTime',
@@ -69,6 +98,8 @@ async function syncCalendarEvents() {
 
     const events = response.data.items || [];
     console.log(`[GCal Sync] ${events.length} eventos encontrados.`);
+
+    const eventIdsInGoogle = events.map(e => e.id);
 
     for (const event of events) {
       const allDay = !!event.start.date;
@@ -80,39 +111,103 @@ async function syncCalendarEvents() {
         update: { title: event.summary || 'Sem título', description: event.description, startAt, endAt, allDay, syncedAt: new Date() },
         create: { id: event.id, title: event.summary || 'Sem título', description: event.description, startAt, endAt, allDay },
       });
+
+      // LÓGICA DE SYNC REVERSO: Se o evento estiver com colorId '10' (Verde/Basílico) ou for deletado
+      // Consideramos como PRONTO no Kanban
+      if (event.colorId === '10' || event.status === 'cancelled') {
+          await prisma.order.updateMany({
+              where: { calendarEventId: event.id, status: 'pending' },
+              data: { status: 'ready' }
+          });
+      }
+    }
+
+    // Se um evento de um pedido sumiu do Google, marcamos como finalizado/ready no Kanban
+    const unsyncedOrdersWithEvents = await prisma.order.findMany({
+        where: { calendarEventId: { not: null }, status: 'pending' }
+    });
+
+    for (const order of unsyncedOrdersWithEvents) {
+        if (!eventIdsInGoogle.includes(order.calendarEventId)) {
+            console.log(`[GCal Sync] Evento ${order.calendarEventId} não encontrado. Marcando pedido #${order.id} como PRONTO.`);
+            await prisma.order.update({ where: { id: order.id }, data: { status: 'ready' } });
+        }
     }
 
     // Remove eventos antigos do cache que foram deletados no Calendar
-    const eventIds = events.map(e => e.id);
     await prisma.calendarEvent.deleteMany({
-      where: { id: { notIn: eventIds }, startAt: { gte: now } }
+      where: { id: { notIn: eventIdsInGoogle }, startAt: { gte: startOfDay } }
     });
 
-    console.log('[GCal Sync] Sincronização concluída.');
+    // ─── TWO-WAY SYNC: ENVIAR PEDIDOS ÓRFÃOS AO GCAL (Apenas Encomendas) ───
+    // Inclui pedidos em qualquer status ativo que não tenham evento no Calendar
+    const unsyncedOrders = await prisma.order.findMany({
+      where: { 
+        OR: [
+          { calendarEventId: null },
+          { calendarEventId: "" },
+          // Re-sincroniza se o evento não está mais no Google
+          { calendarEventId: { notIn: eventIdsInGoogle.length > 0 ? eventIdsInGoogle : ['__none__'] } }
+        ],
+        status: { in: ['pending', 'production', 'ready'] }, // Todos os ativos
+        type: 'order' // FILTRO CRÍTICO: Não envia delivery para a agenda
+      }
+    });
+    
+    let pushedCount = 0;
+    for (const order of unsyncedOrders) {
+      try {
+        const calId = await createCalendarEvent(order);
+        if (calId) {
+          await prisma.order.update({ where: { id: order.id }, data: { calendarEventId: calId } });
+          pushedCount++;
+        }
+      } catch (err) {
+        console.error(`[GCal Sync] Erro ao sincronizar pedido ${order.id}:`, err.message);
+      }
+    }
+
+    console.log(`[GCal Sync] Sincronização concluída. ${events.length} recebidos | ${pushedCount} enviados.`);
+    return { fetched: events.length, pushed: pushedCount };
   } catch (e) {
+    if (e.code === 401 || e.message.includes('invalid_grant')) {
+        console.error('[GCal Sync] Falha de Autenticação Crítica: O token foi revogado ou é inválido.');
+        console.error('[GCal Sync] Por favor, clique em "RECONECTAR" no painel de Configurações.');
+        throw new Error('Autenticação expirada. Por favor, clique em Reconectar nas Configurações.');
+    }
     console.error('[GCal Sync] Erro:', e.message);
+    throw e;
   }
 }
 
 // Cria evento no Google Calendar
 async function createCalendarEvent(order) {
+  // BLINDAGEM EXTRA: Recusa absoluta de criar evento para Delivery
+  if (order.type === 'delivery') {
+    console.log(`[GCal] Ignorando sincronização: Pedido #${order.id} é do tipo DELIVERY.`);
+    return null;
+  }
+
   const gcal = await getGoogleCalendar();
   if (!gcal) return null;
 
   try {
-    const startDateTime = new Date(`${order.scheduledDate}T${order.scheduledTime}:00`);
-    const endDateTime = new Date(startDateTime.getTime() + 2 * 60 * 60 * 1000); // +2h padrão
+    // O evento representa o TEMPO DE PRODUÇÃO (30 min antes da retirada)
+    const endDateTime = new Date(`${order.scheduledDate}T${order.scheduledTime}:00`);
+    const startDateTime = new Date(endDateTime.getTime() - 30 * 60 * 1000); // -30 min
 
     const event = {
-      summary: `📦 ${order.product} — ${order.clientName || 'Cliente'}`,
+      summary: `🎂 ${order.product} — ${order.clientName || 'Cliente'}`,
       description: [
+        `🔔 RETIRADA: ${order.scheduledTime}`,
         order.quantity ? `Quantidade: ${order.quantity}` : '',
         order.notes ? `Observações: ${order.notes}` : '',
         order.clientJid ? `WhatsApp: ${order.clientJid.replace('@s.whatsapp.net', '')}` : '',
       ].filter(Boolean).join('\n'),
       start: { dateTime: startDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
       end: { dateTime: endDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
-      reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 60 }] },
+      colorId: '1', // Azul (Produção)
+      reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 15 }] },
     };
 
     const response = await gcal.calendar.events.insert({ calendarId: gcal.calendarId, resource: event });
@@ -123,47 +218,160 @@ async function createCalendarEvent(order) {
   }
 }
 
-// Verifica disponibilidade num dia/hora
-async function checkAvailability(date, time) {
-  const dayOfWeek = new Date(date + 'T12:00:00').getDay();
-  const slots = await prisma.availableSlot.findMany({ where: { dayOfWeek } });
+// Atualiza evento no Google Calendar
+async function updateCalendarEvent(order) {
+  if (!order.calendarEventId) return createCalendarEvent(order);
+  const gcal = await getGoogleCalendar();
+  if (!gcal) return null;
 
-  if (slots.length === 0) return { available: false, reason: 'Dia não configurado para atendimento.' };
+  try {
+    const startDateTime = new Date(`${order.scheduledDate}T${order.scheduledTime}:00`);
+    const endDateTime = new Date(startDateTime.getTime() + 2 * 60 * 60 * 1000);
 
-  const [hReq, mReq] = time.split(':').map(Number);
-  const timeMinutes = hReq * 60 + mReq;
+    const event = {
+      summary: `📦 ${order.product} — ${order.clientName || 'Cliente'}`,
+      description: [
+        order.quantity ? `Quantidade: ${order.quantity}` : '',
+        order.notes ? `Observações: ${order.notes}` : '',
+        order.clientJid ? `WhatsApp: ${order.clientJid.replace('@s.whatsapp.net', '')}` : '',
+      ].filter(Boolean).join('\n'),
+      start: { dateTime: startDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
+      end: { dateTime: endDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
+    };
 
-  const matchSlot = slots.find(slot => {
-    const [hS, mS] = slot.startTime.split(':').map(Number);
-    const [hE, mE] = slot.endTime.split(':').map(Number);
-    return timeMinutes >= hS * 60 + mS && timeMinutes <= hE * 60 + mE;
-  });
-
-  if (!matchSlot) return { available: false, reason: `Horário ${time} fora do horário de atendimento.` };
-
-  const ordersOnSlot = await prisma.order.count({
-    where: { scheduledDate: date, scheduledTime: time, status: { not: 'cancelled' } }
-  });
-
-  if (ordersOnSlot >= matchSlot.maxOrders) {
-    return { available: false, reason: `Horário ${time} já está lotado para ${date}.` };
+    await gcal.calendar.events.patch({
+      calendarId: gcal.calendarId,
+      eventId: order.calendarEventId,
+      resource: event
+    });
+    return order.calendarEventId;
+  } catch (e) {
+    console.error('[GCal] Erro ao atualizar evento:', e.message);
+    return null;
   }
+}
 
-  return { available: true, slot: matchSlot };
+// Verifica disponibilidade num dia/hora
+async function checkAvailability(date, time, costToUse = 1) {
+  try {
+    const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
+    const dailyLimit = settings?.dailyMaxOrders || 10;
+
+    // SOMA O CUSTO DE CAPACIDADE (VAGAS) DE TODOS OS PEDIDOS NO DIA
+    const ordersToday = await prisma.order.findMany({
+      where: { scheduledDate: date, status: { not: 'cancelled' } }
+    });
+
+    // Precisamos buscar os custos de cada produto desses pedidos
+    const productIds = ordersToday.map(o => o.productId).filter(Boolean);
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } }
+    });
+
+    const totalUsed = ordersToday.reduce((acc, order) => {
+      const p = products.find(prod => prod.id === order.productId);
+      return acc + (p?.capacityCost || 1); // Se não achou produto, conta como 1 vaga
+    }, 0);
+
+    if (totalUsed >= dailyLimit) {
+      return { available: false, reason: `Desculpe, já atingimos nosso limite de produção de ${dailyLimit} vagas para o dia ${date}.` };
+    }
+
+    // Verifica conflito no Google Agenda (considerando os 30 min de produção)
+    const endReq = new Date(`${date}T${time}:00`);
+    const startReq = new Date(endReq.getTime() - 30 * 60 * 1000); // Início da produção
+    
+    const conflict = await prisma.calendarEvent.findFirst({
+      where: {
+        OR: [
+          // Conflito se o início da nova produção cair dentro de um evento existente
+          { startAt: { lte: startReq }, endAt: { gt: startReq } },
+          // Conflito se o fim da nova produção cair dentro de um evento existente
+          { startAt: { lt: endReq }, endAt: { gte: endReq } },
+          // Conflito se a nova produção englobar um evento existente
+          { startAt: { gte: startReq }, endAt: { lte: endReq } },
+          { allDay: true, startAt: { lte: startReq } }
+        ]
+      }
+    });
+
+    if (conflict) {
+        // Sugerir horários próximos (simples: 30 min antes ou depois)
+        const suggestedBefore = new Date(startReq.getTime() - 30 * 60 * 1000);
+        const suggestedAfter = new Date(endReq.getTime() + 30 * 60 * 1000);
+        
+        const format = (d) => d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+        
+        return { 
+          available: false, 
+          reason: `Horário ocupado (conflito com ${conflict.title}). Sugestões: ${format(suggestedBefore)} ou ${format(suggestedAfter)}.` 
+        };
+    }
+
+    return { available: true, remaining: dailyLimit - totalUsed };
+  } catch (e) {
+    console.error('[Availability] Erro:', e.message);
+    return { available: false, reason: 'Erro ao verificar disponibilidade.' };
+  }
 }
 
 // ─── CRON JOBS ───────────────────────────────────────────────────────────────
 
-// Sincronização do Google Calendar — roda no horário configurado
+// Sincronização do Google Calendar — agora roda a cada MINUTO
 async function setupCronJobs(sockGetter) {
-  const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
-
-  const syncHour = settings?.gcalSyncHour ?? 6;
-  cron.schedule(`0 ${syncHour} * * *`, () => {
-    console.log('[Cron] Sincronizando Google Calendar...');
-    syncCalendarEvents();
+  // Sincronização GCal (A cada 5 min)
+  cron.schedule('*/5 * * * *', () => {
+    syncCalendarEvents().catch(err => {
+      console.error('[Cron GCal Sync Error]:', err.message);
+    });
   });
 
+  // Lembrete de Retirada (Rodando a cada 15 min)
+  cron.schedule('*/15 * * * *', async () => {
+    const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
+    if (!settings || !sockGetter) return;
+
+    const leadHours = settings.reminderHours || 2;
+    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+
+    const upcomingOrders = await prisma.order.findMany({
+      where: {
+        scheduledDate: today,
+        status: { in: ['pending', 'production', 'ready'] },
+        type: 'order',
+        reminderSent: false
+      }
+    });
+
+    const sock = sockGetter();
+    if (!sock) return;
+
+    for (const order of upcomingOrders) {
+      try {
+        const [hour, minute] = order.scheduledTime.split(':').map(Number);
+        const pickupTime = new Date();
+        pickupTime.setHours(hour, minute, 0, 0);
+
+        const diffMs = pickupTime - now;
+        const diffHours = diffMs / (1000 * 60 * 60);
+
+        // Se faltar X horas ou menos (mas ainda não passou do horário)
+        if (diffHours > 0 && diffHours <= leadHours) {
+          const msg = `Olá *${order.clientName || 'cliente'}*! 🎂\n\nPassando para te avisar que sua encomenda está agendada para retirada hoje às *${order.scheduledTime}*.\n\nJá estamos nos preparativos finais por aqui! Te esperamos. 🚀`;
+          
+          await sock.sendMessage(order.clientJid, { text: msg });
+          await prisma.order.update({ where: { id: order.id }, data: { reminderSent: true } });
+          console.log(`[Reminder] Lembrete enviado para ${order.clientName} (${order.id})`);
+        }
+      } catch (err) {
+        console.error(`[Reminder Error] Falha ao enviar para ${order.id}:`, err.message);
+      }
+    }
+  });
+
+  // Relatório Diário
+  const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
   const reportHour = settings?.reportHour ?? 7;
   if (settings?.reportEnabled) {
     cron.schedule(`0 ${reportHour} * * *`, async () => {
@@ -172,7 +380,7 @@ async function setupCronJobs(sockGetter) {
     });
   }
 
-  console.log(`[Cron] GCal sync às ${syncHour}h | Relatório às ${reportHour}h`);
+  console.log(`[GCal] Monitor ativo: A cada 5 min | Relatório: ${reportHour}h | Lembretes: ${settings?.reminderHours || 2}h antes`);
 }
 
 // Gera e envia relatório diário
@@ -231,6 +439,7 @@ router.get('/', async (req, res) => {
 
   const orders = await prisma.order.findMany({
     where,
+    include: { productRelation: true },
     orderBy: [{ scheduledDate: 'asc' }, { scheduledTime: 'asc' }]
   });
   res.json(orders);
@@ -238,33 +447,131 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { product, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, type, deliveryAddress } = req.body;
-
-    const avail = await checkAvailability(scheduledDate, scheduledTime);
-    if (!avail.available) return res.status(409).json({ error: avail.reason });
-
-    const order = await prisma.order.create({
-      data: { product, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, type: type || 'order', deliveryAddress, instanceId: 'manual' }
-    });
-
-    // Cria evento no Google Calendar
-    const calendarEventId = await createCalendarEvent(order);
-    if (calendarEventId) {
-      await prisma.order.update({ where: { id: order.id }, data: { calendarEventId } });
+    let { product, variation, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, type, deliveryAddress, paymentMethod, deliveryFee } = req.body;
+    
+    if (paymentMethod) {
+      notes = `[Pagamento: ${paymentMethod}] ${notes || ''}`.trim();
     }
 
-    // Debita estoque se produto tem receita
-    const product_db = await prisma.product.findFirst({
-      where: { name: { contains: product } },
-      include: { ingredients: { include: { stockItem: true } } }
+    if (deliveryFee && parseFloat(deliveryFee) > 0) {
+      notes = `[Frete: R$ ${parseFloat(deliveryFee).toFixed(2)}] ${notes || ''}`.trim();
+    }
+
+    // Busca o produto
+    const cleanProductName = product?.replace(/\s*\(.*?\)\s*/g, '').trim();
+    let dbProduct = await prisma.product.findFirst({ where: { name: { contains: cleanProductName || product } } });
+    if (!dbProduct && product) {
+      dbProduct = await prisma.product.findFirst({ where: { name: { contains: product.split('(')[0].trim() } } });
+    }
+
+    let costToUse = 1;
+    let priceToUse = dbProduct?.price || 0;
+
+    if (dbProduct) {
+      const vars = typeof dbProduct.variations === 'string' ? JSON.parse(dbProduct.variations || '[]') : (dbProduct.variations || []);
+      const matchedVar = variation
+        ? (vars.find(v => v.name.toLowerCase() === variation.toLowerCase())
+          || vars.find(v => v.name.toLowerCase().includes(variation.toLowerCase()))
+          || vars.find(v => variation.toLowerCase().includes(v.name.toLowerCase())))
+        : null;
+
+      if (matchedVar) {
+        costToUse = matchedVar.capacityCost || dbProduct.capacityCost || 1;
+        if (matchedVar.price) priceToUse = matchedVar.price;
+      } else {
+        costToUse = dbProduct.capacityCost || 1;
+      }
+    }
+
+    // Valida disponibilidade
+    const avail = await checkAvailability(scheduledDate, scheduledTime, costToUse);
+    if (!avail.available) return res.status(409).json({ error: avail.reason });
+
+    // Cálculo Final
+    const qtyNum = parseFloat(quantity) || 1;
+    const itemsValue = priceToUse * qtyNum;
+    const finalTotalValue = itemsValue + (parseFloat(deliveryFee) || 0);
+
+    const order = await prisma.order.create({
+      data: { 
+        product: variation ? `${cleanProductName || product} (${variation})` : (cleanProductName || product),
+        productId: dbProduct?.id,
+        quantity: quantity?.toString(), 
+        notes, 
+        scheduledDate, 
+        scheduledTime, 
+        clientName, 
+        clientJid, 
+        type: type || 'order', 
+        deliveryAddress, 
+        instanceId: req.body.instanceId || 'global',
+        totalValue: finalTotalValue
+      }
     });
-    if (product_db && quantity) {
-      const qty = parseFloat(quantity) || 1;
-      for (const ing of product_db.ingredients) {
-        await prisma.stockItem.update({
-          where: { id: ing.stockItemId },
-          data: { quantity: { decrement: ing.quantityPer * qty } }
-        });
+
+    // ─── BAIXA DE ESTOQUE AUTOMÁTICA ───
+    if (dbProduct && order.type === 'delivery') {
+        const qtyToDecrement = Math.max(1, parseInt(quantity) || 1);
+        
+        if (!dbProduct.variations || dbProduct.variations === '[]') {
+            // Caso 1: Produto Simples
+            await prisma.product.update({
+                where: { id: dbProduct.id },
+                data: { stock: { decrement: qtyToDecrement } }
+            });
+        } else {
+            // Caso 2: Produto com Variações
+            let vars = typeof dbProduct.variations === 'string' ? JSON.parse(dbProduct.variations) : dbProduct.variations;
+            let updated = false;
+
+            // Tenta achar a variação ou o sub-item (sabor)
+            for (let v of vars) {
+                // Se o match for na variação e ela tiver estoque próprio
+                if (v.name.toLowerCase() === variation?.toLowerCase() || variation?.toLowerCase().includes(v.name.toLowerCase())) {
+                    if (v.stock > 0) {
+                        v.stock = Math.max(0, v.stock - qtyToDecrement);
+                        updated = true;
+                    } 
+                    // Se não tiver estoque na variação, tenta nos sub-items (sabores)
+                    else if (v.subItems && v.subItems.length > 0) {
+                        for (let si of v.subItems) {
+                            // Se o nome do sub-item estiver contido na nota ou na variação informada
+                            if (notes?.toLowerCase().includes(si.name.toLowerCase()) || variation?.toLowerCase().includes(si.name.toLowerCase())) {
+                                si.stock = Math.max(0, si.stock - qtyToDecrement);
+                                updated = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (updated) break;
+            }
+
+            if (updated) {
+                await prisma.product.update({
+                    where: { id: dbProduct.id },
+                    data: { variations: JSON.stringify(vars) }
+                });
+            }
+        }
+    }
+
+    // 1. Sincroniza com Google Agenda (APENAS ENCOMENDAS)
+    let calendarEventId = null;
+    if (order.type === 'order') {
+      calendarEventId = await createCalendarEvent(order);
+      if (calendarEventId) {
+        await prisma.order.update({ where: { id: order.id }, data: { calendarEventId } });
+      }
+    }
+
+    // 2. Notifica o Gestor
+    const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
+    if (settings?.managerJid && req.sockGetter) {
+      const sock = req.sockGetter();
+      if (sock) {
+        const aviso = `🚨 *NOVA ENCOMENDA!* 🚨\n\n👤 *Cliente:* ${clientName || 'Não informado'}\n🎂 *Pedido:* ${order.product}\n📅 *Data:* ${scheduledDate}\n⏰ *Hora:* ${scheduledTime}\n📝 *Obs:* ${notes || '-'}\n📍 *Entrega:* ${deliveryAddress || 'Retirada'}`;
+        await sock.sendMessage(settings.managerJid, { text: aviso });
       }
     }
 
@@ -275,8 +582,66 @@ router.post('/', async (req, res) => {
 });
 
 router.patch('/:id', async (req, res) => {
+  const { status } = req.body;
+  const oldOrder = await prisma.order.findUnique({ where: { id: req.params.id } });
   const order = await prisma.order.update({ where: { id: req.params.id }, data: req.body });
+
+  // Automação: Notificar cliente que o pedido está sendo preparado
+  if (status === 'production' && order.clientJid) {
+    console.log(`[Automation] Detectada mudança para produção. Enviando msg para: ${order.clientJid}`);
+    const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
+    
+    // Busca uma instância conectada para enviar
+    const instances = await prisma.instance.findMany({ where: { status: 'connected' } });
+    if (instances.length > 0 && req.sockGetter) {
+        const sock = req.sockGetter(instances[0].id);
+        if (sock) {
+            const msg = `✅ *PEDIDO ACEITO!* \n\nOi, *${order.clientName}*! Seu pedido de *${order.product}* já foi aceito e começou a ser preparado com muito carinho! 🧑‍🍳✨\n\nAvisaremos você assim que estiver pronto para entrega ou retirada!`;
+            await sock.sendMessage(order.clientJid, { text: msg });
+            console.log('[Automation] Cliente notificado com sucesso!');
+        } else {
+            console.error('[Automation Error] Não foi possível obter o socket da instância.');
+        }
+    } else {
+        console.warn('[Automation Warning] Nenhuma instância conectada ou sockGetter ausente.');
+    }
+  }
+
+  // Automação: Notificar entregador se status mudou para 'ready' (Pronto para Entrega)
+  if (status === 'ready' && order.type === 'delivery' && req.sockGetter) {
+    const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
+    if (settings?.deliveryJid) {
+        const sock = req.sockGetter();
+        if (sock) {
+            const msg = `🚚 *PEDIDO PRONTO PARA ENTREGA!* 🚚\n\n🆔 *Pedido:* #${order.id.slice(-4).toUpperCase()}\n👤 *Cliente:* ${order.clientName}\n📦 *Itens:* ${order.product}\n📍 *Endereço:* ${order.deliveryAddress || 'Retirada'}\n💰 *Status:* Aguardando retirada pelo entregador.`;
+            await sock.sendMessage(settings.deliveryJid, { text: msg });
+        }
+    }
+  }
+
   res.json(order);
+});
+
+router.patch('/:id', async (req, res) => {
+  const { id } = req.params;
+  const data = { ...req.body };
+  delete data.id; // Proteção
+
+  try {
+    const order = await prisma.order.update({
+      where: { id },
+      data
+    });
+
+    // Sincroniza com Google Agenda se houver mudança relevante
+    if (order.calendarEventId || (order.scheduledDate && order.scheduledTime)) {
+        await updateCalendarEvent(order);
+    }
+
+    res.json(order);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 router.delete('/:id', async (req, res) => {
@@ -371,15 +736,41 @@ router.get('/products', async (req, res) => {
 });
 
 router.post('/products', async (req, res) => {
-  const { name, unit, ingredients } = req.body;
-  const product = await prisma.product.create({
-    data: {
-      name, unit: unit || 'unidade',
-      ingredients: { create: ingredients?.map(i => ({ stockItemId: i.stockItemId, quantityPer: i.quantityPer })) || [] }
-    },
-    include: { ingredients: { include: { stockItem: true } } }
-  });
-  res.json(product);
+  try {
+    const { name, description, type, price, stock, capacityCost, variations, unit } = req.body;
+    const product = await prisma.product.create({
+      data: {
+        name,
+        description: description || null,
+        type: type || 'delivery',
+        price: price || 0,
+        stock: stock || 0,
+        capacityCost: capacityCost || 1,
+        unit: unit || 'unidade',
+        variations: variations || '[]',
+      }
+    });
+    res.json(product);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao criar produto' });
+  }
+});
+
+router.patch('/products/:id', async (req, res) => {
+  try {
+    const { name, description, type, price, stock, capacityCost, variations, unit } = req.body;
+    const product = await prisma.product.update({
+      where: { id: req.params.id },
+      data: {
+        name, description, type, price, stock, capacityCost, variations, unit
+      }
+    });
+    res.json(product);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Erro ao atualizar produto' });
+  }
 });
 
 router.delete('/products/:id', async (req, res) => {
@@ -398,9 +789,12 @@ router.get('/calendar-events', async (req, res) => {
 });
 
 router.post('/calendar-sync', async (req, res) => {
-  await syncCalendarEvents();
-  const events = await prisma.calendarEvent.findMany({ orderBy: { startAt: 'asc' } });
-  res.json({ synced: events.length });
+  try {
+    const result = await syncCalendarEvents();
+    res.json({ synced: result.fetched, pushed: result.pushed });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 });
 
 // Relatório manual

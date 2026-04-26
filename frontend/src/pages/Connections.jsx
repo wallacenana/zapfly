@@ -68,6 +68,7 @@ const Connections = () => {
   };
 
   const handleOpenEditModal = (inst) => {
+    setEditingInstance(inst);
     setFormName(inst.name);
     setFormColor(inst.color);
     setShowModal(true);
@@ -98,6 +99,30 @@ const Connections = () => {
       Toast.fire({ icon: 'info', title: 'Reiniciando instância...' });
     } catch (err) {
       Toast.fire({ icon: 'error', title: 'Erro ao reiniciar' });
+    }
+  };
+
+  const handleLogout = async (e, id) => {
+    e.stopPropagation();
+    const result = await Swal.fire({
+      title: 'Desconectar WhatsApp?',
+      text: "Isso irá deslogar o número atual. Você precisará escanear o QR Code novamente.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sim, desconectar!',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        await axios.post(`http://localhost:3001/instances/${id}/logout`);
+        fetchInstances();
+        Toast.fire({ icon: 'success', title: 'Desconectado com sucesso' });
+      } catch (err) {
+        Toast.fire({ icon: 'error', title: 'Erro ao desconectar' });
+      }
     }
   };
 
@@ -238,13 +263,19 @@ const Connections = () => {
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: 'auto', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
-              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={(e) => handleRestart(e, inst.id)}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: 'auto', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+              <button className="btn btn-secondary" style={{ padding: '8px' }} onClick={(e) => handleRestart(e, inst.id)}>
                 <RefreshCw size={14} /> Reiniciar
               </button>
-              <button className="btn btn-secondary" style={{ flex: 1, color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }} onClick={(e) => handleDelete(e, inst.id)}>
-                <Trash2 size={14} /> Remover
-              </button>
+              {inst.status === 'connected' ? (
+                <button className="btn btn-secondary" style={{ padding: '8px', color: 'var(--warning)', borderColor: 'rgba(245, 158, 11, 0.2)' }} onClick={(e) => handleLogout(e, inst.id)}>
+                   <Smartphone size={14} /> Desconectar
+                </button>
+              ) : (
+                <button className="btn btn-secondary" style={{ padding: '8px', color: 'var(--danger)', borderColor: 'rgba(239, 68, 68, 0.2)' }} onClick={(e) => handleDelete(e, inst.id)}>
+                  <Trash2 size={14} /> Remover
+                </button>
+              )}
             </div>
           </div>
         ))}
@@ -292,7 +323,7 @@ const Connections = () => {
 
             <div style={{ marginBottom: '30px' }}>
               <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px', fontWeight: 600 }}>Cor de Destaque (Accent)</label>
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
                 {['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6', '#f43f5e'].map(color => (
                   <div 
                     key={color}
@@ -309,6 +340,33 @@ const Connections = () => {
                     }}
                   />
                 ))}
+                <div style={{
+                  position: 'relative',
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '10px',
+                  overflow: 'hidden',
+                  border: !['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6', '#f43f5e'].includes(formColor) ? '3px solid #fff' : '1px dashed var(--border-color)',
+                  boxShadow: !['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#14b8a6', '#f43f5e'].includes(formColor) ? `0 0 15px ${formColor}88` : 'none',
+                  cursor: 'pointer'
+                }}>
+                  <input 
+                    type="color" 
+                    value={formColor} 
+                    onChange={(e) => setFormColor(e.target.value)}
+                    style={{
+                      position: 'absolute',
+                      top: '-10px',
+                      left: '-10px',
+                      width: '54px',
+                      height: '54px',
+                      cursor: 'pointer',
+                      border: 'none',
+                      padding: 0
+                    }}
+                    title="Escolher cor personalizada"
+                  />
+                </div>
               </div>
             </div>
 

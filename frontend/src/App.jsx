@@ -9,6 +9,7 @@ import Chat from './pages/Chat';
 import Settings from './pages/Settings';
 import Prompts from './pages/Prompts';
 import Estoque from './pages/Estoque';
+import Kanban from './pages/Kanban';
 
 function App() {
   return (
@@ -21,10 +22,12 @@ function App() {
           <Route path="flows/new" element={<FlowEditor />} />
           <Route path="flows/:id" element={<FlowEditor />} />
           <Route path="chat" element={<Chat />} />
+          <Route path="chat/:jid" element={<Chat />} />
           <Route path="prompts" element={<Prompts />} />
           <Route path="agenda" element={<Agenda />} />
           <Route path="estoque" element={<Estoque />} />
           <Route path="connections" element={<Connections />} />
+          <Route path="kanban" element={<Kanban />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

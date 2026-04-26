@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import {
   Search,
   Send,
@@ -15,7 +16,9 @@ import {
   CheckCheck,
   Smartphone,
   Bot,
-  Users
+  Users,
+  Trash2,
+  Zap
 } from 'lucide-react';
 import axios from 'axios';
 import { io } from 'socket.io-client';
@@ -36,10 +39,22 @@ const Toast = Swal.mixin({
 const socket = io('http://localhost:3001');
 
 const Chat = () => {
+  const { jid: urlJid } = useParams();
   const [instances, setInstances] = useState([]);
   const [activeInstance, setActiveInstance] = useState(null);
   const [contacts, setContacts] = useState([]);
   const [activeContact, setActiveContact] = useState(null);
+
+  // Auto-selecionar contato se vier via URL (Kanban link)
+  useEffect(() => {
+    if (urlJid && contacts.length > 0 && !activeContact) {
+      const decodedJid = decodeURIComponent(urlJid);
+      const contact = contacts.find(c => c.jid === decodedJid);
+      if (contact) {
+        setActiveContact(contact);
+      }
+    }
+  }, [urlJid, contacts, activeContact]);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [showContactInfo, setShowContactInfo] = useState(true);
@@ -111,10 +126,23 @@ const Chat = () => {
       }
     });
 
+    socket.on('chat_update', (data) => {
+      if (activeInstance && data.instanceId === activeInstance.id) {
+        setContacts(prev => prev.map(c => 
+          c.jid === data.jid ? { ...c, ...data } : c
+        ));
+        
+        if (activeContact && activeContact.jid === data.jid) {
+          setActiveContact(prev => ({ ...prev, ...data }));
+        }
+      }
+    });
+
     return () => {
       socket.off('new_message');
       socket.off('presence_update');
       socket.off('message_status_update');
+      socket.off('chat_update');
     };
   }, [activeInstance, activeContact]);
 
@@ -348,7 +376,7 @@ const Chat = () => {
     });
   };
 
-  const deleteMessage = async (forEveryone) => {
+  const deleteMessage = async () => {
     if (!contextMenu?.data) return;
     const msg = contextMenu.data;
     try {
@@ -356,7 +384,7 @@ const Chat = () => {
         jid: activeContact.jid,
         msgId: msg.id,
         fromMe: msg.fromMe,
-        forEveryone
+        forEveryone: true // Por padrão, apaga para todos se possível
       });
       setMessages(prev => prev.filter(m => m.id !== msg.id));
       Toast.fire({ icon: 'success', title: 'Mensagem apagada' });
@@ -374,6 +402,33 @@ const Chat = () => {
     } catch (err) {
       console.error(err);
     }
+    setContextMenu(null);
+  };
+
+  const deleteChat = (contact) => {
+    Swal.fire({
+      title: 'Excluir conversa?',
+      text: 'Isso apagará todas as mensagens e resetará os fluxos deste contato.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sim, excluir!',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: 'var(--danger)',
+      background: 'var(--bg-secondary)',
+      color: 'var(--text-primary)',
+      customClass: { popup: 'swal2-dark-popup' }
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await axios.delete(`http://localhost:3001/instances/${activeInstance.id}/chats/${encodeURIComponent(contact.jid)}`);
+          setContacts(prev => prev.filter(c => c.id !== contact.id));
+          if (activeContact?.id === contact.id) setActiveContact(null);
+          Toast.fire({ icon: 'success', title: 'Conversa excluída' });
+        } catch (err) {
+          Toast.fire({ icon: 'error', title: 'Erro ao excluir conversa' });
+        }
+      }
+    });
     setContextMenu(null);
   };
 
@@ -549,9 +604,14 @@ const Chat = () => {
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                      <span style={{ fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {contact.name || contact.jid?.split('@')[0] || '—'}
-                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                        <span style={{ fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {contact.name || contact.jid?.split('@')[0] || '—'}
+                        </span>
+                        {contact.inFlow && (
+                          <Zap size={12} fill="#3b82f6" color="#3b82f6" style={{ flexShrink: 0 }} />
+                        )}
+                      </div>
                       <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{contact.time}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -617,14 +677,14 @@ const Chat = () => {
                         <div style={{
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '6px',
+                          justifyContent: 'center',
+                          width: '16px',
+                          height: '16px',
                           backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                          padding: '2px 8px',
-                          borderRadius: '12px',
+                          borderRadius: '50%',
                           border: '1px solid rgba(16, 185, 129, 0.2)'
                         }}>
                           <div className="pulse-green"></div>
-                          <span style={{ fontSize: '10px', color: '#10b981', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>IA Ativa</span>
                         </div>
                       )}
                     </div>
@@ -879,13 +939,16 @@ const Chat = () => {
           position: 'fixed',
           top: contextMenu.y,
           left: contextMenu.x,
-          backgroundColor: 'var(--bg-secondary)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '8px',
-          boxShadow: '0 10px 25px rgba(0,0,0,0.3)',
+          backgroundColor: '#18181b',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '12px',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
           zIndex: 9999,
-          minWidth: '180px',
-          padding: '5px'
+          minWidth: '220px',
+          padding: '8px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '4px'
         }}>
           {contextMenu.type === 'message' && (
             <>
@@ -899,21 +962,25 @@ const Chat = () => {
                   confirmButtonText: 'Apagar para mim',
                   denyButtonText: 'Apagar para todos',
                   cancelButtonText: 'Cancelar',
-                  customClass: {
-                    popup: 'swal2-dark-popup'
-                  }
+                  customClass: { popup: 'swal2-dark-popup' }
                 }).then((result) => {
                   if (result.isConfirmed) deleteMessage(false);
                   else if (result.isDenied) deleteMessage(true);
                 });
-              }} style={contextMenuStyle}>Apagar mensagem</div>
-              <div style={contextMenuStyle}>Encaminhar</div>
+              }} className="ctx-menu-item"><Trash2 size={16} /> Apagar mensagem</div>
+              <div className="ctx-menu-item"><Send size={16} style={{ transform: 'rotate(-45deg)' }} /> Encaminhar</div>
             </>
           )}
           {contextMenu.type === 'chat' && (
-            <div onClick={() => markAsUnread(contextMenu.data)} style={contextMenuStyle}>
-              Marcar como não lida
-            </div>
+            <>
+              <div onClick={() => markAsUnread(contextMenu.data)} className="ctx-menu-item">
+                <Check size={16} /> Marcar como não lida
+              </div>
+              <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '4px 0' }} />
+              <div onClick={() => deleteChat(contextMenu.data)} className="ctx-menu-item text-danger" style={{ color: '#ef4444' }}>
+                <Trash2 size={16} /> Excluir conversa
+              </div>
+            </>
           )}
         </div>
       )}
@@ -921,21 +988,29 @@ const Chat = () => {
   );
 };
 
-const contextMenuStyle = {
-  padding: '10px 15px',
-  fontSize: '13px',
-  cursor: 'pointer',
-  borderRadius: '4px',
-  transition: 'background 0.2s',
-  color: 'var(--text-primary)',
-  ':hover': { backgroundColor: 'var(--bg-tertiary)' }
-};
-
 // CSS inline para hover no menu de contexto
 const styleTag = document.createElement("style");
 styleTag.innerHTML = `
   .swal2-dark-popup { background: #1e1e20 !important; color: #fff !important; }
-  div[onClick]:hover { background-color: rgba(255,255,255,0.05) !important; }
+  .ctx-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  .ctx-menu-item:hover {
+    background-color: rgba(255,255,255,0.06);
+  }
+  .ctx-menu-item.text-danger:hover {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #f87171 !important;
+  }
 `;
 document.head.appendChild(styleTag);
 

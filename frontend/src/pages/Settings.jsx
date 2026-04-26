@@ -1,300 +1,579 @@
-import React, { useState, useEffect } from 'react';
-import { Save, Key, Shield, Cpu, Loader2, Globe, Calendar, CheckCircle, XCircle, RefreshCw, ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Save, Shield, MessageSquare, Bell, Calendar, MapPin, Truck, Plus, Trash2, Key, Cpu, ExternalLink, CheckCircle2, Image, Upload } from 'lucide-react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
-import { useSearchParams } from 'react-router-dom';
 
-const Toast = Swal.mixin({
-  toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true
-});
+const API_CONFIG = 'http://localhost:3001/config/keys';
+const API_CALENDARS = 'http://localhost:3001/auth/google/calendars';
+const API_DISCONNECT_GCAL = 'http://localhost:3001/auth/google/disconnect';
 
-const API = 'http://localhost:3001';
-
-export default function Settings() {
-  const [loading, setLoading] = useState(false);
-  const [keys, setKeys] = useState({ openai: '', claude: '', activeModel: 'openai' });
-  const [business, setBusiness] = useState({ businessName: '', managerJid: '', deliveryJid: '', reportEnabled: false, reportHour: 7 });
-  const [gcal, setGcal] = useState({ clientId: '', clientSecret: '', syncHour: 6 });
-  const [gcalStatus, setGcalStatus] = useState({ connected: false, hasCredentials: false, calendarId: null });
+const Settings = () => {
+  const [activeTab, setActiveTab] = useState('business');
+  const [loading, setLoading] = useState(true);
   const [calendars, setCalendars] = useState([]);
-  const [loadingCalendars, setLoadingCalendars] = useState(false);
-  const [searchParams] = useSearchParams();
+  const [settings, setSettings] = useState({
+    businessName: '',
+    businessAddress: '',
+    businessLocation: '',
+    openaiKey: '',
+    claudeKey: '',
+    activeModel: 'openai',
+    googleApiKey: '',
+    gcalCalendarId: '',
+    deliveryRules: [],
+    managerJid: '',
+    deliveryJid: '',
+    dailyMaxOrders: 10,
+    gcalSyncHour: 6,
+    reportHour: 7,
+    reportEnabled: false,
+    gcalRefreshToken: '',
+    gcalEnabled: false,
+    reminderHours: 2
+  });
+  const [slots, setSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(true);
+  const [marketingAssets, setMarketingAssets] = useState([]);
+  const [uploadName, setUploadName] = useState('');
+  const fileInputRef = useRef(null);
+
+  const loadSettings = async () => {
+    try {
+      const res = await axios.get(API_CONFIG);
+      if (res.data) {
+        setSettings({
+          ...res.data,
+          openaiKey: res.data.openai || '',
+          claudeKey: res.data.claude || '',
+          googleApiKey: res.data.googleApiKey || '',
+          gcalCalendarId: res.data.gcalCalendarId || '',
+          deliveryRules: typeof res.data.deliveryRules === 'string'
+            ? JSON.parse(res.data.deliveryRules || '[]')
+            : (Array.isArray(res.data.deliveryRules) ? res.data.deliveryRules : []),
+          reminderHours: res.data.reminderHours || 2
+        });
+
+        if (res.data.gcalRefreshToken) {
+          fetchCalendars();
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCalendars = async () => {
+    try {
+      const res = await axios.get(API_CALENDARS);
+      setCalendars(res.data);
+    } catch (err) {
+      console.error('Erro ao buscar calendários:', err);
+    }
+  };
 
   useEffect(() => {
-    loadAll();
-    // Detecta retorno do OAuth
-    if (searchParams.get('gcal_success')) {
-      Toast.fire({ icon: 'success', title: '✅ Google Calendar conectado!' });
-      loadGcalStatus();
+    // Se estiver no popup de sucesso do Google, fecha a janela
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('gcal_success')) {
+      window.close();
+      return;
     }
-    if (searchParams.get('gcal_error')) {
-      const err = searchParams.get('gcal_error');
-      const msgs = { missing_credentials: 'Salve o Client ID e Secret antes de conectar.', token_exchange_failed: 'Falha na troca de tokens. Verifique as credenciais.' };
-      Swal.fire({ icon: 'error', title: msgs[err] || `Erro: ${err}`, background: '#18181b', color: '#f4f4f5' });
-    }
+    loadSettings();
+    loadSlots();
+    loadMarketingAssets();
   }, []);
 
-  const loadAll = async () => {
-    const [keysRes, gcalStatusRes] = await Promise.all([
-      axios.get(`${API}/config/keys`).catch(() => ({ data: {} })),
-      axios.get(`${API}/auth/google/status`).catch(() => ({ data: {} })),
-    ]);
-    const data = keysRes.data;
-    setKeys({ openai: data.openai || '', claude: data.claude || '', activeModel: data.activeModel || 'openai' });
-    setGcal({ clientId: data.gcalClientId || '', clientSecret: data.gcalClientSecret || '', syncHour: data.gcalSyncHour ?? 6 });
-    setBusiness({ businessName: data.businessName || '', managerJid: data.managerJid || '', deliveryJid: data.deliveryJid || '', reportEnabled: data.reportEnabled || false, reportHour: data.reportHour ?? 7 });
-    setGcalStatus(gcalStatusRes.data);
-  };
-
-  const loadGcalStatus = async () => {
-    const res = await axios.get(`${API}/auth/google/status`).catch(() => ({ data: {} }));
-    setGcalStatus(res.data);
-  };
-
-  const loadCalendars = async () => {
-    setLoadingCalendars(true);
+  const loadSlots = async () => {
     try {
-      const res = await axios.get(`${API}/auth/google/calendars`);
-      setCalendars(res.data);
-    } catch {
-      Toast.fire({ icon: 'error', title: 'Erro ao listar calendários.' });
-    } finally { setLoadingCalendars(false); }
-  };
-
-  const handleSaveKeys = async () => {
-    setLoading(true);
-    try {
-      await axios.post(`${API}/config/keys`, {
-        ...keys,
-        gcalClientId: gcal.clientId,
-        gcalClientSecret: gcal.clientSecret,
-        gcalSyncHour: gcal.syncHour,
-        ...business
-      });
-      Toast.fire({ icon: 'success', title: 'Configurações salvas!' });
-    } catch { Toast.fire({ icon: 'error', title: 'Erro ao salvar.' }); }
-    finally { setLoading(false); }
-  };
-
-  const handleConnect = () => {
-    window.location.href = `${API}/auth/google`;
-  };
-
-  const handleDisconnect = async () => {
-    const r = await Swal.fire({ title: 'Desconectar Google Calendar?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sim', cancelButtonText: 'Não', background: '#18181b', color: '#f4f4f5' });
-    if (r.isConfirmed) {
-      await axios.post(`${API}/auth/google/disconnect`);
-      setGcalStatus({ connected: false, hasCredentials: gcalStatus.hasCredentials });
-      setCalendars([]);
-      Toast.fire({ icon: 'info', title: 'Google Calendar desconectado.' });
+      const res = await axios.get('http://localhost:3001/config/slots');
+      setSlots(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingSlots(false);
     }
   };
 
-  const selectCalendar = async (calendarId) => {
-    await axios.patch(`${API}/auth/google/calendar`, { calendarId });
-    setGcalStatus(s => ({ ...s, calendarId }));
-    Toast.fire({ icon: 'success', title: 'Calendário selecionado!' });
+  const loadMarketingAssets = async () => {
+    try {
+      const res = await axios.get('http://localhost:3001/marketing-assets');
+      setMarketingAssets(res.data);
+    } catch (err) { console.error(err); }
   };
 
-  const inp = (extra = {}) => ({
-    style: { width: '100%', padding: '11px 14px', borderRadius: '8px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '14px', ...extra }
-  });
+  const handleUploadAsset = async () => {
+    if (!fileInputRef.current?.files[0] || !uploadName.trim()) {
+      Swal.fire('Atenção', 'Preencha o nome e selecione uma imagem.', 'warning');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('name', uploadName);
+    formData.append('file', fileInputRef.current.files[0]);
+    try {
+      await axios.post('http://localhost:3001/marketing-assets', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setUploadName('');
+      fileInputRef.current.value = '';
+      await loadMarketingAssets();
+      Swal.fire({ title: 'Foto adicionada!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+    } catch (err) {
+      Swal.fire('Erro', 'Não foi possível subir a imagem.', 'error');
+    }
+  };
+
+  const handleDeleteAsset = async (id) => {
+    const { isConfirmed } = await Swal.fire({ title: 'Remover foto?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sim', cancelButtonText: 'Não' });
+    if (!isConfirmed) return;
+    await axios.delete(`http://localhost:3001/marketing-assets/${id}`);
+    await loadMarketingAssets();
+  };
+
+  const handleSaveSlots = async () => {
+    try {
+      await axios.post('http://localhost:3001/config/slots', { slots });
+      Swal.fire({ title: 'Horários Atualizados!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+    } catch (err) {
+      Swal.fire('Erro', 'Não foi possível salvar os horários.', 'error');
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      const payload = {
+        ...settings,
+        openai: settings.openaiKey,
+        claude: settings.claudeKey,
+        deliveryRules: JSON.stringify(settings.deliveryRules)
+      };
+      await axios.post(API_CONFIG, payload);
+      await loadSettings(); // Recarrega para garantir que o estado local bata com o banco (especialmente GCal)
+      Swal.fire({ title: 'Configurações Salvas!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+    } catch (err) {
+      Swal.fire('Erro', 'Não foi possível salvar.', 'error');
+    }
+  };
+
+  const connectGoogle = () => {
+    const width = 500;
+    const height = 600;
+    const left = window.screen.width / 2 - width / 2;
+    const top = window.screen.height / 2 - height / 2;
+    const win = window.open('http://localhost:3001/auth/google', 'google_auth', `width=${width},height=${height},left=${left},top=${top}`);
+
+    const checkTimer = setInterval(() => {
+      if (win.closed) {
+        clearInterval(checkTimer);
+        loadSettings();
+      }
+    }, 1000);
+  };
+
+  const addDeliveryRule = () => setSettings(s => ({ ...s, deliveryRules: [...s.deliveryRules, { maxKm: 5, fee: 10 }] }));
+  const updateRule = (idx, field, val) => {
+    const rules = [...settings.deliveryRules];
+    rules[idx][field] = parseFloat(val);
+    setSettings(s => ({ ...s, deliveryRules: rules }));
+  };
+
+  const tabs = [
+    { id: 'business', label: 'Empresa', icon: Shield },
+    { id: 'delivery', label: 'Logística & Frete', icon: Truck },
+    { id: 'schedules', label: 'Horários', icon: Calendar },
+    { id: 'bot', label: 'Integrações (IA/GCal)', icon: Cpu },
+    { id: 'marketing', label: 'Mídias de Marketing', icon: Image }
+  ];
+
+  if (loading) return <div style={{ padding: '40px', color: '#fff' }}>Carregando configurações...</div>;
 
   return (
-    <div style={{ padding: '30px', maxWidth: '860px', margin: '0 auto' }}>
-      <div style={{ marginBottom: '30px' }}>
-        <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>Configurações do Sistema</h2>
-        <p style={{ color: 'var(--text-secondary)' }}>Chaves de API, integrações e preferências do negócio</p>
-      </div>
-
-      {/* ── Chaves de IA ─────────────────────────────────────── */}
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-          <Cpu size={20} color="var(--accent-primary)" />
-          <h3 style={{ fontWeight: 700 }}>Inteligência Artificial</h3>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>OpenAI API Key</label>
-            <div style={{ position: 'relative' }}>
-              <Key size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input type="password" {...inp({ paddingLeft: '36px' })} placeholder="sk-..." value={keys.openai} onChange={e => setKeys(k => ({ ...k, openai: e.target.value }))} />
-            </div>
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Anthropic API Key</label>
-            <div style={{ position: 'relative' }}>
-              <Key size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-              <input type="password" {...inp({ paddingLeft: '36px' })} placeholder="sk-ant-..." value={keys.claude} onChange={e => setKeys(k => ({ ...k, claude: e.target.value }))} />
-            </div>
-          </div>
-        </div>
-
+    <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Modelo Padrão</label>
-          <select {...inp()} value={keys.activeModel} onChange={e => setKeys(k => ({ ...k, activeModel: e.target.value }))}>
-            <option value="openai">OpenAI — GPT-4o</option>
-            <option value="openai-mini">OpenAI — GPT-4o mini</option>
-            <option value="openai-nano">OpenAI — GPT-4.1 nano ⚡</option>
-            <option value="claude">Anthropic — Claude 3.5 Sonnet</option>
-          </select>
+          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#fff' }}>Configurações</h2>
+          <p style={{ color: 'var(--text-secondary)' }}>Gerencie o cérebro e a logística da sua plataforma</p>
         </div>
-      </div>
-
-      {/* ── Google Calendar ───────────────────────────────────── */}
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-          <Calendar size={20} color="#3b82f6" />
-          <h3 style={{ fontWeight: 700 }}>Google Calendar</h3>
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px',
-            color: gcalStatus.connected ? '#10b981' : 'var(--text-muted)',
-            fontSize: '13px', fontWeight: 600 }}>
-            {gcalStatus.connected ? <CheckCircle size={15} /> : <XCircle size={15} />}
-            {gcalStatus.connected ? 'Conectado' : 'Desconectado'}
-          </div>
-        </div>
-        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '20px' }}>
-          Configure suas credenciais OAuth 2.0 do Google Cloud Console e clique em Conectar.{' '}
-          <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer"
-            style={{ color: '#3b82f6', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-            Abrir Google Cloud Console <ExternalLink size={12} />
-          </a>
-        </p>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Client ID</label>
-            <input {...inp()} placeholder="xxxxxxxx.apps.googleusercontent.com" value={gcal.clientId} onChange={e => setGcal(g => ({ ...g, clientId: e.target.value }))} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Client Secret</label>
-            <input type="password" {...inp()} placeholder="GOCSPX-..." value={gcal.clientSecret} onChange={e => setGcal(g => ({ ...g, clientSecret: e.target.value }))} />
-          </div>
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>
-            Hora do Sync automático (cron)
-          </label>
-          <select {...inp()} style={{ ...inp().style, width: '200px' }} value={gcal.syncHour} onChange={e => setGcal(g => ({ ...g, syncHour: parseInt(e.target.value) }))}>
-            {Array.from({ length: 24 }, (_, i) => (
-              <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Botões de conexão */}
-        {!gcalStatus.connected ? (
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <button className="btn btn-primary" onClick={handleConnect} disabled={!gcal.clientId || !gcal.clientSecret}
-              style={{ opacity: (!gcal.clientId || !gcal.clientSecret) ? 0.5 : 1 }}>
-              <Globe size={16} /> Conectar com Google
-            </button>
-            {(!gcal.clientId || !gcal.clientSecret) && (
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Preencha Client ID e Secret primeiro e salve</span>
-            )}
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {/* Seletor de calendário */}
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Calendário ativo</label>
-                <button className="btn btn-secondary" style={{ fontSize: '12px', padding: '5px 12px' }} onClick={loadCalendars} disabled={loadingCalendars}>
-                  <RefreshCw size={13} className={loadingCalendars ? 'animate-spin' : ''} />
-                  {loadingCalendars ? 'Carregando...' : 'Listar calendários'}
-                </button>
-              </div>
-
-              {calendars.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {calendars.map(c => (
-                    <div key={c.id} onClick={() => selectCalendar(c.id)} style={{
-                      padding: '10px 14px', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px',
-                      backgroundColor: gcalStatus.calendarId === c.id ? 'rgba(59,130,246,0.12)' : 'var(--bg-tertiary)',
-                      border: `1px solid ${gcalStatus.calendarId === c.id ? 'rgba(59,130,246,0.4)' : 'var(--border-color)'}`,
-                      transition: 'all 0.15s'
-                    }}>
-                      <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: gcalStatus.calendarId === c.id ? '#3b82f6' : 'var(--border-color)', flexShrink: 0 }} />
-                      <span style={{ fontWeight: gcalStatus.calendarId === c.id ? 700 : 400, fontSize: '14px' }}>{c.name}</span>
-                      {c.primary && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginLeft: 'auto' }}>Principal</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {gcalStatus.calendarId && calendars.length === 0 && (
-                <div style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
-                  Calendário selecionado: <strong style={{ color: 'var(--text-primary)' }}>{gcalStatus.calendarId}</strong>
-                </div>
-              )}
-            </div>
-
-            <button className="btn btn-secondary" style={{ color: '#ef4444', borderColor: 'rgba(239,68,68,0.2)', width: 'fit-content' }} onClick={handleDisconnect}>
-              <XCircle size={16} /> Desconectar Google Calendar
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* ── Configurações do Negócio ─────────────────────────── */}
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-          <Globe size={20} color="#10b981" />
-          <h3 style={{ fontWeight: 700 }}>Configurações do Negócio</h3>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Nome do Negócio</label>
-            <input {...inp()} placeholder="Ex: Confeitaria da Ana" value={business.businessName} onChange={e => setBusiness(b => ({ ...b, businessName: e.target.value }))} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>WhatsApp do Gestor (relatórios)</label>
-            <input {...inp()} placeholder="5511999999999@s.whatsapp.net" value={business.managerJid} onChange={e => setBusiness(b => ({ ...b, managerJid: e.target.value }))} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>WhatsApp da Cozinha (delivery)</label>
-            <input {...inp()} placeholder="5511999999999@s.whatsapp.net" value={business.deliveryJid} onChange={e => setBusiness(b => ({ ...b, deliveryJid: e.target.value }))} />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>Hora do relatório diário</label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <select {...inp()} style={{ ...inp().style, flex: 1 }} value={business.reportHour} onChange={e => setBusiness(b => ({ ...b, reportHour: parseInt(e.target.value) }))}>
-                {Array.from({ length: 24 }, (_, i) => (
-                  <option key={i} value={i}>{String(i).padStart(2, '0')}:00</option>
-                ))}
-              </select>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                <input type="checkbox" checked={business.reportEnabled} onChange={e => setBusiness(b => ({ ...b, reportEnabled: e.target.checked }))} />
-                Ativar
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ── Salvar ───────────────────────────────────────────── */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-        <button className="btn btn-primary" onClick={handleSaveKeys} disabled={loading}>
-          {loading ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Salvar Configurações</>}
+        <button
+          onClick={activeTab === 'schedules' ? handleSaveSlots : handleSave}
+          style={{ display: activeTab === 'marketing' ? 'none' : 'flex', alignItems: 'center', gap: '8px', padding: '12px 25px', borderRadius: '12px' }}
+          className="btn btn-primary"
+        >
+          <Save size={20} /> Salvar {activeTab === 'schedules' ? 'Horários' : 'Tudo'}
         </button>
       </div>
 
-      {/* ── Info de segurança ────────────────────────────────── */}
-      <div className="card" style={{ marginTop: '20px', border: '1px solid rgba(16,185,129,0.2)', backgroundColor: 'rgba(16,185,129,0.05)' }}>
-        <div style={{ display: 'flex', gap: '15px' }}>
-          <Shield size={24} color="var(--success)" />
-          <div>
-            <h4 style={{ color: 'var(--success)', marginBottom: '5px' }}>Segurança de Dados</h4>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
-              Suas chaves e tokens são armazenados localmente no banco de dados SQLite do servidor.
-              Nenhuma informação é enviada para servidores externos além das APIs configuradas.
-            </p>
-          </div>
+      <div style={{ display: 'flex', gap: '30px' }}>
+        <div style={{ width: '280px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {tabs.map(t => (
+            <button
+              key={t.id}
+              onClick={() => setActiveTab(t.id)}
+              style={{
+                ...tabStyle,
+                backgroundColor: activeTab === t.id ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                color: activeTab === t.id ? '#3b82f6' : 'var(--text-secondary)',
+                borderLeft: activeTab === t.id ? '4px solid #3b82f6' : '4px solid transparent'
+              }}
+            >
+              <t.icon size={20} /> {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="card" style={{ flex: 1, padding: '40px', borderRadius: '20px' }}>
+          {activeTab === 'business' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+              <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '10px' }}>
+                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Perfil do Negócio</h3>
+              </div>
+              <div>
+                <label style={labelStyle}>Nome Fantasia</label>
+                <input {...inp} value={settings.businessName} onChange={e => setSettings({ ...settings, businessName: e.target.value })} placeholder="Nome da sua loja" />
+              </div>
+              <div>
+                <label style={labelStyle}>Endereço Base (Para cálculo de KM)</label>
+                <input {...inp} value={settings.businessAddress} onChange={e => setSettings({ ...settings, businessAddress: e.target.value })} placeholder="Endereço onde as entregas saem" />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div>
+                  <label style={labelStyle}>🆔 ID / Número do Administrador</label>
+                  <input {...inp} value={settings.managerJid} onChange={e => setSettings({ ...settings, managerJid: e.target.value })} placeholder="Ex: 5521..." />
+                </div>
+                <div>
+                  <label style={labelStyle}>Capacidade de Pedidos/Dia</label>
+                  <input {...inp} type="number" value={settings.dailyMaxOrders} onChange={e => setSettings({ ...settings, dailyMaxOrders: parseInt(e.target.value) })} />
+                </div>
+              </div>
+              <div style={subCard}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                  <Bell size={20} color="#f59e0b" />
+                  <span style={{ fontWeight: 800 }}>Lembrete Automático de Retirada</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={microLabel}>Horas de antecedência para enviar o lembrete</label>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input {...inp} style={{ ...inp.style, width: '100px' }} type="number" value={settings.reminderHours} onChange={e => setSettings({ ...settings, reminderHours: parseInt(e.target.value) })} />
+                      <span style={{ fontWeight: 600, fontSize: '14px' }}>horas antes da retirada</span>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                    O sistema enviará uma mensagem automática ao cliente lembrando do horário agendado.
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'delivery' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+              <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '10px' }}>
+                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Logística & Google Maps</h3>
+              </div>
+
+              <div style={subCard}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                  <MapPin size={20} color="#3b82f6" />
+                  <span style={{ fontWeight: 800 }}>Chave API Google Maps</span>
+                </div>
+                <input {...inp} type="password" value={settings.googleApiKey} onChange={e => setSettings({ ...settings, googleApiKey: e.target.value })} placeholder="Chave do Google Cloud (Distance Matrix)" />
+              </div>
+
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <label style={{ ...labelStyle, marginBottom: 0 }}>Tabela de Preços por Distância</label>
+                  <button onClick={addDeliveryRule} style={smallLink}>+ Adicionar Faixa</button>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {settings.deliveryRules.length === 0 && <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>Nenhuma regra configurada. O frete será manual.</p>}
+                  {settings.deliveryRules.map((rule, idx) => (
+                    <div key={idx} style={ruleRow}>
+                      <span>Até</span>
+                      <input {...inp} style={smallInp} type="number" value={rule.maxKm} onChange={e => updateRule(idx, 'maxKm', e.target.value)} />
+                      <span>KM</span>
+                      <span style={{ marginLeft: '15px' }}>Taxa: R$</span>
+                      <input {...inp} style={smallInp} type="number" value={rule.fee} onChange={e => updateRule(idx, 'fee', e.target.value)} />
+                      <button onClick={() => setSettings(s => ({ ...s, deliveryRules: s.deliveryRules.filter((_, i) => i !== idx) }))} style={delBtn}>
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label style={labelStyle}>WhatsApp do Entregador (Notificações)</label>
+                <input {...inp} value={settings.deliveryJid} onChange={e => setSettings({ ...settings, deliveryJid: e.target.value })} placeholder="JID para aviso de delivery" />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'schedules' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+              <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '10px' }}>
+                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Horários de Funcionamento</h3>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Defina quando a Lily pode aceitar pedidos e as regras de retirada.</p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                {['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((day, idx) => {
+                  const slot = slots.find(s => s.dayOfWeek === idx);
+                  return (
+                    <div key={idx} style={{ ...ruleRow, gridTemplateColumns: '120px 1fr 1fr auto' }}>
+                      <span style={{ fontWeight: 700 }}>{day}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Abre:</label>
+                        <input
+                          {...inp}
+                          style={smallInp}
+                          type="time"
+                          value={slot?.startTime || '09:00'}
+                          onChange={e => {
+                            const newSlots = [...slots.filter(s => s.dayOfWeek !== idx), { dayOfWeek: idx, startTime: e.target.value, endTime: slot?.endTime || '20:00' }];
+                            setSlots(newSlots.sort((a, b) => a.dayOfWeek - b.dayOfWeek));
+                          }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Fecha:</label>
+                        <input
+                          {...inp}
+                          style={smallInp}
+                          type="time"
+                          value={slot?.endTime || '20:00'}
+                          onChange={e => {
+                            const newSlots = [...slots.filter(s => s.dayOfWeek !== idx), { dayOfWeek: idx, startTime: slot?.startTime || '09:00', endTime: e.target.value }];
+                            setSlots(newSlots.sort((a, b) => a.dayOfWeek - b.dayOfWeek));
+                          }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: slot ? '#3b82f6' : 'var(--text-muted)' }}>
+                          {slot ? 'ABERTO' : 'FECHADO'}
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (slot) {
+                              setSlots(slots.filter(s => s.dayOfWeek !== idx));
+                            } else {
+                              setSlots([...slots, { dayOfWeek: idx, startTime: '09:00', endTime: '20:00' }].sort((a, b) => a.dayOfWeek - b.dayOfWeek));
+                            }
+                          }}
+                          style={{
+                            width: '44px',
+                            height: '22px',
+                            backgroundColor: slot ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
+                            border: `1px solid ${slot ? '#3b82f6' : 'var(--border-color)'}`,
+                            borderRadius: '20px',
+                            position: 'relative',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s'
+                          }}
+                        >
+                          <div style={{
+                            width: '14px',
+                            height: '14px',
+                            backgroundColor: slot ? '#3b82f6' : 'var(--text-muted)',
+                            borderRadius: '50%',
+                            position: 'absolute',
+                            top: '3px',
+                            left: slot ? '25px' : '3px',
+                            transition: 'all 0.3s',
+                            boxShadow: slot ? '0 0 10px rgba(59, 130, 246, 0.5)' : 'none'
+                          }} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {activeTab === 'bot' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+              <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '10px' }}>
+                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Motores de Inteligência</h3>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '15px' }}>
+                <div>
+                  <label style={labelStyle}>Modelo de IA Ativo</label>
+                  <select {...inp} value={settings.activeModel} onChange={e => setSettings({ ...settings, activeModel: e.target.value })}>
+                    <option value="openai">OpenAI GPT-4o (Recomendado)</option>
+                    <option value="openai-mini">OpenAI GPT-4o Mini (Econômico)</option>
+                    <option value="openai-nano">OpenAI GPT-4.1 Nano</option>
+                    <option value="claude">Anthropic Claude 3.5 Sonnet</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '25px' }}>
+                  <input type="checkbox" checked={settings.reportEnabled} onChange={e => setSettings({ ...settings, reportEnabled: e.target.checked })} style={{ width: '18px', height: '18px' }} />
+                  <label style={{ fontSize: '14px', fontWeight: 600 }}>Ativar Relatório Diário por WhatsApp</label>
+                </div>
+              </div>
+
+              <div style={subCard}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                  <MessageSquare size={20} color="#10b981" />
+                  <span style={{ fontWeight: 800 }}>Chaves de API</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  <div>
+                    <label style={microLabel}>OpenAI API Key</label>
+                    <input {...inp} type="password" value={settings.openaiKey} onChange={e => setSettings({ ...settings, openaiKey: e.target.value })} placeholder="sk-..." />
+                  </div>
+                  <div>
+                    <label style={microLabel}>Anthropic (Claude) API Key</label>
+                    <input {...inp} type="password" value={settings.claudeKey} onChange={e => setSettings({ ...settings, claudeKey: e.target.value })} placeholder="sk-ant-..." />
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ ...subCard, borderLeftColor: '#f59e0b' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Calendar size={20} color="#f59e0b" />
+                    <span style={{ fontWeight: 800 }}>Google Calendar</span>
+                  </div>
+                  {settings.gcalRefreshToken ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10b981', fontSize: '13px', fontWeight: 800 }}>
+                        <CheckCircle2 size={16} /> CONECTADO
+                      </div>
+                      <button onClick={connectGoogle} style={{ ...smallLink, color: '#3b82f6', fontSize: '12px' }}>
+                        Reconectar
+                      </button>
+                      <button
+                        onClick={async () => {
+                          Swal.fire({
+                            title: 'Sincronizando...',
+                            text: 'Buscando eventos no Google Agenda',
+                            allowOutsideClick: false,
+                            didOpen: () => Swal.showLoading()
+                          });
+                          try {
+                            const res = await axios.post('http://localhost:3001/orders/calendar-sync');
+                            Swal.fire({ title: 'Sincronizado!', text: `${res.data.synced} eventos atualizados.`, icon: 'success', timer: 2000, showConfirmButton: false });
+                          } catch (err) {
+                            Swal.fire('Erro na Sincronização', err.response?.data?.error || 'Não foi possível conectar ao Google.', 'error');
+                          }
+                        }}
+                        style={{ ...smallLink, color: '#ef4444', fontSize: '12px' }}
+                      >
+                        Sincronizar Manualmente
+                      </button>
+                      <button
+                        onClick={async () => {
+                          try {
+                            await axios.post(API_DISCONNECT_GCAL);
+                            setSettings({ ...settings, gcalRefreshToken: '', gcalAccessToken: '', gcalCalendarId: '' });
+                            setCalendars([]);
+                            Swal.fire('Desconectado', 'Sua conta do Google foi removida.', 'info');
+                          } catch (err) {
+                            Swal.fire('Erro', 'Falha ao desconectar do Google.', 'error');
+                          }
+                        }}
+                        style={{ ...smallLink, color: '#ef4444', fontSize: '12px' }}
+                      >
+                        Desconectar
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={connectGoogle} style={{ ...smallLink, color: '#f59e0b', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <ExternalLink size={16} /> Conectar Google Agenda
+                    </button>
+                  )}
+                </div>
+
+                <label style={microLabel}>Agenda para Gravar Pedidos</label>
+                <select {...inp} value={settings.gcalCalendarId} onChange={e => setSettings({ ...settings, gcalCalendarId: e.target.value })}>
+                  <option value="" style={{ backgroundColor: '#18181b' }}>Selecione um calendário...</option>
+                  <option value="primary" style={{ backgroundColor: '#18181b' }}>Calendário Principal</option>
+                  {calendars.map(c => (
+                    <option key={c.id} value={c.id} style={{ backgroundColor: '#18181b' }}>{c.name}</option>
+                  ))}
+                </select>
+
+                <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div>
+                    <label style={microLabel}>Hora da Sincronização (H)</label>
+                    <input {...inp} type="number" value={settings.gcalSyncHour} onChange={e => setSettings({ ...settings, gcalSyncHour: parseInt(e.target.value) })} />
+                  </div>
+                  <div>
+                    <label style={microLabel}>Hora do Relatório (H)</label>
+                    <input {...inp} type="number" value={settings.reportHour} onChange={e => setSettings({ ...settings, reportHour: parseInt(e.target.value) })} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'marketing' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+              <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '10px' }}>
+                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Galeria de Mídias da Lily</h3>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '5px' }}>Envie aqui as fotos que a Lily usará para postar Stories no WhatsApp quando você pedir.</p>
+              </div>
+
+              {/* Upload */}
+              <div style={subCard}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                  <Upload size={20} color="#10b981" />
+                  <span style={{ fontWeight: 800 }}>Adicionar Nova Foto</span>
+                </div>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-end' }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={microLabel}>Nome (ex: "Vulcão Chocolate")</label>
+                    <input {...inp} value={uploadName} onChange={e => setUploadName(e.target.value)} placeholder="Nome que a Lily vai reconhecer" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <label style={microLabel}>Selecionar Imagem</label>
+                    <input ref={fileInputRef} type="file" accept="image/*" style={{ ...inp.style, padding: '10px', cursor: 'pointer' }} />
+                  </div>
+                  <button onClick={handleUploadAsset} className="btn btn-primary" style={{ padding: '14px 20px', borderRadius: '12px', whiteSpace: 'nowrap' }}>
+                    <Upload size={18} /> Subir Foto
+                  </button>
+                </div>
+              </div>
+
+              {/* Galeria */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '20px' }}>
+                {marketingAssets.length === 0 && (
+                  <p style={{ fontSize: '13px', color: 'var(--text-muted)', gridColumn: '1/-1', textAlign: 'center', padding: '30px' }}>Nenhuma foto na galeria ainda.</p>
+                )}
+                {marketingAssets.map(asset => (
+                  <div key={asset.id} style={{ borderRadius: '14px', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', position: 'relative' }}>
+                    <img
+                      src={`http://localhost:3001${asset.path}`}
+                      alt={asset.name}
+                      style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }}
+                    />
+                    <div style={{ padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{asset.name}</span>
+                      <button onClick={() => handleDeleteAsset(asset.id)} style={delBtn}><Trash2 size={16} /></button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </div>
   );
-}
+};
+
+// Styles
+const tabStyle = { display: 'flex', alignItems: 'center', gap: '15px', padding: '18px', borderRadius: '15px', border: 'none', fontWeight: 700, fontSize: '15px', cursor: 'pointer', transition: 'all 0.2s', textAlign: 'left', width: '100%' };
+const labelStyle = { display: 'block', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '10px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' };
+const microLabel = { display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 800 };
+const inp = { style: { width: '100%', padding: '14px 18px', borderRadius: '12px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '15px', outline: 'none', transition: 'border-color 0.2s' } };
+const subCard = { backgroundColor: 'rgba(255,255,255,0.03)', padding: '25px', borderRadius: '18px', borderLeft: '5px solid #3b82f6' };
+const ruleRow = { display: 'grid', gridTemplateColumns: 'auto 90px auto auto 100px auto', gap: '15px', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', padding: '15px 20px', borderRadius: '12px' };
+const smallInp = { ...inp.style, padding: '10px 15px', textAlign: 'center' };
+const smallLink = { border: 'none', background: 'none', color: '#3b82f6', fontWeight: 800, fontSize: '14px', cursor: 'pointer' };
+const delBtn = { background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: 'auto', padding: '5px' };
+
+export default Settings;

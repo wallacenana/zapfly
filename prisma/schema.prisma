@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -14,10 +14,10 @@ model Instance {
   color     String    @default("#3b82f6")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  botPrompt String?   @default("Você é um assistente virtual prestativo.")
-  knowledge String?   @default("[]")
-  flows     Flow[]
+  botPrompt String?   @default("Você é um assistente virtual prestativo.") @db.Text
+  knowledge String?   @default("[]") @db.LongText
   chats     Chat[]
+  flows     Flow[]
   messages  Message[]
 }
 
@@ -26,25 +26,26 @@ model Flow {
   name       String
   trigger    String    @default("whatsapp.inbound")
   status     String    @default("Rascunho")
-  data       String
+  data       String    @db.LongText
   instanceId String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
   instance   Instance? @relation(fields: [instanceId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
 }
 
 model Chat {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   instanceId  String
   jid         String
   name        String?
-  unreadCount Int      @default(0)
+  unreadCount Int       @default(0)
   lastMsg     String?
   lastMsgTime String?
-  aiEnabled   Boolean  @default(false)
-  isGroup     Boolean  @default(false)
-  updatedAt   DateTime @updatedAt
-  instance    Instance @relation(fields: [instanceId], references: [id])
+  aiEnabled   Boolean   @default(false)
+  adminJid    String?
+  isGroup     Boolean   @default(false)
+  updatedAt   DateTime  @updatedAt
+  instance    Instance  @relation(fields: [instanceId], references: [id])
   messages    Message[]
 
   @@unique([instanceId, jid])
@@ -55,7 +56,7 @@ model Message {
   msgId             String   @unique
   instanceId        String
   jid               String
-  text              String
+  text              String   @db.Text
   fromMe            Boolean
   participant       String?
   senderName        String?
@@ -63,18 +64,18 @@ model Message {
   quotedParticipant String?
   timestamp         DateTime @default(now())
   status            String   @default("sent")
-  instance          Instance @relation(fields: [instanceId], references: [id])
   chat              Chat     @relation(fields: [instanceId, jid], references: [instanceId, jid])
+  instance          Instance @relation(fields: [instanceId], references: [id])
 
   @@index([instanceId, jid])
 }
 
-// Agendamentos / Pedidos
 model Order {
   id              String   @id @default(cuid())
   instanceId      String
   clientName      String?
   clientJid       String?
+  productId       String?
   product         String
   quantity        String?
   notes           String?
@@ -85,10 +86,12 @@ model Order {
   type            String   @default("order")
   deliveryAddress String?
   forwardedTo     String?
+  reminderSent    Boolean  @default(false)
+  totalValue      Float    @default(0)
   createdAt       DateTime @default(now())
+  productRelation Product? @relation(fields: [productId], references: [id])
 }
 
-// Estoque
 model StockItem {
   id          String       @id @default(cuid())
   name        String
@@ -99,22 +102,30 @@ model StockItem {
 }
 
 model Product {
-  id          String       @id @default(cuid())
-  name        String
-  unit        String       @default("unidade")
-  ingredients Ingredient[]
+  id           String       @id @default(cuid())
+  name         String
+  type         String       @default("encomenda")
+  unit         String       @default("unidade")
+  price        Float        @default(0)
+  stock        Int          @default(0)
+  capacityCost Int          @default(1)
+  prepTime     Int          @default(30)
+  description  String?
+  variations   String?      @default("[]") @db.Text
+  comboItems   String?      @default("[]") @db.Text
+  ingredients  Ingredient[]
+  orders       Order[]
 }
 
 model Ingredient {
   id          String    @id @default(cuid())
   productId   String
-  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
   stockItemId String
-  stockItem   StockItem @relation(fields: [stockItemId], references: [id])
   quantityPer Float
+  stockItem   StockItem @relation(fields: [stockItemId], references: [id])
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 }
 
-// Disponibilidade de horários
 model AvailableSlot {
   id        String @id @default(cuid())
   dayOfWeek Int
@@ -123,7 +134,6 @@ model AvailableSlot {
   maxOrders Int    @default(3)
 }
 
-// Cache local dos eventos do Google Calendar
 model CalendarEvent {
   id          String   @id
   title       String
@@ -134,7 +144,6 @@ model CalendarEvent {
   syncedAt    DateTime @default(now())
 }
 
-// Legado
 model CakeOrder {
   id           Int      @id @default(autoincrement())
   clientName   String
@@ -146,23 +155,48 @@ model CakeOrder {
 }
 
 model Setting {
-  id              String  @id @default("global")
-  openaiKey       String?
-  claudeKey       String?
-  activeModel     String  @default("openai")
-  // Google Calendar OAuth
-  gcalEnabled     Boolean @default(false)
-  gcalClientId    String?
-  gcalClientSecret String?
-  gcalAccessToken  String?
-  gcalRefreshToken String?
-  gcalTokenExpiry  String?
-  gcalCalendarId  String?
-  gcalSyncHour    Int     @default(6)
-  // Negócio
-  businessName    String?
-  managerJid      String?
-  deliveryJid     String?
-  reportEnabled   Boolean @default(false)
-  reportHour      Int     @default(7)
+  id                 String  @id @default("global")
+  openaiKey          String? @db.Text
+  claudeKey          String? @db.Text
+  activeModel        String  @default("openai")
+  gcalEnabled        Boolean @default(false)
+  gcalClientId       String? @db.Text
+  gcalClientSecret   String? @db.Text
+  gcalAccessToken    String? @db.Text
+  gcalRefreshToken   String? @db.Text
+  gcalTokenExpiry    String? @db.Text
+  gcalCalendarId     String?
+  gcalSyncHour       Int     @default(6)
+  businessName       String?
+  businessAddress    String?
+  businessLocation   String?
+  googleApiKey       String? @default("")
+  deliveryRules      String? @default("[]") @db.Text // JSON: [{ maxKm: 3, fee: 5 }]
+  managerJid         String?
+  deliveryJid        String?
+  dailyMaxOrders     Int     @default(10)
+  maxDeliveryKm      Float   @default(15.0)
+  dailyDeliveryItems String? @default("[]") @db.Text
+  reportEnabled      Boolean @default(false)
+  reportHour         Int     @default(7)
+  reminderHours      Int     @default(2)
+}
+
+model MarketingAsset {
+  id        String   @id @default(uuid())
+  name      String   // Nome que você usará para pedir à Lily (ex: "Vulcão")
+  path      String   // Caminho da imagem no servidor
+  createdAt DateTime @default(now())
+}
+
+model FlowState {
+  id            String    @id @default(uuid())
+  instanceId    String
+  jid           String
+  flowId        String
+  currentNodeId String
+  resumeAt      DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([instanceId, jid])
 }

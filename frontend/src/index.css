@@ -103,6 +103,7 @@ h1, h2, h3, h4 {
   flex: 1;
   margin-left: var(--sidebar-width);
   padding: 0;
+  overflow: hidden;
 }
 
 .header {
@@ -246,6 +247,7 @@ h1, h2, h3, h4 {
 /* Scrollbar Customization */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -264,4 +266,17 @@ h1, h2, h3, h4 {
 /* Table Utilities */
 table tr:hover {
   background-color: rgba(255, 255, 255, 0.02);
+}
+
+.kanban-container::-webkit-scrollbar {
+  height: 12px;
+}
+
+.kanban-container::-webkit-scrollbar-thumb {
+  background: var(--accent-primary);
+  border: 3px solid var(--bg-primary);
+}
+
+.kanban-container::-webkit-scrollbar-thumb:hover {
+  background: #2563eb;
 }

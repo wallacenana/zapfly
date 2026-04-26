@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Calendar, Plus, RefreshCw, CheckCircle, Clock, XCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Plus, RefreshCw, CheckCircle, Clock, XCircle, ChevronLeft, ChevronRight, Package, Truck } from 'lucide-react';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 import ReactDOM from 'react-dom';
@@ -7,26 +7,76 @@ import ReactDOM from 'react-dom';
 const API = 'http://localhost:3001/orders';
 
 const STATUS_CONFIG = {
-  pending:   { label: 'Pendente',   color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',   icon: Clock },
-  confirmed: { label: 'Confirmado', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)',   icon: CheckCircle },
-  done:      { label: 'Concluído',  color: '#10b981', bg: 'rgba(16,185,129,0.1)',   icon: CheckCircle },
-  cancelled: { label: 'Cancelado',  color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    icon: XCircle },
+  pending:    { label: 'Pendente',       color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',   icon: Clock },
+  production: { label: 'Em Produção',    color: '#3b82f6', bg: 'rgba(59,130,246,0.1)',   icon: Package },
+  ready:      { label: 'Pronto/Entrega', color: '#10b981', bg: 'rgba(16,185,129,0.1)',   icon: Truck },
+  completed:  { label: 'Finalizado',     color: '#6b7280', bg: 'rgba(107,114,128,0.1)',  icon: CheckCircle },
+  cancelled:  { label: 'Cancelado',      color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    icon: XCircle },
 };
 
 const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
 function toDateStr(date) {
-  return date.toISOString().split('T')[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 function OrderModal({ onClose, onSaved, date }) {
+  const [activeTab, setActiveTab] = useState('order'); // 'order' ou 'delivery'
+  const [products, setProducts] = useState([]);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [variations, setVariations] = useState([]);
   const [form, setForm] = useState({
-    clientName: '', clientJid: '', product: '', quantity: '',
-    notes: '', scheduledDate: date || toDateStr(new Date()), scheduledTime: '09:00', type: 'order', deliveryAddress: ''
+    clientName: '', clientJid: '', product: '', productId: '', quantity: '1',
+    notes: '', scheduledDate: date || toDateStr(new Date()), scheduledTime: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }), 
+    type: 'order', deliveryAddress: '', paymentMethod: '', variation: '', totalValue: 0
   });
   const [availability, setAvailability] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setForm(f => ({ ...f, type: activeTab }));
+  }, [activeTab]);
+
+  useEffect(() => {
+    axios.get('http://localhost:3001/orders/products').then(res => setProducts(res.data));
+  }, []);
+
+  const handleProductChange = (e) => {
+    const p = products.find(prod => prod.id === e.target.value);
+    setSelectedProduct(p);
+    
+    if (p) {
+      const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
+      setVariations(vars);
+      
+      if (vars.length === 0) {
+        setForm(f => ({ ...f, productId: p.id, product: p.name, variation: '', totalValue: p.price * (parseFloat(f.quantity) || 1) }));
+      } else {
+        setForm(f => ({ ...f, productId: p.id, product: p.name, variation: '', totalValue: 0 }));
+      }
+    } else {
+      setVariations([]);
+      setForm(f => ({ ...f, productId: '', product: '', variation: '', totalValue: 0 }));
+    }
+  };
+
+  const handleVariationChange = (e) => {
+    const vName = e.target.value;
+    const v = variations.find(varItem => varItem.name === vName);
+    if (v && selectedProduct) {
+      const price = v.price || selectedProduct.price || 0;
+      setForm(f => ({ 
+        ...f, 
+        variation: vName, 
+        product: `${selectedProduct.name} (${vName})`,
+        totalValue: price * (parseFloat(f.quantity) || 1)
+      }));
+    }
+  };
 
   const checkAvailability = useCallback(async () => {
     if (!form.scheduledDate || !form.scheduledTime) return;
@@ -40,11 +90,17 @@ function OrderModal({ onClose, onSaved, date }) {
 
   const handleSubmit = async () => {
     if (!form.product || !form.scheduledDate || !form.scheduledTime) {
-      return Swal.fire({ icon: 'warning', title: 'Preencha produto, data e horário.', background: '#18181b', color: '#f4f4f5' });
+      return Swal.fire({ icon: 'warning', title: 'Preencha os campos obrigatórios.', background: '#18181b', color: '#f4f4f5' });
     }
-    if (availability && !availability.available) {
+    
+    if (variations.length > 0 && !form.variation) {
+      return Swal.fire({ icon: 'warning', title: 'Por favor, selecione o tamanho/variação.', background: '#18181b', color: '#f4f4f5' });
+    }
+
+    if (activeTab === 'order' && availability && !availability.available) {
       return Swal.fire({ icon: 'error', title: availability.reason, background: '#18181b', color: '#f4f4f5' });
     }
+
     setLoading(true);
     try {
       await axios.post(API, form);
@@ -55,82 +111,139 @@ function OrderModal({ onClose, onSaved, date }) {
     } finally { setLoading(false); }
   };
 
-  const inp = { style: { width: '100%', padding: '10px 14px', borderRadius: '8px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '14px' } };
+  const filteredProducts = activeTab === 'delivery' 
+    ? products.filter(p => p.type === 'delivery') 
+    : products;
+
+  const inp = { style: { width: '100%', padding: '12px 14px', borderRadius: '10px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '14px', outline: 'none' } };
+
+  const tabStyle = (id) => ({
+    flex: 1, padding: '12px', textAlign: 'center', cursor: 'pointer', fontWeight: 800, fontSize: '13px',
+    backgroundColor: activeTab === id ? 'var(--bg-tertiary)' : 'transparent',
+    color: activeTab === id ? '#fff' : 'var(--text-muted)',
+    borderBottom: activeTab === id ? '3px solid ' + (id === 'delivery' ? '#3b82f6' : '#f59e0b') : '3px solid transparent',
+    transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+  });
 
   return ReactDOM.createPortal(
-    <div style={{ position:'fixed', inset:0, backgroundColor:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999, backdropFilter:'blur(5px)' }}>
-      <div className="card" style={{ width: '500px', padding: '30px', maxHeight: '90vh', overflowY: 'auto' }}>
-        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'24px' }}>
-          <h3 style={{ fontSize:'20px', fontWeight:700 }}>Novo Pedido / Agendamento</h3>
-          <button className="btn-icon" onClick={onClose}>✕</button>
+    <div style={{ position:'fixed', inset:0, backgroundColor:'rgba(0,0,0,0.9)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999, backdropFilter:'blur(8px)' }}>
+      <div className="card" style={{ width: '550px', padding: '0', maxHeight: '95vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', border: '1px solid var(--border-color)' }}>
+        
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+          <div style={tabStyle('delivery')} onClick={() => setActiveTab('delivery')}>
+            <Truck size={18} /> PRONTA ENTREGA
+          </div>
+          <div style={tabStyle('order')} onClick={() => setActiveTab('order')}>
+            <Package size={18} /> ENCOMENDA AGENDADA
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', padding: '0 20px', cursor: 'pointer' }}>✕</button>
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px', marginBottom:'16px' }}>
-          <div>
-            <label style={{ display:'block', fontSize:'12px', color:'var(--text-secondary)', marginBottom:'6px', fontWeight:600 }}>Cliente</label>
-            <input {...inp} placeholder="Nome do cliente" value={form.clientName} onChange={e => setForm(f => ({...f, clientName: e.target.value}))} />
+        <div style={{ padding: '30px', overflowY: 'auto' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'16px', marginBottom:'20px' }}>
+            <div>
+              <label style={{ display:'block', fontSize:'11px', color:'var(--text-muted)', marginBottom:'6px', fontWeight:700, textTransform:'uppercase' }}>Cliente</label>
+              <input {...inp} placeholder="Nome do cliente" value={form.clientName} onChange={e => setForm(f => ({...f, clientName: e.target.value}))} />
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:'11px', color:'var(--text-muted)', marginBottom:'6px', fontWeight:700, textTransform:'uppercase' }}>WhatsApp</label>
+              <input {...inp} placeholder="5511999999999" value={form.clientJid} onChange={e => setForm(f => ({...f, clientJid: e.target.value}))} />
+            </div>
           </div>
-          <div>
-            <label style={{ display:'block', fontSize:'12px', color:'var(--text-secondary)', marginBottom:'6px', fontWeight:600 }}>WhatsApp</label>
-            <input {...inp} placeholder="5511999999999" value={form.clientJid} onChange={e => setForm(f => ({...f, clientJid: e.target.value}))} />
+
+          <div style={{ display: 'grid', gridTemplateColumns: variations.length > 0 ? '1fr 1fr' : '1fr', gap: '16px', marginBottom: '20px' }}>
+            <div>
+              <label style={{ display:'block', fontSize:'11px', color:'var(--text-muted)', marginBottom:'6px', fontWeight:700, textTransform:'uppercase' }}>Produto</label>
+              <select {...inp} value={form.productId} onChange={handleProductChange}>
+                <option value="">Escolha um produto...</option>
+                {filteredProducts.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {variations.length > 0 && (
+              <div>
+                <label style={{ display:'block', fontSize:'11px', color:'var(--text-muted)', marginBottom:'6px', fontWeight:700, textTransform:'uppercase' }}>Tamanho / Variação</label>
+                <select {...inp} value={form.variation} onChange={handleVariationChange}>
+                  <option value="">Selecione...</option>
+                  {variations.map((v, idx) => (
+                    <option key={idx} value={v.name}>{v.name} — R$ {v.price?.toFixed(2)}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
-        </div>
 
-        <div style={{ marginBottom:'16px' }}>
-          <label style={{ display:'block', fontSize:'12px', color:'var(--text-secondary)', marginBottom:'6px', fontWeight:600 }}>Produto / Serviço *</label>
-          <input {...inp} placeholder="Ex: Bolo de chocolate 2kg" value={form.product} onChange={e => setForm(f => ({...f, product: e.target.value}))} />
-        </div>
-
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'16px', marginBottom:'16px' }}>
-          <div>
-            <label style={{ display:'block', fontSize:'12px', color:'var(--text-secondary)', marginBottom:'6px', fontWeight:600 }}>Quantidade</label>
-            <input {...inp} placeholder="Ex: 2kg" value={form.quantity} onChange={e => setForm(f => ({...f, quantity: e.target.value}))} />
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'16px', marginBottom:'20px' }}>
+            <div>
+              <label style={{ display:'block', fontSize:'11px', color:'var(--text-muted)', marginBottom:'6px', fontWeight:700, textTransform:'uppercase' }}>Quantidade</label>
+              <input {...inp} type="number" min="1" value={form.quantity} onChange={e => {
+                  const q = e.target.value;
+                  setForm(f => ({...f, quantity: q, totalValue: (f.totalValue / (parseFloat(f.quantity) || 1)) * (parseFloat(q) || 1)}));
+                }} 
+              />
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:'11px', color:'var(--text-muted)', marginBottom:'6px', fontWeight:700, textTransform:'uppercase' }}>Data</label>
+              <input {...inp} type="date" value={form.scheduledDate} onChange={e => setForm(f => ({...f, scheduledDate: e.target.value}))} />
+            </div>
+            <div>
+              <label style={{ display:'block', fontSize:'11px', color:'var(--text-muted)', marginBottom:'6px', fontWeight:700, textTransform:'uppercase' }}>Horário</label>
+              <input {...inp} type="time" value={form.scheduledTime} onChange={e => setForm(f => ({...f, scheduledTime: e.target.value}))} />
+            </div>
           </div>
-          <div>
-            <label style={{ display:'block', fontSize:'12px', color:'var(--text-secondary)', marginBottom:'6px', fontWeight:600 }}>Data *</label>
-            <input {...inp} type="date" value={form.scheduledDate} onChange={e => setForm(f => ({...f, scheduledDate: e.target.value}))} />
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '20px' }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)' }}>VALOR TOTAL:</span>
+            <span style={{ fontSize: '20px', fontWeight: 900, color: '#10b981' }}>R$ {form.totalValue?.toFixed(2) || '0.00'}</span>
           </div>
-          <div>
-            <label style={{ display:'block', fontSize:'12px', color:'var(--text-secondary)', marginBottom:'6px', fontWeight:600 }}>Horário *</label>
-            <input {...inp} type="time" value={form.scheduledTime} onChange={e => setForm(f => ({...f, scheduledTime: e.target.value}))} />
+
+          {availability && (
+            <div style={{ padding:'12px', borderRadius:'10px', marginBottom:'20px',
+              backgroundColor: availability.available ? 'rgba(16,185,129,0.05)' : 'rgba(239,68,68,0.05)',
+              border: `1px solid ${availability.available ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
+              color: availability.available ? '#10b981' : '#ef4444', fontSize:'13px', fontWeight:700, display: 'flex', gap: '8px', alignItems: 'center'
+            }}>
+              {availability.available ? '✓ Horário Disponível' : `✗ ${availability.reason}`}
+              {activeTab === 'delivery' && !availability.available && <span style={{ fontSize: '10px', opacity: 0.7 }}>(Permitido p/ Delivery)</span>}
+            </div>
+          )}
+
+          {activeTab === 'delivery' && (
+            <div style={{ marginBottom:'20px' }}>
+              <label style={{ display:'block', fontSize:'11px', color:'var(--text-muted)', marginBottom:'6px', fontWeight:700, textTransform:'uppercase' }}>Endereço de Entrega</label>
+              <input {...inp} placeholder="Rua, número, bairro..." value={form.deliveryAddress} onChange={e => setForm(f => ({...f, deliveryAddress: e.target.value}))} />
+            </div>
+          )}
+
+          <div style={{ marginBottom:'20px' }}>
+            <label style={{ display:'block', fontSize:'11px', color:'var(--text-muted)', marginBottom:'6px', fontWeight:700, textTransform:'uppercase' }}>Forma de Pagamento</label>
+            <select {...inp} value={form.paymentMethod} onChange={e => setForm(f => ({...f, paymentMethod: e.target.value}))}>
+              <option value="">Selecione...</option>
+              <option value="Pix">Pix</option>
+              <option value="Cartão de Crédito">Cartão de Crédito</option>
+              <option value="Cartão de Débito">Cartão de Débito</option>
+              <option value="Dinheiro">Dinheiro</option>
+            </select>
           </div>
-        </div>
 
-        {availability && (
-          <div style={{ padding:'10px 14px', borderRadius:'8px', marginBottom:'16px',
-            backgroundColor: availability.available ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-            border: `1px solid ${availability.available ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`,
-            color: availability.available ? '#10b981' : '#ef4444', fontSize:'13px', fontWeight:600
-          }}>
-            {availability.available ? '✓ Horário disponível' : `✗ ${availability.reason}`}
+          <div style={{ marginBottom:'30px' }}>
+            <label style={{ display:'block', fontSize:'11px', color:'var(--text-muted)', marginBottom:'6px', fontWeight:700, textTransform:'uppercase' }}>Observações</label>
+            <textarea {...inp} rows={2} placeholder="Algum detalhe especial?" value={form.notes} onChange={e => setForm(f => ({...f, notes: e.target.value}))} style={{...inp.style, resize:'none'}} />
           </div>
-        )}
 
-        <div style={{ marginBottom:'16px' }}>
-          <label style={{ display:'block', fontSize:'12px', color:'var(--text-secondary)', marginBottom:'6px', fontWeight:600 }}>Tipo</label>
-          <select {...inp} value={form.type} onChange={e => setForm(f => ({...f, type: e.target.value}))}>
-            <option value="order">Encomenda</option>
-            <option value="delivery">Delivery</option>
-          </select>
-        </div>
-
-        {form.type === 'delivery' && (
-          <div style={{ marginBottom:'16px' }}>
-            <label style={{ display:'block', fontSize:'12px', color:'var(--text-secondary)', marginBottom:'6px', fontWeight:600 }}>Endereço de entrega</label>
-            <input {...inp} placeholder="Rua, número, bairro..." value={form.deliveryAddress} onChange={e => setForm(f => ({...f, deliveryAddress: e.target.value}))} />
+          <div style={{ display:'flex', gap:'12px' }}>
+            <button className="btn btn-secondary" style={{ flex:1, padding: '14px' }} onClick={onClose}>Cancelar</button>
+            <button 
+              className="btn btn-primary" 
+              style={{ flex:1, padding: '14px', backgroundColor: activeTab === 'delivery' ? '#3b82f6' : '#f59e0b' }} 
+              onClick={handleSubmit} 
+              disabled={loading}
+            >
+              {loading ? 'Processando...' : activeTab === 'delivery' ? 'Lançar Delivery' : 'Confirmar Encomenda'}
+            </button>
           </div>
-        )}
-
-        <div style={{ marginBottom:'24px' }}>
-          <label style={{ display:'block', fontSize:'12px', color:'var(--text-secondary)', marginBottom:'6px', fontWeight:600 }}>Observações</label>
-          <textarea {...inp} rows={3} placeholder="Detalhes adicionais..." value={form.notes} onChange={e => setForm(f => ({...f, notes: e.target.value}))} style={{...inp.style, resize:'vertical'}} />
-        </div>
-
-        <div style={{ display:'flex', gap:'12px' }}>
-          <button className="btn btn-secondary" style={{ flex:1 }} onClick={onClose}>Cancelar</button>
-          <button className="btn btn-primary" style={{ flex:1 }} onClick={handleSubmit} disabled={loading || (availability && !availability.available)}>
-            {loading ? 'Salvando...' : 'Criar Pedido'}
-          </button>
         </div>
       </div>
     </div>,
@@ -154,10 +267,15 @@ function OrderCard({ order, onUpdate }) {
           <div style={{ fontWeight:700, fontSize:'15px' }}>{order.product}</div>
           {order.quantity && <div style={{ fontSize:'12px', color:'var(--text-muted)' }}>{order.quantity}</div>}
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'4px 10px', borderRadius:'20px',
-          backgroundColor: cfg.bg, color: cfg.color, fontSize:'11px', fontWeight:700 }}>
-          <Icon size={12} />
-          {cfg.label}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'4px 10px', borderRadius:'20px',
+            backgroundColor: cfg.bg, color: cfg.color, fontSize:'11px', fontWeight:700 }}>
+            <Icon size={12} />
+            {cfg.label}
+          </div>
+          <div style={{ fontSize: '16px', fontWeight: 800, color: '#fff' }}>
+            R$ {order.totalValue?.toFixed(2) || '0.00'}
+          </div>
         </div>
       </div>
 
@@ -173,12 +291,15 @@ function OrderCard({ order, onUpdate }) {
 
       <div style={{ display:'flex', gap:'8px', paddingTop:'8px', borderTop:'1px solid var(--border-color)' }}>
         {order.status === 'pending' && (
-          <button className="btn btn-secondary" style={{ flex:1, fontSize:'12px', padding:'6px' }} onClick={() => changeStatus('confirmed')}>Confirmar</button>
+          <button className="btn btn-secondary" style={{ flex:1, fontSize:'12px', padding:'6px' }} onClick={() => changeStatus('production')}>Iniciar Produção</button>
         )}
-        {order.status === 'confirmed' && (
-          <button className="btn btn-secondary" style={{ flex:1, fontSize:'12px', padding:'6px', color:'#10b981' }} onClick={() => changeStatus('done')}>Concluir</button>
+        {order.status === 'production' && (
+          <button className="btn btn-secondary" style={{ flex:1, fontSize:'12px', padding:'6px', color:'#10b981' }} onClick={() => changeStatus('ready')}>Marcar Pronto</button>
         )}
-        {order.status !== 'cancelled' && order.status !== 'done' && (
+        {order.status === 'ready' && (
+          <button className="btn btn-secondary" style={{ flex:1, fontSize:'12px', padding:'6px', color:'#6b7280' }} onClick={() => changeStatus('completed')}>Finalizar</button>
+        )}
+        {order.status !== 'cancelled' && order.status !== 'completed' && (
           <button className="btn btn-secondary" style={{ fontSize:'12px', padding:'6px', color:'#ef4444' }} onClick={() => changeStatus('cancelled')}>Cancelar</button>
         )}
       </div>
@@ -263,7 +384,15 @@ export default function Agenda() {
     setSyncing(true);
     try {
       const res = await axios.post(`${API}/calendar-sync`);
-      Swal.fire({ icon:'success', title:`${res.data.synced} eventos sincronizados!`, background:'#18181b', color:'#f4f4f5', timer:2000, showConfirmButton:false });
+      Swal.fire({ 
+        icon:'success', 
+        title: 'Sincronização Concluída!', 
+        html: `<div style="text-align:center">${res.data.synced} eventos recebidos<br/>${res.data.pushed} pedidos enviados</div>`,
+        background:'#18181b', 
+        color:'#f4f4f5', 
+        timer:3000, 
+        showConfirmButton:false 
+      });
       fetchAll();
     } catch {
       Swal.fire({ icon:'error', title:'Verifique as credenciais do Google Calendar nas Configurações.', background:'#18181b', color:'#f4f4f5' });
@@ -347,7 +476,7 @@ export default function Agenda() {
               </span>
             </h3>
             <div style={{ display:'flex', gap:'8px' }}>
-              {['all','pending','confirmed','done','cancelled'].map(s => (
+              {['all','pending','production','ready','completed','cancelled'].map(s => (
                 <button key={s} onClick={() => setFilterStatus(s)} style={{
                   padding:'5px 12px', borderRadius:'20px', fontSize:'12px', fontWeight:600, cursor:'pointer', border:'none',
                   backgroundColor: filterStatus === s ? 'var(--accent-primary)' : 'var(--bg-tertiary)',

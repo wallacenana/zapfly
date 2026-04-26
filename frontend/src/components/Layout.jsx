@@ -1,16 +1,59 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, GitMerge, MessageSquare, Megaphone, Users, Calendar, Settings, Smartphone, Bot, PackageOpen } from 'lucide-react';
+import { LayoutDashboard, GitMerge, MessageSquare, Megaphone, Users, Calendar, Settings, Smartphone, Bot, PackageOpen, BellRing } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 
 const Layout = () => {
   const location = useLocation();
-  
+  const audioRef = useRef(null);
+  const [hasPendingDelivery, setHasPendingDelivery] = useState(false);
+
+  // ─── ALERTA GLOBAL DE DELIVERY ─────────────────────────────────────────────
+  useEffect(() => {
+    // Cria o elemento de áudio uma única vez
+    audioRef.current = new Audio('/alarm.wav');
+    audioRef.current.loop = true;
+
+    const checkDeliveries = async () => {
+      try {
+        const res = await axios.get('http://localhost:3001/orders');
+        const pendingDeliveries = res.data.filter(o => o.status === 'pending' && o.type === 'delivery');
+        const has = pendingDeliveries.length > 0;
+        setHasPendingDelivery(has);
+
+        if (has) {
+          audioRef.current.play().catch(() => { });
+        } else {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+        }
+      } catch (err) {
+        // silencioso
+      }
+    };
+
+    checkDeliveries();
+    const interval = setInterval(checkDeliveries, 10000);
+
+    return () => {
+      clearInterval(interval);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
+    };
+  }, []);
+
   const isChatPage = location.pathname.includes('/chat');
-  
+  const isFlowEditorPage = location.pathname.includes('/flows/') && location.pathname !== '/flows';
+  const isFullScreenPage = isChatPage || isFlowEditorPage;
+
   const getPageTitle = () => {
     const path = location.pathname;
     if (path.includes('/dashboard')) return 'Dashboard';
     if (path.includes('/flows')) return 'Fluxos de Automação';
     if (path.includes('/agenda')) return 'Agenda de Pedidos';
+    if (path.includes('/kanban')) return 'Produção (Kanban)';
     if (path.includes('/estoque')) return 'Estoque & Disponibilidade';
     if (path.includes('/connections')) return 'Conexões / Números';
     if (path.includes('/settings')) return 'Configurações';
@@ -22,10 +65,10 @@ const Layout = () => {
     <div className="app-container">
       <aside className="sidebar">
         <div className="sidebar-header">
-          <div style={{ 
-            width: '32px', 
-            height: '32px', 
-            borderRadius: '8px', 
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '8px',
             background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
             display: 'flex',
             alignItems: 'center',
@@ -36,66 +79,79 @@ const Layout = () => {
           </div>
           <span style={{ letterSpacing: '-0.02em' }}>ZAP Fly</span>
         </div>
-        
+
         <nav className="sidebar-nav">
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', margin: '10px 0 10px 15px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Principal</div>
-          
-          <NavLink to="/dashboard" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+
+          <NavLink to="/dashboard" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
             <LayoutDashboard size={18} />
             Dashboard
           </NavLink>
 
-          <NavLink to="/chat" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+          <NavLink to="/chat" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
             <MessageSquare size={18} />
             Atendimento
           </NavLink>
 
-          <NavLink to="/prompts" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+          <NavLink to="/prompts" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
             <Bot size={18} />
             Prompts da IA
           </NavLink>
-          
-          <NavLink to="/flows" className={({isActive}) => isActive || location.pathname.includes('/flows') ? "nav-item active" : "nav-item"}>
+
+          <NavLink to="/flows" className={({ isActive }) => isActive || location.pathname.includes('/flows') ? "nav-item active" : "nav-item"}>
             <GitMerge size={18} />
             Fluxos Automáticos
           </NavLink>
-          
-          <NavLink to="/agenda" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+
+          <NavLink to="/agenda" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
             <Calendar size={18} />
             Agenda de Pedidos
           </NavLink>
 
-          <NavLink to="/estoque" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+          <NavLink to="/kanban" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} style={{ position: 'relative' }}>
+            <LayoutDashboard size={18} />
+            Produção (Kanban)
+            {hasPendingDelivery && (
+              <span style={{
+                position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
+                width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#ef4444',
+                boxShadow: '0 0 8px #ef4444',
+                animation: 'pulse 1.2s infinite'
+              }} />
+            )}
+          </NavLink>
+
+          <NavLink to="/estoque" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
             <PackageOpen size={18} />
-            Estoque & Receitas
+            Estoque & Delivery
           </NavLink>
 
           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', margin: '25px 0 10px 15px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Configurações</div>
 
-          <NavLink to="/connections" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+          <NavLink to="/connections" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
             <Smartphone size={18} />
             Conexões / WhatsApp
           </NavLink>
-          
-          <NavLink to="/settings" className={({isActive}) => isActive ? "nav-item active" : "nav-item"}>
+
+          <NavLink to="/settings" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
             <Settings size={18} />
             Ajustes do Sistema
           </NavLink>
         </nav>
 
         <div style={{ marginTop: 'auto', padding: '15px', borderTop: '1px solid var(--border-color)' }}>
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
             gap: '12px',
             padding: '8px',
             borderRadius: '12px',
             backgroundColor: 'var(--bg-tertiary)'
           }}>
-            <div style={{ 
-              width: '32px', 
-              height: '32px', 
-              borderRadius: '50%', 
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
               background: 'linear-gradient(45deg, #71717a, #3f3f46)',
               display: 'flex',
               alignItems: 'center',
@@ -112,12 +168,23 @@ const Layout = () => {
           </div>
         </div>
       </aside>
-      
+
       <main className="main-content">
-        {!isChatPage && (
+        {!isFullScreenPage && (
           <header className="header">
             <h1>{getPageTitle()}</h1>
-            <div style={{ display: 'flex', gap: '15px' }}>
+            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+              {hasPendingDelivery && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                  borderRadius: '20px', padding: '6px 14px', color: '#ef4444', fontWeight: 700, fontSize: '13px',
+                  animation: 'pulse 1.2s infinite'
+                }}>
+                  <BellRing size={15} />
+                  Delivery Pendente!
+                </div>
+              )}
               <div className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'var(--success)', boxShadow: '0 0 5px var(--success)' }}></div>
                 Sistema Operacional
@@ -125,8 +192,8 @@ const Layout = () => {
             </div>
           </header>
         )}
-        
-        <div className="page-content" style={{ padding: isChatPage ? 0 : '40px' }}>
+
+        <div className="page-content" style={{ padding: isFullScreenPage ? 0 : '40px' }}>
           <Outlet />
         </div>
       </main>
