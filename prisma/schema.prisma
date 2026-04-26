@@ -14,8 +14,8 @@ model Instance {
   color     String    @default("#3b82f6")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
-  botPrompt String?   @default("Você é um assistente virtual prestativo.") @db.Text
-  knowledge String?   @default("[]") @db.LongText
+  botPrompt String?   @db.Text
+  knowledge String?   @db.LongText
   chats     Chat[]
   flows     Flow[]
   messages  Message[]
@@ -119,8 +119,8 @@ model Product {
   capacityCost Int          @default(1)
   prepTime     Int          @default(30)
   description  String?
-  variations   String?      @default("[]") @db.Text
-  comboItems   String?      @default("[]") @db.Text
+  variations   String?      @db.Text
+  comboItems   String?      @db.Text
   ingredients  Ingredient[]
   orders       Order[]
   @@map("product")
@@ -184,12 +184,12 @@ model Setting {
   businessAddress    String?
   businessLocation   String?
   googleApiKey       String? @default("")
-  deliveryRules      String? @default("[]") @db.Text // JSON: [{ maxKm: 3, fee: 5 }]
+  deliveryRules      String? @db.Text // JSON: [{ maxKm: 3, fee: 5 }]
   managerJid         String?
   deliveryJid        String?
   dailyMaxOrders     Int     @default(10)
   maxDeliveryKm      Float   @default(15.0)
-  dailyDeliveryItems String? @default("[]") @db.Text
+  dailyDeliveryItems String? @db.Text
   reportEnabled      Boolean @default(false)
   reportHour         Int     @default(7)
   reminderHours      Int     @default(2)
