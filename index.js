@@ -209,10 +209,12 @@ app.get('/auth/google/callback', async (req, res) => {
             create: { id: 'global', ...updateData },
         });
 
-        res.redirect(`http://localhost:5173/settings?gcal_success=1`);
+        const origin = req.get('referer') || `http://${req.get('host')}`;
+        res.redirect(`${origin.split('?')[0]}?gcal_success=1`);
     } catch (e) {
         console.error('[GCal OAuth]', e.message);
-        res.redirect(`http://localhost:5173/settings?gcal_error=token_exchange_failed`);
+        const origin = req.get('referer') || `http://${req.get('host')}`;
+        res.redirect(`${origin.split('?')[0]}?gcal_error=token_exchange_failed`);
     }
 });
 
@@ -1155,10 +1157,15 @@ app.get('/instances', async (req, res) => {
 });
 
 app.post('/instances', async (req, res) => {
-    const { name, color } = req.body;
-    const instance = await prisma.instance.create({ data: { name, color: color || '#3b82f6' } });
-    await initInstance(instance.id);
-    res.json(instance);
+    try {
+        const { name, color } = req.body;
+        const instance = await prisma.instance.create({ data: { name, color: color || '#3b82f6' } });
+        await initInstance(instance.id);
+        res.json(instance);
+    } catch (err) {
+        console.error('[Instance Create Error]', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.patch('/instances/:id', async (req, res) => {
