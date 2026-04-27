@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Calendar, Plus, RefreshCw, CheckCircle, Clock, XCircle, ChevronLeft, ChevronRight, Package, Truck } from 'lucide-react';
-import axios from 'axios';
+
 import Swal from 'sweetalert2';
 import ReactDOM from 'react-dom';
 
@@ -81,7 +81,7 @@ function OrderModal({ onClose, onSaved, date }) {
   const checkAvailability = useCallback(async () => {
     if (!form.scheduledDate || !form.scheduledTime) return;
     try {
-      const res = await axios.get(`${API}/availability`, { params: { date: form.scheduledDate, time: form.scheduledTime } });
+      const res = await api.get('/orders/availability', { params: { date: form.scheduledDate, time: form.scheduledTime } });
       setAvailability(res.data);
     } catch { setAvailability(null); }
   }, [form.scheduledDate, form.scheduledTime]);
@@ -103,7 +103,7 @@ function OrderModal({ onClose, onSaved, date }) {
 
     setLoading(true);
     try {
-      await axios.post(API, form);
+      await api.post('/orders', form);
       onSaved();
       onClose();
     } catch (e) {
@@ -256,7 +256,7 @@ function OrderCard({ order, onUpdate }) {
   const Icon = cfg.icon;
 
   const changeStatus = async (status) => {
-    await axios.patch(`${API}/${order.id}`, { status });
+    await api.patch(`/orders/${order.id}`, { status });
     onUpdate();
   };
 
@@ -371,8 +371,8 @@ export default function Agenda() {
 
   const fetchAll = useCallback(async () => {
     const [ordRes, calRes] = await Promise.all([
-      axios.get(API).catch(() => ({ data: [] })),
-      axios.get(`${API}/calendar-events`).catch(() => ({ data: [] })),
+      api.get('/orders').catch(() => ({ data: [] })),
+      api.get('/orders/calendar-events').catch(() => ({ data: [] })),
     ]);
     setOrders(ordRes.data);
     setCalendarEvents(calRes.data);
@@ -383,7 +383,7 @@ export default function Agenda() {
   const syncCalendar = async () => {
     setSyncing(true);
     try {
-      const res = await axios.post(`${API}/calendar-sync`);
+      const res = await api.post('/orders/calendar-sync');
       Swal.fire({ 
         icon:'success', 
         title: 'Sincronização Concluída!', 

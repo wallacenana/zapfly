@@ -39,7 +39,7 @@ const Settings = () => {
 
   const loadSettings = async () => {
     try {
-      const res = await axios.get(API_CONFIG);
+      const res = await api.get('/config/keys');
       if (res.data) {
         setSettings({
           ...res.data,
@@ -66,7 +66,7 @@ const Settings = () => {
 
   const fetchCalendars = async () => {
     try {
-      const res = await axios.get(API_CALENDARS);
+      const res = await api.get('/auth/google/calendars');
       setCalendars(res.data);
     } catch (err) {
       console.error('Erro ao buscar calendários:', err);
@@ -148,7 +148,7 @@ const Settings = () => {
         claude: settings.claudeKey,
         deliveryRules: JSON.stringify(settings.deliveryRules)
       };
-      await axios.post(API_CONFIG, payload);
+      await api.post('/config/keys', payload);
       await loadSettings(); // Recarrega para garantir que o estado local bata com o banco (especialmente GCal)
       Swal.fire({ title: 'Configurações Salvas!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
     } catch (err) {
@@ -466,7 +466,7 @@ const Settings = () => {
                       <button
                         onClick={async () => {
                           try {
-                            await axios.post(API_DISCONNECT_GCAL);
+                            await api.post('/auth/google/disconnect');
                             setSettings({ ...settings, gcalRefreshToken: '', gcalAccessToken: '', gcalCalendarId: '' });
                             setCalendars([]);
                             Swal.fire('Desconectado', 'Sua conta do Google foi removida.', 'info');

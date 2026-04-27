@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box, Copy, Pencil } from 'lucide-react';
-import axios from 'axios';
+
 import Swal from 'sweetalert2';
 
 import { api } from '../api';
@@ -51,8 +51,8 @@ const Estoque = () => {
     if (!form.name) return;
     const payload = { ...form, variations: JSON.stringify(form.variations) };
     try {
-      if (editing) await axios.patch(`${API}/products/${editing}`, payload);
-      else await axios.post(`${API}/products`, payload);
+      if (editing) await api.patch(`/orders/products/${editing}`, payload);
+      else await api.post('/orders/products', payload);
       setShowModal(false);
       fetchProducts();
       Swal.fire({ title: 'Salvo!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
@@ -126,7 +126,7 @@ const Estoque = () => {
                       cancelButtonText: 'Cancelar'
                     }).then((result) => {
                       if (result.isConfirmed) {
-                        axios.delete(`${API}/products/${p.id}`).then(() => {
+                        api.delete(`/orders/products/${p.id}`).then(() => {
                           fetchProducts();
                           Swal.fire('Excluído!', 'O item foi removido com sucesso.', 'success');
                         });
