@@ -323,7 +323,8 @@ async function executeChamarGerente(reason, jid, currentChat, settings, flowAdmi
         }).catch(() => { });
 
         const clientName = currentChat?.name || jid.split('@')[0];
-        const alertMsg = `⚠️ *ATENÇÃO GESTOR!* ⚠️\n\nO cliente solicitou ajuda.\n\n👤 *Cliente:* ${clientName}\n❓ *Motivo:* ${reason}\n\n🔗 *Abrir Chat:* http://localhost:5173/chat`;
+        const host = process.env.PUBLIC_URL || 'http://137.184.111.93';
+        const alertMsg = `⚠️ *ATENÇÃO GESTOR!* ⚠️\n\nO cliente solicitou ajuda.\n\n👤 *Cliente:* ${clientName}\n❓ *Motivo:* ${reason}\n\n🔗 *Abrir Chat:* ${host}/chat`;
         console.log(`[AI Agent] Chamando gerente em: ${managerJid}`);
         sock.sendMessage(managerJid, { text: alertMsg }).catch(e => console.error('[Manager Alert Error]', e.message));
         return { success: true, message: "O gerente foi avisado. Peça para o cliente aguardar." };
