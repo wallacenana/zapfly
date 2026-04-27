@@ -16,7 +16,7 @@ const Estoque = () => {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const res = await api.get('/products');
+      const res = await api.get('/orders/products');
       const data = res.data.map(p => ({
         ...p,
         variations: typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || [])

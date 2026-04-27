@@ -149,20 +149,26 @@ app.delete('/marketing-assets/:id', async (req, res) => {
 
 const { google } = require('googleapis');
 const GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar'];
-const GCAL_REDIRECT = 'http://localhost:3001/auth/google/callback';
 
-function getOAuth2Client() {
+function getOAuth2Client(req) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     if (!clientId || !clientSecret) return null;
-    return new google.auth.OAuth2(clientId, clientSecret, GCAL_REDIRECT);
+
+    // Constrói a URL de redirecionamento baseada em quem chamou (localhost ou IP)
+    const protocol = req.protocol;
+    const host = req.get('host');
+    const redirectUri = `${protocol}://${host}/auth/google/callback`;
+    
+    return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
 
 // Inicia o fluxo OAuth — redireciona para o consent screen do Google
 app.get('/auth/google', async (req, res) => {
-    const oauth2Client = getOAuth2Client();
+    const oauth2Client = getOAuth2Client(req);
+    const origin = req.get('referer') || `http://${req.get('host')}`;
     if (!oauth2Client) {
-        return res.redirect(`http://localhost:5173/settings?gcal_error=missing_env_credentials`);
+        return res.redirect(`${origin.split('?')[0]}?gcal_error=missing_env_credentials`);
     }
     const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
@@ -175,10 +181,11 @@ app.get('/auth/google', async (req, res) => {
 // Callback do Google com o código de autorização
 app.get('/auth/google/callback', async (req, res) => {
     const { code, error } = req.query;
-    if (error) return res.redirect(`http://localhost:5173/settings?gcal_error=${error}`);
+    const origin = req.get('referer') || `http://${req.get('host')}`;
+    if (error) return res.redirect(`${origin.split('?')[0]}?gcal_error=${error}`);
 
     try {
-        const oauth2Client = getOAuth2Client();
+        const oauth2Client = getOAuth2Client(req);
         const { tokens } = await oauth2Client.getToken(code);
         console.log('[GCal OAuth] Tokens recebidos do Google.');
 

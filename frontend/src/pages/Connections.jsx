@@ -13,7 +13,7 @@ const Toast = Swal.mixin({
   timerProgressBar: true
 });
 
-const socket = io('http://localhost:3001');
+
 
 const Connections = () => {
   const [instances, setInstances] = useState([]);
