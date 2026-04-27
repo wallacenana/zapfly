@@ -98,10 +98,10 @@ const { router: ordersRouter, setupCronJobs } = require('./routes/orders');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-    cors: { origin: "http://localhost:5173", methods: ["GET", "POST"] }
+    cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
-app.use(cors());
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use('/orders', ordersRouter);
 app.use('/assets', express.static(path.join(__dirname, 'assets')));

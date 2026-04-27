@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, GitMerge, Play, Pause, Edit2, Copy, Trash2, Smartphone, Loader2 } from 'lucide-react';
-import axios from 'axios';
+import { api } from '../api';
 import Swal from 'sweetalert2';
 
 const Toast = Swal.mixin({
@@ -67,8 +67,8 @@ const Flows = () => {
       setLoading(true);
       try {
         const [instRes, flowRes] = await Promise.all([
-          axios.get('http://localhost:3001/instances'),
-          axios.get('http://localhost:3001/flows')
+          api.get('/instances'),
+          api.get('/flows')
         ]);
         setInstances(instRes.data);
         setFlows(flowRes.data);
@@ -83,7 +83,7 @@ const Flows = () => {
 
   const handleCreateFlow = async () => {
     try {
-      const res = await axios.post('http://localhost:3001/flows', {
+      const res = await api.post('/flows', {
         name: 'Novo Fluxo de Automação',
         status: 'Rascunho',
         data: JSON.stringify({ 
@@ -100,7 +100,7 @@ const Flows = () => {
   const handleToggleStatus = async (flow) => {
     try {
       const newStatus = flow.status === 'Ativo' ? 'Pausado' : 'Ativo';
-      await axios.patch(`http://localhost:3001/flows/${flow.id}`, { ...flow, status: newStatus });
+      await api.patch(`/flows/${flow.id}`, { ...flow, status: newStatus });
       setFlows(flows.map(f => f.id === flow.id ? { ...f, status: newStatus } : f));
       Toast.fire({
         icon: 'success',
@@ -113,7 +113,7 @@ const Flows = () => {
 
   const handleDuplicate = async (flow) => {
     try {
-      const res = await axios.post('http://localhost:3001/flows', {
+      const res = await api.post('/flows', {
         ...flow,
         id: undefined,
         name: `${flow.name} (Cópia)`,
@@ -142,7 +142,7 @@ const Flows = () => {
 
     if (result.isConfirmed) {
       try {
-        await axios.delete(`http://localhost:3001/flows/${id}`);
+        await api.delete(`/flows/${id}`);
         setFlows(flows.filter(f => f.id !== id));
         Toast.fire({ icon: 'success', title: 'Fluxo excluído!' });
       } catch (err) {

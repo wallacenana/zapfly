@@ -1,7 +1,7 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, GitMerge, MessageSquare, Megaphone, Users, Calendar, Settings, Smartphone, Bot, PackageOpen, BellRing } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import { api } from '../api';
 
 const Layout = () => {
   const location = useLocation();
@@ -16,7 +16,7 @@ const Layout = () => {
 
     const checkDeliveries = async () => {
       try {
-        const res = await axios.get('http://localhost:3001/orders');
+        const res = await api.get('/orders');
         const pendingDeliveries = res.data.filter(o => o.status === 'pending' && o.type === 'delivery');
         const has = pendingDeliveries.length > 0;
         setHasPendingDelivery(has);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Bot, Save, Plus, Trash2, Copy, Check, MessageSquare, Edit3, Loader2 } from 'lucide-react';
-import axios from 'axios';
+import { api } from '../api';
 import Swal from 'sweetalert2';
 
 const Toast = Swal.mixin({
@@ -34,7 +34,7 @@ const Prompts = () => {
   const fetchInstances = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:3001/instances');
+      const res = await api.get('/instances');
       setInstances(res.data);
       if (res.data.length > 0) {
         selectInstance(res.data[0]);
@@ -59,7 +59,7 @@ const Prompts = () => {
     if (!activeInstance) return;
     setSaving(true);
     try {
-      const res = await axios.patch(`http://localhost:3001/instances/${activeInstance.id}`, {
+      const res = await api.patch(`/instances/${activeInstance.id}`, {
         botPrompt: formPrompt,
         knowledge: JSON.stringify(formKnowledge)
       });
@@ -88,7 +88,7 @@ const Prompts = () => {
     setIsSimulating(true);
     setAiResponse('');
     try {
-      const res = await axios.post(`http://localhost:3001/instances/${activeInstance.id}/ai-test`, {
+      const res = await api.post(`/instances/${activeInstance.id}/ai-test`, {
         question: testQuestion,
         botPrompt: formPrompt,
         knowledge: JSON.stringify(formKnowledge)

@@ -40,7 +40,7 @@ import {
   Code
 } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import { api } from '../api';
 import Swal from 'sweetalert2';
 
 const Toast = Swal.mixin({
@@ -62,7 +62,7 @@ const TriggerNode = ({ id, data }) => {
   const [instances, setInstances] = useState([]);
 
   useEffect(() => {
-    axios.get('http://localhost:3001/instances')
+    api.get('/instances')
       .then(res => setInstances(res.data))
       .catch(err => console.error(err));
   }, []);
@@ -357,7 +357,7 @@ const FlowEditorInner = () => {
 
   useEffect(() => {
     if (id && id !== 'new') {
-      axios.get(`http://localhost:3001/flows`)
+      api.get('/flows')
         .then(res => {
           const flow = res.data.find(f => f.id === id);
           if (flow) {
@@ -450,7 +450,7 @@ const FlowEditorInner = () => {
         data: { nodes: currentNodes, edges: currentEdges },
         status: 'Ativo'
       };
-      await axios.post('http://localhost:3001/flows', flowData);
+      await api.post('/flows', flowData);
       Toast.fire({
         icon: 'success',
         title: 'Fluxo salvo com sucesso!'
