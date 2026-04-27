@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { api, API_URL } from '../api';
 import { Package, Clock, CheckCircle, Search, Truck, XCircle, ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin } from 'lucide-react';
 import Swal from 'sweetalert2';
 
@@ -72,7 +73,7 @@ const Kanban = () => {
 
   const fetchOrders = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/orders');
+      const res = await api.get('/orders');
       setOrders(res.data);
     } catch (err) {
       console.error(err);
@@ -83,7 +84,7 @@ const Kanban = () => {
 
   const updateStatus = async (orderId, newStatus) => {
     try {
-      await axios.patch(`http://localhost:3001/orders/${orderId}`, { status: newStatus });
+      await api.patch(`/orders/${orderId}`, { status: newStatus });
       const updatedOrders = orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
       setOrders(updatedOrders);
       if (newStatus === 'ready') {

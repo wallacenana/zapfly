@@ -4,7 +4,7 @@ import axios from 'axios';
 import Swal from 'sweetalert2';
 import ReactDOM from 'react-dom';
 
-const API = 'http://localhost:3001/orders';
+import { api, API_URL } from '../api';
 
 const STATUS_CONFIG = {
   pending:    { label: 'Pendente',       color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',   icon: Clock },
@@ -42,7 +42,7 @@ function OrderModal({ onClose, onSaved, date }) {
   }, [activeTab]);
 
   useEffect(() => {
-    axios.get('http://localhost:3001/orders/products').then(res => setProducts(res.data));
+    api.get('/orders/products').then(res => setProducts(res.data));
   }, []);
 
   const handleProductChange = (e) => {

@@ -4,7 +4,7 @@ import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box
 import axios from 'axios';
 import Swal from 'sweetalert2';
 
-const API = 'http://localhost:3001/orders';
+import { api } from '../api';
 
 const Estoque = () => {
   const [tab, setTab] = useState('delivery');
@@ -16,7 +16,7 @@ const Estoque = () => {
 
   const fetchProducts = useCallback(async () => {
     try {
-      const res = await axios.get(`${API}/products`);
+      const res = await api.get('/products');
       const data = res.data.map(p => ({
         ...p,
         variations: typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || [])

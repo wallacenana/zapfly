@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { Smartphone, RefreshCw, Trash2, Plus, Loader2, QrCode, X, Edit3 } from 'lucide-react';
-import { io } from 'socket.io-client';
 import { QRCodeCanvas } from 'qrcode.react';
-import axios from 'axios';
+import { api, API_URL, socket } from '../api';
 import Swal from 'sweetalert2';
 
 const Toast = Swal.mixin({
@@ -53,7 +52,7 @@ const Connections = () => {
 
   const fetchInstances = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/instances');
+      const res = await api.get('/instances');
       setInstances(res.data);
     } catch (err) {
       console.error(err);
@@ -79,9 +78,9 @@ const Connections = () => {
     setLoading(true);
     try {
       if (editingInstance) {
-        await axios.patch(`http://localhost:3001/instances/${editingInstance.id}`, { name: formName, color: formColor });
+        await api.patch(`/instances/${editingInstance.id}`, { name: formName, color: formColor });
       } else {
-        await axios.post('http://localhost:3001/instances', { name: formName, color: formColor });
+        await api.post('/instances', { name: formName, color: formColor });
       }
       setShowModal(false);
       fetchInstances();
@@ -95,7 +94,7 @@ const Connections = () => {
   const handleRestart = async (e, id) => {
     e.stopPropagation();
     try {
-      await axios.post(`http://localhost:3001/instances/${id}/restart`);
+      await api.post(`/instances/${id}/restart`);
       Toast.fire({ icon: 'info', title: 'Reiniciando instância...' });
     } catch (err) {
       Toast.fire({ icon: 'error', title: 'Erro ao reiniciar' });
@@ -117,7 +116,7 @@ const Connections = () => {
 
     if (result.isConfirmed) {
       try {
-        await axios.post(`http://localhost:3001/instances/${id}/logout`);
+        await api.post(`/instances/${id}/logout`);
         fetchInstances();
         Toast.fire({ icon: 'success', title: 'Desconectado com sucesso' });
       } catch (err) {
@@ -142,7 +141,7 @@ const Connections = () => {
 
     if (result.isConfirmed) {
       try {
-        await axios.delete(`http://localhost:3001/instances/${id}`);
+        await api.delete(`/instances/${id}`);
         fetchInstances();
         Toast.fire({ icon: 'success', title: 'Conexão removida' });
       } catch (err) {

@@ -21,7 +21,7 @@ import {
   Zap
 } from 'lucide-react';
 import axios from 'axios';
-import { io } from 'socket.io-client';
+import { api, API_URL, socket } from '../api';
 import Swal from 'sweetalert2';
 
 const Toast = Swal.mixin({
@@ -36,7 +36,8 @@ const Toast = Swal.mixin({
   }
 });
 
-const socket = io('http://localhost:3001');
+
+// const socket = io('http://localhost:3001'); // Removido, agora vem do ../api
 
 const Chat = () => {
   const { jid: urlJid } = useParams();
@@ -166,7 +167,7 @@ const Chat = () => {
         setChatPage(p => {
           const nextPage = p + 1;
           const actualSearch = searchTerm.length >= 3 ? searchTerm : '';
-          axios.get(`http://localhost:3001/instances/${activeInstance.id}/chats`, {
+          api.get(`/instances/${activeInstance.id}/chats`, {
             params: { skip: nextPage * PAGE_SIZE, take: PAGE_SIZE, search: actualSearch }
           }).then(res => {
             const { chats, hasMore } = res.data;
@@ -192,7 +193,7 @@ const Chat = () => {
       // Marcar como lido ao abrir
       const lastReceived = messages.filter(m => !m.fromMe).slice(-1)[0];
       if (lastReceived) {
-        axios.post(`http://localhost:3001/instances/${activeInstance.id}/chats/read`, {
+        api.post(`/instances/${activeInstance.id}/chats/read`, {
           jid: activeContact.jid,
           msgId: lastReceived.id
         });
@@ -211,7 +212,7 @@ const Chat = () => {
 
   const fetchInstances = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/instances');
+      const res = await api.get('/instances');
       setInstances(res.data);
       if (res.data.length > 0 && !activeInstance) setActiveInstance(res.data[0]);
     } catch (err) {
@@ -231,7 +232,7 @@ const Chat = () => {
       const isGroup = filterType === 'groups' ? true : filterType === 'private' ? false : undefined;
       const actualSearch = searchTerm.length >= 3 ? searchTerm : '';
       const params = { skip, take: PAGE_SIZE, search: actualSearch, ...(isGroup !== undefined && { group: isGroup }) };
-      const res = await axios.get(`http://localhost:3001/instances/${instanceId}/chats`, { params });
+      const res = await api.get(`/instances/${instanceId}/chats`, { params });
       const { chats, hasMore } = res.data;
       setContacts(prev => {
         if (reset) return chats;
@@ -251,7 +252,7 @@ const Chat = () => {
   const fetchMessages = async (instanceId, jid) => {
     setLoadingMessages(true);
     try {
-      const res = await axios.get(`http://localhost:3001/instances/${instanceId}/messages/${encodeURIComponent(jid)}`);
+      const res = await api.get(`/instances/${instanceId}/messages/${encodeURIComponent(jid)}`);
       setMessages(res.data);
     } catch (err) {
       console.error(err);
@@ -267,7 +268,7 @@ const Chat = () => {
     setInputMessage('');
 
     try {
-      const response = await axios.post(`http://localhost:3001/instances/${activeInstance.id}/send`, {
+      const response = await api.post(`/instances/${activeInstance.id}/send`, {
         jid: activeContact.jid, // Use real WhatsApp JID
         text: textToSend
       });
@@ -298,7 +299,7 @@ const Chat = () => {
     if (!activeContact || !activeInstance) return;
     try {
       const newState = !activeContact.aiEnabled;
-      await axios.patch(`http://localhost:3001/instances/${activeInstance.id}/chats/${activeContact.jid}`, {
+      await api.patch(`/instances/${activeInstance.id}/chats/${activeContact.jid}`, {
         aiEnabled: newState
       });
       setActiveContact({ ...activeContact, aiEnabled: newState });
@@ -311,7 +312,7 @@ const Chat = () => {
 
   const getProfilePic = async (jid) => {
     try {
-      const res = await axios.get(`http://localhost:3001/instances/${activeInstance.id}/profile-pic/${jid}`);
+      const res = await api.get(`/instances/${activeInstance.id}/profile-pic/${jid}`);
       return res.data.url;
     } catch {
       return null;
@@ -380,7 +381,7 @@ const Chat = () => {
     if (!contextMenu?.data) return;
     const msg = contextMenu.data;
     try {
-      await axios.post(`http://localhost:3001/instances/${activeInstance.id}/messages/delete`, {
+      await api.post(`/instances/${activeInstance.id}/messages/delete`, {
         jid: activeContact.jid,
         msgId: msg.id,
         fromMe: msg.fromMe,
@@ -396,7 +397,7 @@ const Chat = () => {
 
   const markAsUnread = async (contact) => {
     try {
-      await axios.patch(`http://localhost:3001/instances/${activeInstance.id}/chats/${contact.jid}/unread`);
+      await api.patch(`/instances/${activeInstance.id}/chats/${contact.jid}/unread`);
       setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, unread: 1 } : c));
       Toast.fire({ icon: 'success', title: 'Marcado como não lido' });
     } catch (err) {
@@ -420,7 +421,7 @@ const Chat = () => {
     }).then(async (result) => {
       if (result.isConfirmed) {
         try {
-          await axios.delete(`http://localhost:3001/instances/${activeInstance.id}/chats/${encodeURIComponent(contact.jid)}`);
+          await api.delete(`/instances/${activeInstance.id}/chats/${encodeURIComponent(contact.jid)}`);
           setContacts(prev => prev.filter(c => c.id !== contact.id));
           if (activeContact?.id === contact.id) setActiveContact(null);
           Toast.fire({ icon: 'success', title: 'Conversa excluída' });

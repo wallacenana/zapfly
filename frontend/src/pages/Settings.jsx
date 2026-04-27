@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Save, Shield, MessageSquare, Bell, Calendar, MapPin, Truck, Plus, Trash2, Key, Cpu, ExternalLink, CheckCircle2, Image, Upload } from 'lucide-react';
-import axios from 'axios';
+import { api, API_URL } from '../api';
 import Swal from 'sweetalert2';
 
-const API_CONFIG = 'http://localhost:3001/config/keys';
-const API_CALENDARS = 'http://localhost:3001/auth/google/calendars';
-const API_DISCONNECT_GCAL = 'http://localhost:3001/auth/google/disconnect';
+const API_CONFIG = `${API_URL}/config/keys`;
+const API_CALENDARS = `${API_URL}/auth/google/calendars`;
+const API_DISCONNECT_GCAL = `${API_URL}/auth/google/disconnect`;
 
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('business');
@@ -87,7 +87,7 @@ const Settings = () => {
 
   const loadSlots = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/config/slots');
+      const res = await api.get('/config/slots');
       setSlots(res.data);
     } catch (err) {
       console.error(err);
@@ -98,7 +98,7 @@ const Settings = () => {
 
   const loadMarketingAssets = async () => {
     try {
-      const res = await axios.get('http://localhost:3001/marketing-assets');
+      const res = await api.get('/marketing-assets');
       setMarketingAssets(res.data);
     } catch (err) { console.error(err); }
   };
@@ -112,7 +112,7 @@ const Settings = () => {
     formData.append('name', uploadName);
     formData.append('file', fileInputRef.current.files[0]);
     try {
-      await axios.post('http://localhost:3001/marketing-assets', formData, {
+      await api.post('/marketing-assets', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setUploadName('');
@@ -127,13 +127,13 @@ const Settings = () => {
   const handleDeleteAsset = async (id) => {
     const { isConfirmed } = await Swal.fire({ title: 'Remover foto?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sim', cancelButtonText: 'Não' });
     if (!isConfirmed) return;
-    await axios.delete(`http://localhost:3001/marketing-assets/${id}`);
+    await api.delete(`/marketing-assets/${id}`);
     await loadMarketingAssets();
   };
 
   const handleSaveSlots = async () => {
     try {
-      await axios.post('http://localhost:3001/config/slots', { slots });
+      await api.post('/config/slots', { slots });
       Swal.fire({ title: 'Horários Atualizados!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
     } catch (err) {
       Swal.fire('Erro', 'Não foi possível salvar os horários.', 'error');
@@ -161,7 +161,7 @@ const Settings = () => {
     const height = 600;
     const left = window.screen.width / 2 - width / 2;
     const top = window.screen.height / 2 - height / 2;
-    const win = window.open('http://localhost:3001/auth/google', 'google_auth', `width=${width},height=${height},left=${left},top=${top}`);
+    const win = window.open(`${API_URL}/auth/google`, 'google_auth', `width=${width},height=${height},left=${left},top=${top}`);
 
     const checkTimer = setInterval(() => {
       if (win.closed) {
@@ -453,7 +453,7 @@ const Settings = () => {
                             didOpen: () => Swal.showLoading()
                           });
                           try {
-                            const res = await axios.post('http://localhost:3001/orders/calendar-sync');
+                            const res = await api.post('/orders/calendar-sync');
                             Swal.fire({ title: 'Sincronizado!', text: `${res.data.synced} eventos atualizados.`, icon: 'success', timer: 2000, showConfirmButton: false });
                           } catch (err) {
                             Swal.fire('Erro na Sincronização', err.response?.data?.error || 'Não foi possível conectar ao Google.', 'error');
@@ -545,7 +545,7 @@ const Settings = () => {
                 {marketingAssets.map(asset => (
                   <div key={asset.id} style={{ borderRadius: '14px', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', position: 'relative' }}>
                     <img
-                      src={`http://localhost:3001${asset.path}`}
+                      src={`${API_URL}${asset.path}`}
                       alt={asset.name}
                       style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }}
                     />
