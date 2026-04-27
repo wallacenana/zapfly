@@ -333,12 +333,20 @@ async function executeChamarGerente(reason, jid, currentChat, settings, flowAdmi
 }
 
 async function initInstance(instanceId) {
+    console.log(`[${instanceId}] Iniciando instância...`);
     const sessionDir = path.join(__dirname, 'sessions', instanceId);
-    if (!fs.existsSync(sessionDir)) fs.mkdirSync(sessionDir, { recursive: true });
+    if (!fs.existsSync(sessionDir)) {
+        console.log(`[${instanceId}] Criando pasta de sessão: ${sessionDir}`);
+        fs.mkdirSync(sessionDir, { recursive: true });
+    }
 
+    console.log(`[${instanceId}] Carregando Auth State...`);
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
+    
+    console.log(`[${instanceId}] Buscando versão do Baileys...`);
     const { version } = await fetchLatestBaileysVersion();
 
+    console.log(`[${instanceId}] Inicializando Store...`);
     const store = makeInMemoryStore({ logger: pino({ level: 'silent' }) });
     const storePath = path.join(sessionDir, 'store.json');
 
@@ -1196,14 +1204,19 @@ app.post('/instances/:id/logout', async (req, res) => {
 });
 
 app.post('/instances/:id/restart', async (req, res) => {
-    const { id } = req.params;
-    const sock = sessions.get(id);
-    if (sock) {
-        sock.end();
-        sessions.delete(id);
+    try {
+        const { id } = req.params;
+        const sock = sessions.get(id);
+        if (sock) {
+            try { sock.end(); } catch (e) { }
+            sessions.delete(id);
+        }
+        await initInstance(id);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[Instance Restart Error]', err);
+        res.status(500).json({ error: err.message });
     }
-    await initInstance(id);
-    res.json({ success: true });
 });
 
 app.delete('/instances/:id', async (req, res) => {
