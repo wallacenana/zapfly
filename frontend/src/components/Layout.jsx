@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, GitMerge, MessageSquare, Megaphone, Users, Calendar, Settings, Smartphone, Bot, PackageOpen, BellRing } from 'lucide-react';
+import { LayoutDashboard, GitMerge, MessageSquare, Megaphone, Users, Calendar, Settings, Smartphone, Bot, PackageOpen, BellRing, Grid2X2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { api } from '../api';
 
@@ -53,7 +53,7 @@ const Layout = () => {
     if (path.includes('/dashboard')) return 'Dashboard';
     if (path.includes('/flows')) return 'Fluxos de Automação';
     if (path.includes('/agenda')) return 'Agenda de Pedidos';
-    if (path.includes('/kanban')) return 'Produção (Kanban)';
+    if (path.includes('/production')) return 'Gestão de Pedidos';
     if (path.includes('/estoque')) return 'Estoque & Disponibilidade';
     if (path.includes('/connections')) return 'Conexões / Números';
     if (path.includes('/settings')) return 'Configurações';
@@ -108,9 +108,9 @@ const Layout = () => {
             Agenda de Pedidos
           </NavLink>
 
-          <NavLink to="/kanban" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} style={{ position: 'relative' }}>
-            <LayoutDashboard size={18} />
-            Produção (Kanban)
+          <NavLink to="/production" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} style={{ position: 'relative' }}>
+            <Grid2X2 size={18} />
+            Gestão de Pedidos
             {hasPendingDelivery && (
               <span style={{
                 position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
@@ -193,7 +193,7 @@ const Layout = () => {
           </header>
         )}
 
-        <div className="page-content" style={{ padding: isFullScreenPage ? 0 : '40px' }}>
+        <div className="page-content" style={{ padding: isFullScreenPage ? 0 : '40px', paddingTop: location.pathname === '/production' ? 0 : '40px' }}>
           <Outlet />
         </div>
       </main>

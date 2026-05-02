@@ -9,7 +9,7 @@ import Chat from './pages/Chat';
 import Settings from './pages/Settings';
 import Prompts from './pages/Prompts';
 import Estoque from './pages/Estoque';
-import Kanban from './pages/Kanban';
+import Production from './pages/Production';
 
 function App() {
   return (
@@ -27,7 +27,7 @@ function App() {
           <Route path="agenda" element={<Agenda />} />
           <Route path="estoque" element={<Estoque />} />
           <Route path="connections" element={<Connections />} />
-          <Route path="kanban" element={<Kanban />} />
+          <Route path="production" element={<Production />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

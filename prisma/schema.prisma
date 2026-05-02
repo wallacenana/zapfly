@@ -77,7 +77,7 @@ model Message {
 }
 
 model Order {
-  id              String   @id @default(cuid())
+  id              String    @id @default(cuid())
   instanceId      String
   clientName      String?
   clientJid       String?
@@ -87,16 +87,38 @@ model Order {
   notes           String?
   scheduledDate   String
   scheduledTime   String
-  status          String   @default("pending")
+  status          String    @default("pending")
   calendarEventId String?
-  type            String   @default("order")
+  type            String    @default("order")
   deliveryAddress String?
   forwardedTo     String?
-  reminderSent    Boolean  @default(false)
-  totalValue      Float    @default(0)
-  createdAt       DateTime @default(now())
-  productRelation Product? @relation(fields: [productId], references: [id])
+  reminderSent    Boolean   @default(false)
+  totalValue      Float     @default(0)
+  deliveryFee     Float     @default(0)
+  paymentMethod   String?
+  paymentStatus   String    @default("pending")
+  massa           String?
+  recheio         String?
+  topo            String?
+  createdAt       DateTime  @default(now())
+  productRelation Product?  @relation(fields: [productId], references: [id])
+  customer        Customer? @relation(fields: [clientJid], references: [jid])
   @@map("order")
+}
+
+model Customer {
+  id               String   @id @default(cuid())
+  jid              String   @unique
+  name             String?
+  address          String?
+  paymentMethod    String?
+  lastOrderDate    DateTime?
+  preferredProduct String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  orders           Order[]
+
+  @@map("customer")
 }
 
 model StockItem {
@@ -171,6 +193,8 @@ model Setting {
   id                 String  @id @default("global")
   openaiKey          String? @db.Text
   claudeKey          String? @db.Text
+  mercadopagoToken   String? @db.Text
+  mercadopagoPublicKey String? @db.Text
   activeModel        String  @default("openai")
   gcalEnabled        Boolean @default(false)
   gcalClientId       String? @db.Text

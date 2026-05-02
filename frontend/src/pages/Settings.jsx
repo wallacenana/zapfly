@@ -23,6 +23,8 @@ const Settings = () => {
     deliveryRules: [],
     managerJid: '',
     deliveryJid: '',
+    mercadopagoToken: '',
+    mercadopagoPublicKey: '',
     dailyMaxOrders: 10,
     gcalSyncHour: 6,
     reportHour: 7,
@@ -50,7 +52,9 @@ const Settings = () => {
           deliveryRules: typeof res.data.deliveryRules === 'string'
             ? JSON.parse(res.data.deliveryRules || '[]')
             : (Array.isArray(res.data.deliveryRules) ? res.data.deliveryRules : []),
-          reminderHours: res.data.reminderHours || 2
+          reminderHours: res.data.reminderHours || 2,
+          mercadopagoToken: res.data.mercadopagoToken || '',
+          mercadopagoPublicKey: res.data.mercadopagoPublicKey || ''
         });
 
         if (res.data.gcalRefreshToken) {
@@ -430,6 +434,24 @@ const Settings = () => {
                 </div>
               </div>
 
+              <div style={{ ...subCard, borderLeftColor: '#3b82f6' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                  <Shield size={20} color="#3b82f6" />
+                  <span style={{ fontWeight: 800 }}>Mercado Pago</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div>
+                    <label style={microLabel}>Access Token (Chave de API)</label>
+                    <input {...inp} type="password" value={settings.mercadopagoToken || ''} onChange={e => setSettings({ ...settings, mercadopagoToken: e.target.value })} placeholder="APP_USR-..." />
+                  </div>
+                  <div>
+                    <label style={microLabel}>Public Key</label>
+                    <input {...inp} type="password" value={settings.mercadopagoPublicKey || ''} onChange={e => setSettings({ ...settings, mercadopagoPublicKey: e.target.value })} placeholder="APP_USR-..." />
+                  </div>
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px' }}>Usado para gerar links de pagamento automáticos e garantir que a cozinha só receba pedidos pagos.</p>
+              </div>
+
               <div style={{ ...subCard, borderLeftColor: '#f59e0b' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -489,9 +511,10 @@ const Settings = () => {
                 <label style={microLabel}>Agenda para Gravar Pedidos</label>
                 <select {...inp} value={settings.gcalCalendarId} onChange={e => setSettings({ ...settings, gcalCalendarId: e.target.value })}>
                   <option value="" style={{ backgroundColor: '#18181b' }}>Selecione um calendário...</option>
-                  <option value="primary" style={{ backgroundColor: '#18181b' }}>Calendário Principal</option>
                   {calendars.map(c => (
-                    <option key={c.id} value={c.id} style={{ backgroundColor: '#18181b' }}>{c.name}</option>
+                    <option key={c.id} value={c.id} style={{ backgroundColor: '#18181b' }}>
+                      {c.name} {c.primary ? '(Principal)' : ''}
+                    </option>
                   ))}
                 </select>
 

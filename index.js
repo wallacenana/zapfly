@@ -1,4 +1,5 @@
 require('dotenv').config();
+const { google } = require('googleapis');
 const { makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason, makeInMemoryStore } = require('@whiskeysockets/baileys');
 const pino = require('pino');
 const express = require('express');
@@ -8,12 +9,17 @@ const cors = require('cors');
 const OpenAI = require('openai');
 const fs = require('fs');
 const path = require('path');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('./lib/prisma');
 const { Client: GoogleMapsClient } = require("@googlemaps/google-maps-services-js");
 const mapsClient = new GoogleMapsClient({});
 const { getLinkPreview } = require('link-preview-js');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const multer = require('multer');
+const axios = require('axios');
+const { MercadoPagoConfig, Payment: MercadoPagoPayment } = require('mercadopago');
+
+// Mapa de modelos de IA: chave salva no banco -> nome real da API
+const MODEL_MAP = { 'openai': 'gpt-4o', 'openai-mini': 'gpt-4o-mini', 'openai-nano': 'gpt-4.1-nano', 'claude': 'gpt-4o' };
 
 // Configuração do Multer para Marketing Assets
 const storage = multer.diskStorage({
@@ -25,7 +31,15 @@ const storage = multer.diskStorage({
 });
 const uploadMarketing = multer({ storage });
 
-const prisma = new PrismaClient();
+// Prisma singleton is now loaded from lib/prisma.js
+
+const {
+    getSettings,
+    invalidateSettingsCache,
+    getCachedProducts,
+    getCachedInstance,
+    invalidateProductCache
+} = require('./lib/cache');
 
 function estimateMotoPrice(km) {
     let price = 0;
@@ -46,7 +60,7 @@ function estimateMotoPrice(km) {
 
 // Função para calcular frete baseado em distância
 async function calculateFee(clientAddress) {
-    const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
+    const settings = await getSettings();
 
     if (!settings?.googleApiKey) {
         console.error('[Maps Error] Google API Key não configurada no banco!');
@@ -94,16 +108,115 @@ async function calculateFee(clientAddress) {
         return { error: 'Erro técnico no cálculo.' };
     }
 }
-const { router: ordersRouter, setupCronJobs } = require('./routes/orders');
+const { router: ordersRouter, setupCronJobs, checkAvailability, updateCalendarEvent } = require('./routes/orders');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: { origin: "*", methods: ["GET", "POST"] }
 });
 
+const aiDebounceTimers = {};
+const aiProcessingTokens = {};
+const aiMessageBuffer = {};
+
+
 app.use(cors({ origin: "*" }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.json());
-app.use('/orders', ordersRouter);
+app.use('/orders', (req, res, next) => {
+    req.sockGetter = (instId) => {
+        if (instId) return sessions.get(instId);
+        if (sessions.size > 0) return Array.from(sessions.values())[0];
+        return null;
+    };
+    next();
+}, ordersRouter);
+
+// Redirecionamento de Sucesso do Google Agenda ou Raiz
+app.get('/', (req, res) => {
+    // Se vier do Google Agenda, volta para as configurações
+    if (req.query.gcal_success) {
+        return res.send(`
+            <script>
+                if (window.opener) {
+                    window.opener.location.reload();
+                    window.close();
+                } else {
+                    window.location.href = 'http://localhost:5173/settings';
+                }
+            </script>
+        `);
+    }
+    res.send('Zapfly Backend is running!');
+});
+
+// ─── WEBHOOK MERCADO PAGO ───────────────────────────────────────────────
+app.post('/mercadopago/webhook', async (req, res) => {
+    try {
+        const { type, data } = req.body;
+        console.log(`[MercadoPago Webhook] Tipo: ${type}`, data);
+
+        if (type === 'payment' || req.query.topic === 'payment') {
+            const paymentId = data?.id || req.query.id;
+
+            // Busca detalhes do pagamento no MP
+            const settings = await getSettings();
+            if (!settings?.mercadopagoToken) return res.sendStatus(200);
+
+            const client = new MercadoPagoConfig({ accessToken: settings.mercadopagoToken });
+            const payment = new MercadoPagoPayment(client);
+
+            const p = await payment.get({ id: paymentId });
+            const orderId = p.external_reference;
+
+            if (p.status === 'approved' && orderId) {
+                const order = await prisma.order.findUnique({ where: { id: orderId } });
+
+                // Trava de segurança: Se já foi confirmado, ignora as repetições do MP
+                if (order && order.paymentStatus !== 'confirmed') {
+                    console.log(`[MercadoPago] Pagamento APROVADO para o pedido: ${orderId}`);
+
+                    const updatedOrder = await prisma.order.update({
+                        where: { id: orderId },
+                        data: {
+                            status: 'pending',
+                            paymentStatus: 'confirmed'
+                        }
+                    });
+
+                    // Notifica o frontend e dispara o DING
+                    io.emit('order_confirmed', updatedOrder);
+                    io.emit('new_order_pending', { orderId: updatedOrder.id });
+
+                    // Sincroniza com Google Agenda agora que está confirmado
+                    await updateCalendarEvent(updatedOrder).catch(e => console.error('[GCal Sync Error]', e.message));
+
+                    const settings = await getSettings();
+                    if (settings?.managerJid) {
+                        const sock = sessions.get(updatedOrder.instanceId || 'global') || Array.from(sessions.values())[0];
+                        if (sock) {
+                            const avisoPago = `💰 *PAGAMENTO CONFIRMADO!* 💰\n\n👤 *Cliente:* ${updatedOrder.clientName}\n🎂 *Pedido:* ${updatedOrder.product}\n\nO pedido já está na aba *PENDENTES* do seu painel. Aceite-o para iniciar a produção! ✨`;
+                            await sock.sendMessage(settings.managerJid, { text: avisoPago }).catch(() => { });
+                        }
+                    }
+
+                    if (updatedOrder.clientJid) {
+                        const sock = sessions.get(updatedOrder.instanceId || 'global') || Array.from(sessions.values())[0];
+                        if (sock) {
+                            const msg = `✅ *PAGAMENTO CONFIRMADO!* 🎉\n\nOi, *${updatedOrder.clientName}*! Seu pagamento foi aprovado e seu pedido já está na nossa fila de produção. 🧑‍🍳✨\n\nAvisaremos você assim que estiver pronto! ❤️`;
+                            await sock.sendMessage(updatedOrder.clientJid, { text: msg }).catch(() => { });
+                        }
+                    }
+                } // Fim da trava de segurança do MP
+            }
+        }
+        res.sendStatus(200);
+    } catch (err) {
+        console.error('[MercadoPago Webhook Error]', err.message);
+        res.sendStatus(200); // MP exige 200 sempre para não ficar tentando
+    }
+});
+
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // ─── ROTAS — MARKETING ASSETS (STORIES) ──────────────────────────────────
@@ -147,7 +260,6 @@ app.delete('/marketing-assets/:id', async (req, res) => {
 
 // ─── GOOGLE CALENDAR OAUTH ────────────────────────────────────────────────────
 
-const { google } = require('googleapis');
 const GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
 function getOAuth2Client(req) {
@@ -156,10 +268,11 @@ function getOAuth2Client(req) {
     if (!clientId || !clientSecret) return null;
 
     // Constrói a URL de redirecionamento baseada em quem chamou (localhost ou IP)
-    const protocol = req.protocol;
-    const host = req.get('host');
+    // Proteção contra req indefinido
+    const protocol = (req && req.protocol) ? req.protocol : 'http';
+    const host = (req && typeof req.get === 'function') ? req.get('host') : 'localhost:3001';
     const redirectUri = `${protocol}://${host}/auth/google/callback`;
-    
+
     return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
 
@@ -220,7 +333,7 @@ app.get('/auth/google/callback', async (req, res) => {
 
 // Status da conexão com o Google Calendar
 app.get('/auth/google/status', async (req, res) => {
-    const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
+    const settings = await getSettings();
     const connected = !!(settings?.gcalRefreshToken);
     const hasCredentials = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
     res.json({ connected, calendarId: settings?.gcalCalendarId, hasCredentials });
@@ -229,16 +342,23 @@ app.get('/auth/google/status', async (req, res) => {
 // Lista os calendários disponíveis na conta conectada
 app.get('/auth/google/calendars', async (req, res) => {
     try {
-        const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
+        const settings = await getSettings();
         if (!settings?.gcalRefreshToken) return res.status(401).json({ error: 'Não conectado' });
 
-        const oauth2Client = getOAuth2Client();
+        const oauth2Client = getOAuth2Client(req);
         oauth2Client.setCredentials({ refresh_token: settings.gcalRefreshToken, access_token: settings.gcalAccessToken });
         const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
         const list = await calendar.calendarList.list();
-        const calendars = list.data.items.map(c => ({ id: c.id, name: c.summary, primary: c.primary }));
+
+        console.log(`[GCal] Buscando calendários... Encontrados: ${list.data.items?.length || 0}`);
+
+        const calendars = (list.data.items || [])
+            .map(c => ({ id: c.id, name: c.summaryOverride || c.summary, primary: c.primary }))
+            .filter(c => c.name); // Remove itens sem nome
+
         res.json(calendars);
     } catch (e) {
+        console.error('[GCal Error] Falha ao listar calendários:', e);
         res.status(500).json({ error: e.message });
     }
 });
@@ -265,7 +385,7 @@ app.post('/auth/google/disconnect', async (req, res) => {
 let openaiInstance = null;
 const getOpenAI = async () => {
     if (!openaiInstance) {
-        const config = await prisma.setting.findUnique({ where: { id: 'global' } });
+        const config = await getSettings();
         if (config?.openaiKey) {
             openaiInstance = new OpenAI({ apiKey: config.openaiKey });
         }
@@ -333,21 +453,181 @@ async function executeChamarGerente(reason, jid, currentChat, settings, flowAdmi
     }
 }
 
+async function getStoreStatus() {
+    const hoje = new Date();
+    const diaSemana = hoje.getDay();
+    const horas = hoje.getHours();
+    const minutos = hoje.getMinutes();
+
+    // Formato para exibição no prompt (ex: 09:15)
+    const horaAtual = horas.toString().padStart(2, '0') + ':' + minutos.toString().padStart(2, '0');
+
+    // Valor numérico total em minutos para comparação segura
+    const minutosAtuais = (horas * 60) + minutos;
+
+    const dias = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+    const nomeDia = dias[diaSemana];
+
+    const slots = await prisma.availableSlot.findMany({ where: { dayOfWeek: diaSemana } });
+    let statusLoja = "FECHADA";
+
+    if (slots.length > 0) {
+        for (const slot of slots) {
+            const [startH, startM] = slot.startTime.split(':').map(Number);
+            const [endH, endM] = slot.endTime.split(':').map(Number);
+            const minutosInicio = (startH * 60) + startM;
+            const minutosFim = (endH * 60) + endM;
+
+            if (minutosAtuais >= minutosInicio && minutosAtuais <= minutosFim) {
+                statusLoja = "ABERTA";
+                break;
+            }
+        }
+    }
+    return { statusLoja, nomeDia, horaAtual, hoje };
+}
+
+async function buildLilyPrompt(instanceId, jid, customerContext = "", storeInfo) {
+    const { statusLoja, nomeDia, horaAtual, hoje } = storeInfo;
+    const settings = await getSettings();
+    const { getCachedProducts } = require('./lib/cache');
+    const allProducts = await getCachedProducts();
+    const instance = await getCachedInstance(instanceId);
+
+    // --- PROCESSAMENTO DO CARDÁPIO ---
+    let deliveryCatalog = "";
+    let orderCatalog = "";
+
+    allProducts.forEach(p => {
+        let variations = [];
+        try {
+            variations = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
+        } catch (e) { variations = []; }
+
+        const formatProduct = (prod, vars) => {
+            let text = `*${prod.name.toUpperCase()}*`;
+            if (prod.description) text += `\n_${prod.description}_`;
+
+            if (vars.length > 0) {
+                const varLines = vars.map(v => {
+                    let vText = `   * *${v.name}* - R$ ${v.price.toFixed(2)}`;
+                    if (v.stock === 0) vText += " (ESGOTADO)";
+                    return vText;
+                }).join('\n');
+                return text + '\n' + varLines;
+            } else {
+                return text + ` - R$ ${prod.price.toFixed(2)}`;
+            }
+        };
+
+        const hasStock = p.stock > 0 || variations.some(v =>
+            (v.stock > 0) || (v.subItems && v.subItems.some(si => si.stock > 0))
+        );
+
+        if (p.type === 'delivery') {
+            if (hasStock) deliveryCatalog += formatProduct(p, variations) + '\n\n';
+        } else {
+            orderCatalog += formatProduct(p, variations) + '\n\n';
+        }
+    });
+
+    const finalBasePrompt = instance?.botPrompt || settings?.botPrompt || "Você é a Lily, a alma da Linda Cake! Uma vendedora de elite que ama o que faz.";
+    const knowledgeBase = instance?.knowledge ? `--- CONHECIMENTO EXTRA ---\n${instance.knowledge}\n\n` : "";
+
+    const isOpen = statusLoja === "ABERTA";
+
+    return [
+        // ============================================================
+        // CAMADA 1 — VERDADE ABSOLUTA (sempre prevalece sobre tudo)
+        // ============================================================
+        `### REALIDADE ATUAL — LEIA ANTES DE QUALQUER COISA ###`,
+        `Data/hora exata agora: ${nomeDia}, ${hoje.toLocaleDateString('pt-BR')} às ${horaAtual}`,
+        `Status da loja NESTE MOMENTO: ${statusLoja}`,
+        `### ATENÇÃO: ESTE STATUS É O ÚNICO QUE VALE. ###`,
+        `Se o status acima for FECHADA, ignore qualquer mensagem anterior do histórico onde você disse que estava aberta. A situação mudou AGORA e você deve informar que encerramos.`,
+        ``,
+        `### PRODUTOS DE PRONTA ENTREGA (disponivel HOJE, pedidos imediatos) ###`,
+        `Responda com estes quando o cliente perguntar o que tem hoje, o que tem disponivel, ou quiser algo rapido.`,
+        deliveryCatalog || 'Nenhum em estoque no momento',
+        ``,
+
+        `### PRODUTOS SOB ENCOMENDA (nao disponivel hoje, requer agendamento previo) ###`,
+        `Responda com estes apenas quando o cliente perguntar sobre encomendas, bolos personalizados ou eventos futuros.`,
+        orderCatalog || 'Nenhuma',
+
+        ``,
+        `REGRA ABSOLUTA: O historico de conversa no final deste prompt são mensagens do passado.`,
+        `Elas podem conter status, horários ou disponibilidades que eram verdade NAQUELE momento,`,
+        `mas que podem ter mudado. O unico status e disponibilidade que valem sao os desta secao acima.`,
+        `Nunca use o historico para inferir se a loja esta aberta ou fechada, nem o que esta em estoque.`,
+        `### FIM DA REALIDADE ATUAL ###`,
+        ``,
+
+
+        `### INTERPRETACAO DE INTENCAO DO CLIENTE ###`,
+        `- "o que tem hoje", "o que tem disponivel", "quero pedir agora" -> refere-se SOMENTE a pronta entrega.`,
+        `- "quero encomendar", "festa", "evento", "para o fim de semana" -> refere-se a encomendas.`,
+        `- Nunca misture os dois tipos na mesma resposta a menos que o cliente pergunte pelos dois.`,
+        ``,
+
+        // ============================================================
+        // CAMADA 2 — IDENTIDADE E COMPORTAMENTO (regras fixas)
+        // ============================================================
+        `### QUEM VOCE E ###`,
+        finalBasePrompt,
+        `Voz: objetiva, persuasiva e sutil. Use escassez e exclusividade. Nunca enrole.`,
+        ``,
+
+        `### REGRAS DE OURO ###`,
+        `1. CADASTRO: Use sempre productId, product e variation exata. Nunca adivinhe nomes.`,
+        `2. SIGILO: Nunca mostre o ID (ID: ...) para o cliente.`,
+        `4. CONCISAO: Respostas curtas vendem mais. Seja ultra objetiva.`,
+        `5. CARDAPIO: Proibido listar precos ou produtos manualmente no seu texto. Use as ferramentas.`,
+        `6. INTRODUCAO OBRIGATORIA: Sempre que voce for enviar um catalogo, voce DEVE escrever apenas UMA frase curta de introdução (ex: "Aqui estão as nossas delícias de delivery:").`,
+        `7. CTA FINAL: Ao enviar um catálogo, termine SEMPRE com uma única pergunta curta (ex: "Qual desses posso separar para você?").`,
+        `8. FLUXO DE FECHAMENTO: Se o status for FECHADA, informe que encerramos hoje e pergunte se o cliente quer garantir para AMANHÃ. SE O CLIENTE JÁ DISSE SIM OU QUERO, você está PROIBIDA de repetir o aviso de fechamento; você deve usar o catálogo imediatamente.`,
+        `9. AGENDAMENTO: Ferramenta 'check_availability' deve ser usada APENAS para Encomendas/Bolos de Festa. Para Delivery (Pronta Entrega), NÃO use disponibilidade de horário, apenas mostre o catálogo de delivery para o dia seguinte.`,
+        ``,
+
+        `### ESCADA DE VENDAS ###`,
+        `1. PRODUTO -> 2. NOME -> 3. LOGISTICA -> 4. PAGAMENTO -> 5. FECHAMENTO`,
+        ``,
+
+        `### REGRAS DE AGENDAMENTO ###`,
+        `- Intervalo minimo de 30 minutos entre pedidos.`,
+        `- Agenda cheia: "Nossa agenda desse horario lotou, mas tenho um espacinho exclusivo as X horas, quer garantir?"`,
+        isOpen
+            ? `- Loja ABERTA: atenda normalmente, acione ferramentas de delivery para disponibilidade.`
+            : `- Loja FECHADA: use escassez. Ex: "Hoje ja encerramos, mas a agenda de amanha ja esta quase lotada! Quer garantir seu horario exclusivo agora para nao ficar sem?"`,
+        ``,
+
+        knowledgeBase,
+
+        `### ENCOMENDAS DISPONIVEIS (nao liste manualmente, use apenas como conhecimento) ###`,
+        orderCatalog || 'Nenhuma',
+        ``,
+
+        // ============================================================
+        // CAMADA 3 — HISTÓRICO (passado, sem autoridade sobre status)
+        // ============================================================
+        `### HISTORICO DA CONVERSA (PASSADO — sem autoridade sobre status ou estoque) ###`,
+        `As mensagens abaixo ja ocorreram. Use apenas para entender o contexto da conversa.`,
+        `Nunca as use para determinar se a loja esta aberta, fechada ou o que esta disponivel.`,
+        ``,
+        customerContext,
+
+    ].join('\n');
+}
+
 async function initInstance(instanceId) {
-    console.log(`[${instanceId}] Iniciando instância...`);
     const sessionDir = path.join(__dirname, 'sessions', instanceId);
     if (!fs.existsSync(sessionDir)) {
-        console.log(`[${instanceId}] Criando pasta de sessão: ${sessionDir}`);
         fs.mkdirSync(sessionDir, { recursive: true });
     }
 
-    console.log(`[${instanceId}] Carregando Auth State...`);
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-    
-    console.log(`[${instanceId}] Buscando versão do Baileys...`);
     const { version } = await fetchLatestBaileysVersion();
 
-    console.log(`[${instanceId}] Inicializando Store...`);
     const store = makeInMemoryStore({ logger: pino({ level: 'silent' }) });
     const storePath = path.join(sessionDir, 'store.json');
 
@@ -502,15 +782,8 @@ async function initInstance(instanceId) {
                     create: data
                 });
 
-                // ─── MOTOR DE FLUXOS (FLOW BUILDER) ──────────────────────────────
-                let flowHandled = false;
-                if (!msg.key.fromMe) {
-                    flowHandled = await handleFlows(sock, instanceId, jid, text, msg);
-                }
-                if (flowHandled) return;
-
                 // ─── COMANDOS DE ADMINISTRADOR (MANAGER) ──────────────────────────
-                const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
+                const settings = await getSettings();
                 if (!msg.key.fromMe && settings?.managerJid && jid === settings.managerJid) {
                     console.log(`[Admin Command] Processando comando do gerente: ${text}`);
                     // Chama o agente específico para o administrador
@@ -519,452 +792,609 @@ async function initInstance(instanceId) {
                 }
 
                 // AI AGENT LOGIC (CLIENTES)
-                // Re-buscamos o chat para garantir que pegamos o status de aiEnabled atualizado (caso um fluxo tenha acabado de ligar)
-                const currentChat = await prisma.chat.findUnique({
-                    where: { instanceId_jid: { instanceId, jid } }
-                });
+                if (aiProcessingTokens[jid]) {
+                    aiProcessingTokens[jid].cancelled = true;
+                }
 
-                if (!msg.key.fromMe && currentChat?.aiEnabled) {
-                    // COMMAND AGENT (Experimental)
-                    if (text.toLowerCase().includes('crie um story')) {
-                        const storyText = text.replace(/crie um story/i, '').trim();
-                        if (storyText) {
-                            await sock.sendMessage('status@broadcast', { text: storyText });
-                            await sendRichMessage(sock, jid, "✅ Comando executado! Acabei de publicar seu Story.");
-                            return;
-                        }
-                    }
+                // Adiciona a mensagem atual ao buffer do cliente
+                if (!aiMessageBuffer[jid]) aiMessageBuffer[jid] = [];
+                aiMessageBuffer[jid].push({ text, msg });
 
-                    const ai = await getOpenAI();
-                    if (ai) {
-                        const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
-                        const instance = await prisma.instance.findUnique({ where: { id: instanceId } });
-                        const isImage = !!msg.message?.imageMessage || (msg.message?.documentMessage?.mimetype?.startsWith('image/'));
-                        const isVideo = !!msg.message?.videoMessage;
-                        let userMessageContent = [{ type: "text", text: text || "O cliente enviou uma imagem." }];
+                if (aiDebounceTimers[jid]) {
+                    clearTimeout(aiDebounceTimers[jid]);
+                }
+                aiDebounceTimers[jid] = setTimeout(async () => {
+                    try {
+                        const messagesToProcess = aiMessageBuffer[jid] || [];
+                        delete aiDebounceTimers[jid];
+                        delete aiMessageBuffer[jid];
 
-                        if (isImage) {
-                            try {
-                                const { downloadMediaMessage } = require('@whiskeysockets/baileys');
-                                const buffer = await downloadMediaMessage(msg, 'buffer', {});
-                                const base64Image = buffer.toString('base64');
-                                userMessageContent.push({
-                                    type: "image_url",
-                                    image_url: { url: `data:image/jpeg;base64,${base64Image}` }
-                                });
-                            } catch (vErr) {
-                                console.error('[Vision Error] Falha ao processar imagem:', vErr);
-                            }
-                        }
+                        const currentToken = { cancelled: false };
+                        aiProcessingTokens[jid] = currentToken;
 
-                        const history = await prisma.message.findMany({
-                            where: { instanceId, jid },
-                            orderBy: { timestamp: 'desc' },
-                            take: 30
+                        // Re-buscamos o chat para garantir que pegamos o status de aiEnabled atualizado (caso um fluxo tenha acabado de ligar)
+                        const currentChat = await prisma.chat.findUnique({
+                            where: { instanceId_jid: { instanceId, jid } }
                         });
 
-                        // BUSCA DADOS DO PEDIDO ATUAL (EM NEGOCIAÇÃO OU RECENTE)
-                        const lastOrder = await prisma.order.findFirst({
-                            where: { clientJid: jid },
-                            orderBy: { createdAt: 'desc' }
-                        });
-                        let orderContext = "";
-                        if (lastOrder) {
-                            orderContext = `\n--- ESTADO DO PEDIDO ATUAL (${lastOrder.id.slice(-5).toUpperCase()}) ---\n` +
-                                `Produto: ${lastOrder.product || 'Pendente'}\n` +
-                                `Peso/Qtd: ${lastOrder.quantity || 'Pendente'}\n` +
-                                `Data: ${lastOrder.scheduledDate || 'Pendente'} às ${lastOrder.scheduledTime || 'Pendente'}\n` +
-                                `Forma de Pagamento: ${lastOrder.paymentMethod || 'Pendente'}\n` +
-                                `Status: ${lastOrder.status}\n` +
-                                `Observações: ${lastOrder.notes || 'Nenhuma'}\n` +
-                                `Use esses dados para NÃO perguntar o que já foi informado.\n`;
-                        }
-
-
-                        const kb = JSON.parse(instance?.knowledge || '[]');
-                        let kbContext = kb.length > 0
-                            ? "\n\n--- BASE DE CONHECIMENTO OFICIAL (PRIORIDADE MÁXIMA) ---\n" +
-                            "Use as informações abaixo como ÚNICA verdade para preços, políticas e dúvidas técnicas. " +
-                            "NUNCA invente preços diferentes dos que estão aqui.\n\n" +
-                            kb.map(k => `DÚVIDA: ${k.q}\nRESPOSTA OFICIAL: ${k.a}`).join('\n---\n')
-                            : "";
-
-
-                        // BUSCA PRODUTOS COM HIERARQUIA REAL
-                        const allProducts = await prisma.product.findMany();
-                        let catalogContext = "\n\n--- CARDÁPIO: PRONTA ENTREGA (Delivery/Para comer agora) ---\n";
-                        const deliveryItems = allProducts.filter(p => p.type === 'delivery');
-                        const orderItems = allProducts.filter(p => p.type !== 'delivery');
-
-                        if (deliveryItems.length === 0) {
-                            catalogContext += "(Sem itens de pronta entrega hoje)\n";
-                        } else {
-                            deliveryItems.forEach(p => {
-                                const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
-                                
-                                let prices = vars.length > 0 ? vars.map(v => v.price) : [p.price];
-                                const minP = Math.min(...prices);
-                                const maxP = Math.max(...prices);
-                                const priceRange = minP === maxP ? `R$${minP.toFixed(2)}` : `R$${minP.toFixed(2)} a R$${maxP.toFixed(2)}`;
-
-                                let totalStock = p.stock;
-                                if (vars.length > 0) {
-                                    totalStock = vars.reduce((acc, v) => {
-                                        const subStock = v.subItems?.reduce((sAcc, si) => sAcc + (si.stock || 0), 0) || 0;
-                                        return acc + (v.stock || 0) + subStock;
-                                    }, 0);
-                                }
-
-                                if (totalStock > 0) {
-                                    const variationsInfo = vars.map(v => `   - ${v.name}: ${v.description || 'Sem descrição'}`).join('\n');
-                                    catalogContext += `- *${p.name}* (${priceRange}): ${p.description || ''}\n${variationsInfo}\n`;
-                                } else {
-                                    catalogContext += `- *${p.name}*: (ESGOTADO NO MOMENTO)\n`;
-                                }
-                            });
-                        }
-
-                        catalogContext += "\n--- CARDÁPIO: ENCOMENDAS (Para outro dia/Festa) ---\n";
-                        if (orderItems.length === 0) {
-                            catalogContext += "(Sem itens para encomenda)\n";
-                        } else {
-                            orderItems.forEach(p => {
-                                const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
-                                if (vars.length > 0) {
-                                    const variationsStr = vars.map(v => `${v.name} (R$${v.price})`).join(', ');
-                                    catalogContext += `- *${p.name}*: Opções: ${variationsStr}.\n`;
-                                } else {
-                                    catalogContext += `- *${p.name}*: R$${p.price.toFixed(2)}. ${p.description || ''}\n`;
-                                }
-                            });
-                        }
-
-                        const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-                        const hoje = new Date();
-                        const year = hoje.getFullYear();
-                        const month = hoje.getMonth();
-
-                        // Lista explícita de dias do mês atual para evitar QUALQUER erro de cálculo da IA
-                        let daysList = "";
-                        const lastDate = new Date(year, month + 1, 0).getDate();
-                        for (let d = 1; d <= lastDate; d++) {
-                            const dateObj = new Date(year, month, d);
-                            daysList += `${d}/${month + 1}: ${diasSemana[dateObj.getDay()]}, `;
-                        }
-
-                        const slots = await prisma.availableSlot.findMany();
-                        const diasSiglas = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-                        const diasCompletos = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+                        // ─── MOTOR DE FLUXOS (Agrupado) ──────────────────────────────
+                        // Juntamos o texto primeiro para passar para o motor de fluxos
+                        const textForFlow = messagesToProcess.map(m => m.text).filter(t => t).join('\n');
                         
-                        // Monta o contexto de horários para TODOS os dias
-                        let hoursContext = diasCompletos.map((dia, index) => {
-                            const slot = slots.find(s => s.dayOfWeek === index);
-                            if (slot) return `${dia}: ${slot.startTime} às ${slot.endTime}`;
-                            return `${dia}: FECHADO`;
-                        }).join('\n');
+                        let flowHandled = false;
+                        if (!msg.key.fromMe) {
+                            flowHandled = await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg);
+                        }
+                        if (flowHandled) return;
 
-                        const timeContext = `\n\n--- REGRAS DE ATENDIMENTO HUMANO ---\n1. NÃO SEJA UM ROBÔ: Não mande listas técnicas. Use texto corrido e amigável.\n2. USE NEGRITO: Use asteriscos para destacar nomes de produtos.\n3. PEDIDO IMEDIATO: Se o cliente disser "quero agora" ou "pra já", pule o horário de retirada e peça o endereço para o frete.\n4. HORÁRIO DE HOJE: Hoje é ${diasCompletos[hoje.getDay()]}. O horário é: ${slots.find(s => s.dayOfWeek === hoje.getDay()) ? `${slots.find(s => s.dayOfWeek === hoje.getDay()).startTime} às ${slots.find(s => s.dayOfWeek === hoje.getDay()).endTime}` : 'FECHADO'}.\n\n--- CONTEXTO DE TEMPO ---\nHoje é ${diasCompletos[hoje.getDay()]}, ${hoje.toLocaleDateString('pt-BR')} às ${hoje.toLocaleTimeString('pt-BR')}\n\nHORÁRIOS DA SEMANA:\n${hoursContext}\n\n--- TABELA DE DATAS (${year}) ---\n${daysList}\n\n--- PROTOCOLO DE ENCOMENDA ---\n1. COLETA: Peça APENAS UM item por vez.\n2. AGUARDAR PREÇO: Se for encomenda, avise que aguarda a admin.\n\n--- PAGAMENTO ---\n- OPÇÕES: Pix, Dinheiro, Crédito.\n- PIX: Peça o comprovante. SÓ CHAME create_order após o cliente enviar o comprovante.\n- CRÉDITO: Diga "Vou solicitar ao meu gerente que te envie o link de pagamento agora mesmo!". NÃO CHAME create_order ainda. Aguarde o cliente pagar.\n- DINHEIRO: Pode chamar create_order normalmente.\n- NUNCA feche o pedido sem saber a forma de pagamento.\n\n--- LOGÍSTICA ---\n- RETIRADA POR PADRÃO: Trate todos os pedidos como "Retirada na Loja".\n- NÃO OFEREÇA ENTREGA: Nunca ofereça o serviço de entrega proativamente.\n- REATIVO: Se e SOMENTE SE o cliente perguntar sobre entrega (ex: "Vocês entregam?"), responda que sim, que temos parceria com "Apps de Entrega".\n- CÁLCULO DE FRETE: Só peça o endereço e use get_delivery_fee se o cliente solicitou a entrega.\n- NUNCA diga "Uber", use apenas "App de entrega".\n`;
-
-                        const finalSystemPrompt = `--- REGRAS DE ATENDIMENTO (PRIORIDADE MÁXIMA) ---\n` +
-                            `1. HORÁRIOS DE HOJE: Hoje é ${diasCompletos[hoje.getDay()]}. Abrimos às ${slots.find(s => s.dayOfWeek === hoje.getDay())?.startTime || '09:00'} e fechamos às ${slots.find(s => s.dayOfWeek === hoje.getDay())?.endTime || '20:00'}.\n` +
-                            `2. PEDIDO IMEDIATO: Se o cliente disser "quero agora", "pra já" ou "tô com pressa", NÃO pergunte horário de retirada. Confirme o item e peça o endereço para o frete (Uber) imediatamente.\n` +
-                            `3. NÃO USE LISTAS: Responda de forma fluida e humana.\n` +
-                            `4. DESCRIÇÕES REAIS: Use as descrições das variações que estão no cardápio abaixo.\n\n` +
-                            catalogContext + timeContext + orderContext + 
-                            (kbContext ? "\n\n--- INFORMAÇÕES EXTRAS ---\n" + kbContext : "") +
-                            "\n\n--- PERSONALIDADE DA LILY ---\n" + (instance?.botPrompt || 'Você é a Lily, assistente da Linda Cake.');
-
-                        console.log("\n--- DEBUG LILY PROMPT ---\n", finalSystemPrompt.slice(0, 500) + "...");
-
-                        const messages = [
-                            { role: 'system', content: finalSystemPrompt },
-                            ...history.reverse().map(m => ({
-                                role: m.fromMe ? 'assistant' : 'user',
-                                content: m.text || "O cliente enviou uma imagem/arquivo."
-                            })),
-                            { role: 'user', content: userMessageContent }
-                        ];
-
-
-                        // --- TOOLS DEFINITION ---
-                        const tools = [
-                            {
-                                type: "function",
-                                function: {
-                                    name: "chamar_gerente",
-                                    description: "Avisa o dono/gerente da loja que existe uma dúvida que a IA não sabe responder ou um pedido especial.",
-                                    parameters: {
-                                        type: "object",
-                                        properties: {
-                                            reason: { type: "string", description: "O motivo do chamado ou a pergunta do cliente" }
-                                        },
-                                        required: ["reason"]
-                                    }
-                                }
-                            },
-                            {
-                                type: "function",
-                                function: {
-                                    name: "get_delivery_fee",
-                                    description: "Calcula o valor do frete baseado no endereço do cliente usando Google Maps e as regras da loja.",
-                                    parameters: {
-                                        type: "object",
-                                        properties: {
-                                            address: { type: "string", description: "Endereço completo do cliente" }
-                                        },
-                                        required: ["address"]
-                                    }
-                                }
-                            },
-                            {
-                                type: "function",
-                                function: {
-                                    name: "check_availability",
-                                    description: "Verifica se há horários disponíveis para agendamento em uma data e hora específica.",
-                                    parameters: {
-                                        type: "object",
-                                        properties: {
-                                            date: { type: "string", description: "A data no formato YYYY-MM-DD" },
-                                            time: { type: "string", description: "O horário no formato HH:MM" },
-                                        },
-                                        required: ["date", "time"],
-                                    },
-                                },
-                            },
-                            {
-                                type: "function",
-                                function: {
-                                    name: "create_order",
-                                    description: "Cria um novo pedido ou agendamento (bolo, doce, delivery, etc). Identifique o produto e a variação correta se disponível.",
-                                    parameters: {
-                                        type: "object",
-                                        properties: {
-                                            product: { type: "string", description: "Nome do produto/bolo" },
-                                            variation: { type: "string", description: "Sabor da massa e sabor dos recheios (ex: Massa branca, Recheio de Ninho com Morango)" },
-                                            quantity: { type: "string", description: "Peso do bolo (ex: 2kg) ou Quantidade" },
-                                            scheduledDate: { type: "string", description: "Data do agendamento YYYY-MM-DD" },
-                                            scheduledTime: { type: "string", description: "Horário do agendamento HH:MM" },
-                                            clientName: { type: "string", description: "Nome do cliente" },
-                                            paymentMethod: { type: "string", description: "Forma de pagamento (ex: Pix com comprovante, Dinheiro, Cartão/Link)" },
-                                            type: { type: "string", enum: ["order", "delivery"], description: "Tipo: order (encomenda) ou delivery (entrega)" },
-                                            deliveryAddress: { type: "string", description: "Endereço se for delivery" },
-                                            deliveryFee: { type: "number", description: "Valor do frete calculado (apenas o número, ex: 4.50)" },
-                                            notes: { type: "string", description: "Detalhes do modelo de referência, detalhes do topo, e outras observações" }
-                                        },
-                                        required: ["product", "variation", "quantity", "scheduledDate", "scheduledTime", "clientName", "paymentMethod", "notes"],
-                                    },
-                                },
-                            },
-                            {
-                                type: "function",
-                                function: {
-                                    name: "update_order",
-                                    description: "Atualiza informações de um pedido ou agendamento já existente. Só use se o cliente pedir para corrigir algo.",
-                                    parameters: {
-                                        type: "object",
-                                        properties: {
-                                            orderId: { type: "string", description: "Código de referência curto do pedido (ex: FJBIR)" },
-                                            product: { type: "string", description: "Novo produto (opcional)" },
-                                            quantity: { type: "string", description: "Novo peso ou quantidade (opcional)" },
-                                            scheduledDate: { type: "string", description: "Nova data YYYY-MM-DD (opcional)" },
-                                            scheduledTime: { type: "string", description: "Novo horário HH:MM (opcional)" },
-                                            notes: { type: "string", description: "Novas observações ou mudanças nos sabores (opcional)" }
-                                        },
-                                        required: ["orderId"]
-                                    }
-                                }
-                            },
-                            {
-                                type: "function",
-                                function: {
-                                    name: "get_order_status",
-                                    description: "Verifica se o pedido do cliente atual está pronto para retirada ou entrega.",
-                                    parameters: { type: "object", properties: {} }
-                                }
-                            },
-                            {
-                                type: "function",
-                                function: {
-                                    name: "get_store_location",
-                                    description: "Retorna o endereço físico da loja e o link do Google Maps para retirada.",
-                                    parameters: { type: "object", properties: {} }
+                        if (!msg.key.fromMe && currentChat?.aiEnabled) {
+                            // COMMAND AGENT (Experimental)
+                            if (text.toLowerCase().includes('crie um story')) {
+                                const storyText = text.replace(/crie um story/i, '').trim();
+                                if (storyText) {
+                                    await sock.sendMessage('status@broadcast', { text: storyText });
+                                    await sendRichMessage(sock, jid, "✅ Comando executado! Acabei de publicar seu Story.");
+                                    return;
                                 }
                             }
-                        ];
 
-                        const modelMap = { 'openai': 'gpt-4o', 'openai-mini': 'gpt-4o-mini', 'openai-nano': 'gpt-4o-mini', 'claude': 'gpt-4o' };
+                            const ai = await getOpenAI();
+                            if (ai) {
+                                const settings = await getSettings();
 
-                        let responseMessage;
-                        try {
-                            console.log("\n--- DEBUG SYSTEM PROMPT (AGENTE) ---\n", messages[0].content, "\n-----------------------------------\n");
+                                // Agrupa todos os textos e imagens do buffer
+                                let combinedText = "";
+                                let combinedImages = [];
 
-                            const completion = await ai.chat.completions.create({
-                                model: modelMap[settings?.activeModel] || 'gpt-4o',
-                                messages,
-                                tools,
-                                tool_choice: "auto"
-                            });
-
-                            responseMessage = completion.choices[0].message;
-
-                            // FUNCTION CALLING LOOP
-                            if (responseMessage.tool_calls) {
-                                console.log(`[AI] IA solicitou execução de ${responseMessage.tool_calls.length} ferramentas.`);
-                                messages.push(responseMessage);
-
-                                for (const toolCall of responseMessage.tool_calls) {
-                                    const functionName = toolCall.function.name;
-                                    const args = JSON.parse(toolCall.function.arguments);
-                                    let result;
-
-                                    console.log(`[AI] Executando função: ${functionName}`, args);
-
-                                    if (functionName === "chamar_gerente") {
-                                        const { reason } = args;
-                                        result = await executeChamarGerente(reason, jid, currentChat, settings, null, sock, prisma, instanceId);
-                                    }
-                                    else if (functionName === "check_availability") {
-                                        const { checkAvailability } = require('./routes/orders');
-                                        result = await checkAvailability(args.date, args.time);
-                                    }
-                                    else if (functionName === "get_delivery_fee") {
-                                        const feeRes = await calculateFee(args.address);
-                                        if (feeRes.error) result = "Erro: " + feeRes.error;
-                                        else if (feeRes.type === 'fixed') {
-                                            result = `VALOR DO FRETE: R$ ${feeRes.fee.toFixed(2)}`;
-                                        } else {
-                                            result = `VALOR DO FRETE (APP): R$ ${feeRes.estimated.toFixed(2)}`;
-                                        }
-                                    }
-                                    else if (functionName === "create_order") {
-                                        const axios = require('axios');
-                                        // Usamos a rota interna via POST para garantir que toda a lógica (GCal, Estoque) seja executada
+                                for (const m of messagesToProcess) {
+                                    if (m.text) combinedText += (combinedText ? "\n" : "") + m.text;
+                                    const isImg = !!m.msg.message?.imageMessage || (m.msg.message?.documentMessage?.mimetype?.startsWith('image/'));
+                                    if (isImg) {
                                         try {
-                                            const res = await axios.post('http://localhost:3001/orders', {
-                                                ...args,
-                                                clientJid: jid,
-                                                instanceId: instanceId
-                                            });
-                                            result = { success: true, referenceCode: res.data.id.slice(-5).toUpperCase(), calendarEvent: !!res.data.calendarEventId };
-                                        } catch (err) {
-                                            result = { success: false, error: err.response?.data?.error || err.message };
-                                        }
+                                            const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+                                            const buffer = await downloadMediaMessage(m.msg, 'buffer', {});
+                                            combinedImages.push(buffer.toString('base64'));
+                                        } catch (e) { console.error("Erro imagem buffer:", e); }
                                     }
-                                    else if (functionName === "update_order") {
-                                        const axios = require('axios');
-                                        try {
-                                            const allOrders = await prisma.order.findMany({ where: { clientJid: jid } });
-                                            const targetOrder = allOrders.find(o => o.id.slice(-5).toUpperCase() === args.orderId.toUpperCase());
-                                            if (!targetOrder) {
-                                                result = { success: false, error: "Pedido não encontrado com esse código de referência." };
-                                            } else {
-                                                const updateData = {};
-                                                if (args.product) updateData.product = args.product;
-                                                if (args.quantity) updateData.quantity = args.quantity;
-                                                if (args.scheduledDate) updateData.scheduledDate = args.scheduledDate;
-                                                if (args.scheduledTime) updateData.scheduledTime = args.scheduledTime;
-                                                if (args.notes) updateData.notes = args.notes;
+                                }
 
-                                                await axios.patch(`http://localhost:3001/orders/${targetOrder.id}`, updateData);
-
-                                                result = { success: true, message: "Pedido atualizado com sucesso." };
-                                            }
-                                        } catch (err) {
-                                            result = { success: false, error: err.response?.data?.error || err.message };
-                                        }
-                                    }
-
-                                    else if (functionName === "get_order_status") {
-                                        const order = await prisma.order.findFirst({
-                                            where: { clientJid: jid, status: { not: "completed" } },
-                                            orderBy: { createdAt: 'desc' }
-                                        });
-                                        if (order) {
-                                            result = {
-                                                status: order.status === "ready" ? "PRONTO" : "EM PRODUÇÃO",
-                                                product: order.product,
-                                                canOfferLocation: order.status === "ready"
-                                            };
-                                        } else {
-                                            result = { error: "Nenhum pedido ativo encontrado para este número." };
-                                        }
-                                    }
-                                    else if (functionName === "get_store_location") {
-                                        result = {
-                                            address: settings?.businessAddress || "Endereço não configurado.",
-                                            locationLink: settings?.businessLocation || "Link não disponível."
-                                        };
-                                    }
-
-                                    messages.push({
-                                        tool_call_id: toolCall.id,
-                                        role: "tool",
-                                        name: functionName,
-                                        content: JSON.stringify(result),
+                                let userMessageContent = [{ type: "text", text: combinedText || "O cliente enviou uma imagem." }];
+                                for (const b64 of combinedImages) {
+                                    userMessageContent.push({
+                                        type: "image_url",
+                                        image_url: { url: `data:image/jpeg;base64,${b64}` }
                                     });
                                 }
 
-                                // Get final response from AI after tools
-                                const secondResponse = await ai.chat.completions.create({
-                                    model: modelMap[settings?.activeModel] || 'gpt-4o',
-                                    messages,
+                                const storeInfo = await getStoreStatus();
+                                const { statusLoja } = storeInfo;
+
+                                const history = await prisma.message.findMany({
+                                    where: { instanceId, jid },
+                                    orderBy: { timestamp: 'desc' },
+                                    take: 30
                                 });
-                                responseMessage = secondResponse.choices[0].message;
+
+                                // Formata o histórico como texto para injetar no final do prompt do sistema
+                                const formattedHistory = history.reverse().map(m =>
+                                    `${m.fromMe ? 'Lily' : 'Cliente'}: ${m.text || '[Imagem/Arquivo]'}`
+                                ).join('\n');
+
+                                const finalSystemPrompt = await buildLilyPrompt(instanceId, jid, formattedHistory, storeInfo);
+                                console.log("\n--- DEBUG LILY PROMPT (DIRETO) ---\n", finalSystemPrompt, "\n-----------------------------------\n");
+
+                                console.log(`[AI] Gerando resposta para ${jid}...`);
+                                const messages = [
+                                    { role: 'system', content: finalSystemPrompt },
+                                    { role: 'user', content: userMessageContent }
+                                ];
+
+
+                                // --- TOOLS DEFINITION ---
+                                const tools = [
+                                    {
+                                        type: "function",
+                                        function: {
+                                            name: "chamar_gerente",
+                                            description: "Avisa o dono/gerente da loja que existe uma dúvida que a IA não sabe responder ou um pedido especial.",
+                                            parameters: {
+                                                type: "object",
+                                                properties: {
+                                                    reason: { type: "string", description: "O motivo do chamado ou a pergunta do cliente" }
+                                                },
+                                                required: ["reason"]
+                                            }
+                                        }
+                                    },
+                                    {
+                                        type: "function",
+                                        function: {
+                                            name: "get_delivery_fee",
+                                            description: "Calcula o valor da entrega baseado no endereço do cliente usando Google Maps e as regras da loja.",
+                                            parameters: {
+                                                type: "object",
+                                                properties: {
+                                                    address: { type: "string", description: "Endereço completo do cliente" }
+                                                },
+                                                required: ["address"]
+                                            }
+                                        }
+                                    },
+                                    {
+                                        type: "function",
+                                        function: {
+                                            name: "check_availability",
+                                            description: "Verifica se há horários disponíveis para agendamento em uma data e hora específica.",
+                                            parameters: {
+                                                type: "object",
+                                                properties: {
+                                                    date: { type: "string", description: "A data no formato YYYY-MM-DD" },
+                                                    time: { type: "string", description: "O horário no formato HH:MM" },
+                                                },
+                                                required: ["date", "time"],
+                                            },
+                                        },
+                                    },
+                                    {
+                                        type: "function",
+                                        function: {
+                                            name: "create_order",
+                                            description: "Cria um novo pedido ou agendamento. ATENÇÃO: Se o cliente acabou de fazer um pedido e quer mudar algo, use 'update_order'. NÃO crie pedidos duplicados para a mesma pessoa seguidamente.",
+                                            parameters: {
+                                                type: "object",
+                                                properties: {
+                                                    productId: { type: "string", description: "ID do produto (ex: cmo...) encontrado entre [ID:...] no catálogo." },
+                                                    product: { type: "string", description: "Nome do produto" },
+                                                    variation: { type: "string", description: "Nome da variação EXACTA (ex: 'P', 'M', 'Mini'). Não coloque sabores aqui." },
+                                                    quantity: { type: "string", description: "Peso do bolo (ex: 2kg) ou Quantidade" },
+                                                    scheduledDate: { type: "string", description: "Data do agendamento YYYY-MM-DD" },
+                                                    scheduledTime: { type: "string", description: "Horário do agendamento HH:MM" },
+                                                    clientName: { type: "string", description: "Nome do cliente" },
+                                                    paymentMethod: { type: "string", description: "Forma de pagamento (ex: Pix com comprovante, Dinheiro, Cartão/Link)" },
+                                                    type: { type: "string", enum: ["order", "delivery"], description: "Tipo: order (encomenda) ou delivery (entrega)" },
+                                                    deliveryAddress: { type: "string", description: "Endereço se for delivery" },
+                                                    deliveryFee: { type: "number", description: "Valor da entrega calculado por get_delivery_fee" },
+                                                    massa: { type: "string", description: "Sabor da massa escolhida" },
+                                                    recheio: { type: "string", description: "Sabor do recheio escolhido" },
+                                                    topo: { type: "string", description: "Informações sobre o topo do bolo" },
+                                                    notes: { type: "string", description: "Outras observações gerais" }
+                                                },
+                                                required: ["product", "variation", "quantity", "scheduledDate", "scheduledTime", "clientName", "paymentMethod", "notes"],
+                                            },
+                                        },
+                                    },
+                                    {
+                                        type: "function",
+                                        function: {
+                                            name: "update_order",
+                                            description: "Atualiza informações de um pedido ou agendamento já existente. Só use se o cliente pedir para corrigir algo.",
+                                            parameters: {
+                                                type: "object",
+                                                properties: {
+                                                    orderId: { type: "string", description: "Código de referência curto do pedido (ex: FJBIR)" },
+                                                    product: { type: "string", description: "Novo produto (opcional)" },
+                                                    quantity: { type: "string", description: "Novo peso ou quantidade (opcional)" },
+                                                    scheduledDate: { type: "string", description: "Nova data YYYY-MM-DD (opcional)" },
+                                                    scheduledTime: { type: "string", description: "Novo horário HH:MM (opcional)" },
+                                                    notes: { type: "string", description: "Novas observações ou mudanças nos sabores (opcional)" }
+                                                },
+                                                required: ["orderId"]
+                                            }
+                                        }
+                                    },
+                                    {
+                                        type: "function",
+                                        function: {
+                                            name: "get_order_status",
+                                            description: "Verifica se o pedido do cliente atual está pronto para retirada ou entrega.",
+                                            parameters: { type: "object", properties: {} }
+                                        }
+                                    },
+                                    {
+                                        type: "function",
+                                        function: {
+                                            name: "get_store_location",
+                                            description: "Retorna o endereço físico da loja e o link do Google Maps para retirada.",
+                                            parameters: { type: "object", properties: {} }
+                                        }
+                                    },
+                                    {
+                                        type: "function",
+                                        function: {
+                                            name: "get_delivery_catalog",
+                                            description: "OBRIGATÓRIO: Chame SEMPRE que o cliente perguntar o que tem para hoje, pronta entrega, ou pedir opções imediatas. Proibido listar produtos manualmente, quando estiver fechado e o cliente pedir informações \"sobre o que tem hoje\".",
+                                            parameters: { type: "object", properties: {} }
+                                        }
+                                    },
+                                    {
+                                        type: "function",
+                                        function: {
+                                            name: "get_order_catalog",
+                                            description: "OBRIGATÓRIO: Chame SEMPRE que o cliente pedir cardápio de encomendas, bolos de festa, personalizados ou agendamentos futuros. Proibido listar produtos manualmente.",
+                                            parameters: { type: "object", properties: {} }
+                                        }
+                                    }
+                                ];
+
+                                let responseMessage;
+                                let pendingPaymentLink = null;
+                                let pendingCatalogMessage = null;
+                                let pendingCatalogCTA = null; // 3ª mensagem: CTA da Lily após o catálogo
+                                try {
+                                    // Detecta se o usuário está pedindo o cardápio e força a ferramenta correta
+                                    const lastUserMsgObj = messages.filter(m => m.role === 'user').pop();
+                                    const lastUserMsgContent = Array.isArray(lastUserMsgObj?.content)
+                                        ? lastUserMsgObj.content.map(c => c.text || '').join(' ')
+                                        : (lastUserMsgObj?.content || '');
+                                    const lastUserMsg = lastUserMsgContent.toLowerCase();
+
+                                    const isDeliveryRequest = /card[aá]pio|o que tem|pronta entrega|o que voc[eê] tem|tem hoje|tem pra hoje|disponível|disponivel|preço|preco|o que vende/i.test(lastUserMsg);
+                                    const isOrderRequest = /encomenda|bolo de festa|personalizado|encomendar|quero encomendar/i.test(lastUserMsg);
+
+                                    let forcedToolChoice = "auto";
+
+                                    if (statusLoja.includes("FECHADA")) {
+                                        const hasAccepted = /sim|quero|pode|manda|veja|vê|veja|ok|agendar|amanhã/i.test(lastUserMsg);
+                                        const isAskingForDelivery = /hoje|disponivel|pronta|tem|agora/i.test(combinedText);
+                                        
+                                        if (hasAccepted || isAskingForDelivery) {
+                                            forcedToolChoice = { type: "function", function: { name: "get_delivery_catalog" } };
+                                        } else {
+                                            forcedToolChoice = "none";
+                                        }
+                                    } else if (statusLoja.includes("ABERTA")) {
+                                        if (isDeliveryRequest && !isOrderRequest) {
+                                            forcedToolChoice = { type: "function", function: { name: "get_delivery_catalog" } };
+                                        } else if (isOrderRequest) {
+                                            forcedToolChoice = { type: "function", function: { name: "get_order_catalog" } };
+                                        }
+                                    }
+
+                                    const completion = await ai.chat.completions.create({
+                                        model: MODEL_MAP[settings?.activeModel] || 'gpt-4o',
+                                        messages,
+                                        tools,
+                                        tool_choice: forcedToolChoice
+                                    });
+
+                                    responseMessage = completion.choices[0].message;
+                                    let initialAIText = responseMessage.content;
+
+                                    // FUNCTION CALLING LOOP
+                                    if (responseMessage.tool_calls) {
+                                        console.log(`[AI] IA solicitou execução de ${responseMessage.tool_calls.length} ferramentas.`);
+                                        messages.push(responseMessage);
+
+                                        for (const toolCall of responseMessage.tool_calls) {
+                                            const functionName = toolCall.function.name;
+                                            const args = JSON.parse(toolCall.function.arguments);
+                                            let result;
+
+                                            console.log(`[AI] Executando função: ${functionName}`, args);
+
+                                            if (functionName === "chamar_gerente") {
+                                                const { reason } = args;
+                                                result = await executeChamarGerente(reason, jid, currentChat, settings, null, sock, prisma, instanceId);
+                                            }
+                                            else if (functionName === "get_delivery_catalog" || functionName === "get_order_catalog") {
+                                                try {
+                                                    const { getCachedProducts } = require('./lib/cache');
+                                                    const prods = await getCachedProducts();
+                                                    let deliveryStr = '';
+                                                    let orderStr = '';
+                                                    prods.forEach(p => {
+                                                        const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
+                                                        let text = `*${p.name.toUpperCase()}*`;
+                                                        if (vars.length > 0) {
+                                                            text += '\n' + vars.map(v => `   * *${v.name}* - R$ ${v.price.toFixed(2)}`).join('\n');
+                                                        } else {
+                                                            text += ` - R$ ${p.price.toFixed(2)}`;
+                                                        }
+                                                        if (p.type === 'delivery') deliveryStr += text + '\n\n';
+                                                        else orderStr += text + '\n\n';
+                                                    });
+
+                                                    if (functionName === "get_delivery_catalog") {
+                                                        // BLOQUEIO DE SEGURANÇA: Só permite ver o catálogo se estiver aberta OU se o cliente já aceitou ver para amanhã.
+                                                        // Se a loja está fechada e a IA tenta chamar a ferramenta sem o cliente ter aceitado, bloqueamos para forçar a conversa.
+                                                        const hasAccepted = /sim|quero|pode|manda|veja|vê|veja|ok|agendar|amanhã/i.test(lastUserMsg);
+
+                                                        if (statusLoja.includes("FECHADA") && !hasAccepted) {
+                                                            result = { success: false, error: "ACESSO NEGADO: A loja está FECHADA. Você é PROIBIDA de mostrar o catálogo agora. Primeiro, responda ao cliente informando que a produção encerrou hoje e pergunte se ele quer garantir o pedido para AMANHÃ. Só chame esta ferramenta se ele disser 'Sim'." };
+                                                            pendingCatalogMessage = null; // Garante que não envie o balão do catálogo
+                                                        } else {
+                                                            pendingCatalogMessage = `${deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.'}`;
+                                                            pendingCatalogCTA = "delivery";
+                                                            if (statusLoja.includes("FECHADA")) {
+                                                                result = { success: true, message: "O catálogo de delivery foi injetado. AVISO: A loja está FECHADA AGORA. Informe ao cliente que ele pode garantir esses itens para AMANHÃ." };
+                                                            } else {
+                                                                result = { success: true, message: "O catálogo JÁ FOI ENVIADO para o cliente em um balão separado. Agora a Lily deve enviar APENAS UM CTA final, curto e persuasivo (pergunta de fechamento). PROIBIDO repetir o cardápio ou a introdução." };
+                                                            }
+                                                        }
+                                                    } else {
+                                                        pendingCatalogMessage = `${orderStr.trim() || 'Nenhuma encomenda disponível.'}`;
+                                                        pendingCatalogCTA = "order";
+                                                        result = { success: true, message: "O catálogo de encomendas já foi enviado. Agora a Lily deve enviar APENAS UM CTA final, curto e humano. PROIBIDO listar preços ou produtos agora." };
+                                                    }
+                                                } catch (err) {
+                                                    console.error('[Catalog Error]', err);
+                                                    result = { success: false, error: "Falha ao buscar cardápio." };
+                                                }
+                                            }
+                                            else if (functionName === "check_availability") {
+                                                result = await checkAvailability(args.date, args.time);
+                                            }
+                                            else if (functionName === "get_delivery_fee") {
+                                                const feeRes = await calculateFee(args.address);
+                                                if (feeRes.error) result = "Erro: " + feeRes.error;
+                                                else if (feeRes.type === 'fixed') {
+                                                    const canCash = feeRes.fee <= 4.0;
+                                                    result = `VALOR DO FRETE: R$ ${feeRes.fee.toFixed(2)}. ${canCash ? 'DINHEIRO LIBERADO' : 'APENAS PIX/CARTÃO (Link)'}`;
+                                                } else {
+                                                    const canCash = feeRes.estimated <= 4.0;
+                                                    result = `VALOR DO FRETE (ESTIMADO): R$ ${feeRes.estimated.toFixed(2)}. ${canCash ? 'DINHEIRO LIBERADO' : 'APENAS PIX/CARTÃO (Link)'}`;
+                                                }
+                                            }
+                                            else if (functionName === "create_order") {
+                                                // Notes are now kept clean, cake details passed as separate fields
+                                                let finalNotes = args.notes || '';
+
+                                                try {
+                                                    // TRAVA DE SEGURANÇA: Evita duplicatas em curto espaço de tempo
+                                                    const recentOrder = await prisma.order.findFirst({
+                                                        where: {
+                                                            clientJid: jid,
+                                                            createdAt: { gte: new Date(Date.now() - 15 * 60000) },
+                                                            status: { in: ['pending', 'waiting_payment'] }
+                                                        },
+                                                        orderBy: { createdAt: 'desc' }
+                                                    });
+
+                                                    if (recentOrder) {
+                                                        // Se a IA não estiver explicitamente tentando criar um NOVO item diferente
+                                                        result = {
+                                                            success: false,
+                                                            error: `ALERTA: Já existe um pedido recente (#${recentOrder.id.slice(-5).toUpperCase()}) para este cliente. NÃO DUPLIQUE o pedido. Se o cliente está mudando de ideia, use 'update_order' com este código. Só crie um novo se forem produtos diferentes.`
+                                                        };
+                                                    } else {
+                                                        const res = await axios.post('http://localhost:3001/orders', {
+                                                            ...args,
+                                                            notes: finalNotes.trim(),
+                                                            clientJid: jid,
+                                                            instanceId: instanceId
+                                                        });
+                                                        result = {
+                                                            success: true,
+                                                            referenceCode: res.data.id.slice(-5).toUpperCase(),
+                                                            calendarEvent: !!res.data.calendarEventId,
+                                                            paymentLinkSent: !!res.data.paymentLink
+                                                        };
+                                                        if (res.data.paymentLink) pendingPaymentLink = res.data.paymentLink;
+
+                                                        // Se for dinheiro, já cai como pending, então dispara o DING agora
+                                                        if (args.paymentMethod === 'Dinheiro') {
+                                                            io.emit('new_order_pending', { orderId: res.data.id });
+                                                        }
+                                                    }
+                                                } catch (err) {
+                                                    result = { success: false, error: err.response?.data?.error || err.message };
+                                                }
+                                            }
+                                            else if (functionName === "update_order") {
+                                                try {
+                                                    const allOrders = await prisma.order.findMany({ where: { clientJid: jid } });
+                                                    const targetOrder = allOrders.find(o => o.id.slice(-5).toUpperCase() === args.orderId.toUpperCase());
+                                                    if (!targetOrder) {
+                                                        result = { success: false, error: "Pedido não encontrado com esse código de referência." };
+                                                    } else {
+                                                        const updateData = {};
+                                                        if (args.product) updateData.product = args.product;
+                                                        if (args.quantity) updateData.quantity = args.quantity;
+                                                        if (args.scheduledDate) updateData.scheduledDate = args.scheduledDate;
+                                                        if (args.scheduledTime) updateData.scheduledTime = args.scheduledTime;
+                                                        if (args.notes) updateData.notes = args.notes;
+
+                                                        await axios.patch(`http://localhost:3001/orders/${targetOrder.id}`, updateData);
+
+                                                        result = { success: true, message: "Pedido atualizado com sucesso." };
+                                                    }
+                                                } catch (err) {
+                                                    result = { success: false, error: err.response?.data?.error || err.message };
+                                                }
+                                            }
+
+                                            else if (functionName === "get_order_status") {
+                                                const order = await prisma.order.findFirst({
+                                                    where: { clientJid: jid, status: { not: "completed" } },
+                                                    orderBy: { createdAt: 'desc' }
+                                                });
+                                                if (order) {
+                                                    result = {
+                                                        status: order.status === "ready" ? "PRONTO" : "EM PRODUÇÃO",
+                                                        product: order.product,
+                                                        canOfferLocation: order.status === "ready"
+                                                    };
+                                                } else {
+                                                    result = { error: "Nenhum pedido ativo encontrado para este número." };
+                                                }
+                                            }
+                                            else if (functionName === "get_store_location") {
+                                                result = {
+                                                    address: settings?.businessAddress || "Endereço não configurado.",
+                                                    locationLink: settings?.businessLocation || "Link não disponível."
+                                                };
+                                            }
+
+                                            messages.push({
+                                                tool_call_id: toolCall.id,
+                                                role: "tool",
+                                                name: functionName,
+                                                content: JSON.stringify(result),
+                                            });
+                                        }
+
+                                        if (currentToken.cancelled) return;
+                                        const secondResponse = await ai.chat.completions.create({
+                                            model: MODEL_MAP[settings?.activeModel] || 'gpt-4o',
+                                            messages,
+                                        });
+
+                                        if (currentToken.cancelled) return;
+                                        let aiFinalText = secondResponse.choices[0].message.content || "";
+
+                                        // Se houver um catálogo pendente, vamos dividir a resposta da IA em Intro e CTA
+                                        if (pendingCatalogMessage) {
+                                            // 1ª MENSAGEM: INTRODUÇÃO (Pega a primeira frase)
+                                            let introText = aiFinalText.split(/[.!?\n]/)[0].trim();
+                                            if (!introText || introText.length < 5) introText = "Aqui estão as nossas delícias de delivery:";
+                                            if (introText.endsWith(':')) introText = introText.slice(0, -1);
+                                            introText += ":";
+
+                                            // CTA FINAL (Pega a última frase se houver, ou usa a padrão)
+                                            let ctaText = "Qual desses posso separar para você?";
+                                            const lines = aiFinalText.split('\n').filter(l => l.trim().length > 0);
+                                            if (lines.length > 1) {
+                                                const lastLine = lines[lines.length - 1].trim();
+                                                if (lastLine.includes('?') && lastLine.length < 60) ctaText = lastLine;
+                                            }
+
+                                            // Envia Intro
+                                            await sendRichMessage(sock, jid, introText);
+                                            
+                                            // Envia Catálogo
+                                            await new Promise(resolve => setTimeout(resolve, 1500));
+                                            await sock.sendMessage(jid, { text: pendingCatalogMessage });
+
+                                            // Envia CTA
+                                            await new Promise(resolve => setTimeout(resolve, 2000));
+                                            await sendRichMessage(sock, jid, ctaText);
+                                        } else {
+                                            // Se não for catálogo, envia a resposta normal
+                                            await sendRichMessage(sock, jid, aiFinalText);
+                                        }
+
+                                        return;
+                                    }
+                                } catch (err) {
+                                    console.error('[AI Completion Error]', err);
+                                    return;
+                                }
+
+                                let replyText = responseMessage.content;
+                                if (replyText) {
+                                    if (currentToken.cancelled) return;
+                                    // LIMPEZA AGRESSIVA DE FORMATAÇÃO
+                                    replyText = replyText.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$2'); // links markdown -> URL pura
+                                    replyText = replyText.replace(/\*/g, ''); // Remove negrito/itálico
+                                    replyText = replyText.replace(/#/g, '');  // Remove hashtags
+                                    replyText = replyText.replace(/•/g, '-'); // Troca bullet por traço
+                                    replyText = replyText.replace(/·/g, '-'); // Troca bullet médio por traço
+                                    replyText = replyText.replace(/·/g, '-'); // Repetindo para garantir
+                                    replyText = replyText.replace(/_/g, '');  // Remove underlines
+                                    replyText = replyText.replace(/`/g, '');  // Remove backticks
+                                    replyText = replyText.trim();
+
+                                    // TRAVA DE SEGURANÇA: Se o catálogo vai ser enviado em seguida,
+                                    // força o replyText a ser APENAS a primeira frase da IA (a introdução).
+                                    if (pendingCatalogMessage) {
+                                        const firstSentence = replyText.split(/[\n!?]/)[0].trim();
+                                        replyText = firstSentence || replyText;
+                                    }
+                                }
+
+                                // 1ª MENSAGEM: INTRODUÇÃO DA LILY
+                                if (currentToken.cancelled) return;
+                                const typingSpeed = 50;
+                                const introDelay = Math.min(Math.max(replyText.length * typingSpeed, 2000), 10000);
+
+                                await sock.sendPresenceUpdate('composing', jid);
+                                await new Promise(resolve => setTimeout(resolve, introDelay));
+                                await sock.sendPresenceUpdate('paused', jid);
+
+                                await sendRichMessage(sock, jid, replyText);
+                                console.log(`[AI] Intro enviada para ${jid}`);
+
+                                // Envia o link de pagamento se houver
+                                if (pendingPaymentLink) {
+                                    await new Promise(resolve => setTimeout(resolve, 1000));
+                                    await sock.sendMessage(jid, { text: pendingPaymentLink });
+                                }
+
+                                // 2ª MENSAGEM: CARDÁPIO (SISTEMA)
+                                if (pendingCatalogMessage) {
+                                    // Pausa mínima para respiro
+                                    await new Promise(resolve => setTimeout(resolve, 500));
+
+                                    // Digitação rápida para o catálogo
+                                    const catalogDelay = Math.min(Math.max(pendingCatalogMessage.length * 5, 800), 3000);
+                                    await sock.sendPresenceUpdate('composing', jid);
+                                    await new Promise(resolve => setTimeout(resolve, catalogDelay));
+                                    await sock.sendPresenceUpdate('paused', jid);
+
+                                    await sock.sendMessage(jid, { text: pendingCatalogMessage });
+                                    console.log(`[AI] Cardápio injetado para ${jid}`);
+
+                                    // 3ª MENSAGEM: CTA DA LILY (DINÂMICO)
+                                    if (pendingCatalogCTA) {
+                                        // Pausa mínima para o CTA
+                                        await new Promise(resolve => setTimeout(resolve, 800));
+
+                                        const ctaPrompt = pendingCatalogCTA === "delivery"
+                                            ? "O cardápio de hoje foi enviado. Agora, como Lily (vendedora sutil e ótima), envie UM CTA final (1 frase) perfeito para fechar a venda. Seja natural e direta, sem formalidades. Ex: 'Dê uma olhadinha nas opções e me diz qual dessas posso separar para você?'"
+                                            : "O cardápio de encomendas foi enviado. Agora, como Lily, envie UM CTA final (1 frase) humano e simpático para entender o desejo do cliente. Ex: 'Qual dessas combina mais com o que você está imaginando?'";
+                                        try {
+                                            const ctaResponse = await ai.chat.completions.create({
+                                                model: MODEL_MAP[settings?.activeModel] || 'gpt-4o',
+                                                messages: [...messages, { role: 'user', content: ctaPrompt }],
+                                                max_tokens: 60
+                                            });
+                                            let ctaText = ctaResponse.choices[0].message.content?.trim();
+                                            if (ctaText) {
+                                                ctaText = ctaText.replace(/\*/g, '').replace(/#/g, '').replace(/_/g, '').trim();
+
+                                                // Digitação rápida para o CTA
+                                                const ctaDelay = Math.min(Math.max(ctaText.length * 20, 1000), 2500);
+                                                await sock.sendPresenceUpdate('composing', jid);
+                                                await new Promise(resolve => setTimeout(resolve, ctaDelay));
+                                                await sock.sendPresenceUpdate('paused', jid);
+
+                                                await sock.sendMessage(jid, { text: ctaText });
+                                                console.log(`[AI] CTA enviado para ${jid}: ${ctaText}`);
+                                            }
+                                        } catch (e) {
+                                            console.error('[AI CTA Error]', e.message);
+                                        }
+                                    }
+                                }
+                                // PONTE ROBUSTA: Busca o fluxo tentando bater o número (prefixo) se o JID exato falhar
+                                const cleanJid = jid.split('@')[0];
+                                console.log(`[Flow Debug] Lily buscando fluxo: Instância=${instanceId} | Número=${cleanJid}`);
+
+                                let flowState = await prisma.flowState.findFirst({
+                                    where: {
+                                        instanceId,
+                                        jid: { contains: cleanJid }
+                                    }
+                                });
+
+                                if (flowState) {
+                                    const flow = await prisma.flow.findUnique({ where: { id: flowState.flowId } });
+                                    if (flow && flow.status === 'Ativo') {
+                                        await runFlowNode(sock, instanceId, jid, flow, flowState.currentNodeId);
+
+                                        // Verificação de agendamento
+                                        const updatedState = await prisma.flowState.findUnique({ where: { id: flowState.id } });
+
+                                    }
+                                }
+                            } else {
+                                console.warn(`[AI] Agente está ligado para ${jid}, mas a OpenAI API Key não está configurada.`);
                             }
-                        } catch (err) {
-                            console.error('[AI Completion Error]', err);
-                            return;
                         }
-
-                        let replyText = responseMessage.content;
-                        if (replyText) {
-                            // LIMPEZA AGRESSIVA DE FORMATAÇÃO
-                            replyText = replyText.replace(/\*/g, ''); // Remove negrito/itálico
-                            replyText = replyText.replace(/#/g, '');  // Remove hashtags
-                            replyText = replyText.replace(/•/g, '-'); // Troca bullet por traço
-                            replyText = replyText.replace(/·/g, '-'); // Troca bullet médio por traço
-                            replyText = replyText.replace(/·/g, '-'); // Repetindo para garantir
-                            replyText = replyText.replace(/_/g, '');  // Remove underlines
-                            replyText = replyText.replace(/`/g, '');  // Remove backticks
-                            replyText = replyText.trim();
-                        }
-
-
-                        // SIMULATE HUMAN TYPING
-                        const typingSpeed = 50; // ms per character
-                        const delay = Math.min(Math.max(replyText.length * typingSpeed, 2000), 10000);
-
-                        await sock.sendPresenceUpdate('composing', jid);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        await sock.sendPresenceUpdate('paused', jid);
-
-                        await sendRichMessage(sock, jid, replyText);
-                        console.log(`[AI] Resposta enviada com sucesso para ${jid}`);
-                        // PONTE ROBUSTA: Busca o fluxo tentando bater o número (prefixo) se o JID exato falhar
-                        const cleanJid = jid.split('@')[0];
-                        console.log(`[Flow Debug] Lily buscando fluxo: Instância=${instanceId} | Número=${cleanJid}`);
-
-                        let flowState = await prisma.flowState.findFirst({
-                            where: {
-                                instanceId,
-                                jid: { contains: cleanJid }
-                            }
-                        });
-
-                        if (flowState) {
-                            const flow = await prisma.flow.findUnique({ where: { id: flowState.flowId } });
-                            if (flow && flow.status === 'Ativo') {
-                                await runFlowNode(sock, instanceId, jid, flow, flowState.currentNodeId);
-
-                                // Verificação de agendamento
-                                const updatedState = await prisma.flowState.findUnique({ where: { id: flowState.id } });
-
-                            }
-                        }
-                    } else {
-                        console.warn(`[AI] Agente está ligado para ${jid}, mas a OpenAI API Key não está configurada.`);
+                    } catch (errDbnc) {
+                        console.error('[AI Debounce Error]', errDbnc);
                     }
-                }
+                }, 4000); // 4 SEGUNDOS DE ESPERA (Otimizado para UX humana)
             } catch (e) {
                 console.error('Erro na persistência/AI:', e.message);
             }
@@ -972,7 +1402,6 @@ async function initInstance(instanceId) {
         io.emit('new_message', { instanceId, message: msg });
     });
 
-    // Atualiza status das mensagens (entregue / lido)
     sock.ev.on('messages.update', async (updates) => {
         for (const update of updates) {
             if (!update.update?.status) continue;
@@ -994,11 +1423,34 @@ async function initInstance(instanceId) {
         }
     });
 
+    sock.ev.on('messages.delete', async (item) => {
+        console.log('[WhatsApp Delete Debug] Evento recebido:', JSON.stringify(item));
+        try {
+            if ('all' in item) {
+                const deleted = await prisma.message.deleteMany({
+                    where: { instanceId, clientJid: item.jid }
+                });
+                io.emit('messages_deleted', { instanceId, jid: item.jid, all: true });
+                console.log(`[WhatsApp] Todas as mensagens do chat ${item.jid} foram deletadas do DB. Quantidade: ${deleted.count}`);
+            } else {
+                for (const key of item.keys) {
+                    const deleted = await prisma.message.deleteMany({
+                        where: { instanceId, msgId: key.id }
+                    });
+                    io.emit('message_deleted', { instanceId, msgId: key.id });
+                    console.log(`[WhatsApp] Mensagem deletada do DB: ${key.id}. Quantidade: ${deleted.count}`);
+                }
+            }
+        } catch (err) {
+            console.error('[WhatsApp Delete Error]', err);
+        }
+    });
+
     sock.ev.on('connection.update', async (update) => {
         const { connection, lastDisconnect, qr } = update;
         if (qr) io.emit('qr', { instanceId, qr });
         if (connection === 'open') {
-            console.log(`[${instanceId}] Conectado!`);
+            // Conexão bem-sucedida
             await prisma.instance.update({ where: { id: instanceId }, data: { status: 'connected' } }).catch(() => { });
             io.emit('connection_update', { instanceId, status: 'connected' });
         }
@@ -1050,10 +1502,9 @@ app.post('/instances/:id/ai-test', async (req, res) => {
             { role: 'user', content: question }
         ];
 
-        const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
-        const modelMap = { 'openai': 'gpt-4o', 'openai-mini': 'gpt-4o-mini', 'openai-nano': 'gpt-4.1-nano', 'claude': 'gpt-4o' };
+        const settings = await getSettings();
         const completion = await ai.chat.completions.create({
-            model: modelMap[settings?.activeModel] || 'gpt-4o',
+            model: MODEL_MAP[settings?.activeModel] || 'gpt-4o',
             messages
         });
 
@@ -1065,7 +1516,7 @@ app.post('/instances/:id/ai-test', async (req, res) => {
 
 // API Routes
 app.get('/config/keys', async (req, res) => {
-    let config = await prisma.setting.findUnique({ where: { id: 'global' } });
+    let config = await getSettings();
     if (!config) config = await prisma.setting.create({ data: { id: 'global', activeModel: 'openai' } });
     res.json({
         openai: config.openaiKey,
@@ -1084,7 +1535,9 @@ app.get('/config/keys', async (req, res) => {
         reportHour: config.reportHour,
         googleApiKey: config.googleApiKey,
         deliveryRules: config.deliveryRules,
-        gcalRefreshToken: config.gcalRefreshToken
+        gcalRefreshToken: config.gcalRefreshToken,
+        mercadopagoPublicKey: config.mercadopagoPublicKey,
+        mercadopagoToken: config.mercadopagoToken
     });
 });
 
@@ -1094,14 +1547,17 @@ app.post('/config/keys', async (req, res) => {
         businessName, businessAddress, businessLocation,
         dailyMaxOrders, dailyDeliveryItems, managerJid,
         deliveryJid, reportEnabled, reportHour,
-        googleApiKey, deliveryRules, gcalCalendarId
+        googleApiKey, deliveryRules, gcalCalendarId,
+        mercadopagoToken, mercadopagoPublicKey
     } = req.body;
 
-    const currentConfig = await prisma.setting.findUnique({ where: { id: 'global' } });
-    
+    const currentConfig = await getSettings();
+
     const updateData = {
         openaiKey: openai,
         claudeKey: claude,
+        mercadopagoToken,
+        mercadopagoPublicKey,
         activeModel,
         gcalSyncHour: gcalSyncHour ?? (currentConfig?.gcalSyncHour || 6),
         businessName,
@@ -1126,6 +1582,7 @@ app.post('/config/keys', async (req, res) => {
     });
 
     openaiInstance = null;
+    invalidateSettingsCache(); // força reload das configurações no próximo uso
     res.json(config);
 });
 
@@ -1141,7 +1598,7 @@ app.get('/config/slots', async (req, res) => {
 app.post('/config/slots', async (req, res) => {
     try {
         const { slots } = req.body; // Array de { dayOfWeek, startTime, endTime }
-        
+
         // Limpa slots atuais e recria
         await prisma.availableSlot.deleteMany({});
         const created = await prisma.availableSlot.createMany({
@@ -1343,8 +1800,7 @@ app.post('/instances/:id/messages/delete', async (req, res) => {
 
 // Marcar conversa como lida (Visto)
 app.post('/instances/:id/chats/read', async (req, res) => {
-    const { id } = req.params;
-    const { jid, msgId } = req.body;
+    const { id, jid, msgId } = req.body;
     const sock = sessions.get(id);
     if (!sock) return res.status(404).json({ error: 'Instância não conectada' });
 
@@ -1762,123 +2218,28 @@ async function runFlowNode(sock, instanceId, jid, flow, nodeId, sourceHandle = n
                 const ai = await getOpenAI();
                 if (!ai) return;
 
+                const nodePrompt = node.data?.prompt || node.data?.instruction || "";
+                const storeInfo = await getStoreStatus();
+                const finalSystemPrompt = await buildLilyPrompt(instanceId, jid, nodePrompt, storeInfo);
+                console.log("\n--- DEBUG LILY PROMPT (FLOW) ---\n", finalSystemPrompt, "\n-----------------------------------\n");
                 await sock.sendPresenceUpdate('composing', jid).catch(() => { });
-                console.log(`[Flow AI] Ativando Agente para ${jid}...`);
 
                 // Busca o histórico diretamente via Prisma
                 const history = await prisma.message.findMany({
                     where: { instanceId, jid },
                     orderBy: { timestamp: 'desc' },
-                    take: 10
+                    take: 40
                 });
-
-                const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
-
-                const instance = await prisma.instance.findUnique({ where: { id: instanceId } });
-                const kb = JSON.parse(instance?.knowledge || '[]');
-                const kbContext = kb.length > 0
-                    ? "\n\n--- BASE DE CONHECIMENTO OFICIAL ---\n" + kb.map(k => `DÚVIDA: ${k.q}\nRESPOSTA: ${k.a}`).join('\n---\n')
-                    : "";
-
-                const allProducts = await prisma.product.findMany();
-                let catalogContext = "\n\n--- CARDÁPIO: PRONTA ENTREGA (Delivery/Para comer agora) ---\n";
-                const deliveryItems = allProducts.filter(p => p.type === 'delivery');
-                const orderItems = allProducts.filter(p => p.type !== 'delivery');
-
-                if (deliveryItems.length === 0) {
-                    catalogContext += "(Sem itens de pronta entrega hoje)\n";
-                } else {
-                    deliveryItems.forEach(p => {
-                        const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
-                        
-                        let prices = vars.length > 0 ? vars.map(v => v.price) : [p.price];
-                        const minP = Math.min(...prices);
-                        const maxP = Math.max(...prices);
-                        const priceRange = minP === maxP ? `R$${minP.toFixed(2)}` : `R$${minP.toFixed(2)} a R$${maxP.toFixed(2)}`;
-
-                        let totalStock = p.stock;
-                        if (vars.length > 0) {
-                            totalStock = vars.reduce((acc, v) => {
-                                const subStock = v.subItems?.reduce((sAcc, si) => sAcc + (si.stock || 0), 0) || 0;
-                                return acc + (v.stock || 0) + subStock;
-                            }, 0);
-                        }
-
-                        if (totalStock > 0) {
-                            const variationsInfo = vars.map(v => `   - ${v.name}: ${v.description || 'Sem descrição'}`).join('\n');
-                            catalogContext += `- *${p.name}* (${priceRange}): ${p.description || ''}\n${variationsInfo}\n`;
-                        } else {
-                            catalogContext += `- *${p.name}*: (ESGOTADO NO MOMENTO)\n`;
-                        }
-                    });
-                }
-
-                catalogContext += "\n--- CARDÁPIO: ENCOMENDAS (Para outro dia/Festa) ---\n";
-                if (orderItems.length === 0) {
-                    catalogContext += "(Sem itens para encomenda)\n";
-                } else {
-                    orderItems.forEach(p => {
-                        const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
-                        if (vars.length > 0) {
-                            const variationsStr = vars.map(v => `${v.name} (R$${v.price})`).join(', ');
-                            catalogContext += `- *${p.name}*: Opções: ${variationsStr}.\n`;
-                        } else {
-                            catalogContext += `- *${p.name}*: R$${p.price.toFixed(2)}. ${p.description || ''}\n`;
-                        }
-                    });
-                }
-
-                const lastOrder = await prisma.order.findFirst({
-                    where: { clientJid: jid },
-                    orderBy: { createdAt: 'desc' }
-                });
-                let orderContext = "";
-                if (lastOrder) {
-                    orderContext = `\n--- ESTADO DO PEDIDO ATUAL ---\nProduto: ${lastOrder.product}\nData/Hora: ${lastOrder.scheduledDate} ${lastOrder.scheduledTime}\nPagamento: ${lastOrder.paymentMethod}\n`;
-                }
-
-                const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-                const hoje = new Date();
-                const year = hoje.getFullYear();
-                let daysList = "";
-                const lastDate = new Date(year, hoje.getMonth() + 1, 0).getDate();
-                for (let d = 1; d <= lastDate; d++) {
-                    const dateObj = new Date(year, hoje.getMonth(), d);
-                    daysList += `${d}/${hoje.getMonth() + 1}: ${diasSemana[dateObj.getDay()]}, `;
-                }
-
-                const slots = await prisma.availableSlot.findMany();
-                const diasSiglas = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-                let hoursContext = slots.length > 0 
-                    ? slots.map(s => `${diasSiglas[s.dayOfWeek]}: ${s.startTime}-${s.endTime}`).join(', ')
-                    : "Terça a Domingo: 09:00 às 20:00 (Segunda fechado)";
-
-                const timeContext = `\n\n--- TABELA DE DATAS (${year}) ---\n${daysList}\n\n--- CONTEXTO ---\nHoje: ${diasSemana[hoje.getDay()]}, ${hoje.toLocaleDateString('pt-BR')}\nHORÁRIO DE FUNCIONAMENTO: ${hoursContext}\n`;
-
-                const diasCompletos = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
-                const hoursContextDetailed = diasCompletos.map((dia, index) => {
-                    const slot = slots.find(s => s.dayOfWeek === index);
-                    return slot ? `${dia}: ${slot.startTime} às ${slot.endTime}` : `${dia}: FECHADO`;
-                }).join('\n');
-
-                const flowAiContext = `\n\n--- REGRAS DE ATENDIMENTO (PRIORIDADE MÁXIMA) ---\n` +
-                    `1. NÃO INVENTE: Nunca preencha a forma de pagamento ou endereço sem perguntar ao cliente.\n` +
-                    `2. ESTOQUE: Se o item estiver (ESGOTADO), peça desculpas e ofereça outro.\n` +
-                    `3. HORÁRIO: Hoje é ${diasCompletos[hoje.getDay()]}. Horário: ${slots.find(s => s.dayOfWeek === hoje.getDay())?.startTime || '09:00'} às ${slots.find(s => s.dayOfWeek === hoje.getDay())?.endTime || '20:00'}.\n` +
-                    `4. HUMANO: Não use listas. Use texto corrido e *Negrito* para nomes de produtos.\n` +
-                    `5. QUERO AGORA: Se o cliente quiser 'pra já', peça o endereço para o Uber imediatamente.\n\n` +
-                    `--- HORÁRIOS DA SEMANA ---\n${hoursContextDetailed}\n` +
-                    kbContext + catalogContext + orderContext;
-
-
 
                 const messages = [
-                    { role: 'system', content: (node.data.prompt || instance?.botPrompt || 'Você é um assistente prestativa.') + flowAiContext },
+                    { role: 'system', content: finalSystemPrompt },
                     ...history.reverse().map(m => ({
                         role: m.fromMe ? 'assistant' : 'user',
                         content: m.text || 'O cliente enviou uma mídia.'
                     }))
                 ];
+
+                console.log("\n--- DEBUG LILY PROMPT (FLOW) ---\n", finalSystemPrompt, "\n-----------------------------------\n");
 
                 const tools = [
                     {
@@ -2138,6 +2499,9 @@ INSTRUÇÕES:
                                 type: { type: "string", enum: ["order", "delivery"] },
                                 deliveryAddress: { type: "string" },
                                 paymentMethod: { type: "string", default: "Admin" },
+                                massa: { type: "string", description: "Tipo da massa do bolo (ex: baunilha, chocolate)" },
+                                recheio: { type: "string", description: "Sabor do recheio" },
+                                topo: { type: "string", description: "Informações sobre o topo do bolo" },
                                 notes: { type: "string" }
                             },
                             required: ["product", "scheduledDate", "scheduledTime", "clientName"]
@@ -2158,6 +2522,9 @@ INSTRUÇÕES:
                                 quantity: { type: "string" },
                                 scheduledDate: { type: "string" },
                                 scheduledTime: { type: "string" },
+                                massa: { type: "string" },
+                                recheio: { type: "string" },
+                                topo: { type: "string" },
                                 notes: { type: "string" }
                             },
                             required: ["orderId"]
@@ -2192,9 +2559,9 @@ INSTRUÇÕES:
                                 price: { type: "number", description: "Preço base do produto" },
                                 stock: { type: "number", description: "Quantidade em estoque total do produto" },
                                 description: { type: "string", description: "Descrição vendedora do produto" },
-                                variations: { 
-                                    type: "string", 
-                                    description: "JSON Array: [{name: 'M', price: 50, stock: 10, subItems: [{name: 'Nutella', stock: 5}]}]" 
+                                variations: {
+                                    type: "string",
+                                    description: "JSON Array: [{name: 'M', price: 50, stock: 10, subItems: [{name: 'Nutella', stock: 5}]}]"
                                 },
                                 type: { type: "string", enum: ["encomenda", "delivery"], default: "encomenda" }
                             },
@@ -2220,7 +2587,17 @@ INSTRUÇÕES:
                     try {
                         const res = await axios.post('http://localhost:3001/orders', { ...args, instanceId: instanceId });
                         const ref = res.data.id.slice(-5).toUpperCase();
-                        await sock.sendMessage(jid, { text: `✅ *Agendado com sucesso!*\n\n👤 *Cliente:* ${args.clientName}\n🎂 *Item:* ${args.product} ${args.variation || ''}\n📅 *Data:* ${args.scheduledDate}\n⏰ *Hora:* ${args.scheduledTime}\n🆔 *Ref:* #${ref}` });
+                        const paymentLink = res.data.paymentLink;
+
+                        if (paymentLink) {
+                            await sock.sendMessage(jid, {
+                                text: `📦 *Pedido Agendado!* \n\nPara que possamos iniciar a produção, realize o pagamento no link abaixo:\n\n🔗 *Link de Pagamento:* ${paymentLink}\n\n⚠️ *Atenção:* O pedido será confirmado automaticamente pela cozinha assim que o pagamento for aprovado! ✨`
+                            });
+                        } else {
+                            await sock.sendMessage(jid, {
+                                text: `✅ *Pedido Confirmado!* \n\n👤 *Cliente:* ${args.clientName}\n🎂 *Item:* ${args.product} ${args.variation || ''}\n📅 *Data:* ${args.scheduledDate}\n⏰ *Hora:* ${args.scheduledTime}\n🆔 *Ref:* #${ref}\n\nJá estamos nos preparativos! 🚀`
+                            });
+                        }
                     } catch (err) {
                         await sock.sendMessage(jid, { text: `❌ *Erro ao agendar:* ${err.response?.data?.error || err.message}` });
                     }
@@ -2298,7 +2675,7 @@ INSTRUÇÕES:
                             }
 
                             let finalVariations = args.variations || "[]";
-                            
+
                             // Lógica inteligente de LIMPEZA para Variações (se houver)
                             if (finalVariations && finalVariations !== '[]' && typeof finalVariations === 'string') {
                                 try {
@@ -2326,6 +2703,7 @@ INSTRUÇÕES:
                                     type: args.type || "encomenda"
                                 }
                             });
+                            invalidateProductCache();
                             await sock.sendMessage(jid, { text: `✅ *Produto cadastrado!* ✨\n\n🎂 *Item:* ${product.name}\n💰 *Preço:* R$ ${product.price.toFixed(2)}\n📦 *Estoque:* ${product.stock}` });
                         } else {
                             const existing = await prisma.product.findFirst({
@@ -2336,7 +2714,7 @@ INSTRUÇÕES:
                                 continue;
                             }
                             let newVariations = args.variations;
-                            
+
                             // Lógica inteligente de Merge e LIMPEZA para Variações
                             if (newVariations && typeof newVariations === 'string') {
                                 try {
@@ -2382,6 +2760,7 @@ INSTRUÇÕES:
                                     type: args.type !== undefined ? args.type : existing.type
                                 }
                             });
+                            invalidateProductCache();
                             await sock.sendMessage(jid, { text: `✅ *Produto atualizado!* ✨\n\n🎂 *Item:* ${updated.name}\n💰 *Preço:* R$ ${updated.price.toFixed(2)}\n📦 *Status:* Alterações gravadas com sucesso!` });
                         }
                     } catch (err) {
