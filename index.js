@@ -45,6 +45,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
     cors: { origin: "*", methods: ["GET", "POST"] }
 });
+app.set('io', io); // Disponibiliza o IO para as rotas
 initFlows(io);
 const sessions = new Map();
 const stores = new Map();
@@ -396,6 +397,17 @@ async function initInstance(instanceId) {
         // BLOQUEIO DE STATUS E GRUPOS (OPCIONAL)
         if (jid === 'status@broadcast' || jid.includes('@g.us')) return;
 
+        // ─── INTERCEPTA MENSAGEM APAGADA ("Apagar para Todos") ───
+        if (msg.message?.protocolMessage?.type === 0 || msg.message?.protocolMessage?.type === 'REVOKE') {
+            const keyToRevoke = msg.message.protocolMessage.key;
+            if (keyToRevoke && keyToRevoke.id) {
+                await prisma.message.deleteMany({ where: { instanceId, msgId: keyToRevoke.id } });
+                io.emit('message_deleted', { instanceId, msgId: keyToRevoke.id });
+                console.log(`[WhatsApp] Mensagem revogada e apagada do DB: ${keyToRevoke.id}`);
+            }
+            return; // Interrompe aqui, não processa IA
+        }
+
         let text = msg.message?.conversation ||
             msg.message?.extendedTextMessage?.text ||
             msg.message?.imageMessage?.caption ||
@@ -487,8 +499,19 @@ async function initInstance(instanceId) {
                 const settings = await getSettings();
                 if (!msg.key.fromMe && settings?.managerJid && jid === settings.managerJid) {
                     console.log(`[Admin Command] Processando comando do gerente: ${text}`);
-                    // Chama o agente específico para o administrador
-                    await handleAdminAgent(sock, instanceId, jid, text, settings);
+                    
+                    let adminImages = [];
+                    const isImg = !!msg.message?.imageMessage || (msg.message?.documentMessage?.mimetype?.startsWith('image/'));
+                    if (isImg) {
+                        try {
+                            const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+                            const buffer = await downloadMediaMessage(msg, 'buffer', {});
+                            adminImages.push(buffer.toString('base64'));
+                        } catch (e) { console.error("Erro imagem admin:", e); }
+                    }
+
+                    // Chama o agente específico para o administrador passando imagens se houver
+                    await handleAdminAgent(sock, instanceId, jid, text, settings, adminImages);
                     return;
                 }
 
@@ -524,7 +547,7 @@ async function initInstance(instanceId) {
 
                         let flowHandled = false;
                         if (!msg.key.fromMe) {
-                            flowHandled = await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg, buildLilyPrompt, getOpenAI, executeChamarGerente, settings);
+                            flowHandled = await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName);
                         }
                         if (flowHandled) return;
 
@@ -581,7 +604,7 @@ async function initInstance(instanceId) {
                                     `${m.fromMe ? 'Lily' : 'Cliente'}: ${m.text || '[Imagem/Arquivo]'}`
                                 ).join('\n');
 
-                                const finalSystemPrompt = await buildLilyPrompt(instanceId, jid, formattedHistory, storeInfo);
+                                const finalSystemPrompt = await buildLilyPrompt(instanceId, jid, formattedHistory, storeInfo, msg.pushName);
                                 console.log("\n--- DEBUG LILY PROMPT (DIRETO) ---\n", finalSystemPrompt, "\n-----------------------------------\n");
 
                                 console.log(`[AI] Gerando resposta para ${jid}...`);
@@ -640,7 +663,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "create_order",
-                                            description: "Cria um novo pedido ou agendamento. ATENÇÃO: Se o cliente acabou de fazer um pedido e quer mudar algo, use 'update_order'. NÃO crie pedidos duplicados para a mesma pessoa seguidamente.",
+                                            description: "Cria um novo pedido. REGRAS CRÍTICAS: 1. NUNCA crie pedidos duplicados se o cliente estiver apenas corrigindo algo ou tentando de novo após um erro; use 'update_order' nesses casos. 2. Se o cliente mudar de ideia no meio do atendimento, atualize o pedido existente.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
@@ -652,7 +675,7 @@ async function initInstance(instanceId) {
                                                     scheduledTime: { type: "string", description: "Horário do agendamento HH:MM" },
                                                     clientName: { type: "string", description: "Nome do cliente" },
                                                     paymentMethod: { type: "string", description: "Forma de pagamento (ex: Pix com comprovante, Dinheiro, Cartão/Link)" },
-                                                    type: { type: "string", enum: ["order", "delivery"], description: "Tipo: order (encomenda) ou delivery (entrega)" },
+                                                    type: { type: "string", enum: ["order", "delivery"], description: "OBRIGATÓRIO: Use 'delivery' para pedidos imediatos (hoje/agora) com entrega. Use 'order' para agendamentos futuros, encomendas de bolos ou retiradas programadas." },
                                                     deliveryAddress: { type: "string", description: "Endereço se for delivery" },
                                                     deliveryFee: { type: "number", description: "Valor da entrega calculado por get_delivery_fee" },
                                                     massa: { type: "string", description: "Sabor da massa escolhida" },
@@ -660,7 +683,7 @@ async function initInstance(instanceId) {
                                                     topo: { type: "string", description: "Informações sobre o topo do bolo" },
                                                     notes: { type: "string", description: "Outras observações gerais" }
                                                 },
-                                                required: ["product", "variation", "quantity", "scheduledDate", "scheduledTime", "clientName", "paymentMethod", "notes"],
+                                                required: ["product", "paymentMethod"],
                                             },
                                         },
                                     },
@@ -713,6 +736,20 @@ async function initInstance(instanceId) {
                                             name: "get_order_catalog",
                                             description: "OBRIGATÓRIO: Chame SEMPRE que o cliente pedir cardápio de encomendas, bolos de festa, personalizados ou agendamentos futuros. Proibido listar produtos manualmente.",
                                             parameters: { type: "object", properties: {} }
+                                        }
+                                    },
+                                    {
+                                        type: "function",
+                                        function: {
+                                            name: "solicitar_cancelamento",
+                                            description: "Chama o gerente/admin para tratar de um cancelamento de pedido que o cliente solicitou.",
+                                            parameters: {
+                                                type: "object",
+                                                properties: {
+                                                    reason: { type: "string", description: "O motivo que o cliente deu para o cancelamento." }
+                                                },
+                                                required: ["reason"]
+                                            }
                                         }
                                     }
                                 ];
@@ -767,6 +804,7 @@ async function initInstance(instanceId) {
                                     if (responseMessage.tool_calls) {
                                         console.log(`[AI] IA solicitou execução de ${responseMessage.tool_calls.length} ferramentas.`);
                                         messages.push(responseMessage);
+                                        let lastDeliveryFee = 0; // Fallback se a IA esquecer de passar no create_order
 
                                         for (const toolCall of responseMessage.tool_calls) {
                                             const functionName = toolCall.function.name;
@@ -798,21 +836,32 @@ async function initInstance(instanceId) {
                                                     });
 
                                                     if (functionName === "get_delivery_catalog") {
-                                                        // BLOQUEIO DE SEGURANÇA: Só permite ver o catálogo se estiver aberta OU se o cliente já aceitou ver para amanhã.
-                                                        // Se a loja está fechada e a IA tenta chamar a ferramenta sem o cliente ter aceitado, bloqueamos para forçar a conversa.
-                                                        const hasAccepted = /sim|quero|pode|manda|veja|vê|veja|ok|agendar|amanhã/i.test(lastUserMsg);
+                                                        const hasAccepted = /sim|quero|pode|manda|veja|vê|ok|agendar|amanhã/i.test(lastUserMsg);
 
                                                         if (statusLoja.includes("FECHADA") && !hasAccepted) {
-                                                            result = { success: false, error: "ACESSO NEGADO: A loja está FECHADA. Você é PROIBIDA de mostrar o catálogo agora. Primeiro, responda ao cliente informando que a produção encerrou hoje e pergunte se ele quer garantir o pedido para AMANHÃ. Só chame esta ferramenta se ele disser 'Sim'." };
-                                                            pendingCatalogMessage = null; // Garante que não envie o balão do catálogo
+                                                            result = { success: false, error: "ACESSO NEGADO: A loja está FECHADA. Responda informando que encerramos hoje e pergunte se quer garantir para AMANHÃ." };
                                                         } else {
-                                                            pendingCatalogMessage = `${deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.'}`;
-                                                            pendingCatalogCTA = "delivery";
-                                                            if (statusLoja.includes("FECHADA")) {
-                                                                result = { success: true, message: "O catálogo de delivery foi injetado. AVISO: A loja está FECHADA AGORA. Informe ao cliente que ele pode garantir esses itens para AMANHÃ." };
-                                                            } else {
-                                                                result = { success: true, message: "O catálogo JÁ FOI ENVIADO para o cliente em um balão separado. Agora a Lily deve enviar APENAS UM CTA final, curto e persuasivo (pergunta de fechamento). PROIBIDO repetir o cardápio ou a introdução." };
-                                                            }
+                                                            const catalogText = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
+                                                            const introMsg = statusLoja.includes("FECHADA")
+                                                                ? "Para amanhã, temos os seguintes produtos de pronta entrega:"
+                                                                : "Hoje temos os seguintes produtos de pronta entrega:";
+
+                                                            // ─── SISTEMA ENVIA OS 3 BALÕES DIRETAMENTE ───
+                                                            // Balão 1: Introdução
+                                                            await sock.sendPresenceUpdate('composing', jid);
+                                                            await new Promise(r => setTimeout(r, 1000));
+                                                            await sock.sendPresenceUpdate('paused', jid);
+                                                            await sock.sendMessage(jid, { text: introMsg });
+
+                                                            // Balão 2: Catálogo
+                                                            await new Promise(r => setTimeout(r, 800));
+                                                            await sock.sendMessage(jid, { text: catalogText });
+
+                                                            // Balão 3: CTA
+                                                            await new Promise(r => setTimeout(r, 800));
+                                                            await sock.sendMessage(jid, { text: "Qual desses posso separar para você? 😊" });
+
+                                                            return; // Encerra aqui — sem passar pela IA
                                                         }
                                                     } else {
                                                         pendingCatalogMessage = `${orderStr.trim() || 'Nenhuma encomenda disponível.'}`;
@@ -830,15 +879,27 @@ async function initInstance(instanceId) {
                                             else if (functionName === "get_delivery_fee") {
                                                 const feeRes = await calculateFee(args.address);
                                                 if (feeRes.error) result = "Erro: " + feeRes.error;
-                                                else if (feeRes.type === 'fixed') {
-                                                    const canCash = feeRes.fee <= 4.0;
-                                                    result = `VALOR DO FRETE: R$ ${feeRes.fee.toFixed(2)}. ${canCash ? 'DINHEIRO LIBERADO' : 'APENAS PIX/CARTÃO (Link)'}`;
-                                                } else {
-                                                    const canCash = feeRes.estimated <= 4.0;
-                                                    result = `VALOR DO FRETE (ESTIMADO): R$ ${feeRes.estimated.toFixed(2)}. ${canCash ? 'DINHEIRO LIBERADO' : 'APENAS PIX/CARTÃO (Link)'}`;
+                                                else {
+                                                    const rules = JSON.parse(settings?.deliveryRules || '[]');
+                                                    const maxCashKm = rules.length > 0 ? parseFloat(rules[0].maxKm) : 2.0;
+                                                    const canCash = parseFloat(feeRes.distance) <= maxCashKm;
+
+                                                    const feeValue = feeRes.type === 'fixed' ? feeRes.fee : feeRes.estimated;
+                                                    lastDeliveryFee = feeValue; // Salva para o fallback
+
+                                                    // PERSISTÊNCIA: Salva no cadastro do cliente para evitar re-calculo caro
+                                                    await prisma.customer.update({
+                                                        where: { jid },
+                                                        data: { address: args.address, lastDeliveryFee: feeValue }
+                                                    }).catch(() => { });
+
+                                                    const feeLabel = feeRes.type === 'fixed' ? 'VALOR DO FRETE' : 'VALOR DO FRETE (ESTIMADO)';
+
+                                                    result = `${feeLabel}: R$ ${feeValue.toFixed(2)}. ${canCash ? 'DINHEIRO LIBERADO' : 'APENAS PIX/CARTÃO (Link)'}`;
                                                 }
                                             }
                                             else if (functionName === "create_order") {
+                                                console.log(`[AI] Tentando executar 'create_order' para ${jid}...`);
                                                 // Notes are now kept clean, cake details passed as separate fields
                                                 let finalNotes = args.notes || '';
 
@@ -854,14 +915,17 @@ async function initInstance(instanceId) {
                                                     });
 
                                                     if (recentOrder) {
+                                                        console.log(`[AI] Bloqueio anti-spam acionado para ${jid}. Já existe pedido #${recentOrder.id.slice(-5)}.`);
                                                         // Se a IA não estiver explicitamente tentando criar um NOVO item diferente
                                                         result = {
                                                             success: false,
                                                             error: `ALERTA: Já existe um pedido recente (#${recentOrder.id.slice(-5).toUpperCase()}) para este cliente. NÃO DUPLIQUE o pedido. Se o cliente está mudando de ideia, use 'update_order' com este código. Só crie um novo se forem produtos diferentes.`
+
                                                         };
                                                     } else {
                                                         const res = await axios.post('http://localhost:3001/orders', {
                                                             ...args,
+                                                            deliveryFee: args.deliveryFee || lastDeliveryFee, // FALLBACK: Usa o último frete calculado
                                                             notes: finalNotes.trim(),
                                                             clientJid: jid,
                                                             instanceId: instanceId
@@ -872,7 +936,12 @@ async function initInstance(instanceId) {
                                                             calendarEvent: !!res.data.calendarEventId,
                                                             paymentLinkSent: !!res.data.paymentLink
                                                         };
-                                                        if (res.data.paymentLink) pendingPaymentLink = res.data.paymentLink;
+                                                        if (res.data.paymentLink) {
+                                                            pendingPaymentLink = res.data.paymentLink;
+                                                            result.message = "Pedido criado. SILÊNCIO ABSOLUTO NO PRÓXIMO TURNO. NÃO GERE NENHUM TEXTO, O SISTEMA ENVIARÁ O LINK.";
+                                                        } else {
+                                                            result.message = "Pedido criado. Agradeça o cliente e diga que o pedido já entrou em produção (pois o pagamento será em Dinheiro/Presencial).";
+                                                        }
 
                                                         // Se for dinheiro, já cai como pending, então dispara o DING agora
                                                         if (args.paymentMethod === 'Dinheiro') {
@@ -927,6 +996,14 @@ async function initInstance(instanceId) {
                                                     locationLink: settings?.businessLocation || "Link não disponível."
                                                 };
                                             }
+                                            else if (functionName === "solicitar_cancelamento") {
+                                                const { reason } = args;
+                                                const clientName = currentChat?.name || jid.split('@')[0];
+                                                const alertMsg = `🚨 *SOLICITAÇÃO DE CANCELAMENTO* 🚨\n\n👤 *Cliente:* ${clientName}\n📱 *WhatsApp:* ${jid.split('@')[0]}\n📝 *Motivo:* ${reason}\n\nLily já avisou o cliente que o gerente foi notificado. Por favor, verifique o pedido no painel.`;
+                                                
+                                                await sock.sendMessage(settings.managerJid, { text: alertMsg });
+                                                result = { success: true, message: "O gerente foi notificado sobre o seu pedido de cancelamento e entrará em contato em breve." };
+                                            }
 
                                             messages.push({
                                                 tool_call_id: toolCall.id,
@@ -937,6 +1014,30 @@ async function initInstance(instanceId) {
                                         }
 
                                         if (currentToken.cancelled) return;
+
+                                        // ─── SEQUESTRAR O FLUXO: SE GEROU LINK, A IA SE CALA E O SISTEMA ASSUME ───
+                                        if (pendingPaymentLink) {
+                                            // Balão 1: Aviso
+                                            await sock.sendPresenceUpdate('composing', jid);
+                                            await new Promise(r => setTimeout(r, 1200));
+                                            await sock.sendPresenceUpdate('paused', jid);
+                                            await sendRichMessage(sock, jid, 'Vou gerar o link do seu pagamento logo abaixo:');
+
+                                            // Balão 2: Link
+                                            await sock.sendPresenceUpdate('composing', jid);
+                                            await new Promise(r => setTimeout(r, 800));
+                                            await sock.sendPresenceUpdate('paused', jid);
+                                            await sock.sendMessage(jid, { text: pendingPaymentLink });
+
+                                            // Balão 3: Confirmação
+                                            await sock.sendPresenceUpdate('composing', jid);
+                                            await new Promise(r => setTimeout(r, 1000));
+                                            await sock.sendPresenceUpdate('paused', jid);
+                                            await sendRichMessage(sock, jid, 'O pedido será confirmado após o pagamento.');
+
+                                            return; // FIM IMEDIATO: a IA não fala mais nada.
+                                        }
+
                                         const secondResponse = await ai.chat.completions.create({
                                             model: MODEL_MAP[settings?.activeModel] || 'gpt-4o',
                                             messages,
@@ -1017,11 +1118,7 @@ async function initInstance(instanceId) {
                                 await sendRichMessage(sock, jid, replyText);
                                 console.log(`[AI] Intro enviada para ${jid}`);
 
-                                // Envia o link de pagamento se houver
-                                if (pendingPaymentLink) {
-                                    await new Promise(resolve => setTimeout(resolve, 1000));
-                                    await sock.sendMessage(jid, { text: pendingPaymentLink });
-                                }
+
 
                                 // 2ª MENSAGEM: CARDÁPIO (SISTEMA)
                                 if (pendingCatalogMessage) {
@@ -1489,12 +1586,12 @@ app.post('/instances/:id/messages/delete', async (req, res) => {
 
     try {
         if (forEveryone && fromMe) {
-            // Apaga para todos (apenas se for minha mensagem)
+            // Apaga para todos no WhatsApp
             await sock.sendMessage(jid, { delete: { remoteJid: jid, fromMe: true, id: msgId } });
-        } else {
-            // Apenas remove do banco local (simula "apagar para mim")
-            await prisma.message.deleteMany({ where: { msgId } });
         }
+
+        // Remove do banco local em todos os casos (assim o histórico da IA e da tela limpam na hora)
+        await prisma.message.deleteMany({ where: { instanceId: id, msgId } });
         res.json({ ok: true });
     } catch (err) {
         res.status(500).json({ error: err.message });

@@ -481,11 +481,10 @@ async function sendDailyReport(sockGetter) {
 // ─── ROTAS — PEDIDOS / AGENDAMENTOS ─────────────────────────────────────────
 
 router.get('/', async (req, res) => {
-  const { status, date, type } = req.query;
+  const { status, date } = req.query;
   const where = {};
   if (status) where.status = status;
   if (date) where.scheduledDate = date;
-  if (type) where.type = type;
 
   const orders = await prisma.order.findMany({
     where,
@@ -501,6 +500,47 @@ router.post('/', async (req, res) => {
   try {
     const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
     let { productId, product, variation, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, type, deliveryAddress, paymentMethod, deliveryFee, massa, recheio, topo } = req.body;
+
+    // --- SMART DUPLICATE PREVENTION ---
+    // Se o cliente já tem um pedido 'waiting_payment' para o MESMO produto criado nos últimos 5 minutos,
+    // nós ATUALIZAMOS esse pedido em vez de criar um novo.
+    if (clientJid) {
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+        const existingOrder = await prisma.order.findFirst({
+            where: {
+                clientJid,
+                product: product || undefined,
+                status: 'waiting_payment',
+                createdAt: { gte: fiveMinutesAgo }
+            },
+            orderBy: { createdAt: 'desc' }
+        });
+
+        if (existingOrder) {
+            console.log(`[Order API] Duplicata detectada! Atualizando pedido #${existingOrder.id} em vez de criar um novo.`);
+            // Simula uma chamada de PATCH para aproveitar a lógica de atualização (opcional) ou faz o update direto
+            const updated = await prisma.order.update({
+                where: { id: existingOrder.id },
+                data: {
+                    variation, quantity, notes, scheduledDate, scheduledTime, deliveryAddress, paymentMethod, deliveryFee, massa, recheio, topo,
+                    updatedAt: new Date()
+                }
+            });
+            return res.json(updated);
+        }
+    }
+
+    // INTELIGÊNCIA DE RECAPITULAÇÃO: Define o tipo se a IA esquecer
+    if (!type) {
+        const today = new Date().toISOString().split('T')[0];
+        if (deliveryAddress && (!scheduledDate || scheduledDate === today)) {
+            type = 'delivery';
+        } else {
+            type = 'order';
+        }
+        console.log(`[Order API] Tipo de pedido inferido: ${type}`);
+    }
+    console.log(`[Order API] Criando pedido para ${clientName} (${paymentMethod}) - Valor: ${deliveryFee}`);
 
     finalProductName = (product || '').replace(/\s*\(.*?\)\s*/g, '').trim();
 
@@ -549,7 +589,22 @@ router.post('/', async (req, res) => {
 
     // ─── CÁLCULO DE VALORES ───
     const qtyNum = parseFloat(quantity) || 1;
-    const dFee = parseFloat(deliveryFee) || 0;
+    let dFee = parseFloat(deliveryFee) || 0;
+
+    // RECALCULO DE SEGURANÇA: Se não veio taxa mas tem endereço, calcula agora
+    if (dFee === 0 && deliveryAddress && (type === 'delivery' || !type)) {
+        try {
+            const { calculateFee } = require('../lib/maps');
+            const feeRes = await calculateFee(deliveryAddress);
+            if (!feeRes.error) {
+                dFee = feeRes.type === 'fixed' ? feeRes.fee : feeRes.estimated;
+                console.log(`[Order API] Taxa recalculada automaticamente: R$${dFee}`);
+            }
+        } catch (err) {
+            console.error('[Order API] Erro no recalculo de frete:', err.message);
+        }
+    }
+
     const itemsValue = priceToUse * qtyNum;
     const finalTotalValue = itemsValue + dFee;
     console.log(`[Order] Cálculo: R$${priceToUse} x ${qtyNum} + R$${dFee} = TOTAL R$${finalTotalValue}`);
@@ -572,21 +627,21 @@ router.post('/', async (req, res) => {
         productId: dbProduct?.id,
         quantity: quantity?.toString(),
         notes: notes || "",
-        scheduledDate,
-        scheduledTime,
-        clientName,
+        scheduledDate: scheduledDate || new Date().toISOString().split('T')[0],
+        scheduledTime: scheduledTime || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        clientName: clientName || 'Cliente',
         clientJid,
         type: type || 'order',
-        deliveryAddress,
+        deliveryAddress: deliveryAddress || "",
         instanceId: req.body.instanceId || 'global',
         totalValue: finalTotalValue,
         deliveryFee: dFee,
         paymentMethod: paymentMethod,
         status: initialStatus,
         paymentStatus: initialStatus,
-        massa,
-        recheio,
-        topo
+        massa: massa || null,
+        recheio: recheio || null,
+        topo: topo || null
       }
     });
 
@@ -649,35 +704,41 @@ router.post('/', async (req, res) => {
     // 2. Mercado Pago (Link de Pagamento)
     let paymentLink = null;
     if (paymentMethod !== 'Dinheiro') {
+      console.log(`[MercadoPago] Iniciando geração de link para pedido ${order.id}...`);
       try {
-        const mpClient = new MercadoPagoConfig({ accessToken: settings.mercadopagoToken });
-        const preference = new Preference(mpClient);
-        
-        const prefRes = await preference.create({
-          body: {
-            items: [
-              {
-                title: order.product,
-                quantity: 1,
-                unit_price: finalTotalValue,
-                currency_id: 'BRL'
+        if (!settings.mercadopagoToken) {
+            console.error('[MercadoPago] ERRO: mercadopagoToken não configurado nas settings!');
+        } else {
+            const mpClient = new MercadoPagoConfig({ accessToken: settings.mercadopagoToken });
+            const preference = new Preference(mpClient);
+            
+            const prefRes = await preference.create({
+              body: {
+                items: [
+                  {
+                    title: order.product,
+                    quantity: 1,
+                    unit_price: finalTotalValue,
+                    currency_id: 'BRL'
+                  }
+                ],
+                back_urls: {
+                  success: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/sucesso`,
+                  failure: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/falha`,
+                  pending: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/pendente`
+                },
+                auto_return: 'approved',
+                notification_url: `${process.env.PUBLIC_URL || 'http://localhost:3001'}/mercadopago/webhook`,
+                external_reference: order.id
               }
-            ],
-            back_urls: {
-              success: `${process.env.PUBLIC_URL || 'https://seusite.com'}/sucesso`,
-              failure: `${process.env.PUBLIC_URL || 'https://seusite.com'}/falha`,
-              pending: `${process.env.PUBLIC_URL || 'https://seusite.com'}/pendente`
-            },
-            auto_return: 'approved',
-            notification_url: `${process.env.PUBLIC_URL}/mercadopago/webhook`,
-            external_reference: order.id
-          }
-        });
-        
-        paymentLink = prefRes.init_point;
-        console.log(`[MercadoPago] Link gerado: ${paymentLink}`);
+            });
+            
+            paymentLink = prefRes.init_point;
+            console.log(`[MercadoPago] SUCESSO: Link gerado -> ${paymentLink}`);
+        }
       } catch (mpErr) {
-        console.error('[MercadoPago] Erro ao gerar link:', mpErr.message);
+        console.error('[MercadoPago] ERRO FATAL ao gerar link:', mpErr.message);
+        if (mpErr.response) console.error('[MercadoPago] Detalhes do erro:', JSON.stringify(mpErr.response.data));
       }
     }
 
@@ -685,12 +746,13 @@ router.post('/', async (req, res) => {
     if (settings?.managerJid && req.sockGetter) {
       const sock = req.sockGetter();
       if (sock) {
-        const aviso = `🚨 *NOVA ENCOMENDA!* 🚨\n\n👤 *Cliente:* ${clientName || 'Não informado'}\n🎂 *Pedido:* ${order.product}\n📅 *Data:* ${scheduledDate}\n⏰ *Hora:* ${scheduledTime}\n📝 *Obs:* ${notes || '-'}\n📍 *Entrega:* ${deliveryAddress || 'Retirada'}`;
+        const aviso = `🚨 *NOVA ENCOMENDA!* 🚨\n\n👤 *Cliente:* ${order.clientName || 'Não informado'}\n🎂 *Pedido:* ${order.product}\n📅 *Data:* ${order.scheduledDate}\n⏰ *Hora:* ${order.scheduledTime}\n📝 *Obs:* ${order.notes || '-'}\n📍 *Entrega:* ${order.deliveryAddress || 'Retirada'}`;
         await sock.sendMessage(settings.managerJid, { text: aviso }).catch(() => {});
         
-        // Dispara o som (DING) apenas se for Dinheiro (já entra em produção/pendente)
-        if (paymentMethod === 'Dinheiro') {
-           io.emit('new_order_pending', { orderId: order.id });
+        // Dispara o som (DING) apenas se for Dinheiro ou Link gerado com sucesso
+        if (paymentMethod === 'Dinheiro' || paymentLink) {
+           const io = req.app.get('io');
+           if (io) io.emit('new_order_pending', { orderId: order.id });
         }
       }
     }

@@ -91,7 +91,6 @@ const Production = () => {
 
     socket.on('new_order_pending', (data) => {
       console.log('[Socket] Novo pedido pago!', data);
-      playDing();
       fetchOrders();
       Swal.fire({
         title: '💰 PAGAMENTO CONFIRMADO!',
@@ -115,17 +114,19 @@ const Production = () => {
     };
   }, [selectedDate, activeType]); // Dependências adicionadas para recarregar ao mudar de dia
 
-  // Monitora a lista de pedidos: se não houver NADA pendente, para o barulho
+  // Monitora a lista de pedidos: toca o alarme se houver pendentes, para se não houver.
   useEffect(() => {
     const hasPending = orders.some(o => o.status === 'pending');
-    if (!hasPending) {
+    if (hasPending) {
+      playDing();
+    } else {
       stopDing();
     }
   }, [orders]);
 
   const fetchOrders = async () => {
     try {
-      const res = await api.get(`/orders?date=${selectedDate}&type=${activeType}`);
+      const res = await api.get(`/orders?date=${selectedDate}`);
       setOrders(res.data);
     } catch (err) {
       console.error(err);
@@ -203,7 +204,9 @@ const Production = () => {
 
     // Botão de ação baseado no status
     let actionBtnHtml = '';
-    if (order.status === 'pending') {
+    if (order.status === 'waiting_payment') {
+      actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #fbbf24; color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">CONFIRMAR PAGAMENTO</button>`;
+    } else if (order.status === 'pending') {
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #f59e0b; color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">ACEITAR PEDIDO</button>`;
     } else if (order.status === 'production') {
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #3b82f6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">PEDIDO PRONTO</button>`;
@@ -224,7 +227,7 @@ const Production = () => {
         const actionBtn = document.getElementById('btn-action-next');
         if (actionBtn) {
           actionBtn.onclick = () => {
-            const nextStatusMap = { 'pending': 'production', 'production': 'ready', 'ready': 'completed' };
+            const nextStatusMap = { 'waiting_payment': 'pending', 'pending': 'production', 'production': 'ready', 'ready': 'completed' };
             const nextStatus = nextStatusMap[order.status];
             if (nextStatus) {
               updateStatus(order.id, nextStatus);
@@ -355,15 +358,25 @@ const Production = () => {
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
             <button
               onClick={() => setActiveType('delivery')}
-              style={{ ...tabBtn, backgroundColor: activeType === 'delivery' ? '#3b82f6' : 'var(--bg-tertiary)', color: '#fff' }}
+              style={{ ...tabBtn, backgroundColor: activeType === 'delivery' ? '#3b82f6' : 'var(--bg-tertiary)', color: '#fff', position: 'relative' }}
             >
-              <Truck size={16} /> Pronta Entrega ({orders.filter(o => o.type === 'delivery' && o.status !== 'completed' && o.status !== 'cancelled').length})
+              <Truck size={16} /> Pronta Entrega
+              {orders.filter(o => o.type === 'delivery' && o.status !== 'completed' && o.status !== 'cancelled').length > 0 && (
+                <span style={badgeStyle}>
+                  {orders.filter(o => o.type === 'delivery' && o.status !== 'completed' && o.status !== 'cancelled').length}
+                </span>
+              )}
             </button>
             <button
               onClick={() => setActiveType('order')}
-              style={{ ...tabBtn, backgroundColor: activeType === 'order' ? '#f59e0b' : 'var(--bg-tertiary)', color: '#fff' }}
+              style={{ ...tabBtn, backgroundColor: activeType === 'order' ? '#f59e0b' : 'var(--bg-tertiary)', color: '#fff', position: 'relative' }}
             >
-              <CalendarIcon size={16} /> Encomendas ({orders.filter(o => (o.type === 'order' || !o.type) && o.status !== 'completed' && o.status !== 'cancelled').length})
+              <CalendarIcon size={16} /> Encomendas
+              {orders.filter(o => (o.type === 'order' || !o.type) && o.status !== 'completed' && o.status !== 'cancelled').length > 0 && (
+                <span style={badgeStyle}>
+                  {orders.filter(o => (o.type === 'order' || !o.type) && o.status !== 'completed' && o.status !== 'cancelled').length}
+                </span>
+              )}
             </button>
           </div>
 
@@ -427,9 +440,9 @@ const Production = () => {
                 }}
               >
                 <span>💳</span> Aguardando Pagamento
-                {orders.filter(o => o.status === 'waiting_payment').length > 0 && (
+                {orders.filter(o => o.status === 'waiting_payment' && (o.type === activeType || (!o.type && activeType === 'order'))).length > 0 && (
                   <span style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {orders.filter(o => o.status === 'waiting_payment').length}
+                    {orders.filter(o => o.status === 'waiting_payment' && (o.type === activeType || (!o.type && activeType === 'order'))).length}
                   </span>
                 )}
               </button>
@@ -487,7 +500,7 @@ const Production = () => {
             </button>
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {orders.filter(o => o.status === 'waiting_payment').map(order => (
+            {orders.filter(o => o.status === 'waiting_payment' && (o.type === activeType || (!o.type && activeType === 'order'))).map(order => (
               <div
                 key={order.id}
                 onClick={() => openDetails(order)}
@@ -501,8 +514,8 @@ const Production = () => {
                 <div style={{ fontSize: '12px', marginTop: '8px', color: '#9ca3af' }}>🕒 {order.scheduledTime}</div>
               </div>
             ))}
-            {orders.filter(o => o.status === 'waiting_payment').length === 0 && (
-              <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '50px' }}>Nenhum pedido aguardando pagamento.</div>
+            {orders.filter(o => o.status === 'waiting_payment' && (o.type === activeType || (!o.type && activeType === 'order'))).length === 0 && (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '50px' }}>Nenhum pedido aguardando pagamento nesta categoria.</div>
             )}
           </div>
         </div>
@@ -618,5 +631,22 @@ const KanbanColumn = ({ col, orders, updateStatus, openDetails, height = '100%' 
 
 const tabBtn = { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 20px', borderRadius: '10px', border: 'none', fontSize: '13px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' };
 const btnMini = { flex: 1, padding: '8px', borderRadius: '8px', fontSize: '12px', border: 'none', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 800 };
+const badgeStyle = {
+  position: 'absolute',
+  top: '-5px',
+  right: '-5px',
+  backgroundColor: '#ef4444',
+  color: '#fff',
+  borderRadius: '50%',
+  width: '18px',
+  height: '18px',
+  fontSize: '10px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontWeight: 800,
+  boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+  border: '1.5px solid var(--bg-primary)'
+};
 
 export default Production;

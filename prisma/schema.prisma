@@ -111,6 +111,7 @@ model Customer {
   jid              String   @unique
   name             String?
   address          String?
+  lastDeliveryFee  Float?   @default(0)
   paymentMethod    String?
   lastOrderDate    DateTime?
   preferredProduct String?
