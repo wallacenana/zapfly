@@ -31,7 +31,9 @@ const Settings = () => {
     reportEnabled: false,
     gcalRefreshToken: '',
     gcalEnabled: false,
-    reminderHours: 2
+    reminderHours: 2,
+    pixReceiverName: '',
+    pixReceiverKey: ''
   });
   const [slots, setSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(true);
@@ -249,6 +251,24 @@ const Settings = () => {
                   <label style={labelStyle}>Capacidade de Pedidos/Dia</label>
                   <input {...inp} type="number" value={settings.dailyMaxOrders} onChange={e => setSettings({ ...settings, dailyMaxOrders: parseInt(e.target.value) })} />
                 </div>
+              </div>
+
+              <div style={{ ...subCard, borderLeftColor: '#ef4444' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
+                  <Shield size={20} color="#ef4444" />
+                  <span style={{ fontWeight: 800 }}>Dados para Validação de Pix (Gabarito)</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                  <div>
+                    <label style={microLabel}>Nome do Recebedor Oficial</label>
+                    <input {...inp} value={settings.pixReceiverName || ''} onChange={e => setSettings({ ...settings, pixReceiverName: e.target.value })} placeholder="Ex: Linda Cake Ltda" />
+                  </div>
+                  <div>
+                    <label style={microLabel}>Chave Pix Oficial (CPF/CNPJ/Cel)</label>
+                    <input {...inp} value={settings.pixReceiverKey || ''} onChange={e => setSettings({ ...settings, pixReceiverKey: e.target.value })} placeholder="Ex: 12.345..." />
+                  </div>
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px' }}>A Lily usará esses dados para conferir se o Pix enviado pelo cliente caiu na conta certa.</p>
               </div>
               <div style={subCard}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>

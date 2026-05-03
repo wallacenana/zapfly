@@ -376,49 +376,56 @@ async function setupCronJobs(sockGetter) {
     });
   });
 
-  // Lembrete de Retirada (Rodando a cada 15 min)
-  cron.schedule('*/15 * * * *', async () => {
-    const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
-    if (!settings || !sockGetter) return;
+    // Lembrete de Retirada (Rodando a cada 15 min)
+    cron.schedule('*/15 * * * *', async () => {
+        const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
+        if (!settings || !sockGetter) return;
 
-    const leadHours = settings.reminderHours || 2;
-    const today = new Date().toISOString().split('T')[0];
-    const now = new Date();
+        const leadHours = settings.reminderHours || 2;
+        
+        // Ajusta data/hora para fuso de São Paulo (UTC-3)
+        const now = new Date();
+        const nowBR = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+        const todayBR = nowBR.toISOString().split('T')[0];
 
-    const upcomingOrders = await prisma.order.findMany({
-      where: {
-        scheduledDate: today,
-        status: { in: ['pending', 'production', 'ready'] },
-        type: 'order',
-        reminderSent: false
-      }
-    });
+        const upcomingOrders = await prisma.order.findMany({
+            where: {
+                scheduledDate: todayBR,
+                status: { in: ['pending', 'production', 'ready'] },
+                type: 'order',
+                reminderSent: false
+            }
+        });
 
-    const sock = sockGetter();
-    if (!sock) return;
+        const sock = sockGetter();
+        if (!sock) return;
 
-    for (const order of upcomingOrders) {
-      try {
-        const [hour, minute] = order.scheduledTime.split(':').map(Number);
-        const pickupTime = new Date();
-        pickupTime.setHours(hour, minute, 0, 0);
+        for (const order of upcomingOrders) {
+            try {
+                const [hour, minute] = order.scheduledTime.split(':').map(Number);
+                
+                // Monta o horário do pedido também no fuso BR
+                const pickupTime = new Date(nowBR);
+                pickupTime.setHours(hour, minute, 0, 0);
 
-        const diffMs = pickupTime - now;
-        const diffHours = diffMs / (1000 * 60 * 60);
+                const diffMs = pickupTime.getTime() - nowBR.getTime();
+                const diffHours = diffMs / (1000 * 60 * 60);
 
-        // Se faltar X horas ou menos (mas ainda não passou do horário)
-        if (diffHours > 0 && diffHours <= leadHours) {
-          const msg = `Olá *${order.clientName || 'cliente'}*! 🎂\n\nPassando para te avisar que sua encomenda está agendada para retirada hoje às *${order.scheduledTime}*.\n\nJá estamos nos preparativos finais por aqui! Te esperamos. 🚀`;
+                console.log(`[Reminder Check] Pedido ${order.id} agendado para ${order.scheduledTime}. Faltam ${diffHours.toFixed(2)}h`);
 
-          await sock.sendMessage(order.clientJid, { text: msg });
-          await prisma.order.update({ where: { id: order.id }, data: { reminderSent: true } });
-          console.log(`[Reminder] Lembrete enviado para ${order.clientName} (${order.id})`);
+                // Se faltar X horas ou menos (até 15 min de tolerância para não perder o cron)
+                if (diffHours > -0.25 && diffHours <= leadHours) {
+                    const msg = `Olá *${order.clientName || 'cliente'}*! 🎂\n\nPassando para te avisar que sua encomenda está agendada para retirada hoje às *${order.scheduledTime}*.\n\nJá estamos nos preparativos finais por aqui! Te esperamos. 🚀`;
+
+                    await sock.sendMessage(order.clientJid, { text: msg });
+                    await prisma.order.update({ where: { id: order.id }, data: { reminderSent: true } });
+                    console.log(`[Reminder] Lembrete enviado para ${order.clientName} (${order.id})`);
+                }
+            } catch (err) {
+                console.error(`[Reminder Error] Falha ao enviar para ${order.id}:`, err.message);
+            }
         }
-      } catch (err) {
-        console.error(`[Reminder Error] Falha ao enviar para ${order.id}:`, err.message);
-      }
-    }
-  });
+    });
 
   // Relatório Diário
   const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
@@ -482,9 +489,24 @@ async function sendDailyReport(sockGetter) {
 
 router.get('/', async (req, res) => {
   const { status, date } = req.query;
-  const where = {};
-  if (status) where.status = status;
-  if (date) where.scheduledDate = date;
+  
+  // LÓGICA INTELIGENTE: Se houver uma data, retornamos os históricos daquela data
+  // MAS sempre incluímos os pedidos ATIVOS (pendentes, produção, prontos) de qualquer data
+  // para que o Kanban e o Alarme funcionem corretamente.
+  const where = {
+    OR: [
+      { status: { in: ['waiting_payment', 'pending', 'production', 'ready'] } },
+      date ? { scheduledDate: date } : {}
+    ]
+  };
+
+  // Filtros adicionais se fornecidos explicitamente
+  if (status) {
+    // Se o usuário pediu um status específico, respeitamos
+    delete where.OR;
+    where.status = status;
+    if (date) where.scheduledDate = date;
+  }
 
   const orders = await prisma.order.findMany({
     where,
@@ -540,7 +562,12 @@ router.post('/', async (req, res) => {
         }
         console.log(`[Order API] Tipo de pedido inferido: ${type}`);
     }
-    console.log(`[Order API] Criando pedido para ${clientName} (${paymentMethod}) - Valor: ${deliveryFee}`);
+
+    // DEFINE PADRÕES PARA DATA E HORA ANTES DA CHECAGEM
+    if (!scheduledDate) scheduledDate = new Date().toISOString().split('T')[0];
+    if (!scheduledTime) scheduledTime = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+    console.log(`[Order API] Criando pedido para ${clientName} (${paymentMethod}) - Data: ${scheduledDate}, Hora: ${scheduledTime}`);
 
     finalProductName = (product || '').replace(/\s*\(.*?\)\s*/g, '').trim();
 
@@ -627,8 +654,8 @@ router.post('/', async (req, res) => {
         productId: dbProduct?.id,
         quantity: quantity?.toString(),
         notes: notes || "",
-        scheduledDate: scheduledDate || new Date().toISOString().split('T')[0],
-        scheduledTime: scheduledTime || new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        scheduledDate: scheduledDate,
+        scheduledTime: scheduledTime,
         clientName: clientName || 'Cliente',
         clientJid,
         type: type || 'order',
@@ -742,20 +769,12 @@ router.post('/', async (req, res) => {
       }
     }
 
-    // 3. Notifica o Gestor
-    if (settings?.managerJid && req.sockGetter) {
-      const sock = req.sockGetter();
-      if (sock) {
-        const aviso = `🚨 *NOVA ENCOMENDA!* 🚨\n\n👤 *Cliente:* ${order.clientName || 'Não informado'}\n🎂 *Pedido:* ${order.product}\n📅 *Data:* ${order.scheduledDate}\n⏰ *Hora:* ${order.scheduledTime}\n📝 *Obs:* ${order.notes || '-'}\n📍 *Entrega:* ${order.deliveryAddress || 'Retirada'}`;
-        await sock.sendMessage(settings.managerJid, { text: aviso }).catch(() => {});
-        
-        // Dispara o som (DING) apenas se for Dinheiro ou Link gerado com sucesso
-        if (paymentMethod === 'Dinheiro' || paymentLink) {
-           const io = req.app.get('io');
-           if (io) io.emit('new_order_pending', { orderId: order.id });
-        }
+      // Notificação ao admin removida daqui para evitar spam. 
+      // Será enviada apenas após a confirmação do pagamento no Webhook.
+      if (paymentMethod === 'Dinheiro') {
+         const io = req.app.get('io');
+         if (io) io.emit('new_order_pending', { orderId: order.id });
       }
-    }
 
     // 4. Notifica o Cliente (se for dinheiro, confirma recebimento)
     if (paymentMethod === 'Dinheiro' && order.clientJid && req.sockGetter) {
@@ -800,12 +819,12 @@ router.patch('/:id', async (req, res) => {
       if (sock) {
         let msg = '';
         if (data.status === 'production') {
-          msg = `✅ *PEDIDO ACEITO!* \n\nOi, *${order.clientName}*! Seu pedido de *${order.product}* já foi aceito e começou a ser preparado com muito carinho! 🧑‍🍳✨\n\nAvisaremos você assim que estiver pronto para entrega ou retirada!`;
+          msg = `👨‍🍳 *PEDIDO EM PREPARO!* (#${order.id.slice(-4).toUpperCase()})\n\nOi, *${order.clientName}*! Seu pedido de *${order.product}* já foi aceito e começou a ser preparado com muito carinho! 🧑‍🍳✨\n\nAvisaremos você assim que estiver pronto para entrega ou retirada!`;
         } else if (data.status === 'ready') {
           const typeLabel = order.type === 'delivery' ? 'está saindo para entrega' : 'já está pronto para retirada';
-          msg = `🚀 *BOAS NOTÍCIAS!* \n\nOi, *${order.clientName}*! Seu pedido de *${order.product}* ${typeLabel}! 🎂✨\n\n${order.type === 'delivery' ? 'Prepare o coração (e o estômago), jajá chega aí!' : 'Pode vir buscar quando quiser, estamos te esperando!'}`;
+          msg = `🚀 *BOAS NOTÍCIAS!* (#${order.id.slice(-4).toUpperCase()})\n\nOi, *${order.clientName}*! Seu pedido de *${order.product}* ${typeLabel}! 🎂✨\n\n${order.type === 'delivery' ? 'Prepare o coração (e o estômago), jajá chega aí!' : 'Pode vir buscar quando quiser, estamos te esperando!'}`;
         } else if (data.status === 'completed') {
-          msg = `❤️ *PEDIDO FINALIZADO!* \n\nOi, *${order.clientName}*! Seu pedido foi finalizado com sucesso. \n\nMuito obrigado pela confiança e esperamos que aproveite cada pedacinho! Se puder, nos conte o que achou. 🥰`;
+          msg = `❤️ *PEDIDO FINALIZADO!* (#${order.id.slice(-4).toUpperCase()})\n\nOi, *${order.clientName}*! Seu pedido foi finalizado com sucesso. \n\nMuito obrigado pela confiança e esperamos que aproveite cada pedacinho! Se puder, nos conte o que achou. 🥰`;
         }
 
         if (msg) {

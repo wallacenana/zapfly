@@ -48,6 +48,7 @@ model Chat {
   aiEnabled   Boolean   @default(false)
   adminJid    String?
   isGroup     Boolean   @default(false)
+  lastPixAnalysis String?  @db.Text
   updatedAt   DateTime  @updatedAt
   instance    Instance  @relation(fields: [instanceId], references: [id])
   messages    Message[]
@@ -218,6 +219,8 @@ model Setting {
   reportEnabled      Boolean @default(false)
   reportHour         Int     @default(7)
   reminderHours      Int     @default(2)
+  pixReceiverName    String? @db.Text
+  pixReceiverKey     String? @db.Text
   @@map("setting")
 }
 

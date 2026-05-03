@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const prisma = require('./lib/prisma');
 const { calculateFee } = require('./lib/maps');
-const { getStoreStatus, formatProduct, sendRichMessage } = require('./lib/utils');
+const { getStoreStatus, sendRichMessage } = require('./lib/utils');
 const { initFlows, handleFlows, runFlowNode, startFlowMonitor } = require('./lib/flows');
 const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODEL_MAP } = require('./lib/ai');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -34,9 +34,7 @@ const uploadMarketing = multer({ storage });
 
 const {
     getSettings,
-    invalidateSettingsCache,
-    getCachedInstance,
-    invalidateProductCache
+    invalidateSettingsCache
 } = require('./lib/cache');
 
 const { router: ordersRouter, setupCronJobs, checkAvailability, updateCalendarEvent } = require('./routes/orders');
@@ -87,69 +85,92 @@ app.get('/', (req, res) => {
 });
 
 // ─── WEBHOOK MERCADO PAGO ───────────────────────────────────────────────
+const processingPayments = new Set();
+
 app.post('/mercadopago/webhook', async (req, res) => {
     try {
         const { type, data } = req.body;
-        console.log(`[MercadoPago Webhook] Tipo: ${type}`, data);
+        const paymentId = data?.id || req.query.id;
 
-        if (type === 'payment' || req.query.topic === 'payment') {
-            const paymentId = data?.id || req.query.id;
+        if ((type === 'payment' || req.query.topic === 'payment') && paymentId) {
+            
+            // TRAVA DE MEMÓRIA: Evita processar o mesmo ID se ele já estiver em curso
+            if (processingPayments.has(paymentId)) {
+                console.log(`[MercadoPago] Ignorando webhook duplicado em processamento: ${paymentId}`);
+                return res.sendStatus(200);
+            }
+            processingPayments.add(paymentId);
 
-            // Busca detalhes do pagamento no MP
-            const settings = await getSettings();
-            if (!settings?.mercadopagoToken) return res.sendStatus(200);
+            try {
+                // Busca detalhes do pagamento no MP
+                const settings = await getSettings();
+                if (!settings?.mercadopagoToken) {
+                    processingPayments.delete(paymentId);
+                    return res.sendStatus(200);
+                }
 
-            const client = new MercadoPagoConfig({ accessToken: settings.mercadopagoToken });
-            const payment = new MercadoPagoPayment(client);
+                const client = new MercadoPagoConfig({ accessToken: settings.mercadopagoToken });
+                const payment = new MercadoPagoPayment(client);
 
-            const p = await payment.get({ id: paymentId });
-            const orderId = p.external_reference;
+                const p = await payment.get({ id: paymentId });
+                const orderId = p.external_reference;
 
-            if (p.status === 'approved' && orderId) {
-                const order = await prisma.order.findUnique({ where: { id: orderId } });
+                if (p.status === 'approved' && orderId) {
+                    const order = await prisma.order.findUnique({ where: { id: orderId } });
 
-                // Trava de segurança: Se já foi confirmado, ignora as repetições do MP
-                if (order && order.paymentStatus !== 'confirmed') {
-                    console.log(`[MercadoPago] Pagamento APROVADO para o pedido: ${orderId}`);
+                    // Trava de segurança no DB: Se já foi confirmado, ignora
+                    if (order && order.paymentStatus !== 'confirmed') {
+                        console.log(`[MercadoPago] Pagamento APROVADO para o pedido: ${orderId}`);
 
-                    const updatedOrder = await prisma.order.update({
-                        where: { id: orderId },
-                        data: {
-                            status: 'pending',
-                            paymentStatus: 'confirmed'
+                        const updatedOrder = await prisma.order.update({
+                            where: { id: orderId },
+                            data: {
+                                status: 'pending',
+                                paymentStatus: 'confirmed'
+                            }
+                        });
+
+                        // Notifica o frontend e dispara o DING
+                        io.emit('order_confirmed', updatedOrder);
+                        io.emit('new_order_pending', { orderId: updatedOrder.id });
+
+                        // Sincroniza com Google Agenda agora que está confirmado
+                        await updateCalendarEvent(updatedOrder).catch(e => console.error('[GCal Sync Error]', e.message));
+
+                        if (settings?.managerJid) {
+                            const sock = sessions.get(updatedOrder.instanceId || 'global') || Array.from(sessions.values())[0];
+                            if (sock) {
+                                let aviso = "";
+                                const orderIdShort = updatedOrder.id.slice(-4).toUpperCase();
+                                
+                                if (updatedOrder.type === 'order') {
+                                    aviso = `🚨 *NOVA ENCOMENDA!* (#${orderIdShort}) 🚨\n\n👤 *Cliente:* ${updatedOrder.clientName}\n🎂 *Pedido:* ${updatedOrder.product}\n📅 *Data:* ${updatedOrder.scheduledDate}\n⏰ *Hora:* ${updatedOrder.scheduledTime}\n📝 *Obs:* ${updatedOrder.notes || '-'}\n📍 *Entrega:* ${updatedOrder.deliveryAddress || 'Retirada'}\n\nO pagamento foi confirmado e o pedido já está no seu painel! ✨`;
+                                } else {
+                                    aviso = `💰 *PAGAMENTO APROVADO!* (#${orderIdShort}) 💰\n\n👤 *Cliente:* ${updatedOrder.clientName}\n🎂 *Pedido:* ${updatedOrder.product}\n\nO pedido já está na aba *PENDENTES* do seu painel. Aceite-o para iniciar a produção! ✨`;
+                                }
+                                
+                                await sock.sendMessage(settings.managerJid, { text: aviso }).catch(() => { });
+                            }
                         }
-                    });
 
-                    // Notifica o frontend e dispara o DING
-                    io.emit('order_confirmed', updatedOrder);
-                    io.emit('new_order_pending', { orderId: updatedOrder.id });
-
-                    // Sincroniza com Google Agenda agora que está confirmado
-                    await updateCalendarEvent(updatedOrder).catch(e => console.error('[GCal Sync Error]', e.message));
-
-                    const settings = await getSettings();
-                    if (settings?.managerJid) {
-                        const sock = sessions.get(updatedOrder.instanceId || 'global') || Array.from(sessions.values())[0];
-                        if (sock) {
-                            const avisoPago = `💰 *PAGAMENTO CONFIRMADO!* 💰\n\n👤 *Cliente:* ${updatedOrder.clientName}\n🎂 *Pedido:* ${updatedOrder.product}\n\nO pedido já está na aba *PENDENTES* do seu painel. Aceite-o para iniciar a produção! ✨`;
-                            await sock.sendMessage(settings.managerJid, { text: avisoPago }).catch(() => { });
+                        if (updatedOrder.clientJid) {
+                            const sock = sessions.get(updatedOrder.instanceId || 'global') || Array.from(sessions.values())[0];
+                            if (sock) {
+                                const msg = `💰 *PAGAMENTO APROVADO!* 💳\n\nOi, *${updatedOrder.clientName}*! Seu pagamento foi aprovado e seu pedido já está na nossa fila de produção. 🧑‍🍳✨\n\nAvisaremos você assim que estiver pronto! ❤️`;
+                                await sock.sendMessage(updatedOrder.clientJid, { text: msg }).catch(() => { });
+                            }
                         }
                     }
-
-                    if (updatedOrder.clientJid) {
-                        const sock = sessions.get(updatedOrder.instanceId || 'global') || Array.from(sessions.values())[0];
-                        if (sock) {
-                            const msg = `✅ *PAGAMENTO CONFIRMADO!* 🎉\n\nOi, *${updatedOrder.clientName}*! Seu pagamento foi aprovado e seu pedido já está na nossa fila de produção. 🧑‍🍳✨\n\nAvisaremos você assim que estiver pronto! ❤️`;
-                            await sock.sendMessage(updatedOrder.clientJid, { text: msg }).catch(() => { });
-                        }
-                    }
-                } // Fim da trava de segurança do MP
+                }
+            } finally {
+                // Remove da trava após o processamento (independente de sucesso ou falha)
+                processingPayments.delete(paymentId);
             }
         }
         res.sendStatus(200);
     } catch (err) {
         console.error('[MercadoPago Webhook Error]', err.message);
-        res.sendStatus(200); // MP exige 200 sempre para não ficar tentando
+        res.sendStatus(200);
     }
 });
 
@@ -439,7 +460,16 @@ async function initInstance(instanceId) {
             }
         }
 
-        const isMedia = !!(msg.message?.imageMessage || msg.message?.videoMessage || msg.message?.audioMessage || msg.message?.documentMessage);
+        const isMedia = !!(msg.message?.imageMessage ||
+            msg.message?.videoMessage ||
+            msg.message?.audioMessage ||
+            msg.message?.documentMessage ||
+            msg.message?.viewOnceMessageV2 ||
+            msg.message?.viewOnceMessage);
+
+        if (!text && isMedia) {
+            console.log("[DEBUG MEDIA] Mensagem de mídia detectada. Estrutura:", JSON.stringify(msg.message, null, 2));
+        }
 
         if (text || isMedia) {
             // Se for mídia sem texto, define um placeholder para o banco de dados
@@ -499,15 +529,23 @@ async function initInstance(instanceId) {
                 const settings = await getSettings();
                 if (!msg.key.fromMe && settings?.managerJid && jid === settings.managerJid) {
                     console.log(`[Admin Command] Processando comando do gerente: ${text}`);
-                    
+
                     let adminImages = [];
-                    const isImg = !!msg.message?.imageMessage || (msg.message?.documentMessage?.mimetype?.startsWith('image/'));
+                    const isImg = !!msg.message?.imageMessage ||
+                        !!msg.message?.viewOnceMessageV2?.message?.imageMessage ||
+                        !!msg.message?.viewOnceMessage?.message?.imageMessage ||
+                        (msg.message?.documentMessage?.mimetype?.startsWith('image/'));
+
                     if (isImg) {
                         try {
+                            console.log(`[Admin] Detectada imagem no comando do gerente. Baixando...`);
                             const { downloadMediaMessage } = require('@whiskeysockets/baileys');
                             const buffer = await downloadMediaMessage(msg, 'buffer', {});
                             adminImages.push(buffer.toString('base64'));
-                        } catch (e) { console.error("Erro imagem admin:", e); }
+                            console.log(`[Admin] Imagem baixada com sucesso. (${buffer.length} bytes)`);
+                        } catch (e) {
+                            console.error("[Admin Error] Falha ao baixar imagem do gerente:", e.message);
+                        }
                     }
 
                     // Chama o agente específico para o administrador passando imagens se houver
@@ -536,18 +574,38 @@ async function initInstance(instanceId) {
                         const currentToken = { cancelled: false };
                         aiProcessingTokens[jid] = currentToken;
 
-                        // Re-buscamos o chat para garantir que pegamos o status de aiEnabled atualizado (caso um fluxo tenha acabado de ligar)
+                        // Re-buscamos o chat para garantir que pegamos o status de aiEnabled atualizado
                         const currentChat = await prisma.chat.findUnique({
                             where: { instanceId_jid: { instanceId, jid } }
                         });
 
-                        // ─── MOTOR DE FLUXOS (Agrupado) ──────────────────────────────
-                        // Juntamos o texto primeiro para passar para o motor de fluxos
-                        const textForFlow = messagesToProcess.map(m => m.text).filter(t => t).join('\n');
+                        // Agrupa todos os textos e imagens do buffer LOGO NO INÍCIO
+                        let combinedText = "";
+                        let combinedImages = [];
+
+                        for (const m of messagesToProcess) {
+                            if (m.text) combinedText += (combinedText ? "\n" : "") + m.text;
+                            const isImg = !!m.msg.message?.imageMessage ||
+                                !!m.msg.message?.viewOnceMessageV2?.message?.imageMessage ||
+                                !!m.msg.message?.viewOnceMessage?.message?.imageMessage ||
+                                (m.msg.message?.documentMessage?.mimetype?.startsWith('image/'));
+                            if (isImg) {
+                                try {
+                                    console.log(`[AI] Detectada imagem de cliente. Baixando...`);
+                                    const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+                                    const buffer = await downloadMediaMessage(m.msg, 'buffer', {});
+                                    combinedImages.push(buffer.toString('base64'));
+                                    console.log(`[AI] Imagem de cliente baixada com sucesso. (${buffer.length} bytes)`);
+                                } catch (e) { console.error("Erro imagem buffer:", e); }
+                            }
+                        }
+
+                        // Juntamos o texto para o motor de fluxos (usando o combinedText já calculado)
+                        const textForFlow = combinedText;
 
                         let flowHandled = false;
                         if (!msg.key.fromMe) {
-                            flowHandled = await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName);
+                            flowHandled = await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages);
                         }
                         if (flowHandled) return;
 
@@ -566,23 +624,12 @@ async function initInstance(instanceId) {
                             if (ai) {
                                 const settings = await getSettings();
 
-                                // Agrupa todos os textos e imagens do buffer
-                                let combinedText = "";
-                                let combinedImages = [];
-
-                                for (const m of messagesToProcess) {
-                                    if (m.text) combinedText += (combinedText ? "\n" : "") + m.text;
-                                    const isImg = !!m.msg.message?.imageMessage || (m.msg.message?.documentMessage?.mimetype?.startsWith('image/'));
-                                    if (isImg) {
-                                        try {
-                                            const { downloadMediaMessage } = require('@whiskeysockets/baileys');
-                                            const buffer = await downloadMediaMessage(m.msg, 'buffer', {});
-                                            combinedImages.push(buffer.toString('base64'));
-                                        } catch (e) { console.error("Erro imagem buffer:", e); }
-                                    }
+                                let promptText = (combinedText ? `Mensagem do cliente: ${combinedText}` : "");
+                                if (combinedImages.length > 0) {
+                                    promptText += (promptText ? "\n\n" : "") + "Analise este comprovante e extraia:\n1. Status (Válido ou Agendado)\n2. Nome do Pagador\n3. Nome do Recebedor\n4. Data e Hora\n5. Valor\n\nCONCLUSÃO: Com base no Gabarito, decida se o Pix é VÁLIDO ou INVÁLIDO. Responda de forma gentil e humana, mas NUNCA cite nomes do gabarito ou motivos técnicos do erro.";
                                 }
 
-                                let userMessageContent = [{ type: "text", text: combinedText || "O cliente enviou uma imagem." }];
+                                let userMessageContent = [{ type: "text", text: promptText }];
                                 for (const b64 of combinedImages) {
                                     userMessageContent.push({
                                         type: "image_url",
@@ -790,8 +837,10 @@ async function initInstance(instanceId) {
                                         }
                                     }
 
+                                    const modelToUse = MODEL_MAP[settings?.activeModel] || 'gpt-4o';
+
                                     const completion = await ai.chat.completions.create({
-                                        model: MODEL_MAP[settings?.activeModel] || 'gpt-4o',
+                                        model: modelToUse,
                                         messages,
                                         tools,
                                         tool_choice: forcedToolChoice
@@ -799,6 +848,23 @@ async function initInstance(instanceId) {
 
                                     responseMessage = completion.choices[0].message;
                                     let initialAIText = responseMessage.content;
+
+                                    // Interceptador de Memória de Imagem
+                                    if (initialAIText && initialAIText.includes('[ANALISE:')) {
+                                        const match = initialAIText.match(/\[ANALISE: (.*?)\]/s);
+                                        if (match) {
+                                            const analysisContent = match[1];
+                                            console.log(`[AI Memory] Salvando análise técnica no banco...`);
+                                            await prisma.chat.update({
+                                                where: { instanceId_jid: { instanceId, jid } },
+                                                data: { lastPixAnalysis: analysisContent }
+                                            }).catch(e => console.error("Erro ao salvar memória AI:", e));
+                                            
+                                            // Remove o bloco técnico do texto que o cliente verá
+                                            initialAIText = initialAIText.replace(/\[ANALISE: .*?\]/s, '').trim();
+                                            responseMessage.content = initialAIText;
+                                        }
+                                    }
 
                                     // FUNCTION CALLING LOOP
                                     if (responseMessage.tool_calls) {
@@ -1000,7 +1066,7 @@ async function initInstance(instanceId) {
                                                 const { reason } = args;
                                                 const clientName = currentChat?.name || jid.split('@')[0];
                                                 const alertMsg = `🚨 *SOLICITAÇÃO DE CANCELAMENTO* 🚨\n\n👤 *Cliente:* ${clientName}\n📱 *WhatsApp:* ${jid.split('@')[0]}\n📝 *Motivo:* ${reason}\n\nLily já avisou o cliente que o gerente foi notificado. Por favor, verifique o pedido no painel.`;
-                                                
+
                                                 await sock.sendMessage(settings.managerJid, { text: alertMsg });
                                                 result = { success: true, message: "O gerente foi notificado sobre o seu pedido de cancelamento e entrará em contato em breve." };
                                             }
@@ -1180,11 +1246,7 @@ async function initInstance(instanceId) {
                                 if (flowState) {
                                     const flow = await prisma.flow.findUnique({ where: { id: flowState.flowId } });
                                     if (flow && flow.status === 'Ativo') {
-                                        await runFlowNode(sock, instanceId, jid, flow, flowState.currentNodeId);
-
-                                        // Verificação de agendamento
-                                        const updatedState = await prisma.flowState.findUnique({ where: { id: flowState.id } });
-
+                                        await runFlowNode(sock, instanceId, jid, flow, flowState.currentNodeId, null, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages, textForFlow);
                                     }
                                 }
                             } else {
@@ -1337,7 +1399,9 @@ app.get('/config/keys', async (req, res) => {
         deliveryRules: config.deliveryRules,
         gcalRefreshToken: config.gcalRefreshToken,
         mercadopagoPublicKey: config.mercadopagoPublicKey,
-        mercadopagoToken: config.mercadopagoToken
+        mercadopagoToken: config.mercadopagoToken,
+        pixReceiverName: config.pixReceiverName,
+        pixReceiverKey: config.pixReceiverKey
     });
 });
 
@@ -1348,7 +1412,8 @@ app.post('/config/keys', async (req, res) => {
         dailyMaxOrders, dailyDeliveryItems, managerJid,
         deliveryJid, reportEnabled, reportHour,
         googleApiKey, deliveryRules, gcalCalendarId,
-        mercadopagoToken, mercadopagoPublicKey
+        mercadopagoToken, mercadopagoPublicKey,
+        pixReceiverName, pixReceiverKey
     } = req.body;
 
     const currentConfig = await getSettings();
@@ -1370,7 +1435,9 @@ app.post('/config/keys', async (req, res) => {
         reportHour: reportHour ?? (currentConfig?.reportHour || 7),
         googleApiKey: googleApiKey || "",
         deliveryRules: typeof deliveryRules === 'string' ? deliveryRules : JSON.stringify(deliveryRules || []),
-        gcalCalendarId: gcalCalendarId || ""
+        gcalCalendarId: gcalCalendarId || "",
+        pixReceiverName,
+        pixReceiverKey
     };
 
     console.log(`[Config Save] Atualizando configurações globais...`);
