@@ -8,6 +8,7 @@ import { api, API_URL } from '../api';
 
 const STATUS_CONFIG = {
   pending: { label: 'Pendente', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', icon: Clock },
+  accepted: { label: 'Aceito', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)', icon: CheckCircle },
   production: { label: 'Em Produção', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)', icon: Package },
   ready: { label: 'Pronto/Entrega', color: '#10b981', bg: 'rgba(16,185,129,0.1)', icon: Truck },
   completed: { label: 'Finalizado', color: '#6b7280', bg: 'rgba(107,114,128,0.1)', icon: CheckCircle },
@@ -32,7 +33,8 @@ function OrderModal({ onClose, onSaved, date }) {
   const [form, setForm] = useState({
     clientName: '', clientJid: '', product: '', productId: '', quantity: '1',
     notes: '', scheduledDate: date || toDateStr(new Date()), scheduledTime: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    type: 'order', deliveryAddress: '', paymentMethod: '', variation: '', totalValue: 0
+    type: 'order', deliveryAddress: '', paymentMethod: '', variation: '', totalValue: 0,
+    massa: '', recheio: ''
   });
   const [availability, setAvailability] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -194,6 +196,17 @@ function OrderModal({ onClose, onSaved, date }) {
             </div>
           </div>
 
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase' }}>Massa</label>
+              <input {...inp} placeholder="Ex: Chocolate, Baunilha..." value={form.massa} onChange={e => setForm(f => ({ ...f, massa: e.target.value }))} />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 700, textTransform: 'uppercase' }}>Recheio</label>
+              <input {...inp} placeholder="Ex: Ninho com Nutella..." value={form.recheio} onChange={e => setForm(f => ({ ...f, recheio: e.target.value }))} />
+            </div>
+          </div>
+
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border-color)', marginBottom: '20px' }}>
             <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-muted)' }}>VALOR TOTAL:</span>
             <span style={{ fontSize: '20px', fontWeight: 900, color: '#10b981' }}>R$ {form.totalValue?.toFixed(2) || '0.00'}</span>
@@ -289,17 +302,119 @@ function OrderCard({ order, onUpdate }) {
             </div>`;
     }
 
+    const handleEditOrder = () => {
+      Swal.fire({
+        title: 'Editar Pedido',
+        background: '#111827',
+        color: '#fff',
+        html: `
+          <div style="text-align: left; font-family: 'Inter', sans-serif;">
+            <div style="margin-bottom: 15px;">
+              <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">PRODUTO</label>
+              <input id="edit-product" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.product || ''}">
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+              <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">VARIAÇÃO / SABOR</label>
+              <input id="edit-variation" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.variation || ''}">
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+              <div>
+                <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">DATA</label>
+                <input id="edit-date" type="date" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.scheduledDate || ''}">
+              </div>
+              <div>
+                <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">HORA</label>
+                <input id="edit-time" type="time" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.scheduledTime || ''}">
+              </div>
+            </div>
+  
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+              <div>
+                <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">MASSA</label>
+                <input id="edit-massa" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.massa || ''}">
+              </div>
+              <div>
+                <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">RECHEIO</label>
+                <input id="edit-recheio" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.recheio || ''}">
+              </div>
+              <div>
+                <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">TOPO</label>
+                <input id="edit-topo" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.topo || ''}">
+              </div>
+            </div>
+  
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">NOTAS / OBSERVAÇÕES</label>
+              <textarea id="edit-notes" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff; min-height: 80px;">${order.notes || ''}</textarea>
+            </div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Salvar Alterações',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#3b82f6',
+        preConfirm: () => {
+          return {
+            product: document.getElementById('edit-product').value,
+            variation: document.getElementById('edit-variation').value,
+            scheduledDate: document.getElementById('edit-date').value,
+            scheduledTime: document.getElementById('edit-time').value,
+            massa: document.getElementById('edit-massa').value,
+            recheio: document.getElementById('edit-recheio').value,
+            topo: document.getElementById('edit-topo').value,
+            notes: document.getElementById('edit-notes').value
+          }
+        }
+      }).then(async (result) => {
+        if (result.isConfirmed) {
+          try {
+            await api.patch(`/orders/${order.id}`, result.value);
+            Swal.fire({
+              title: 'Sucesso!',
+              text: 'Pedido atualizado com sucesso.',
+              icon: 'success',
+              timer: 2000,
+              showConfirmButton: false,
+              background: '#111827',
+              color: '#fff'
+            });
+            refresh();
+          } catch (err) {
+            Swal.fire({
+              title: 'Erro!',
+              text: 'Não foi possível atualizar o pedido.',
+              icon: 'error',
+              background: '#111827',
+              color: '#fff'
+            });
+          }
+        }
+      });
+    };
+
     Swal.fire({
       background: '#111827',
       color: '#fff',
       width: '500px',
       showCloseButton: true,
       showConfirmButton: false,
+      didOpen: () => {
+        const editBtn = document.getElementById('btn-edit-agenda');
+        if (editBtn) editBtn.onclick = () => {
+          Swal.close();
+          handleEditOrder();
+        };
+      },
       html: `
         <div style="text-align: left; font-family: 'Inter', sans-serif; padding: 10px;">
           <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 12px; color: #3b82f6; font-weight: 900; letter-spacing: 1px;">PEDIDO #${orderIdShort}</span>
-            <div style="background: ${cfg.bg}; color: ${cfg.color}; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase;">${cfg.label}</div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button id="btn-edit-agenda" style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer;">✏️ EDITAR</button>
+              <div style="background: ${cfg.bg}; color: ${cfg.color}; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase;">${cfg.label}</div>
+            </div>
           </div>
 
           <div style="background: rgba(255,255,255,0.03); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
@@ -307,10 +422,17 @@ function OrderCard({ order, onUpdate }) {
                <div style="background: #3b82f6; color: #fff; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 18px; font-weight: 900;">
                  ${quantity}
                </div>
-               <div>
-                  <div style="font-weight: 800; font-size: 16px; color: #fff;">${order.product}</div>
-                  <div style="font-size: 12px; color: var(--text-muted);">Preço un.: R$ ${unitPrice.toFixed(2)}</div>
-               </div>
+                <div>
+                   <div style="font-weight: 800; font-size: 16px; color: #fff;">${order.product}</div>
+                   <div style="font-size: 12px; color: var(--text-muted);">Preço un.: R$ ${unitPrice.toFixed(2)}</div>
+                   ${(order.massa || order.recheio) ? `
+                     <div style="font-size: 11px; color: #fbbf24; margin-top: 5px; font-weight: 700;">
+                        ${order.massa ? `🍞 MASSA: ${order.massa}` : ''} 
+                        ${(order.massa && order.recheio) ? ' | ' : ''}
+                        ${order.recheio ? `🍯 RECHEIO: ${order.recheio}` : ''}
+                     </div>
+                   ` : ''}
+                </div>
             </div>
             
             <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px;">
@@ -383,8 +505,11 @@ function OrderCard({ order, onUpdate }) {
       {order.calendarEventId && <div style={{ fontSize: '11px', color: '#3b82f6' }}>📆 Sincronizado com Google Calendar</div>}
 
       <div style={{ display: 'flex', gap: '8px', paddingTop: '8px', borderTop: '1px solid var(--border-color)' }}>
-        {order.status === 'pending' && (
-          <button className="btn btn-secondary" style={{ flex: 1, fontSize: '12px', padding: '6px' }} onClick={(e) => { e.stopPropagation(); changeStatus('production'); }}>Iniciar Produção</button>
+        {order.status === 'pending' && order.type === 'order' && (
+          <button className="btn btn-secondary" style={{ flex: 1, fontSize: '12px', padding: '6px', color: '#8b5cf6', borderColor: '#8b5cf6' }} onClick={(e) => { e.stopPropagation(); changeStatus('accepted'); }}>Aceitar Pedido</button>
+        )}
+        {(order.status === 'accepted' || (order.status === 'pending' && order.type === 'delivery')) && (
+          <button className="btn btn-secondary" style={{ flex: 1, fontSize: '12px', padding: '6px', color: '#3b82f6' }} onClick={(e) => { e.stopPropagation(); changeStatus('production'); }}>Iniciar Produção</button>
         )}
         {order.status === 'production' && (
           <button className="btn btn-secondary" style={{ flex: 1, fontSize: '12px', padding: '6px', color: '#10b981' }} onClick={(e) => { e.stopPropagation(); changeStatus('ready'); }}>Marcar Pronto</button>
@@ -571,7 +696,7 @@ export default function Agenda() {
               </span>
             </h3>
             <div style={{ display: 'flex', gap: '8px' }}>
-              {['all', 'pending', 'production', 'ready', 'completed', 'cancelled'].map(s => (
+              {['all', 'pending', 'accepted', 'production', 'ready', 'completed', 'cancelled'].map(s => (
                 <button key={s} onClick={() => setFilterStatus(s)} style={{
                   padding: '5px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', border: 'none',
                   backgroundColor: filterStatus === s ? 'var(--accent-primary)' : 'var(--bg-tertiary)',

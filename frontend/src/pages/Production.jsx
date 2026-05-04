@@ -62,6 +62,7 @@ const Production = () => {
   const columns = [
     { id: 'waiting_payment', title: 'Aguardando', color: '#9ca3af', icon: <CreditCard size={18} /> },
     { id: 'pending', title: 'Pendentes', color: '#f59e0b', icon: <Clock size={18} /> },
+    { id: 'accepted', title: 'Aceitos', color: '#8b5cf6', icon: <CheckCircle size={18} /> },
     { id: 'production', title: 'Em Produção', color: '#3b82f6', icon: <Package size={18} /> },
     { id: 'ready', title: 'Saiu p/ Entrega / Pronto', color: '#10b981', icon: <Truck size={18} /> },
     { id: 'completed', title: 'Finalizados', color: '#6b7280', icon: <CheckCircle size={18} /> },
@@ -164,8 +165,99 @@ const Production = () => {
     }
   };
 
+  const handleEditOrder = (order) => {
+    Swal.fire({
+      title: 'Editar Pedido',
+      background: '#111827',
+      color: '#fff',
+      html: `
+        <div style="text-align: left; font-family: 'Inter', sans-serif;">
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">PRODUTO</label>
+            <input id="edit-product" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.product || ''}">
+          </div>
+          
+          <div style="margin-bottom: 15px;">
+            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">VARIAÇÃO / SABOR</label>
+            <input id="edit-variation" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.variation || ''}">
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">DATA</label>
+              <input id="edit-date" type="date" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.scheduledDate || ''}">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">HORA</label>
+              <input id="edit-time" type="time" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.scheduledTime || ''}">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">MASSA</label>
+              <input id="edit-massa" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.massa || ''}">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">RECHEIO</label>
+              <input id="edit-recheio" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.recheio || ''}">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">TOPO</label>
+              <input id="edit-topo" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.topo || ''}">
+            </div>
+          </div>
+
+          <div>
+            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">NOTAS / OBSERVAÇÕES</label>
+            <textarea id="edit-notes" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff; min-height: 80px;">${order.notes || ''}</textarea>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Salvar Alterações',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#3b82f6',
+      preConfirm: () => {
+        return {
+          product: document.getElementById('edit-product').value,
+          variation: document.getElementById('edit-variation').value,
+          scheduledDate: document.getElementById('edit-date').value,
+          scheduledTime: document.getElementById('edit-time').value,
+          massa: document.getElementById('edit-massa').value,
+          recheio: document.getElementById('edit-recheio').value,
+          topo: document.getElementById('edit-topo').value,
+          notes: document.getElementById('edit-notes').value
+        }
+      }
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await api.patch(`/orders/${order.id}`, result.value);
+          Swal.fire({
+            title: 'Sucesso!',
+            text: 'Pedido atualizado com sucesso.',
+            icon: 'success',
+            timer: 2000,
+            showConfirmButton: false,
+            background: '#111827',
+            color: '#fff'
+          });
+          fetchOrders();
+        } catch (err) {
+          Swal.fire({
+            title: 'Erro!',
+            text: 'Não foi possível atualizar o pedido.',
+            icon: 'error',
+            background: '#111827',
+            color: '#fff'
+          });
+        }
+      }
+    });
+  };
+
   const openDetails = (order) => {
-    console.log(order);
     const orderIdShort = (order.id || '').slice(-4).toUpperCase();
     const formattedDate = (order.scheduledDate || '').split('-').reverse().join('/');
     const statusLabel = order.status === 'pending' ? 'Pendente' : 'Em Produção';
@@ -207,7 +299,9 @@ const Production = () => {
     if (order.status === 'waiting_payment') {
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #fbbf24; color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">CONFIRMAR PAGAMENTO</button>`;
     } else if (order.status === 'pending') {
-      actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #f59e0b; color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">ACEITAR PEDIDO</button>`;
+      actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #8b5cf6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">${order.type === 'delivery' ? 'INICIAR PRODUÇÃO' : 'ACEITAR PEDIDO'}</button>`;
+    } else if (order.status === 'accepted') {
+      actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #3b82f6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">INICIAR PRODUÇÃO</button>`;
     } else if (order.status === 'production') {
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #3b82f6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">PEDIDO PRONTO</button>`;
     } else if (order.status === 'ready') {
@@ -227,7 +321,13 @@ const Production = () => {
         const actionBtn = document.getElementById('btn-action-next');
         if (actionBtn) {
           actionBtn.onclick = () => {
-            const nextStatusMap = { 'waiting_payment': 'pending', 'pending': 'production', 'production': 'ready', 'ready': 'completed' };
+            const nextStatusMap = {
+              'waiting_payment': 'pending',
+              'pending': order.type === 'delivery' ? 'production' : 'accepted',
+              'accepted': 'production',
+              'production': 'ready',
+              'ready': 'completed'
+            };
             const nextStatus = nextStatusMap[order.status];
             if (nextStatus) {
               updateStatus(order.id, nextStatus);
@@ -235,12 +335,21 @@ const Production = () => {
             }
           };
         }
+
+        const editBtn = document.getElementById('btn-edit-order');
+        if (editBtn) editBtn.onclick = () => {
+          Swal.close();
+          handleEditOrder(order);
+        };
       },
       html: `
         <div style="text-align: left; font-family: 'Inter', sans-serif;">
           <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 12px; color: #3b82f6; font-weight: 900; letter-spacing: 1px;">PEDIDO #${orderIdShort}</span>
-            <div style="background: ${order.status === 'waiting_payment' ? '#6b7280' : '#10b981'}; color: #fff; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase;">${order.status}</div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button id="btn-edit-order" style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer;">✏️ EDITAR</button>
+              <div style="background: ${order.status === 'waiting_payment' ? '#6b7280' : '#10b981'}; color: #fff; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase;">${order.status}</div>
+            </div>
           </div>
 
           <div style="background: rgba(255,255,255,0.03); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
@@ -330,10 +439,10 @@ const Production = () => {
     const orderType = o.type || 'order';
     const matchType = orderType === activeType;
 
-    // Para colunas ATIVAS (Aguardando, Pendente, Produção, Pronto), mostramos TUDO indpendente da data.
-    // Para colunas de HISTÓRICO (Finalizado, Cancelado), filtramos pela data selecionada.
-    const isHistory = ['completed', 'cancelled'].includes(o.status);
-    const matchDate = isHistory ? (o.scheduledDate === selectedDate) : true;
+    // Apenas pedidos "Pendente" furam o filtro de data (como uma Caixa de Entrada universal).
+    // Todo o restante (aguardando, aceito, produção, pronto, histórico) obedece rigorosamente à data selecionada.
+    const bypassDateFilter = o.status === 'pending';
+    const matchDate = bypassDateFilter ? true : (o.scheduledDate === selectedDate);
 
     return matchType && matchSearch && matchDate;
   });
@@ -476,6 +585,8 @@ const Production = () => {
       }}>
 
         <KanbanColumn col={columns.find(c => c.id === 'pending')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} />
+
+        <KanbanColumn col={columns.find(c => c.id === 'accepted')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} />
 
         <KanbanColumn col={columns.find(c => c.id === 'production')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} />
 

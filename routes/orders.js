@@ -144,7 +144,7 @@ async function syncCalendarEvents() {
           // Re-sincroniza se o evento não está mais no Google
           { calendarEventId: { notIn: eventIdsInGoogle.length > 0 ? eventIdsInGoogle : ['__none__'] } }
         ],
-        status: { in: ['pending', 'production', 'ready'] }, // Todos os ativos
+        status: { in: ['accepted', 'production', 'ready'] }, // Apenas aceitos pra frente
         type: 'order' // FILTRO CRÍTICO: Não envia delivery para a agenda
       }
     });
@@ -176,32 +176,43 @@ async function syncCalendarEvents() {
 
 // Cria evento no Google Calendar
 async function createCalendarEvent(order) {
-  // BLINDAGEM EXTRA: Recusa absoluta de criar evento para Delivery
-  if (order.type === 'delivery') {
-    console.log(`[GCal] Ignorando sincronização: Pedido #${order.id} é do tipo DELIVERY.`);
-    return null;
-  }
+  if (order.type === 'delivery') return null;
 
   const gcal = await getGoogleCalendar();
   if (!gcal) return null;
 
   try {
-    // O evento representa o TEMPO DE PRODUÇÃO (30 min antes da retirada)
     const endDateTime = new Date(`${order.scheduledDate}T${order.scheduledTime}:00`);
-    const startDateTime = new Date(endDateTime.getTime() - 30 * 60 * 1000); // -30 min
+    const startDateTime = new Date(endDateTime.getTime() - 60 * 60 * 1000); // 1 hora de produção
+    const idShort = order.id.slice(-4).toUpperCase();
+    const phone = order.clientJid ? order.clientJid.split('@')[0] : '';
+    
+    // Links de Conversa
+    const waLink = `https://wa.me/${phone}`;
+    const systemLink = `http://localhost:5173/chat?jid=${order.clientJid}`;
 
     const event = {
-      summary: `🎂 ${order.product} — ${order.clientName || 'Cliente'}`,
+      summary: `🎂 #${idShort} - ${order.product} (${order.clientName || 'Cliente'})`,
       description: [
-        `🔔 RETIRADA: ${order.scheduledTime}`,
-        order.quantity ? `Quantidade: ${order.quantity}` : '',
-        order.notes ? `Observações: ${order.notes}` : '',
-        order.clientJid ? `WhatsApp: ${order.clientJid.replace('@s.whatsapp.net', '')}` : '',
+        `🆔 *ID DO PEDIDO:* #${idShort}`,
+        `👤 *CLIENTE:* ${order.clientName || 'Não informado'}`,
+        `🍰 *PRODUTO:* ${order.product}`,
+        `───────────────────────`,
+        order.massa ? `🍞 *MASSA:* ${order.massa}` : '',
+        order.recheio ? `🍯 *RECHEIO:* ${order.recheio}` : '',
+        order.topo ? `🎨 *TOPO:* ${order.topo}` : '',
+        order.notes ? `📝 *OBS:* ${order.notes}` : '',
+        `───────────────────────`,
+        `🔗 *LINKS DE CONTATO:*`,
+        `👉 [WhatsApp] ${waLink}`,
+        `👉 [Abrir no Sistema] ${systemLink}`,
+        `───────────────────────`,
+        `⏰ RETIRADA AGENDADA: ${order.scheduledTime}`
       ].filter(Boolean).join('\n'),
       start: { dateTime: startDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
       end: { dateTime: endDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
-      colorId: '1', // Azul (Produção)
-      reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 15 }] },
+      colorId: '1', // Azul
+      reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 30 }] },
     };
 
     const response = await gcal.calendar.events.insert({ calendarId: gcal.calendarId, resource: event });
@@ -219,15 +230,31 @@ async function updateCalendarEvent(order) {
   if (!gcal) return null;
 
   try {
-    const startDateTime = new Date(`${order.scheduledDate}T${order.scheduledTime}:00`);
-    const endDateTime = new Date(startDateTime.getTime() + 2 * 60 * 60 * 1000);
+    const endDateTime = new Date(`${order.scheduledDate}T${order.scheduledTime}:00`);
+    const startDateTime = new Date(endDateTime.getTime() - 60 * 60 * 1000);
+    const idShort = order.id.slice(-4).toUpperCase();
+    const phone = order.clientJid ? order.clientJid.split('@')[0] : '';
+    
+    const waLink = `https://wa.me/${phone}`;
+    const systemLink = `http://localhost:5173/chat?jid=${order.clientJid}`;
 
     const event = {
-      summary: `📦 ${order.product} — ${order.clientName || 'Cliente'}`,
+      summary: `🎂 #${idShort} - ${order.product} (${order.clientName || 'Cliente'})`,
       description: [
-        order.quantity ? `Quantidade: ${order.quantity}` : '',
-        order.notes ? `Observações: ${order.notes}` : '',
-        order.clientJid ? `WhatsApp: ${order.clientJid.replace('@s.whatsapp.net', '')}` : '',
+        `🆔 *ID DO PEDIDO:* #${idShort}`,
+        `👤 *CLIENTE:* ${order.clientName || 'Não informado'}`,
+        `🍰 *PRODUTO:* ${order.product}`,
+        `───────────────────────`,
+        order.massa ? `🍞 *MASSA:* ${order.massa}` : '',
+        order.recheio ? `🍯 *RECHEIO:* ${order.recheio}` : '',
+        order.topo ? `🎨 *TOPO:* ${order.topo}` : '',
+        order.notes ? `📝 *OBS:* ${order.notes}` : '',
+        `───────────────────────`,
+        `🔗 *LINKS DE CONTATO:*`,
+        `👉 [WhatsApp] ${waLink}`,
+        `👉 [Abrir no Sistema] ${systemLink}`,
+        `───────────────────────`,
+        `⏰ RETIRADA AGENDADA: ${order.scheduledTime}`
       ].filter(Boolean).join('\n'),
       start: { dateTime: startDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
       end: { dateTime: endDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
@@ -308,7 +335,10 @@ async function checkAvailability(date, time, costToUse = 1) {
     const ordersToday = await prisma.order.findMany({
       where: { 
         scheduledDate: date, 
-        status: { notIn: ['cancelled', 'cancelado'] } 
+        OR: [
+          { type: 'delivery', status: { notIn: ['cancelled', 'cancelado'] } },
+          { type: 'order', status: { in: ['accepted', 'production', 'ready', 'completed'] } }
+        ]
       }
     });
 
@@ -490,15 +520,19 @@ async function sendDailyReport(sockGetter) {
 router.get('/', async (req, res) => {
   const { status, date } = req.query;
   
-  // LÓGICA INTELIGENTE: Se houver uma data, retornamos os históricos daquela data
-  // MAS sempre incluímos os pedidos ATIVOS (pendentes, produção, prontos) de qualquer data
-  // para que o Kanban e o Alarme funcionem corretamente.
-  const where = {
-    OR: [
-      { status: { in: ['waiting_payment', 'pending', 'production', 'ready'] } },
-      date ? { scheduledDate: date } : {}
-    ]
-  };
+  const where = {};
+  
+  // LÓGICA INTELIGENTE:
+  // Se veio data (Kanban pedindo), trazemos os pendentes (caixa de entrada global) + pedidos do dia.
+  // Se não veio data (Agenda pedindo), trazemos todos os ativos para o mini-calendário funcionar.
+  if (date) {
+    where.OR = [
+      { status: 'pending' },
+      { scheduledDate: date }
+    ];
+  } else {
+    where.status = { in: ['waiting_payment', 'pending', 'accepted', 'production', 'ready'] };
+  }
 
   // Filtros adicionais se fornecidos explicitamente
   if (status) {
@@ -636,17 +670,20 @@ router.post('/', async (req, res) => {
     const finalTotalValue = itemsValue + dFee;
     console.log(`[Order] Cálculo: R$${priceToUse} x ${qtyNum} + R$${dFee} = TOTAL R$${finalTotalValue}`);
 
-    const isCash = paymentMethod === 'Dinheiro';
-    const initialStatus = isCash ? 'pending' : 'waiting_payment';
+    // Pedidos manuais (via API/Dashboard) já nascem confirmados e ACEITOS
+    const initialStatus = 'accepted';
+    const initialPaymentStatus = 'confirmed';
+
+    // Normaliza clientJid para evitar erro de Foreign Key se vier vazio ("")
+    // Se não tiver JID (pedido manual via painel ou caderno), usamos um JID genérico
+    const finalClientJid = (clientJid && clientJid.trim() !== "") ? clientJid.trim() : 'manual_LOJA';
 
     // ─── UPSERT CUSTOMER ───
-    if (clientJid) {
-      await prisma.customer.upsert({
-        where: { jid: clientJid },
-        update: { name: clientName, address: deliveryAddress, lastOrderDate: new Date() },
-        create: { jid: clientJid, name: clientName, address: deliveryAddress }
-      });
-    }
+    await prisma.customer.upsert({
+      where: { jid: finalClientJid },
+      update: { name: clientName || 'Cliente Balcão', address: deliveryAddress, lastOrderDate: new Date() },
+      create: { jid: finalClientJid, name: clientName || 'Cliente Balcão', address: deliveryAddress }
+    });
 
     const order = await prisma.order.create({
       data: {
@@ -657,7 +694,7 @@ router.post('/', async (req, res) => {
         scheduledDate: scheduledDate,
         scheduledTime: scheduledTime,
         clientName: clientName || 'Cliente',
-        clientJid,
+        clientJid: finalClientJid,
         type: type || 'order',
         deliveryAddress: deliveryAddress || "",
         instanceId: req.body.instanceId || 'global',
@@ -665,7 +702,7 @@ router.post('/', async (req, res) => {
         deliveryFee: dFee,
         paymentMethod: paymentMethod,
         status: initialStatus,
-        paymentStatus: initialStatus,
+        paymentStatus: initialPaymentStatus,
         massa: massa || null,
         recheio: recheio || null,
         topo: topo || null
@@ -818,8 +855,10 @@ router.patch('/:id', async (req, res) => {
       
       if (sock) {
         let msg = '';
-        if (data.status === 'production') {
-          msg = `👨‍🍳 *PEDIDO EM PREPARO!* (#${order.id.slice(-4).toUpperCase()})\n\nOi, *${order.clientName}*! Seu pedido de *${order.product}* já foi aceito e começou a ser preparado com muito carinho! 🧑‍🍳✨\n\nAvisaremos você assim que estiver pronto para entrega ou retirada!`;
+        if (data.status === 'accepted') {
+          msg = `✅ *ENCOMENDA CONFIRMADA!* (#${order.id.slice(-4).toUpperCase()})\n\nOi, *${order.clientName}*! Sua encomenda de *${order.product}* foi oficialmente aceita e sua vaga está garantida na nossa agenda! 🎉\n\nFique tranquilo(a), entraremos em contato novamente quando começarmos a prepará-la.`;
+        } else if (data.status === 'production') {
+          msg = `👨‍🍳 *PEDIDO EM PREPARO!* (#${order.id.slice(-4).toUpperCase()})\n\nOi, *${order.clientName}*! Seu pedido de *${order.product}* começou a ser preparado com muito carinho! 🧑‍🍳✨\n\nAvisaremos você assim que estiver pronto para entrega ou retirada!`;
         } else if (data.status === 'ready') {
           const typeLabel = order.type === 'delivery' ? 'está saindo para entrega' : 'já está pronto para retirada';
           msg = `🚀 *BOAS NOTÍCIAS!* (#${order.id.slice(-4).toUpperCase()})\n\nOi, *${order.clientName}*! Seu pedido de *${order.product}* ${typeLabel}! 🎂✨\n\n${order.type === 'delivery' ? 'Prepare o coração (e o estômago), jajá chega aí!' : 'Pode vir buscar quando quiser, estamos te esperando!'}`;
@@ -867,8 +906,8 @@ router.patch('/:id', async (req, res) => {
           }
         }
       }
-    } else if (status !== 'waiting_payment' && (order.calendarEventId || (order.scheduledDate && order.scheduledTime))) {
-      // Atualiza se houver mudança de data/hora ou se for re-ativado (e não estiver aguardando pagamento)
+    } else if (status !== 'waiting_payment' && status !== 'pending' && (order.calendarEventId || (order.scheduledDate && order.scheduledTime))) {
+      // Atualiza se houver mudança de data/hora ou se for re-ativado (e não estiver aguardando pagamento/pendente)
       await updateCalendarEvent(order);
     }
 
@@ -900,7 +939,10 @@ router.get('/slots/:date', async (req, res) => {
   const orders = await prisma.order.findMany({
     where: { 
       scheduledDate: date, 
-      status: { notIn: ['cancelled', 'cancelado'] } 
+      OR: [
+        { type: 'delivery', status: { notIn: ['cancelled', 'cancelado'] } },
+        { type: 'order', status: { in: ['accepted', 'production', 'ready', 'completed'] } }
+      ]
     }
   });
 

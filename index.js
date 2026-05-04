@@ -1401,7 +1401,8 @@ app.get('/config/keys', async (req, res) => {
         mercadopagoPublicKey: config.mercadopagoPublicKey,
         mercadopagoToken: config.mercadopagoToken,
         pixReceiverName: config.pixReceiverName,
-        pixReceiverKey: config.pixReceiverKey
+        pixReceiverKey: config.pixReceiverKey,
+        gcalCalendarId: config.gcalCalendarId
     });
 });
 

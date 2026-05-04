@@ -1,0 +1,16 @@
+[2026-05-03T22:11:38.197Z] ERROR POST /orders: 
+Invalid `prisma.order.create()` invocation:
+
+
+Foreign key constraint violated on the fields: (`clientJid`)
+PrismaClientKnownRequestError: 
+Invalid `prisma.order.create()` invocation:
+
+
+Foreign key constraint violated on the fields: (`clientJid`)
+    at ei.handleRequestError (D:\Whatsapi\node_modules\@prisma\client\runtime\library.js:121:7268)
+    at ei.handleAndLogRequestError (D:\Whatsapi\node_modules\@prisma\client\runtime\library.js:121:6593)
+    at ei.request (D:\Whatsapi\node_modules\@prisma\client\runtime\library.js:121:6300)
+    at async a (D:\Whatsapi\node_modules\@prisma\client\runtime\library.js:130:9551)
+    at async D:\Whatsapi\routes\orders.js:644:19
+
