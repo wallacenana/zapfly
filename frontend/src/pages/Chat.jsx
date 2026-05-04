@@ -58,7 +58,7 @@ const Chat = () => {
   }, [urlJid, contacts, activeContact]);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
-  const [showContactInfo, setShowContactInfo] = useState(true);
+  const [showContactInfo, setShowContactInfo] = useState(false);
   const [filterType, setFilterType] = useState('all');
   const [loadingChats, setLoadingChats] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -67,6 +67,7 @@ const Chat = () => {
   const [hasMoreChats, setHasMoreChats] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [customerDetails, setCustomerDetails] = useState(null);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, type, data }
 
   const sentinelRef = useRef(null);
@@ -97,6 +98,12 @@ const Chat = () => {
 
         // 2. Update message window if it's the current chat
         if (activeContact && activeContact.jid === msgJid) {
+          // Marcar como lido imediatamente se o chat está aberto
+          api.post(`/instances/${activeInstance.id}/chats/read`, {
+            jid: msgJid,
+            msgId: msgId
+          }).catch(() => {});
+
           if (text) {
             setMessages(prev => {
               // Prevent duplicates
@@ -188,18 +195,14 @@ const Chat = () => {
   // Auto-fetch messages when active contact changes
   useEffect(() => {
     if (activeContact && activeInstance) {
+      setMessages([]); // Limpa mensagens anteriores imediatamente ao trocar
+      setCustomerDetails(null); // Limpa detalhes anteriores
       fetchMessages(activeInstance.id, activeContact.jid);
-      
-      // Marcar como lido ao abrir
-      const lastReceived = messages.filter(m => !m.fromMe).slice(-1)[0];
-      if (lastReceived) {
-        api.post(`/instances/${activeInstance.id}/chats/read`, {
-          jid: activeContact.jid,
-          msgId: lastReceived.id
-        });
-        // Update local UI
-        setContacts(prev => prev.map(c => c.id === activeContact.id ? { ...c, unread: 0 } : c));
-      }
+
+      // Busca detalhes do cliente
+      api.get(`/orders/customers/${activeContact.jid}`).then(res => {
+        setCustomerDetails(res.data);
+      }).catch(console.error);
     }
   }, [activeContact, activeInstance]);
 
@@ -253,7 +256,20 @@ const Chat = () => {
     setLoadingMessages(true);
     try {
       const res = await api.get(`/instances/${instanceId}/messages/${encodeURIComponent(jid)}`);
-      setMessages(res.data);
+      const msgs = res.data;
+      setMessages(msgs);
+
+      // Marcar como lido ao carregar
+      const lastReceived = msgs.filter(m => !m.fromMe).slice(-1)[0];
+      if (lastReceived) {
+        api.post(`/instances/${instanceId}/chats/read`, {
+          jid: jid,
+          msgId: lastReceived.id
+        }).catch(err => console.error("Erro ao marcar como lido:", err));
+        
+        // Zera o contador visual localmente
+        setContacts(prev => prev.map(c => c.jid === jid ? { ...c, unread: 0 } : c));
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -667,7 +683,11 @@ const Chat = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div 
+                  onClick={() => setShowContactInfo(!showContactInfo)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }}
+                  title="Ver detalhes do contato"
+                >
                   <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <User size={18} color="var(--text-muted)" />
                   </div>
@@ -901,32 +921,89 @@ const Chat = () => {
         {/* Right Sidebar (Contact Info) */}
         {showContactInfo && activeContact && (
           <div style={{
-            width: '300px',
+            width: '320px',
             backgroundColor: 'var(--bg-secondary)',
             borderLeft: '1px solid var(--border-color)',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            overflowY: 'auto'
           }}>
-            <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, backgroundColor: 'var(--bg-secondary)', zIndex: 10 }}>
               <span style={{ fontWeight: 800, fontSize: '14px' }}>Detalhes do Contato</span>
               <button onClick={() => setShowContactInfo(false)} className="btn-icon"><X size={18} /></button>
             </div>
             <div style={{ padding: '30px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
-              <div style={{ width: '100px', height: '100px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px' }}>
-                <User size={48} color="var(--text-muted)" />
+              <div style={{ width: '80px', height: '80px', borderRadius: '50%', backgroundColor: 'var(--bg-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '15px', border: '1px solid var(--border-color)' }}>
+                <User size={32} color="var(--text-muted)" />
               </div>
-              <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '5px' }}>{activeContact.name}</h3>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{activeContact.id}</p>
+              <h3 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '5px', textAlign: 'center' }}>{activeContact.name || activeContact.jid?.split('@')[0]}</h3>
+              <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{activeContact.jid}</p>
+              
+              <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '15px', justifyContent: 'center' }}>
+                <span className="badge badge-warning" style={{ fontSize: '10px', padding: '4px 8px' }}>CLIENTE ZAP FLY</span>
+                {activeContact.aiEnabled && <span style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontSize: '10px', padding: '4px 8px', borderRadius: '6px', fontWeight: 800 }}>IA ATIVA</span>}
+              </div>
             </div>
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '25px' }}>
+              {/* DADOS CADASTRAIS */}
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '10px' }}>IDENTIFICADOR</label>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{activeContact.id}</p>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Dados Cadastrais</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <Smartphone size={16} color="var(--text-muted)" />
+                    <div>
+                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>WhatsApp</p>
+                      <p style={{ fontSize: '13px', fontWeight: 500 }}>{activeContact.jid?.split('@')[0]}</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <Info size={16} color="var(--text-muted)" />
+                    <div>
+                      <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>Endereço Padrão</p>
+                      <p style={{ fontSize: '13px', fontWeight: 500 }}>{customerDetails?.customer?.address || 'Não informado'}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
+
+              {/* PREFERÊNCIAS */}
               <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '10px' }}>TAGS</label>
-                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                  <span className="badge badge-warning" style={{ fontSize: '10px' }}>Cliente ZAP Fly</span>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Últimas Preferências</label>
+                <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '15px', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '4px' }}>Produto Favorito</p>
+                    <p style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent-primary)' }}>{customerDetails?.customer?.preferredProduct || customerDetails?.lastOrder?.product || 'Nenhum pedido'}</p>
+                  </div>
+                  <div style={{ height: '1px', backgroundColor: 'var(--border-color)' }}></div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>Massa</p>
+                      <p style={{ fontSize: '12px', fontWeight: 600 }}>{customerDetails?.lastOrder?.massa || '—'}</p>
+                    </div>
+                    <div>
+                      <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>Recheio</p>
+                      <p style={{ fontSize: '12px', fontWeight: 600 }}>{customerDetails?.lastOrder?.recheio || '—'}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '2px' }}>Topo / Notas</p>
+                    <p style={{ fontSize: '12px', fontWeight: 500, fontStyle: 'italic' }}>{customerDetails?.lastOrder?.topo || customerDetails?.lastOrder?.notes || 'Nenhuma observação'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* HISTÓRICO RÁPIDO */}
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Pagamento</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ padding: '8px', borderRadius: '8px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6' }}>
+                    <Check size={16} />
+                  </div>
+                  <div>
+                    <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Método preferido</p>
+                    <p style={{ fontSize: '13px', fontWeight: 600 }}>{customerDetails?.customer?.paymentMethod || 'A definir'}</p>
+                  </div>
                 </div>
               </div>
             </div>

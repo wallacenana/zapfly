@@ -282,7 +282,7 @@ function OrderCard({ order, onUpdate }) {
     const unitPrice = order.totalValue > 0 ? (order.totalValue - (order.deliveryFee || 0)) / quantity : 0;
     const itemsSubtotal = unitPrice * quantity;
     const freightValue = order.deliveryFee || 0;
-    
+
     let notesHtml = '';
     // Limpa a tag de frete da exibição visual das notas para não ficar repetitivo
     const cleanNotes = (order.notes || '').replace(/\[Frete: R\$ [\d.]+\]/, '').trim();
@@ -394,6 +394,118 @@ function OrderCard({ order, onUpdate }) {
       });
     };
 
+    const handlePrint = (order) => {
+      const saved = JSON.parse(localStorage.getItem('print_settings') || '{"showId":true,"prod":true,"massa":true,"notes":true,"value":true,"addr":true,"client":true}');
+
+      Swal.fire({
+        title: 'Opções de Impressão',
+        background: '#111827',
+        color: '#fff',
+        html: `
+          <div style="text-align: left; padding: 10px;">
+            <div style="margin-bottom: 10px;"><label><input type="checkbox" id="p-id" ${saved.showId ? 'checked' : ''}> ID do Pedido (#XXXX)</label></div>
+            <div style="margin-bottom: 10px;"><label><input type="checkbox" id="p-prod" ${saved.prod ? 'checked' : ''}> Produto e Variação</label></div>
+            <div style="margin-bottom: 10px;"><label><input type="checkbox" id="p-massa" ${saved.massa ? 'checked' : ''}> Detalhes (Massa/Recheio/Topo)</label></div>
+            <div style="margin-bottom: 10px;"><label><input type="checkbox" id="p-notes" ${saved.notes ? 'checked' : ''}> Observações</label></div>
+            <div style="margin-bottom: 10px;"><label><input type="checkbox" id="p-value" ${saved.value ? 'checked' : ''}> Valor Total</label></div>
+            <div style="margin-bottom: 10px;"><label><input type="checkbox" id="p-addr" ${saved.addr ? 'checked' : ''}> Endereço de Entrega</label></div>
+            <div style="margin-bottom: 10px;"><label><input type="checkbox" id="p-client" ${saved.client ? 'checked' : ''}> Nome do Cliente</label></div>
+          </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: '🖨️ IMPRIMIR AGORA',
+        cancelButtonText: 'Cancelar',
+        confirmButtonColor: '#3b82f6',
+        preConfirm: () => {
+          const settings = {
+            showId: document.getElementById('p-id').checked,
+            prod: document.getElementById('p-prod').checked,
+            massa: document.getElementById('p-massa').checked,
+            notes: document.getElementById('p-notes').checked,
+            value: document.getElementById('p-value').checked,
+            addr: document.getElementById('p-addr').checked,
+            client: document.getElementById('p-client').checked,
+          };
+          localStorage.setItem('print_settings', JSON.stringify(settings));
+          return settings;
+        }
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const opts = result.value;
+          const idShort = order.id.slice(-4).toUpperCase();
+
+          let content = `
+            <div style="font-family: 'Inter', Arial, sans-serif; width: 100%; max-width: 280px; margin: 0 auto; color: #000; line-height: 1.4;">
+              <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px;">
+                ${opts.showId ? `<h1 style="margin: 0; font-size: 32px; font-weight: 900;">#${idShort}</h1>` : ''}
+                <p style="margin: 5px 0; font-size: 16px; font-weight: 700;">${order.scheduledDate} - ${order.scheduledTime}</p>
+              </div>
+          `;
+
+          if (opts.client) content += `<p style="font-size: 18px; margin: 8px 0;"><b>👤 CLIENTE:</b> ${order.clientName}</p>`;
+          if (opts.prod) content += `<p style="font-size: 20px; margin: 10px 0; border-bottom: 1px solid #eee; padding-bottom: 5px;"><b>📦 ITEM:</b> ${order.product} <br/><span style="font-size: 16px;">(${order.variation || 'Padrão'})</span></p>`;
+
+          if (opts.massa) {
+            content += `
+              <div style="margin: 10px 0; padding: 10px; border: 1px solid #000; border-radius: 5px; font-size: 16px;">
+                <p style="margin: 4px 0;"><b>MASSA:</b> ${order.massa || '-'}</p>
+                <p style="margin: 4px 0;"><b>RECHEIO:</b> ${order.recheio || '-'}</p>
+                <p style="margin: 4px 0;"><b>TOPO:</b> ${order.topo || '-'}</p>
+              </div>
+            `;
+          }
+
+          if (opts.notes && order.notes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>📝 OBS:</b> ${order.notes}</p>`;
+          if (opts.addr && order.deliveryAddress) content += `<p style="font-size: 16px; margin: 10px 0;"><b>📍 ENTREGA:</b> ${order.deliveryAddress}</p>`;
+          if (opts.value) content += `<div style="margin-top: 15px; border-top: 2px solid #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 24px;">TOTAL: R$ ${order.totalValue?.toFixed(2)}</h2></div>`;
+
+          content += `
+              <div style="text-align: center; margin-top: 30px; font-size: 14px; border-top: 1px dashed #000; padding-top: 10px;">
+                CUPOM DE PRODUÇÃO - ZAPFLY
+              </div>
+            </div>
+          `;
+
+          const printWindow = window.open('', '_blank', 'width=600,height=800');
+          if (printWindow) {
+            printWindow.document.write(`
+              <html>
+                <head>
+                  <title>Pedido #${idShort}</title>
+                  <style>
+                    @page { margin: 0; size: auto; }
+                    body { margin: 0; padding: 10px; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; }
+                    * { box-sizing: border-box; }
+                  </style>
+                </head>
+                <body>
+                  ${content}
+                  <script>
+                    setTimeout(() => {
+                      window.print();
+                      window.close();
+                    }, 500);
+                  </script>
+                </body>
+              </html>
+            `);
+            printWindow.document.close();
+          } else {
+            Swal.fire('Pop-up Bloqueado', 'Por favor, permita pop-ups para este site para poder imprimir.', 'warning');
+          }
+        }
+      });
+    };
+
+    const handleMaps = (address) => {
+      if (!address) {
+        Swal.fire('Erro', 'Este pedido não possui endereço de entrega.', 'error');
+        return;
+      }
+      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+      window.open(mapsUrl, '_blank');
+    };
+
     Swal.fire({
       background: '#111827',
       color: '#fff',
@@ -406,12 +518,20 @@ function OrderCard({ order, onUpdate }) {
           Swal.close();
           handleEditOrder();
         };
+
+        const printBtn = document.getElementById('btn-print-agenda');
+        if (printBtn) printBtn.onclick = () => handlePrint(order);
+
+        const mapsBtn = document.getElementById('btn-maps-agenda');
+        if (mapsBtn) mapsBtn.onclick = () => handleMaps(order.deliveryAddress);
       },
       html: `
         <div style="text-align: left; font-family: 'Inter', sans-serif; padding: 10px;">
           <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 12px; color: #3b82f6; font-weight: 900; letter-spacing: 1px;">PEDIDO #${orderIdShort}</span>
             <div style="display: flex; gap: 8px; align-items: center;">
+              ${order.type === 'delivery' ? `<button id="btn-maps-agenda" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer;">📍 ROTA</button>` : ''}
+              <button id="btn-print-agenda" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); color: #a78bfa; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer;">🖨️ IMPRIMIR</button>
               <button id="btn-edit-agenda" style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer;">✏️ EDITAR</button>
               <div style="background: ${cfg.bg}; color: ${cfg.color}; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase;">${cfg.label}</div>
             </div>
@@ -532,9 +652,9 @@ function MiniCalendar({ selectedDate, onSelect, orders }) {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const hasOrders = (day) => {
+  const getDayOrders = (day) => {
     const d = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    return orders.some(o => o.scheduledDate === d && o.status !== 'cancelled');
+    return orders.filter(o => o.scheduledDate === d && o.status !== 'cancelled');
   };
 
   const cells = [];
@@ -548,29 +668,57 @@ function MiniCalendar({ selectedDate, onSelect, orders }) {
         <span style={{ fontWeight: 700, fontSize: '15px' }}>{MONTHS[month]} {year}</span>
         <button className="btn-icon" onClick={() => setCurrent(new Date(year, month + 1, 1))}><ChevronRight size={16} /></button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '8px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '8px' }}>
         {DAYS.map(d => <div key={d} style={{ textAlign: 'center', fontSize: '11px', color: 'var(--text-muted)', fontWeight: 700, padding: '4px' }}>{d}</div>)}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
         {cells.map((day, i) => {
           if (!day) return <div key={`e${i}`} />;
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
           const isSelected = dateStr === selectedDate;
           const isToday = dateStr === toDateStr(new Date());
-          const has = hasOrders(day);
+          const dayOrders = getDayOrders(day);
+          const has = dayOrders.length > 0;
+
           return (
             <div key={day} onClick={() => onSelect(dateStr)} style={{
-              textAlign: 'center', padding: '6px 2px', borderRadius: '8px', fontSize: '13px', cursor: 'pointer',
-              fontWeight: isSelected || isToday ? 700 : 400,
-              backgroundColor: isSelected ? 'var(--accent-primary)' : isToday ? 'rgba(59,130,246,0.15)' : 'transparent',
-              color: isSelected ? '#fff' : isToday ? 'var(--accent-primary)' : 'var(--text-primary)',
-              position: 'relative', transition: 'all 0.15s'
+              textAlign: 'center',
+              padding: '8px 2px',
+              borderRadius: '10px',
+              fontSize: '14px',
+              cursor: 'pointer',
+              fontWeight: isSelected || isToday || has ? 800 : 400,
+              backgroundColor: isSelected
+                ? 'var(--accent-primary)'
+                : isToday
+                  ? 'rgba(59,130,246,0.15)'
+                  : has
+                    ? 'rgba(16, 185, 129, 0.15)'
+                    : 'transparent',
+              color: isSelected
+                ? '#fff'
+                : isToday
+                  ? 'var(--accent-primary)'
+                  : has
+                    ? '#10b981'
+                    : 'var(--text-muted)',
+              position: 'relative',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              border: isSelected ? 'none' : has ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid transparent',
+              opacity: !has && !isSelected && !isToday ? 0.6 : 1
             }}>
               {day}
               {has && !isSelected && (
                 <div style={{
-                  width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#10b981',
-                  position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)'
+                  width: '14px',
+                  height: '4px',
+                  borderRadius: '2px',
+                  backgroundColor: '#10b981',
+                  position: 'absolute',
+                  bottom: '4px',
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  boxShadow: '0 0 8px rgba(16, 185, 129, 0.5)'
                 }} />
               )}
             </div>

@@ -1668,7 +1668,8 @@ app.post('/instances/:id/messages/delete', async (req, res) => {
 
 // Marcar conversa como lida (Visto)
 app.post('/instances/:id/chats/read', async (req, res) => {
-    const { id, jid, msgId } = req.body;
+    const { id } = req.params;
+    const { jid, msgId } = req.body;
     const sock = sessions.get(id);
     if (!sock) return res.status(404).json({ error: 'Instância não conectada' });
 

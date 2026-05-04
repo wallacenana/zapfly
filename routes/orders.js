@@ -107,12 +107,13 @@ async function syncCalendarEvents() {
         create: { id: event.id, title: event.summary || 'Sem título', description: event.description, startAt, endAt, allDay },
       });
 
-      // LÓGICA DE SYNC REVERSO: Se o evento estiver com colorId '10' (Verde/Basílico) ou for deletado
-      // Consideramos como PRONTO no Kanban
-      if (event.colorId === '10' || event.status === 'cancelled') {
+      // LÓGICA DE SYNC REVERSO: Se o evento estiver com ✅ no título, colorId '10' (Verde/Basílico) ou for deletado
+      // Consideramos como FINALIZADO (completed) no Kanban
+      const hasCheck = (event.summary || '').includes('✅');
+      if (event.colorId === '10' || hasCheck) {
         await prisma.order.updateMany({
-          where: { calendarEventId: event.id, status: 'pending' },
-          data: { status: 'ready' }
+          where: { calendarEventId: event.id, status: { not: 'completed' } },
+          data: { status: 'completed' }
         });
       }
     }
@@ -238,8 +239,12 @@ async function updateCalendarEvent(order) {
     const waLink = `https://wa.me/${phone}`;
     const systemLink = `http://localhost:5173/chat?jid=${order.clientJid}`;
 
+    const isCompleted = order.status === 'completed';
+    const cleanProduct = (order.product || '').replace(/^✅\s*/, '');
+    
     const event = {
-      summary: `🎂 #${idShort} - ${order.product} (${order.clientName || 'Cliente'})`,
+      summary: `${isCompleted ? '✅ ' : ''}🎂 #${idShort} - ${cleanProduct} (${order.clientName || 'Cliente'})`,
+      colorId: isCompleted ? '10' : null, // 10 é Verde (Basil) no GCal
       description: [
         `🆔 *ID DO PEDIDO:* #${idShort}`,
         `👤 *CLIENTE:* ${order.clientName || 'Não informado'}`,
@@ -1081,6 +1086,35 @@ router.post('/report/send', async (req, res) => {
   const { sockGetter } = req;
   await sendDailyReport(sockGetter);
   res.json({ ok: true });
+});
+
+// Detalhes do Cliente
+router.get('/customers/:jid', async (req, res) => {
+  try {
+    const { jid } = req.params;
+    const customer = await prisma.customer.findUnique({
+      where: { jid },
+      include: {
+        orders: {
+          orderBy: { createdAt: 'desc' },
+          take: 1
+        }
+      }
+    });
+
+    if (!customer) {
+      // Se não existir o cliente ainda, tenta buscar a última ordem para ter algum dado
+      const lastOrder = await prisma.order.findFirst({
+        where: { clientJid: jid },
+        orderBy: { createdAt: 'desc' }
+      });
+      return res.json({ customer: null, lastOrder });
+    }
+
+    res.json({ customer, lastOrder: customer.orders[0] || null });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 module.exports = { router, setupCronJobs, syncCalendarEvents, sendDailyReport, checkAvailability, updateCalendarEvent };
