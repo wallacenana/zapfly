@@ -46,7 +46,6 @@ async function getGoogleCalendar() {
 
     // Se o access_token mudou, atualiza no banco
     if (token !== settings.gcalAccessToken) {
-      console.log('[GCal] Novo Access Token gerado via Auto-Refresh.');
       await prisma.setting.update({
         where: { id: 'global' },
         data: {
@@ -80,6 +79,7 @@ async function syncCalendarEvents() {
 
   try {
     const now = new Date();
+    const today = now.toISOString().split('T')[0];
     const startOfDay = new Date(now);
     startOfDay.setHours(0, 0, 0, 0); // Começa do início do dia atual
     const inThirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -118,15 +118,15 @@ async function syncCalendarEvents() {
       }
     }
 
-    // Se um evento de um pedido sumiu do Google, marcamos como finalizado/ready no Kanban
+    // ─── ESPELHAMENTO: Se sumiu do Google, cancela no sistema ───
     const unsyncedOrdersWithEvents = await prisma.order.findMany({
-      where: { calendarEventId: { not: null }, status: 'pending' }
+      where: { calendarEventId: { not: null, not: "" }, status: { notIn: ['cancelled', 'completed'] } }
     });
 
     for (const order of unsyncedOrdersWithEvents) {
       if (!eventIdsInGoogle.includes(order.calendarEventId)) {
-        console.log(`[GCal Sync] Evento ${order.calendarEventId} não encontrado. Marcando pedido #${order.id} como PRONTO.`);
-        await prisma.order.update({ where: { id: order.id }, data: { status: 'ready' } });
+        console.log(`[GCal Mirror] Evento ${order.calendarEventId} sumiu do Google. Cancelando pedido #${order.id}.`);
+        await prisma.order.update({ where: { id: order.id }, data: { status: 'cancelled' } });
       }
     }
 
@@ -136,34 +136,44 @@ async function syncCalendarEvents() {
     });
 
     // ─── TWO-WAY SYNC: ENVIAR PEDIDOS ÓRFÃOS AO GCAL (Apenas Encomendas) ───
-    // Inclui pedidos em qualquer status ativo que não tenham evento no Calendar
-    const unsyncedOrders = await prisma.order.findMany({
-      where: {
-        OR: [
-          { calendarEventId: null },
-          { calendarEventId: "" },
-          // Re-sincroniza se o evento não está mais no Google
-          { calendarEventId: { notIn: eventIdsInGoogle.length > 0 ? eventIdsInGoogle : ['__none__'] } }
-        ],
-        status: { in: ['accepted', 'production', 'ready'] }, // Apenas aceitos pra frente
-        type: 'order' // FILTRO CRÍTICO: Não envia delivery para a agenda
-      }
-    });
+    // Evita que dois processos de sincronização rodem ao mesmo tempo
+    if (global.isSyncingGCal) return { fetched: events.length, pushed: 0 };
+    global.isSyncingGCal = true;
 
-    let pushedCount = 0;
-    for (const order of unsyncedOrders) {
-      try {
-        const calId = await createCalendarEvent(order);
-        if (calId) {
-          await prisma.order.update({ where: { id: order.id }, data: { calendarEventId: calId } });
-          pushedCount++;
+    try {
+      const unsyncedOrders = await prisma.order.findMany({
+        where: {
+          OR: [
+            { calendarEventId: null },
+            { calendarEventId: "" }
+          ],
+          status: { in: ['accepted', 'production', 'ready'] },
+          OR: [
+            { type: 'order' },
+            {
+              type: 'delivery',
+              scheduledDate: { gt: today }
+            }
+          ]
         }
-      } catch (err) {
-        console.error(`[GCal Sync] Erro ao sincronizar pedido ${order.id}:`, err.message);
-      }
-    }
+      });
 
-    return { fetched: events.length, pushed: pushedCount };
+      let pushedCount = 0;
+      for (const order of unsyncedOrders) {
+        try {
+          const calId = await createCalendarEvent(order);
+          if (calId) {
+            await prisma.order.update({ where: { id: order.id }, data: { calendarEventId: calId } });
+            pushedCount++;
+          }
+        } catch (err) {
+          console.error(`[GCal Sync] Erro ao sincronizar pedido ${order.id}:`, err.message);
+        }
+      }
+      return { fetched: events.length, pushed: pushedCount };
+    } finally {
+      global.isSyncingGCal = false;
+    }
   } catch (e) {
     if (e.code === 401 || e.message.includes('invalid_grant')) {
       console.error('[GCal Sync] Falha de Autenticação Crítica: O token foi revogado ou é inválido.');
@@ -177,7 +187,9 @@ async function syncCalendarEvents() {
 
 // Cria evento no Google Calendar
 async function createCalendarEvent(order) {
-  if (order.type === 'delivery') return null;
+  const today = new Date().toISOString().split('T')[0];
+  // Só não manda pro calendar se for delivery para HOJE (pronta entrega imediata)
+  if (order.type === 'delivery' && order.scheduledDate === today) return null;
 
   const gcal = await getGoogleCalendar();
   if (!gcal) return null;
@@ -187,13 +199,14 @@ async function createCalendarEvent(order) {
     const startDateTime = new Date(endDateTime.getTime() - 60 * 60 * 1000); // 1 hora de produção
     const idShort = order.id.slice(-4).toUpperCase();
     const phone = order.clientJid ? order.clientJid.split('@')[0] : '';
-    
+
     // Links de Conversa
     const waLink = `https://wa.me/${phone}`;
     const systemLink = `http://localhost:5173/chat?jid=${order.clientJid}`;
 
+    const isDelivery = order.type === 'delivery' || !!order.deliveryAddress;
     const event = {
-      summary: `🎂 #${idShort} - ${order.product} (${order.clientName || 'Cliente'})`,
+      summary: `${isDelivery ? '🚚' : '🎂'} #${idShort} - ${order.product} (${order.clientName || 'Cliente'})`,
       description: [
         `🆔 *ID DO PEDIDO:* #${idShort}`,
         `👤 *CLIENTE:* ${order.clientName || 'Não informado'}`,
@@ -203,6 +216,7 @@ async function createCalendarEvent(order) {
         order.recheio ? `🍯 *RECHEIO:* ${order.recheio}` : '',
         order.topo ? `🎨 *TOPO:* ${order.topo}` : '',
         order.notes ? `📝 *OBS:* ${order.notes}` : '',
+        order.deliveryAddress ? `📍 *ENTREGA:* ${order.deliveryAddress}` : '🏠 *RETIRADA NA LOJA*',
         `───────────────────────`,
         `🔗 *LINKS DE CONTATO:*`,
         `👉 [WhatsApp] ${waLink}`,
@@ -235,13 +249,13 @@ async function updateCalendarEvent(order) {
     const startDateTime = new Date(endDateTime.getTime() - 60 * 60 * 1000);
     const idShort = order.id.slice(-4).toUpperCase();
     const phone = order.clientJid ? order.clientJid.split('@')[0] : '';
-    
+
     const waLink = `https://wa.me/${phone}`;
     const systemLink = `http://localhost:5173/chat?jid=${order.clientJid}`;
 
     const isCompleted = order.status === 'completed';
     const cleanProduct = (order.product || '').replace(/^✅\s*/, '');
-    
+
     const event = {
       summary: `${isCompleted ? '✅ ' : ''}🎂 #${idShort} - ${cleanProduct} (${order.clientName || 'Cliente'})`,
       colorId: isCompleted ? '10' : null, // 10 é Verde (Basil) no GCal
@@ -276,6 +290,26 @@ async function updateCalendarEvent(order) {
     return null;
   }
 }
+
+// Deleta evento no Google Calendar
+async function deleteCalendarEvent(calendarEventId) {
+  if (!calendarEventId) return;
+  const gcal = await getGoogleCalendar();
+  if (!gcal) return;
+
+  try {
+    await gcal.calendar.events.delete({
+      calendarId: gcal.calendarId,
+      eventId: calendarEventId
+    });
+    console.log(`[GCal] Evento ${calendarEventId} removido com sucesso.`);
+  } catch (e) {
+    if (e.code !== 404) {
+      console.error('[GCal] Erro ao remover evento:', e.message);
+    }
+  }
+}
+
 
 // ─── MERCADO PAGO ───────────────────────────────────────────────────────────
 
@@ -338,8 +372,8 @@ async function checkAvailability(date, time, costToUse = 1) {
 
     // SOMA O CUSTO DE CAPACIDADE (VAGAS) DE TODOS OS PEDIDOS NO DIA
     const ordersToday = await prisma.order.findMany({
-      where: { 
-        scheduledDate: date, 
+      where: {
+        scheduledDate: date,
         OR: [
           { type: 'delivery', status: { notIn: ['cancelled', 'cancelado'] } },
           { type: 'order', status: { in: ['accepted', 'production', 'ready', 'completed'] } }
@@ -411,56 +445,56 @@ async function setupCronJobs(sockGetter) {
     });
   });
 
-    // Lembrete de Retirada (Rodando a cada 15 min)
-    cron.schedule('*/15 * * * *', async () => {
-        const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
-        if (!settings || !sockGetter) return;
+  // Lembrete de Retirada (Rodando a cada 15 min)
+  cron.schedule('*/15 * * * *', async () => {
+    const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
+    if (!settings || !sockGetter) return;
 
-        const leadHours = settings.reminderHours || 2;
-        
-        // Ajusta data/hora para fuso de São Paulo (UTC-3)
-        const now = new Date();
-        const nowBR = new Date(now.getTime() - (3 * 60 * 60 * 1000));
-        const todayBR = nowBR.toISOString().split('T')[0];
+    const leadHours = settings.reminderHours || 2;
 
-        const upcomingOrders = await prisma.order.findMany({
-            where: {
-                scheduledDate: todayBR,
-                status: { in: ['pending', 'production', 'ready'] },
-                type: 'order',
-                reminderSent: false
-            }
-        });
+    // Ajusta data/hora para fuso de São Paulo (UTC-3)
+    const now = new Date();
+    const nowBR = new Date(now.getTime() - (3 * 60 * 60 * 1000));
+    const todayBR = nowBR.toISOString().split('T')[0];
 
-        const sock = sockGetter();
-        if (!sock) return;
-
-        for (const order of upcomingOrders) {
-            try {
-                const [hour, minute] = order.scheduledTime.split(':').map(Number);
-                
-                // Monta o horário do pedido também no fuso BR
-                const pickupTime = new Date(nowBR);
-                pickupTime.setHours(hour, minute, 0, 0);
-
-                const diffMs = pickupTime.getTime() - nowBR.getTime();
-                const diffHours = diffMs / (1000 * 60 * 60);
-
-                console.log(`[Reminder Check] Pedido ${order.id} agendado para ${order.scheduledTime}. Faltam ${diffHours.toFixed(2)}h`);
-
-                // Se faltar X horas ou menos (até 15 min de tolerância para não perder o cron)
-                if (diffHours > -0.25 && diffHours <= leadHours) {
-                    const msg = `Olá *${order.clientName || 'cliente'}*! 🎂\n\nPassando para te avisar que sua encomenda está agendada para retirada hoje às *${order.scheduledTime}*.\n\nJá estamos nos preparativos finais por aqui! Te esperamos. 🚀`;
-
-                    await sock.sendMessage(order.clientJid, { text: msg });
-                    await prisma.order.update({ where: { id: order.id }, data: { reminderSent: true } });
-                    console.log(`[Reminder] Lembrete enviado para ${order.clientName} (${order.id})`);
-                }
-            } catch (err) {
-                console.error(`[Reminder Error] Falha ao enviar para ${order.id}:`, err.message);
-            }
-        }
+    const upcomingOrders = await prisma.order.findMany({
+      where: {
+        scheduledDate: todayBR,
+        status: { in: ['pending', 'production', 'ready'] },
+        type: 'order',
+        reminderSent: false
+      }
     });
+
+    const sock = sockGetter();
+    if (!sock) return;
+
+    for (const order of upcomingOrders) {
+      try {
+        const [hour, minute] = order.scheduledTime.split(':').map(Number);
+
+        // Monta o horário do pedido também no fuso BR
+        const pickupTime = new Date(nowBR);
+        pickupTime.setHours(hour, minute, 0, 0);
+
+        const diffMs = pickupTime.getTime() - nowBR.getTime();
+        const diffHours = diffMs / (1000 * 60 * 60);
+
+        console.log(`[Reminder Check] Pedido ${order.id} agendado para ${order.scheduledTime}. Faltam ${diffHours.toFixed(2)}h`);
+
+        // Se faltar X horas ou menos (até 15 min de tolerância para não perder o cron)
+        if (diffHours > -0.25 && diffHours <= leadHours) {
+          const msg = `Olá *${order.clientName || 'cliente'}*! 🎂\n\nPassando para te avisar que sua encomenda está agendada para retirada hoje às *${order.scheduledTime}*.\n\nJá estamos nos preparativos finais por aqui! Te esperamos. 🚀`;
+
+          await sock.sendMessage(order.clientJid, { text: msg });
+          await prisma.order.update({ where: { id: order.id }, data: { reminderSent: true } });
+          console.log(`[Reminder] Lembrete enviado para ${order.clientName} (${order.id})`);
+        }
+      } catch (err) {
+        console.error(`[Reminder Error] Falha ao enviar para ${order.id}:`, err.message);
+      }
+    }
+  });
 
   // Relatório Diário
   const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
@@ -524,9 +558,9 @@ async function sendDailyReport(sockGetter) {
 
 router.get('/', async (req, res) => {
   const { status, date } = req.query;
-  
+
   const where = {};
-  
+
   // LÓGICA INTELIGENTE:
   // Se veio data (Kanban pedindo), trazemos os pendentes (caixa de entrada global) + pedidos do dia.
   // Se não veio data (Agenda pedindo), trazemos todos os ativos para o mini-calendário funcionar.
@@ -566,40 +600,44 @@ router.post('/', async (req, res) => {
     // Se o cliente já tem um pedido 'waiting_payment' para o MESMO produto criado nos últimos 5 minutos,
     // nós ATUALIZAMOS esse pedido em vez de criar um novo.
     if (clientJid) {
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-        const existingOrder = await prisma.order.findFirst({
-            where: {
-                clientJid,
-                product: product || undefined,
-                status: 'waiting_payment',
-                createdAt: { gte: fiveMinutesAgo }
-            },
-            orderBy: { createdAt: 'desc' }
-        });
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const existingOrder = await prisma.order.findFirst({
+        where: {
+          clientJid,
+          product: product || undefined,
+          status: 'waiting_payment',
+          createdAt: { gte: fiveMinutesAgo }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
 
-        if (existingOrder) {
-            console.log(`[Order API] Duplicata detectada! Atualizando pedido #${existingOrder.id} em vez de criar um novo.`);
-            // Simula uma chamada de PATCH para aproveitar a lógica de atualização (opcional) ou faz o update direto
-            const updated = await prisma.order.update({
-                where: { id: existingOrder.id },
-                data: {
-                    variation, quantity, notes, scheduledDate, scheduledTime, deliveryAddress, paymentMethod, deliveryFee, massa, recheio, topo,
-                    updatedAt: new Date()
-                }
-            });
-            return res.json(updated);
-        }
+      if (existingOrder) {
+        console.log(`[Order API] Duplicata detectada! Atualizando pedido #${existingOrder.id}.`);
+
+        // Valida disponibilidade antes de atualizar (caso o cliente tenha mudado o horário)
+        const availUpdate = await checkAvailability(scheduledDate || existingOrder.scheduledDate, scheduledTime || existingOrder.scheduledTime);
+        if (!availUpdate.available) return res.status(409).json({ error: availUpdate.reason });
+
+        const updated = await prisma.order.update({
+          where: { id: existingOrder.id },
+          data: {
+            variation, quantity, notes, scheduledDate, scheduledTime, deliveryAddress, paymentMethod, deliveryFee, massa, recheio, topo,
+            updatedAt: new Date()
+          }
+        });
+        return res.json(updated);
+      }
     }
 
     // INTELIGÊNCIA DE RECAPITULAÇÃO: Define o tipo se a IA esquecer
     if (!type) {
-        const today = new Date().toISOString().split('T')[0];
-        if (deliveryAddress && (!scheduledDate || scheduledDate === today)) {
-            type = 'delivery';
-        } else {
-            type = 'order';
-        }
-        console.log(`[Order API] Tipo de pedido inferido: ${type}`);
+      const today = new Date().toISOString().split('T')[0];
+      if (deliveryAddress && (!scheduledDate || scheduledDate === today)) {
+        type = 'delivery';
+      } else {
+        type = 'order';
+      }
+      console.log(`[Order API] Tipo de pedido inferido: ${type}`);
     }
 
     // DEFINE PADRÕES PARA DATA E HORA ANTES DA CHECAGEM
@@ -625,11 +663,12 @@ router.post('/', async (req, res) => {
       if (dbProduct) console.log(`[Order] Produto encontrado por nome: ${dbProduct.name} (R$${dbProduct.price})`);
     }
 
+    console.log(dbProduct);
     let priceToUse = dbProduct?.price || 0;
 
     if (dbProduct) {
       const vars = typeof dbProduct.variations === 'string' ? JSON.parse(dbProduct.variations || '[]') : (dbProduct.variations || []);
-      
+
       let matchedVar = variation
         ? (vars.find(v => v.name.toLowerCase() === variation.toLowerCase())
           || vars.find(v => v.name.toLowerCase().includes(variation.toLowerCase())))
@@ -645,9 +684,9 @@ router.post('/', async (req, res) => {
     // Primeiro, busca o custo de capacidade (capcityCost)
     let costToUse = dbProduct?.capacityCost || 1;
     if (dbProduct) {
-        const vars = typeof dbProduct.variations === 'string' ? JSON.parse(dbProduct.variations || '[]') : (dbProduct.variations || []);
-        let matchedVar = variation ? vars.find(v => v.name.toLowerCase() === variation.toLowerCase()) : null;
-        if (matchedVar && matchedVar.capacityCost) costToUse = matchedVar.capacityCost;
+      const vars = typeof dbProduct.variations === 'string' ? JSON.parse(dbProduct.variations || '[]') : (dbProduct.variations || []);
+      let matchedVar = variation ? vars.find(v => v.name.toLowerCase() === variation.toLowerCase()) : null;
+      if (matchedVar && matchedVar.capacityCost) costToUse = matchedVar.capacityCost;
     }
 
     const avail = await checkAvailability(scheduledDate, scheduledTime, costToUse);
@@ -659,25 +698,27 @@ router.post('/', async (req, res) => {
 
     // RECALCULO DE SEGURANÇA: Se não veio taxa mas tem endereço, calcula agora
     if (dFee === 0 && deliveryAddress && (type === 'delivery' || !type)) {
-        try {
-            const { calculateFee } = require('../lib/maps');
-            const feeRes = await calculateFee(deliveryAddress);
-            if (!feeRes.error) {
-                dFee = feeRes.type === 'fixed' ? feeRes.fee : feeRes.estimated;
-                console.log(`[Order API] Taxa recalculada automaticamente: R$${dFee}`);
-            }
-        } catch (err) {
-            console.error('[Order API] Erro no recalculo de frete:', err.message);
+      try {
+        const { calculateFee } = require('../lib/maps');
+        const feeRes = await calculateFee(deliveryAddress);
+        if (!feeRes.error) {
+          dFee = feeRes.type === 'fixed' ? feeRes.fee : feeRes.estimated;
+          console.log(`[Order API] Taxa recalculada automaticamente: R$${dFee}`);
         }
+      } catch (err) {
+        console.error('[Order API] Erro no recalculo de frete:', err.message);
+      }
     }
 
     const itemsValue = priceToUse * qtyNum;
     const finalTotalValue = itemsValue + dFee;
     console.log(`[Order] Cálculo: R$${priceToUse} x ${qtyNum} + R$${dFee} = TOTAL R$${finalTotalValue}`);
 
-    // Pedidos manuais (via API/Dashboard) já nascem confirmados e ACEITOS
-    const initialStatus = 'accepted';
-    const initialPaymentStatus = 'confirmed';
+    // Pedidos via WhatsApp começam em 'waiting_payment' até o webhook confirmar.
+    // Pedidos manuais (caderno/balcão) já nascem aceitos.
+    const isManual = !clientJid || clientJid === 'manual_LOJA';
+    const initialStatus = isManual ? 'accepted' : 'waiting_payment';
+    const initialPaymentStatus = isManual ? 'confirmed' : 'pending';
 
     // Normaliza clientJid para evitar erro de Foreign Key se vier vazio ("")
     // Se não tiver JID (pedido manual via painel ou caderno), usamos um JID genérico
@@ -776,34 +817,34 @@ router.post('/', async (req, res) => {
       console.log(`[MercadoPago] Iniciando geração de link para pedido ${order.id}...`);
       try {
         if (!settings.mercadopagoToken) {
-            console.error('[MercadoPago] ERRO: mercadopagoToken não configurado nas settings!');
+          console.error('[MercadoPago] ERRO: mercadopagoToken não configurado nas settings!');
         } else {
-            const mpClient = new MercadoPagoConfig({ accessToken: settings.mercadopagoToken });
-            const preference = new Preference(mpClient);
-            
-            const prefRes = await preference.create({
-              body: {
-                items: [
-                  {
-                    title: order.product,
-                    quantity: 1,
-                    unit_price: finalTotalValue,
-                    currency_id: 'BRL'
-                  }
-                ],
-                back_urls: {
-                  success: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/sucesso`,
-                  failure: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/falha`,
-                  pending: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/pendente`
-                },
-                auto_return: 'approved',
-                notification_url: `${process.env.PUBLIC_URL || 'http://localhost:3001'}/mercadopago/webhook`,
-                external_reference: order.id
-              }
-            });
-            
-            paymentLink = prefRes.init_point;
-            console.log(`[MercadoPago] SUCESSO: Link gerado -> ${paymentLink}`);
+          const mpClient = new MercadoPagoConfig({ accessToken: settings.mercadopagoToken });
+          const preference = new Preference(mpClient);
+
+          const prefRes = await preference.create({
+            body: {
+              items: [
+                {
+                  title: order.product,
+                  quantity: 1,
+                  unit_price: finalTotalValue,
+                  currency_id: 'BRL'
+                }
+              ],
+              back_urls: {
+                success: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/sucesso`,
+                failure: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/falha`,
+                pending: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/pendente`
+              },
+              auto_return: 'approved',
+              notification_url: `${process.env.PUBLIC_URL || 'http://localhost:3001'}/mercadopago/webhook`,
+              external_reference: order.id
+            }
+          });
+
+          paymentLink = prefRes.init_point;
+          console.log(`[MercadoPago] SUCESSO: Link gerado -> ${paymentLink}`);
         }
       } catch (mpErr) {
         console.error('[MercadoPago] ERRO FATAL ao gerar link:', mpErr.message);
@@ -811,19 +852,19 @@ router.post('/', async (req, res) => {
       }
     }
 
-      // Notificação ao admin removida daqui para evitar spam. 
-      // Será enviada apenas após a confirmação do pagamento no Webhook.
-      if (paymentMethod === 'Dinheiro') {
-         const io = req.app.get('io');
-         if (io) io.emit('new_order_pending', { orderId: order.id });
-      }
+    // Notificação ao admin removida daqui para evitar spam. 
+    // Será enviada apenas após a confirmação do pagamento no Webhook.
+    if (paymentMethod === 'Dinheiro') {
+      const io = req.app.get('io');
+      if (io) io.emit('new_order_pending', { orderId: order.id });
+    }
 
     // 4. Notifica o Cliente (se for dinheiro, confirma recebimento)
     if (paymentMethod === 'Dinheiro' && order.clientJid && req.sockGetter) {
       const sock = req.sockGetter();
       if (sock) {
         const msg = `✅ *PEDIDO RECEBIDO!* \n\nOi, *${clientName || 'cliente'}*! Recebemos seu pedido de *${order.product}* (Pagamento em Dinheiro).\n\nAgora ele está aguardando a aprovação da nossa equipe. Avisaremos você assim que começarmos a preparar! ✨`;
-        await sock.sendMessage(order.clientJid, { text: msg }).catch(() => {});
+        await sock.sendMessage(order.clientJid, { text: msg }).catch(() => { });
       }
     }
 
@@ -838,7 +879,7 @@ router.post('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const data = { ...req.body };
-  delete data.id; 
+  delete data.id;
 
   try {
     const oldOrder = await prisma.order.findUnique({ where: { id } });
@@ -852,12 +893,12 @@ router.patch('/:id', async (req, res) => {
     const status = data.status || order.status;
 
     // ─── AUTOMAÇÕES DE STATUS ───
-    
+
     // ─── AUTOMAÇÕES DE STATUS — NOTIFICAÇÕES AO CLIENTE ───
     if (data.status && order.clientJid && req.sockGetter) {
       const sock = req.sockGetter(order.instanceId);
       console.log(`[Status Notification] Tentando enviar para ${order.clientName} (${order.clientJid}) - Status: ${data.status}`);
-      
+
       if (sock) {
         let msg = '';
         if (data.status === 'accepted') {
@@ -888,7 +929,7 @@ router.patch('/:id', async (req, res) => {
         const sock = req.sockGetter();
         if (sock) {
           const msg = `🚚 *PEDIDO PRONTO PARA ENTREGA!* 🚚\n\n🆔 *Pedido:* #${order.id.slice(-4).toUpperCase()}\n👤 *Cliente:* ${order.clientName}\n📦 *Itens:* ${order.product}\n📍 *Endereço:* ${order.deliveryAddress || 'Retirada'}\n💰 *Status:* Aguardando retirada pelo entregador.`;
-          await sock.sendMessage(settings.deliveryJid, { text: msg }).catch(() => {});
+          await sock.sendMessage(settings.deliveryJid, { text: msg }).catch(() => { });
         }
       }
     }
@@ -896,20 +937,10 @@ router.patch('/:id', async (req, res) => {
     // 3. Gerenciar Google Calendar (Cancelamento ou Atualização)
     if (status === 'cancelled' || status === 'cancelado') {
       if (order.calendarEventId) {
-        const gcal = await getGoogleCalendar();
-        if (gcal) {
-          try {
-            await gcal.calendar.events.delete({
-              calendarId: gcal.calendarId,
-              eventId: order.calendarEventId
-            });
-            // Limpa o ID e remove do cache local de eventos
-            await prisma.order.update({ where: { id }, data: { calendarEventId: null } });
-            await prisma.calendarEvent.deleteMany({ where: { id: order.calendarEventId } });
-          } catch (err) {
-            console.error('[GCal] Erro ao deletar evento no cancelamento:', err.message);
-          }
-        }
+        await deleteCalendarEvent(order.calendarEventId);
+        // Limpa o ID e remove do cache local de eventos
+        await prisma.order.update({ where: { id }, data: { calendarEventId: null } });
+        await prisma.calendarEvent.deleteMany({ where: { id: order.calendarEventId } });
       }
     } else if (status !== 'waiting_payment' && status !== 'pending' && (order.calendarEventId || (order.scheduledDate && order.scheduledTime))) {
       // Atualiza se houver mudança de data/hora ou se for re-ativado (e não estiver aguardando pagamento/pendente)
@@ -942,8 +973,8 @@ router.get('/slots/:date', async (req, res) => {
   const slots = await prisma.availableSlot.findMany({ where: { dayOfWeek } });
 
   const orders = await prisma.order.findMany({
-    where: { 
-      scheduledDate: date, 
+    where: {
+      scheduledDate: date,
       OR: [
         { type: 'delivery', status: { notIn: ['cancelled', 'cancelado'] } },
         { type: 'order', status: { in: ['accepted', 'production', 'ready', 'completed'] } }

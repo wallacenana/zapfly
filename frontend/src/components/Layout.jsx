@@ -1,25 +1,26 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, GitMerge, MessageSquare, Megaphone, Users, Calendar, Settings, Smartphone, Bot, PackageOpen, BellRing, Grid2X2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
-import { api } from '../api';
+import { api, socket } from '../api';
 
 const Layout = () => {
   const location = useLocation();
   const audioRef = useRef(null);
-  const [hasPendingDelivery, setHasPendingDelivery] = useState(false);
+  const [hasPendingOrders, setHasPendingOrders] = useState(false);
 
-  // ─── ALERTA GLOBAL DE DELIVERY ─────────────────────────────────────────────
+  // ─── ALERTA GLOBAL DE NOVOS PEDIDOS (DING) ──────────────────────────────────
   useEffect(() => {
     // Cria o elemento de áudio uma única vez
-    audioRef.current = new Audio('/alarm.wav');
+    audioRef.current = new Audio('/alarme.wav');
     audioRef.current.loop = true;
 
-    const checkDeliveries = async () => {
+    const checkOrders = async () => {
       try {
         const res = await api.get('/orders');
-        const pendingDeliveries = res.data.filter(o => o.status === 'pending' && o.type === 'delivery');
-        const has = pendingDeliveries.length > 0;
-        setHasPendingDelivery(has);
+        // Agora monitora QUALQUER pedido pendente (Delivery ou Encomenda)
+        const pending = res.data.filter(o => o.status === 'pending');
+        const has = pending.length > 0;
+        setHasPendingOrders(has);
 
         if (has) {
           audioRef.current.play().catch(() => { });
@@ -32,11 +33,22 @@ const Layout = () => {
       }
     };
 
-    checkDeliveries();
-    const interval = setInterval(checkDeliveries, 10000);
+    // Escuta via Socket para ser instantâneo
+    socket.on('new_order_pending', () => {
+      checkOrders();
+    });
+
+    socket.on('order_confirmed', () => {
+      checkOrders();
+    });
+
+    checkOrders();
+    const interval = setInterval(checkOrders, 15000); // Polling de segurança
 
     return () => {
       clearInterval(interval);
+      socket.off('new_order_pending');
+      socket.off('order_confirmed');
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
@@ -111,7 +123,7 @@ const Layout = () => {
           <NavLink to="/production" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"} style={{ position: 'relative' }}>
             <Grid2X2 size={18} />
             Gestão de Pedidos
-            {hasPendingDelivery && (
+            {hasPendingOrders && (
               <span style={{
                 position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
                 width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#ef4444',
@@ -174,7 +186,7 @@ const Layout = () => {
           <header className="header">
             <h1>{getPageTitle()}</h1>
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-              {hasPendingDelivery && (
+              {hasPendingOrders && (
                 <div style={{
                   display: 'flex', alignItems: 'center', gap: '8px',
                   backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239,68,68,0.3)',
@@ -182,7 +194,7 @@ const Layout = () => {
                   animation: 'pulse 1.2s infinite'
                 }}>
                   <BellRing size={15} />
-                  Delivery Pendente!
+                  Pedido Pendente!
                 </div>
               )}
               <div className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

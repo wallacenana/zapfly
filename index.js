@@ -93,10 +93,9 @@ app.post('/mercadopago/webhook', async (req, res) => {
         const paymentId = data?.id || req.query.id;
 
         if ((type === 'payment' || req.query.topic === 'payment') && paymentId) {
-            
+
             // TRAVA DE MEMÓRIA: Evita processar o mesmo ID se ele já estiver em curso
             if (processingPayments.has(paymentId)) {
-                console.log(`[MercadoPago] Ignorando webhook duplicado em processamento: ${paymentId}`);
                 return res.sendStatus(200);
             }
             processingPayments.add(paymentId);
@@ -120,7 +119,6 @@ app.post('/mercadopago/webhook', async (req, res) => {
 
                     // Trava de segurança no DB: Se já foi confirmado, ignora
                     if (order && order.paymentStatus !== 'confirmed') {
-                        console.log(`[MercadoPago] Pagamento APROVADO para o pedido: ${orderId}`);
 
                         const updatedOrder = await prisma.order.update({
                             where: { id: orderId },
@@ -142,13 +140,13 @@ app.post('/mercadopago/webhook', async (req, res) => {
                             if (sock) {
                                 let aviso = "";
                                 const orderIdShort = updatedOrder.id.slice(-4).toUpperCase();
-                                
+
                                 if (updatedOrder.type === 'order') {
                                     aviso = `🚨 *NOVA ENCOMENDA!* (#${orderIdShort}) 🚨\n\n👤 *Cliente:* ${updatedOrder.clientName}\n🎂 *Pedido:* ${updatedOrder.product}\n📅 *Data:* ${updatedOrder.scheduledDate}\n⏰ *Hora:* ${updatedOrder.scheduledTime}\n📝 *Obs:* ${updatedOrder.notes || '-'}\n📍 *Entrega:* ${updatedOrder.deliveryAddress || 'Retirada'}\n\nO pagamento foi confirmado e o pedido já está no seu painel! ✨`;
                                 } else {
                                     aviso = `💰 *PAGAMENTO APROVADO!* (#${orderIdShort}) 💰\n\n👤 *Cliente:* ${updatedOrder.clientName}\n🎂 *Pedido:* ${updatedOrder.product}\n\nO pedido já está na aba *PENDENTES* do seu painel. Aceite-o para iniciar a produção! ✨`;
                                 }
-                                
+
                                 await sock.sendMessage(settings.managerJid, { text: aviso }).catch(() => { });
                             }
                         }
@@ -306,16 +304,17 @@ app.get('/auth/google/calendars', async (req, res) => {
         oauth2Client.setCredentials({ refresh_token: settings.gcalRefreshToken, access_token: settings.gcalAccessToken });
         const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
         const list = await calendar.calendarList.list();
-
-        console.log(`[GCal] Buscando calendários... Encontrados: ${list.data.items?.length || 0}`);
-
         const calendars = (list.data.items || [])
             .map(c => ({ id: c.id, name: c.summaryOverride || c.summary, primary: c.primary }))
             .filter(c => c.name); // Remove itens sem nome
 
         res.json(calendars);
     } catch (e) {
-        console.error('[GCal Error] Falha ao listar calendários:', e);
+        if (e.message.includes('invalid_grant')) {
+            console.error('[GCal Error] Conexão expirada ou revogada. Por favor, reconecte sua conta nas Configurações.');
+        } else {
+            console.error('[GCal Error] Falha ao listar calendários:', e.message);
+        }
         res.status(500).json({ error: e.message });
     }
 });
@@ -413,8 +412,6 @@ async function initInstance(instanceId) {
         const jid = msg.key.remoteJid;
         const pushName = msg.pushName || 'Desconhecido';
 
-        console.log(`\n📩 [Nova Mensagem] de: ${pushName} (${jid})`);
-
         // BLOQUEIO DE STATUS E GRUPOS (OPCIONAL)
         if (jid === 'status@broadcast' || jid.includes('@g.us')) return;
 
@@ -424,7 +421,6 @@ async function initInstance(instanceId) {
             if (keyToRevoke && keyToRevoke.id) {
                 await prisma.message.deleteMany({ where: { instanceId, msgId: keyToRevoke.id } });
                 io.emit('message_deleted', { instanceId, msgId: keyToRevoke.id });
-                console.log(`[WhatsApp] Mensagem revogada e apagada do DB: ${keyToRevoke.id}`);
             }
             return; // Interrompe aqui, não processa IA
         }
@@ -452,7 +448,6 @@ async function initInstance(instanceId) {
                     });
                     // Salva apenas o texto para a IA não se confundir
                     text = transcription.text;
-                    console.log(`[Whisper] Transcrição: ${text}`);
                 }
             } catch (err) {
                 console.error('[Audio Error]', err.message);
@@ -468,7 +463,7 @@ async function initInstance(instanceId) {
             msg.message?.viewOnceMessage);
 
         if (!text && isMedia) {
-            console.log("[DEBUG MEDIA] Mensagem de mídia detectada. Estrutura:", JSON.stringify(msg.message, null, 2));
+            // console.log("[DEBUG MEDIA] Mensagem de mídia detectada. Estrutura:", JSON.stringify(msg.message, null, 2));
         }
 
         if (text || isMedia) {
@@ -528,7 +523,6 @@ async function initInstance(instanceId) {
                 // ─── COMANDOS DE ADMINISTRADOR (MANAGER) ──────────────────────────
                 const settings = await getSettings();
                 if (!msg.key.fromMe && settings?.managerJid && jid === settings.managerJid) {
-                    console.log(`[Admin Command] Processando comando do gerente: ${text}`);
 
                     let adminImages = [];
                     const isImg = !!msg.message?.imageMessage ||
@@ -538,11 +532,9 @@ async function initInstance(instanceId) {
 
                     if (isImg) {
                         try {
-                            console.log(`[Admin] Detectada imagem no comando do gerente. Baixando...`);
                             const { downloadMediaMessage } = require('@whiskeysockets/baileys');
                             const buffer = await downloadMediaMessage(msg, 'buffer', {});
                             adminImages.push(buffer.toString('base64'));
-                            console.log(`[Admin] Imagem baixada com sucesso. (${buffer.length} bytes)`);
                         } catch (e) {
                             console.error("[Admin Error] Falha ao baixar imagem do gerente:", e.message);
                         }
@@ -591,11 +583,9 @@ async function initInstance(instanceId) {
                                 (m.msg.message?.documentMessage?.mimetype?.startsWith('image/'));
                             if (isImg) {
                                 try {
-                                    console.log(`[AI] Detectada imagem de cliente. Baixando...`);
                                     const { downloadMediaMessage } = require('@whiskeysockets/baileys');
                                     const buffer = await downloadMediaMessage(m.msg, 'buffer', {});
                                     combinedImages.push(buffer.toString('base64'));
-                                    console.log(`[AI] Imagem de cliente baixada com sucesso. (${buffer.length} bytes)`);
                                 } catch (e) { console.error("Erro imagem buffer:", e); }
                             }
                         }
@@ -624,10 +614,7 @@ async function initInstance(instanceId) {
                             if (ai) {
                                 const settings = await getSettings();
 
-                                let promptText = (combinedText ? `Mensagem do cliente: ${combinedText}` : "");
-                                if (combinedImages.length > 0) {
-                                    promptText += (promptText ? "\n\n" : "") + "Analise este comprovante e extraia:\n1. Status (Válido ou Agendado)\n2. Nome do Pagador\n3. Nome do Recebedor\n4. Data e Hora\n5. Valor\n\nCONCLUSÃO: Com base no Gabarito, decida se o Pix é VÁLIDO ou INVÁLIDO. Responda de forma gentil e humana, mas NUNCA cite nomes do gabarito ou motivos técnicos do erro.";
-                                }
+                                let promptText = (combinedText ? combinedText : "");
 
                                 let userMessageContent = [{ type: "text", text: promptText }];
                                 for (const b64 of combinedImages) {
@@ -652,9 +639,7 @@ async function initInstance(instanceId) {
                                 ).join('\n');
 
                                 const finalSystemPrompt = await buildLilyPrompt(instanceId, jid, formattedHistory, storeInfo, msg.pushName);
-                                console.log("\n--- DEBUG LILY PROMPT (DIRETO) ---\n", finalSystemPrompt, "\n-----------------------------------\n");
 
-                                console.log(`[AI] Gerando resposta para ${jid}...`);
                                 const messages = [
                                     { role: 'system', content: finalSystemPrompt },
                                     { role: 'user', content: userMessageContent }
@@ -721,7 +706,7 @@ async function initInstance(instanceId) {
                                                     scheduledDate: { type: "string", description: "Data do agendamento YYYY-MM-DD" },
                                                     scheduledTime: { type: "string", description: "Horário do agendamento HH:MM" },
                                                     clientName: { type: "string", description: "Nome do cliente" },
-                                                    paymentMethod: { type: "string", description: "Forma de pagamento (ex: Pix com comprovante, Dinheiro, Cartão/Link)" },
+                                                    paymentMethod: { type: "string", description: "Forma de pagamento (ex: Pix e Cartão com link de pagamento e Dinheiro em alguns casos)" },
                                                     type: { type: "string", enum: ["order", "delivery"], description: "OBRIGATÓRIO: Use 'delivery' para pedidos imediatos (hoje/agora) com entrega. Use 'order' para agendamentos futuros, encomendas de bolos ou retiradas programadas." },
                                                     deliveryAddress: { type: "string", description: "Endereço se for delivery" },
                                                     deliveryFee: { type: "number", description: "Valor da entrega calculado por get_delivery_fee" },
@@ -733,6 +718,21 @@ async function initInstance(instanceId) {
                                                 required: ["product", "paymentMethod"],
                                             },
                                         },
+                                    },
+                                    {
+                                        type: "function",
+                                        function: {
+                                            name: "check_availability",
+                                            description: "OBRIGATÓRIO: Chame ANTES de confirmar qualquer agendamento, data ou horário com o cliente. Verifica se há vagas disponíveis para produção no dia e horário informados.",
+                                            parameters: {
+                                                type: "object",
+                                                properties: {
+                                                    date: { type: "string", description: "Data desejada no formato YYYY-MM-DD" },
+                                                    time: { type: "string", description: "Horário desejado no formato HH:MM" }
+                                                },
+                                                required: ["date", "time"]
+                                            }
+                                        }
                                     },
                                     {
                                         type: "function",
@@ -859,7 +859,7 @@ async function initInstance(instanceId) {
                                                 where: { instanceId_jid: { instanceId, jid } },
                                                 data: { lastPixAnalysis: analysisContent }
                                             }).catch(e => console.error("Erro ao salvar memória AI:", e));
-                                            
+
                                             // Remove o bloco técnico do texto que o cliente verá
                                             initialAIText = initialAIText.replace(/\[ANALISE: .*?\]/s, '').trim();
                                             responseMessage.content = initialAIText;
@@ -883,61 +883,82 @@ async function initInstance(instanceId) {
                                                 const { reason } = args;
                                                 result = await executeChamarGerente(reason, jid, currentChat, settings, null, sock, prisma, instanceId);
                                             }
-                                            else if (functionName === "get_delivery_catalog" || functionName === "get_order_catalog") {
-                                                try {
-                                                    const { getCachedProducts } = require('./lib/cache');
-                                                    const prods = await getCachedProducts();
-                                                    let deliveryStr = '';
-                                                    let orderStr = '';
-                                                    prods.forEach(p => {
-                                                        const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
-                                                        let text = `*${p.name.toUpperCase()}*`;
-                                                        if (vars.length > 0) {
-                                                            text += '\n' + vars.map(v => `   * *${v.name}* - R$ ${v.price.toFixed(2)}`).join('\n');
-                                                        } else {
-                                                            text += ` - R$ ${p.price.toFixed(2)}`;
-                                                        }
-                                                        if (p.type === 'delivery') deliveryStr += text + '\n\n';
-                                                        else orderStr += text + '\n\n';
-                                                    });
+                                            else if (functionName === "get_delivery_catalog") {
+                                                const { statusLoja, isBeforeOpening } = await getStoreStatus();
+                                                const prods = await prisma.product.findMany();
 
-                                                    if (functionName === "get_delivery_catalog") {
-                                                        const hasAccepted = /sim|quero|pode|manda|veja|vê|ok|agendar|amanhã/i.test(lastUserMsg);
-
-                                                        if (statusLoja.includes("FECHADA") && !hasAccepted) {
-                                                            result = { success: false, error: "ACESSO NEGADO: A loja está FECHADA. Responda informando que encerramos hoje e pergunte se quer garantir para AMANHÃ." };
-                                                        } else {
-                                                            const catalogText = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
-                                                            const introMsg = statusLoja.includes("FECHADA")
-                                                                ? "Para amanhã, temos os seguintes produtos de pronta entrega:"
-                                                                : "Hoje temos os seguintes produtos de pronta entrega:";
-
-                                                            // ─── SISTEMA ENVIA OS 3 BALÕES DIRETAMENTE ───
-                                                            // Balão 1: Introdução
-                                                            await sock.sendPresenceUpdate('composing', jid);
-                                                            await new Promise(r => setTimeout(r, 1000));
-                                                            await sock.sendPresenceUpdate('paused', jid);
-                                                            await sock.sendMessage(jid, { text: introMsg });
-
-                                                            // Balão 2: Catálogo
-                                                            await new Promise(r => setTimeout(r, 800));
-                                                            await sock.sendMessage(jid, { text: catalogText });
-
-                                                            // Balão 3: CTA
-                                                            await new Promise(r => setTimeout(r, 800));
-                                                            await sock.sendMessage(jid, { text: "Qual desses posso separar para você? 😊" });
-
-                                                            return; // Encerra aqui — sem passar pela IA
-                                                        }
+                                                let deliveryStr = '';
+                                                prods.filter(p => p.type === 'delivery' && p.stock > 0).forEach(p => {
+                                                    const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
+                                                    let line = `*${p.name}*`;
+                                                    if (vars.length > 0) {
+                                                        line += '\n' + vars.map(v => `   - ${v.name}: R$ ${v.price.toFixed(2)}`).join('\n');
                                                     } else {
-                                                        pendingCatalogMessage = `${orderStr.trim() || 'Nenhuma encomenda disponível.'}`;
-                                                        pendingCatalogCTA = "order";
-                                                        result = { success: true, message: "O catálogo de encomendas já foi enviado. Agora a Lily deve enviar APENAS UM CTA final, curto e humano. PROIBIDO listar preços ou produtos agora." };
+                                                        line += ` - R$ ${p.price.toFixed(2)}`;
                                                     }
-                                                } catch (err) {
-                                                    console.error('[Catalog Error]', err);
-                                                    result = { success: false, error: "Falha ao buscar cardápio." };
+                                                    deliveryStr += line + '\n\n';
+                                                });
+
+                                                const catalogText = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
+
+                                                let introMsg;
+                                                if (!statusLoja.includes('FECHADA')) {
+                                                    introMsg = 'Hoje temos os seguintes produtos de pronta entrega:';
+                                                } else if (isBeforeOpening) {
+                                                    introMsg = 'Ainda não estamos funcionando, mas hoje teremos estes produtos a pronta entrega:';
+                                                } else {
+                                                    introMsg = 'Encerramos a produção hoje, mas para amanhã temos:';
                                                 }
+
+                                                // Balão 1: Introdução
+                                                await sock.sendPresenceUpdate('composing', jid);
+                                                await new Promise(r => setTimeout(r, 1000));
+                                                await sock.sendPresenceUpdate('paused', jid);
+                                                await sock.sendMessage(jid, { text: introMsg });
+
+                                                // Balão 2: Catálogo
+                                                await new Promise(resolve => setTimeout(resolve, 800));
+                                                await sock.sendMessage(jid, { text: catalogText });
+
+                                                // Balão 3: CTA
+                                                await sock.sendPresenceUpdate('composing', jid);
+                                                await new Promise(r => setTimeout(r, 800));
+                                                await sock.sendPresenceUpdate('paused', jid);
+                                                const ctaMsg = isBeforeOpening
+                                                    ? 'Qual destes posso garantir pra você hoje? As unidades são limitadas e costumam voar! 🔥'
+                                                    : 'Qual desses posso separar para você? 😊';
+                                                await sock.sendMessage(jid, { text: ctaMsg });
+
+                                                return; // ENCERRA SEMPRE: impede que o código continue para a chamada da IA
+                                            }
+                                            else if (functionName === "get_order_catalog") {
+                                                const prods = await prisma.product.findMany({ where: { type: 'encomenda' } });
+                                                let orderStr = '';
+                                                prods.forEach(p => {
+                                                    const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
+                                                    let line = `*${p.name}*`;
+                                                    if (vars.length > 0) {
+                                                        line += '\n' + vars.map(v => `   - ${v.name}: R$ ${v.price.toFixed(2)}`).join('\n');
+                                                    } else {
+                                                        line += ` - R$ ${p.price.toFixed(2)}`;
+                                                    }
+                                                    orderStr += line + '\n\n';
+                                                });
+
+                                                const catalogText = orderStr.trim() || 'Nenhum item para encomenda no momento.';
+
+                                                // Balão 1: Introdução
+                                                await sock.sendMessage(jid, { text: "Olha só o que temos para encomenda:" });
+
+                                                // Balão 2: Catálogo
+                                                await new Promise(resolve => setTimeout(resolve, 800));
+                                                await sock.sendMessage(jid, { text: catalogText });
+
+                                                // Balão 3: CTA
+                                                await new Promise(resolve => setTimeout(resolve, 1000));
+                                                await sock.sendMessage(jid, { text: "Qual desses você gostaria de agendar?" });
+
+                                                return; // ENCERRA SEMPRE
                                             }
                                             else if (functionName === "check_availability") {
                                                 result = await checkAvailability(args.date, args.time);
@@ -965,7 +986,6 @@ async function initInstance(instanceId) {
                                                 }
                                             }
                                             else if (functionName === "create_order") {
-                                                console.log(`[AI] Tentando executar 'create_order' para ${jid}...`);
                                                 // Notes are now kept clean, cake details passed as separate fields
                                                 let finalNotes = args.notes || '';
 
@@ -981,7 +1001,6 @@ async function initInstance(instanceId) {
                                                     });
 
                                                     if (recentOrder) {
-                                                        console.log(`[AI] Bloqueio anti-spam acionado para ${jid}. Já existe pedido #${recentOrder.id.slice(-5)}.`);
                                                         // Se a IA não estiver explicitamente tentando criar um NOVO item diferente
                                                         result = {
                                                             success: false,
@@ -1112,30 +1131,32 @@ async function initInstance(instanceId) {
                                         if (currentToken.cancelled) return;
                                         let aiFinalText = secondResponse.choices[0].message.content || "";
 
-                                        // Se houver um catálogo pendente, vamos dividir a resposta da IA em Intro e CTA
+                                        // Se houver um catálogo pendente, vamos dividir a resposta da IA em Intro e CTA usando o separador ---
                                         if (pendingCatalogMessage) {
-                                            // 1ª MENSAGEM: INTRODUÇÃO (Pega a primeira frase)
-                                            let introText = aiFinalText.split(/[.!?\n]/)[0].trim();
-                                            if (!introText || introText.length < 5) introText = "Aqui estão as nossas delícias de delivery:";
-                                            if (introText.endsWith(':')) introText = introText.slice(0, -1);
-                                            introText += ":";
+                                            let introText = "Temos essas delícias:";
+                                            let ctaText = "Qual desses posso separar para você? 😊";
 
-                                            // CTA FINAL (Pega a última frase se houver, ou usa a padrão)
-                                            let ctaText = "Qual desses posso separar para você?";
-                                            const lines = aiFinalText.split('\n').filter(l => l.trim().length > 0);
-                                            if (lines.length > 1) {
-                                                const lastLine = lines[lines.length - 1].trim();
-                                                if (lastLine.includes('?') && lastLine.length < 60) ctaText = lastLine;
+                                            if (aiFinalText.includes('---')) {
+                                                const parts = aiFinalText.split('---');
+                                                introText = parts[0].trim();
+                                                ctaText = parts[1].trim();
+                                            } else {
+                                                // Fallback inteligente se a IA não usar o separador
+                                                const sentences = aiFinalText.split(/[.!?\n]/).filter(s => s.trim().length > 5);
+                                                if (sentences.length >= 2) {
+                                                    introText = sentences[0].trim() + (aiFinalText.includes(':') ? '' : ':');
+                                                    ctaText = sentences[sentences.length - 1].trim();
+                                                }
                                             }
 
-                                            // Envia Intro
+                                            // Envia Intro (IA)
                                             await sendRichMessage(sock, jid, introText);
 
-                                            // Envia Catálogo
+                                            // Envia Catálogo (SISTEMA)
                                             await new Promise(resolve => setTimeout(resolve, 1500));
                                             await sock.sendMessage(jid, { text: pendingCatalogMessage });
 
-                                            // Envia CTA
+                                            // Envia CTA (IA)
                                             await new Promise(resolve => setTimeout(resolve, 2000));
                                             await sendRichMessage(sock, jid, ctaText);
                                         } else {
@@ -1182,7 +1203,6 @@ async function initInstance(instanceId) {
                                 await sock.sendPresenceUpdate('paused', jid);
 
                                 await sendRichMessage(sock, jid, replyText);
-                                console.log(`[AI] Intro enviada para ${jid}`);
 
 
 
@@ -1198,7 +1218,6 @@ async function initInstance(instanceId) {
                                     await sock.sendPresenceUpdate('paused', jid);
 
                                     await sock.sendMessage(jid, { text: pendingCatalogMessage });
-                                    console.log(`[AI] Cardápio injetado para ${jid}`);
 
                                     // 3ª MENSAGEM: CTA DA LILY (DINÂMICO)
                                     if (pendingCatalogCTA) {
@@ -1234,7 +1253,6 @@ async function initInstance(instanceId) {
                                 }
                                 // PONTE ROBUSTA: Busca o fluxo tentando bater o número (prefixo) se o JID exato falhar
                                 const cleanJid = jid.split('@')[0];
-                                console.log(`[Flow Debug] Lily buscando fluxo: Instância=${instanceId} | Número=${cleanJid}`);
 
                                 let flowState = await prisma.flowState.findFirst({
                                     where: {
@@ -1286,21 +1304,18 @@ async function initInstance(instanceId) {
     });
 
     sock.ev.on('messages.delete', async (item) => {
-        console.log('[WhatsApp Delete Debug] Evento recebido:', JSON.stringify(item));
         try {
             if ('all' in item) {
                 const deleted = await prisma.message.deleteMany({
                     where: { instanceId, clientJid: item.jid }
                 });
                 io.emit('messages_deleted', { instanceId, jid: item.jid, all: true });
-                console.log(`[WhatsApp] Todas as mensagens do chat ${item.jid} foram deletadas do DB. Quantidade: ${deleted.count}`);
             } else {
                 for (const key of item.keys) {
                     const deleted = await prisma.message.deleteMany({
                         where: { instanceId, msgId: key.id }
                     });
                     io.emit('message_deleted', { instanceId, msgId: key.id });
-                    console.log(`[WhatsApp] Mensagem deletada do DB: ${key.id}. Quantidade: ${deleted.count}`);
                 }
             }
         } catch (err) {
@@ -1441,7 +1456,7 @@ app.post('/config/keys', async (req, res) => {
         pixReceiverKey
     };
 
-    console.log(`[Config Save] Atualizando configurações globais...`);
+    console.log(`[Config Save] Salvando configurações globais...`);
 
     const config = await prisma.setting.upsert({
         where: { id: 'global' },
@@ -1705,13 +1720,10 @@ app.patch('/instances/:id/chats/:jid/unread', async (req, res) => {
 app.delete('/instances/:id/chats/:jid', async (req, res) => {
     const { id, jid } = req.params;
     try {
-        console.log(`[Delete Chat] Removendo dados para ${jid} na instância ${id}`);
         // Remove do banco local as mensagens, o chat e o ESTADO DO FLUXO
         const mDel = await prisma.message.deleteMany({ where: { instanceId: id, jid } });
         const cDel = await prisma.chat.deleteMany({ where: { instanceId: id, jid } });
         const fDel = await prisma.flowState.deleteMany({ where: { instanceId: id, jid } }).catch(() => { });
-
-        console.log(`[Delete Chat] Resultado: ${mDel.count} msgs, ${cDel.count} chats, ${fDel?.count || 0} flows removidos.`);
 
         // Avisa o front-end para limpar o indicador visual
         io.emit('chat_update', { instanceId: id, jid, inFlow: false });
@@ -1738,8 +1750,6 @@ app.post('/instances/:id/send', async (req, res) => {
         if (!finalJid.includes('@')) {
             finalJid = finalJid.includes(':') ? finalJid.split(':')[0] + '@s.whatsapp.net' : finalJid + '@s.whatsapp.net';
         }
-
-        console.log(`[${id}] JID Final Formatado: ${finalJid}`);
 
         let result;
         let attempts = 0;

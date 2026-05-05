@@ -4,7 +4,7 @@ import { Calendar, Plus, RefreshCw, CheckCircle, Clock, XCircle, ChevronLeft, Ch
 import Swal from 'sweetalert2';
 import ReactDOM from 'react-dom';
 
-import { api, API_URL } from '../api';
+import { api } from '../api';
 
 const STATUS_CONFIG = {
   pending: { label: 'Pendente', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)', icon: Clock },

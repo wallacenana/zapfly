@@ -299,7 +299,8 @@ const Production = () => {
     if (order.status === 'waiting_payment') {
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #fbbf24; color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">CONFIRMAR PAGAMENTO</button>`;
     } else if (order.status === 'pending') {
-      actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #8b5cf6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">${order.type === 'delivery' ? 'INICIAR PRODUÇÃO' : 'ACEITAR PEDIDO'}</button>`;
+      const nextLabel = order.type === 'delivery' ? 'INICIAR PRODUÇÃO' : 'ACEITAR PEDIDO';
+      actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #8b5cf6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">${nextLabel}</button>`;
     } else if (order.status === 'accepted') {
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #3b82f6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">INICIAR PRODUÇÃO</button>`;
     } else if (order.status === 'production') {
@@ -706,7 +707,9 @@ const Production = () => {
 
         <KanbanColumn col={columns.find(c => c.id === 'pending')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} />
 
-        <KanbanColumn col={columns.find(c => c.id === 'accepted')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} />
+        {activeType === 'order' && (
+          <KanbanColumn col={columns.find(c => c.id === 'accepted')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} />
+        )}
 
         <KanbanColumn col={columns.find(c => c.id === 'production')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} />
 
