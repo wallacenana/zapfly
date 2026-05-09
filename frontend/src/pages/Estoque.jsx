@@ -1,19 +1,24 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box, Copy, Pencil } from 'lucide-react';
+import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box, Copy, Pencil, Gift, Clock, AlertTriangle } from 'lucide-react';
 
 import Swal from 'sweetalert2';
 
 import { api } from '../api';
 
 const Estoque = () => {
-  const [tab, setTab] = useState('delivery'); // 'delivery' ou 'encomenda'
+  const [tab, setTab] = useState('delivery'); // 'delivery', 'encomenda' ou 'addon'
   const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [isComboMode, setIsComboMode] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', price: 0, stock: 0, capacityCost: 1, variations: [], comboItems: [] });
+  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', price: 0, stock: 0, trackStock: false, capacityCost: 1, variations: [], comboItems: [] });
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState(null);
+
+  const [seasonalCatalogs, setSeasonalCatalogs] = useState([]);
+  const [showSeasonalModal, setShowSeasonalModal] = useState(false);
+  const [seasonalForm, setSeasonalForm] = useState({ name: '', eventDate: '', preStartDays: 15, postEndDays: 2, description: '', items: [], maxOrders: 0, onlySeasonalOnEventDay: false, active: true });
+  const [editingSeasonal, setEditingSeasonal] = useState(null);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -39,7 +44,17 @@ const Estoque = () => {
     } catch (err) { console.error(err); }
   }, []);
 
-  useEffect(() => { fetchProducts(); }, [fetchProducts]);
+  const fetchSeasonal = useCallback(async () => {
+    try {
+      const res = await api.get('/orders/seasonal');
+      setSeasonalCatalogs(res.data);
+    } catch (err) { console.error(err); }
+  }, []);
+
+  useEffect(() => { 
+    fetchProducts(); 
+    fetchSeasonal();
+  }, [fetchProducts, fetchSeasonal]);
 
   useEffect(() => {
     const handleEsc = (e) => {
@@ -52,13 +67,13 @@ const Estoque = () => {
   const openAdd = (asCombo = false) => {
     setEditing(null);
     setIsComboMode(asCombo);
-    setForm({ name: '', description: '', type: tab, price: 0, stock: 0, capacityCost: 1, variations: [], comboItems: [] });
+    setForm({ name: '', description: '', type: tab, price: 0, stock: 0, trackStock: tab === 'delivery', capacityCost: 1, variations: [], comboItems: [] });
     setShowModal(true);
   };
 
   const openEdit = (p) => {
     setEditing(p.id);
-    setIsComboMode(p.comboItems && p.comboItems.length > 0);
+    setIsComboMode(p.comboItems && p.comboItems.length > 0 || p.type.startsWith('combo_'));
     setForm({ ...p });
     setShowModal(true);
   };
@@ -76,6 +91,7 @@ const Estoque = () => {
 
     const payload = { 
       ...form, 
+      type: isComboMode ? (form.type.startsWith('combo_') ? form.type : `combo_${form.type}`) : form.type.replace('combo_', ''),
       variations: JSON.stringify(form.variations),
       comboItems: JSON.stringify(isComboMode ? form.comboItems : [])
     };
@@ -107,7 +123,34 @@ const Estoque = () => {
     });
   };
 
-  const filtered = products.filter(p => p.type === tab);
+  const saveSeasonal = async () => {
+    if (!seasonalForm.name || !seasonalForm.eventDate) {
+      Swal.fire({ title: 'Atenção', text: 'Nome e Data do Evento são obrigatórios.', icon: 'warning' });
+      return;
+    }
+    try {
+      if (editingSeasonal) await api.patch(`/orders/seasonal/${editingSeasonal}`, seasonalForm);
+      else await api.post('/orders/seasonal', seasonalForm);
+      setShowSeasonalModal(false);
+      fetchSeasonal();
+      Swal.fire({ title: 'Salvo!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+    } catch (err) { Swal.fire('Erro', 'Falha ao salvar catálogo sazonal.', 'error'); }
+  };
+
+  const openAddSeasonal = () => {
+    setEditingSeasonal(null);
+    setSeasonalForm({ name: '', eventDate: '', preStartDays: 15, postEndDays: 2, description: '', items: [], maxOrders: 0, onlySeasonalOnEventDay: false, active: true });
+    setShowSeasonalModal(true);
+  };
+
+  const openEditSeasonal = (s) => {
+    setEditingSeasonal(s.id);
+    const items = typeof s.items === 'string' ? JSON.parse(s.items || '[]') : (s.items || []);
+    setSeasonalForm({ ...s, items });
+    setShowSeasonalModal(true);
+  };
+
+  const filtered = products.filter(p => p.type === tab || p.type === `combo_${tab}`);
   const inp = { style: { width:'100%', padding:'10px 14px', borderRadius:'10px', backgroundColor:'var(--bg-tertiary)', border:'1px solid var(--border-color)', color:'#fff', fontSize:'14px', outline: 'none' } };
 
   return (
@@ -118,12 +161,20 @@ const Estoque = () => {
           <p style={{ color: 'var(--text-secondary)' }}>Gerencie seus produtos e combos de {tab === 'delivery' ? 'Pronta Entrega' : 'Agendamento'}</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="btn" onClick={() => openAdd(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#a78bfa', border: '1px solid #8b5cf6', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}>
-            Novo Combo
-          </button>
-          <button className="btn btn-primary" onClick={() => openAdd(false)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px' }}>
-            <Plus size={20} /> Adicionar Item
-          </button>
+          {tab === 'seasonal' ? (
+            <button className="btn btn-primary" onClick={openAddSeasonal} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: '#ec4899' }}>
+              <Plus size={20} /> Novo Evento
+            </button>
+          ) : (
+            <>
+              <button className="btn" onClick={() => openAdd(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#a78bfa', border: '1px solid #8b5cf6', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                Novo Combo
+              </button>
+              <button className="btn btn-primary" onClick={() => openAdd(false)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px' }}>
+                <Plus size={20} /> Adicionar Item
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -134,101 +185,240 @@ const Estoque = () => {
         <button onClick={() => setTab('encomenda')} style={{ ...tabBtn, backgroundColor: tab === 'encomenda' ? '#10b981' : 'var(--bg-secondary)', color: tab === 'encomenda' ? '#fff' : 'var(--text-secondary)' }}>
           <Calendar size={18} /> Agendamentos
         </button>
+        <button onClick={() => setTab('addon')} style={{ ...tabBtn, backgroundColor: tab === 'addon' ? '#f59e0b' : 'var(--bg-secondary)', color: tab === 'addon' ? '#fff' : 'var(--text-secondary)' }}>
+          <Plus size={18} /> Adicionais
+        </button>
+        <button onClick={() => setTab('seasonal')} style={{ ...tabBtn, backgroundColor: tab === 'seasonal' ? '#ec4899' : 'var(--bg-secondary)', color: tab === 'seasonal' ? '#fff' : 'var(--text-secondary)' }}>
+          <Gift size={18} /> Datas Comemorativas
+        </button>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-        {filtered.map(p => {
-          const isExpanded = expanded === p.id;
-          const isCombo = p.comboItems && p.comboItems.length > 0;
-          return (
-            <div key={p.id} style={{ backgroundColor: '#18181b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', transition: 'all 0.2s' }}>
-              <div 
-                onClick={() => setExpanded(isExpanded ? null : p.id)}
-                style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent', borderBottom: isExpanded ? '1px solid rgba(255,255,255,0.05)' : 'none' }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <div style={{ width: '4px', height: '24px', borderRadius: '4px', background: isCombo ? '#8b5cf6' : (p.type === 'delivery' ? '#3b82f6' : '#10b981') }} />
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ fontWeight: 800, fontSize: '16px', color: '#fff' }}>{p.name}</div>
-                      {isCombo && <span style={{ fontSize: '10px', backgroundColor: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', padding: '2px 8px', borderRadius: '4px', fontWeight: 900 }}>COMBO</span>}
-                    </div>
-                    {p.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{p.description}</div>}
-                    {!p.variations.length && !isCombo && <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.type !== 'encomenda' && `| Estoque: ${p.stock}`}</div>}
-                    {isCombo && <div style={{ fontSize: '13px', color: '#8b5cf6', marginTop: '4px', fontWeight: 700 }}>R$ {p.price.toFixed(2)} | {p.comboItems.length} itens inclusos</div>}
+        {tab === 'seasonal' ? (
+          seasonalCatalogs.map(s => (
+            <div key={s.id} style={{ backgroundColor: '#18181b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(236, 72, 153, 0.1)', color: '#ec4899', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Gift size={20} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '16px', color: '#fff' }}>{s.name}</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', display: 'flex', gap: '10px', marginTop: '4px' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={14} /> {new Date(s.eventDate + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> Antecedência: {s.preStartDays} dias</span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); openEdit(p); }}><Pencil size={16} /></button>
-                  <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px' }} onClick={(e) => { 
-                    e.stopPropagation(); 
-                    Swal.fire({
-                      title: 'Tem certeza?',
-                      text: "Você não poderá reverter isso!",
-                      icon: 'warning',
-                      showCancelButton: true,
-                      confirmButtonColor: '#ef4444',
-                      cancelButtonColor: '#6e7881',
-                      confirmButtonText: 'Sim, excluir!',
-                      cancelButtonText: 'Cancelar'
-                    }).then((result) => {
-                      if (result.isConfirmed) {
-                        api.delete(`/orders/products/${p.id}`).then(() => {
-                          fetchProducts();
-                          Swal.fire('Excluído!', 'O item foi removido com sucesso.', 'success');
-                        });
-                      }
-                    });
-                  }}><Trash2 size={16} /></button>
-                  <ChevronRight size={20} color="var(--text-secondary)" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                {s.maxOrders > 0 && <span style={{ fontSize: '10px', backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', padding: '4px 10px', borderRadius: '20px', fontWeight: 800 }}>Limite: {s.maxOrders} pedidos</span>}
+                <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '8px' }} onClick={() => openEditSeasonal(s)}><Pencil size={16} /></button>
+                <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px' }} onClick={() => {
+                  Swal.fire({ title: 'Excluir?', text: "Deseja remover este catálogo?", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' }).then(r => {
+                    if (r.isConfirmed) api.delete(`/orders/seasonal/${s.id}`).then(() => fetchSeasonal());
+                  });
+                }}><Trash2 size={16} /></button>
+              </div>
+            </div>
+          ))
+        ) : (
+          filtered.map(p => {
+            const isExpanded = expanded === p.id;
+            const isCombo = p.comboItems && p.comboItems.length > 0;
+            return (
+              <div key={p.id} style={{ backgroundColor: '#18181b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', transition: 'all 0.2s' }}>
+                <div 
+                  onClick={() => setExpanded(isExpanded ? null : p.id)}
+                  style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent', borderBottom: isExpanded ? '1px solid rgba(255,255,255,0.05)' : 'none' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <div style={{ width: '4px', height: '24px', borderRadius: '4px', background: isCombo ? '#8b5cf6' : (p.type === 'delivery' ? '#3b82f6' : '#10b981') }} />
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ fontWeight: 800, fontSize: '16px', color: '#fff' }}>{p.name}</div>
+                        {isCombo && <span style={{ fontSize: '10px', backgroundColor: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', padding: '2px 8px', borderRadius: '4px', fontWeight: 900 }}>COMBO</span>}
+                      </div>
+                      {p.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{p.description}</div>}
+                      {!p.variations.length && !isCombo && <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.trackStock && `| Estoque: ${p.stock}`} {!p.trackStock && '| Estoque: ∞'}</div>}
+                      {isCombo && <div style={{ fontSize: '13px', color: '#8b5cf6', marginTop: '4px', fontWeight: 700 }}>R$ {p.price.toFixed(2)} | {p.comboItems.length} itens inclusos</div>}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                    <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); openEdit(p); }}><Pencil size={16} /></button>
+                    <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px' }} onClick={(e) => { 
+                      e.stopPropagation(); 
+                      Swal.fire({
+                        title: 'Tem certeza?',
+                        text: "Você não poderá reverter isso!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#ef4444',
+                        cancelButtonColor: '#6e7881',
+                        confirmButtonText: 'Sim, excluir!',
+                        cancelButtonText: 'Cancelar'
+                      }).then((result) => {
+                        if (result.isConfirmed) {
+                          api.delete(`/orders/products/${p.id}`).then(() => {
+                            fetchProducts();
+                            Swal.fire('Excluído!', 'O item foi removido com sucesso.', 'success');
+                          });
+                        }
+                      });
+                    }}><Trash2 size={16} /></button>
+                    <ChevronRight size={20} color="var(--text-secondary)" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+                  </div>
+                </div>
+                
+                {isExpanded && (
+                  <div style={{ padding: '20px', backgroundColor: 'rgba(0,0,0,0.2)' }}>
+                    {isCombo ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                         {p.comboItems.map((item, i) => (
+                           <div key={i} style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#a78bfa', padding: '6px 15px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                             📦 {item}
+                           </div>
+                         ))}
+                      </div>
+                    ) : (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '15px' }}>
+                        {p.variations.map((v, i) => (
+                          <div key={i} style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontWeight:800, color: p.type === 'delivery' ? '#60a5fa' : '#34d399', fontSize:'13px' }}>{v.name.toUpperCase()} {v.hidden && <span style={{ color: '#fbbf24', fontSize: '10px', marginLeft: '5px' }}>(INVISÍVEL)</span>}</span>
+                                {v.description && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{v.description}</span>}
+                              </div>
+                              <span style={{ fontWeight:700, fontSize:'13px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', color: '#fff' }}>R$ {v.price}</span>
+                            </div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                              {v.subItems?.map((si, idx) => (
+                                <div key={idx} style={{ display:'inline-flex', alignItems:'center', gap:'6px', fontSize:'11px', color:'var(--text-secondary)', padding:'4px 10px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '20px' }}>
+                                  <span style={{ fontWeight: 600 }}>{si.name}</span>
+                                  {p.trackStock ? (
+                                    <span style={{ color: si.stock > 0 ? '#10b981' : '#ef4444', fontWeight:800, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '6px' }}>{si.stock}</span>
+                                  ) : (
+                                    <span style={{ color: '#60a5fa', fontWeight:800, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '6px' }}>∞</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {showSeasonalModal && createPortal(
+        <div style={modalOverlay}>
+          <div className="card" style={modalContent}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+              <h3 style={{ fontWeight: 800 }}>{editingSeasonal ? 'Editar' : 'Novo'} Catálogo de Evento</h3>
+              <button onClick={() => setShowSeasonalModal(false)} style={closeBtn}><X size={24} /></button>
+            </div>
+
+            <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr', gap: '15px', marginBottom: '20px' }}>
+                <div>
+                  <label style={labelStyle}>Nome do Evento</label>
+                  <input {...inp} placeholder="Ex: Dia das Mães, Páscoa..." value={seasonalForm.name} onChange={e => setSeasonalForm(f => ({ ...f, name: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Data do Evento</label>
+                  <input {...inp} type="date" value={seasonalForm.eventDate} onChange={e => setSeasonalForm(f => ({ ...f, eventDate: e.target.value }))} />
                 </div>
               </div>
-              
-              {isExpanded && (
-                <div style={{ padding: '20px', backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                  {isCombo ? (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                       {p.comboItems.map((item, i) => (
-                         <div key={i} style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#a78bfa', padding: '6px 15px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                           📦 {item}
-                         </div>
-                       ))}
-                    </div>
-                  ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '15px' }}>
-                      {p.variations.map((v, i) => (
-                        <div key={i} style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
-                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <span style={{ fontWeight:800, color: p.type === 'delivery' ? '#60a5fa' : '#34d399', fontSize:'13px' }}>{v.name.toUpperCase()}</span>
-                              {v.description && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{v.description}</span>}
-                            </div>
-                            <span style={{ fontWeight:700, fontSize:'13px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', color: '#fff' }}>R$ {v.price}</span>
-                          </div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                            {v.subItems?.map((si, idx) => (
-                              <div key={idx} style={{ display:'inline-flex', alignItems:'center', gap:'6px', fontSize:'11px', color:'var(--text-secondary)', padding:'4px 10px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '20px' }}>
-                                <span style={{ fontWeight: 600 }}>{si.name}</span>
-                                {p.type !== 'encomenda' && <span style={{ color: si.stock > 0 ? '#10b981' : '#ef4444', fontWeight:800, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '6px' }}>{si.stock}</span>}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                <div>
+                  <label style={labelStyle}><Clock size={10} /> Antecedência (Exibir X dias antes)</label>
+                  <input {...inp} type="number" value={seasonalForm.preStartDays} onChange={e => setSeasonalForm(f => ({ ...f, preStartDays: parseInt(e.target.value) }))} />
                 </div>
-              )}
+                <div>
+                  <label style={labelStyle}><Clock size={10} /> Permanência (Exibir Y dias depois)</label>
+                  <input {...inp} type="number" value={seasonalForm.postEndDays} onChange={e => setSeasonalForm(f => ({ ...f, postEndDays: parseInt(e.target.value) }))} />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <label style={labelStyle}>Descrição / Chamada Especial</label>
+                <textarea {...inp} style={{ ...inp.style, minHeight: '60px' }} placeholder="Ex: Prepare-se para o dia mais especial do ano!" value={seasonalForm.description || ''} onChange={e => setSeasonalForm(f => ({ ...f, description: e.target.value }))} />
+              </div>
+
+              <div style={sectionBox}>
+                <h5 style={sectionTitle}>⚙️ REGRAS OPERACIONAIS</h5>
+                <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  <div>
+                    <label style={microLabel}>Limite Máximo de Pedidos para o Dia (0 = Ilimitado)</label>
+                    <input {...inp} type="number" value={seasonalForm.maxOrders} onChange={e => setSeasonalForm(f => ({ ...f, maxOrders: parseInt(e.target.value) }))} />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(236, 72, 153, 0.05)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(236, 72, 153, 0.1)' }}>
+                    <input type="checkbox" id="onlySeasonal" checked={seasonalForm.onlySeasonalOnEventDay} onChange={e => setSeasonalForm(f => ({ ...f, onlySeasonalOnEventDay: e.target.checked }))} style={{ width: '18px', height: '18px' }} />
+                    <label htmlFor="onlySeasonal" style={{ cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#ec4899' }}>
+                      Aceitar APENAS itens sazonais para a data do evento?
+                      <p style={{ fontWeight: 400, fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Lily recusará encomendas do cardápio regular se o cliente escolher o dia do evento para entrega.</p>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <label style={labelStyle}>ITENS DO CATÁLOGO ESPECIAL</label>
+                  <button className="btn btn-secondary" style={{ fontSize: '10px' }} onClick={() => setSeasonalForm(f => ({ ...f, items: [...f.items, { name: '', price: 0, description: '' }] }))}>+ Add Item</button>
+                </div>
+                {seasonalForm.items.map((item, idx) => (
+                  <div key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '10px', marginBottom: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '10px', marginBottom: '10px' }}>
+                      <input {...inp} placeholder="Nome do Produto Especial" value={item.name} onChange={e => { const i = [...seasonalForm.items]; i[idx].name = e.target.value; setSeasonalForm(f => ({ ...f, items: i })) }} />
+                      <div style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: 'var(--text-muted)' }}>R$</span>
+                        <input 
+                          {...inp} 
+                          style={{ ...inp.style, paddingLeft: '30px' }} 
+                          placeholder="0,00" 
+                          value={item.price || ''} 
+                          onChange={e => { 
+                            let val = e.target.value.replace(/\D/g, "");
+                            if (val === "") val = "0";
+                            const floatVal = parseFloat(val) / 100;
+                            const i = [...seasonalForm.items]; 
+                            i[idx].price = floatVal; 
+                            setSeasonalForm(f => ({ ...f, items: i }));
+                          }}
+                          onBlur={e => {
+                            const i = [...seasonalForm.items];
+                            i[idx].price = parseFloat(i[idx].price || 0).toFixed(2);
+                            setSeasonalForm(f => ({ ...f, items: i }));
+                          }}
+                        />
+                      </div>
+                      <button className="btn-icon" style={{ color: '#ef4444' }} onClick={() => { const i = seasonalForm.items.filter((_, k) => k !== idx); setSeasonalForm(f => ({ ...f, items: i })) }}><Trash2 size={16} /></button>
+                    </div>
+                    <input {...inp} style={{ ...inp.style, fontSize: '12px', padding: '6px 10px' }} placeholder="Breve descrição do item..." value={item.description} onChange={e => { const i = [...seasonalForm.items]; i[idx].description = e.target.value; setSeasonalForm(f => ({ ...f, items: i })) }} />
+                  </div>
+                ))}
+              </div>
             </div>
-          );
-        })}
-      </div>
+
+            <div style={{ marginTop: '25px', display: 'flex', gap: '10px' }}>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowSeasonalModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" style={{ flex: 2, backgroundColor: '#ec4899' }} onClick={saveSeasonal}>Salvar Catálogo</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {showModal && createPortal(
         <div style={modalOverlay}>
           <div className="card" style={modalContent}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'25px' }}>
-                <h3 style={{ fontWeight: 800 }}>{editing ? 'Editar' : 'Novo'} {form.type === 'combo' ? 'Combo' : 'Produto'}</h3>
+                <h3 style={{ fontWeight: 800 }}>{editing ? 'Editar' : 'Novo'} {isComboMode ? 'Combo' : 'Produto'}</h3>
                 <button onClick={() => setShowModal(false)} style={closeBtn}><X size={24} /></button>
             </div>
 
@@ -240,6 +430,19 @@ const Estoque = () => {
                 <div style={{ marginBottom:'20px' }}>
                     <label style={labelStyle}>Descrição (Opcional)</label>
                     <textarea {...inp} style={{ ...inp.style, minHeight: '60px', resize: 'vertical' }} placeholder="Detalhes que o cliente deve saber." value={form.description || ''} onChange={e => setForm(f => ({...f, description: e.target.value}))} />
+                </div>
+                
+                <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <input 
+                    type="checkbox" 
+                    id="trackStock" 
+                    checked={form.trackStock} 
+                    onChange={e => setForm(f => ({...f, trackStock: e.target.checked}))}
+                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="trackStock" style={{ cursor: 'pointer', fontWeight: 600, fontSize: '14px', color: '#fff' }}>
+                    Controle de estoque
+                  </label>
                 </div>
                 {isComboMode ? (
                   <div style={sectionBox}>
@@ -331,9 +534,15 @@ const Estoque = () => {
                                   </div>
                               </div>
 
-                              <div style={{ marginBottom: '15px' }}>
-                                  <label style={microLabel}>Descrição da Categoria (Opcional)</label>
-                                  <input {...inp} style={{ ...inp.style, padding: '6px 12px', fontSize: '12px' }} placeholder="Ex: Serve 2 pessoas, embalagem especial..." value={v.description || ''} onChange={e => { const v2=[...form.variations]; v2[vIdx].description=e.target.value; setForm(f=>({...f, variations:v2})) }} />
+                              <div style={{ marginBottom: '15px', display: 'flex', gap: '15px', alignItems: 'center' }}>
+                                  <div style={{ flex: 2 }}>
+                                      <label style={microLabel}>Descrição da Categoria (Opcional)</label>
+                                      <input {...inp} style={{ ...inp.style, padding: '6px 12px', fontSize: '12px' }} placeholder="Ex: Serve 2 pessoas, embalagem especial..." value={v.description || ''} onChange={e => { const v2=[...form.variations]; v2[vIdx].description=e.target.value; setForm(f=>({...f, variations:v2})) }} />
+                                  </div>
+                                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '15px' }}>
+                                      <input type="checkbox" id={`hidden-${vIdx}`} checked={v.hidden || false} onChange={e => { const v2=[...form.variations]; v2[vIdx].hidden=e.target.checked; setForm(f=>({...f, variations:v2})) }} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+                                      <label htmlFor={`hidden-${vIdx}`} style={{ cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: v.hidden ? '#fbbf24' : 'var(--text-muted)' }}>{v.hidden ? '🙈 INVISÍVEL' : '👁️ VISÍVEL'}</label>
+                                  </div>
                               </div>
 
                               <div style={{ paddingLeft:'20px', borderLeft:'2px solid var(--border-color)', marginBottom:'10px' }}>

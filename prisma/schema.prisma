@@ -98,9 +98,12 @@ model Order {
   deliveryFee     Float     @default(0)
   paymentMethod   String?
   paymentStatus   String    @default("pending")
+  paymentLink     String?   @db.Text
+  variation       String?
   massa           String?
   recheio         String?
   topo            String?
+  addons          String?
   createdAt       DateTime  @default(now())
   productRelation Product?  @relation(fields: [productId], references: [id])
   customer        Customer? @relation(fields: [clientJid], references: [jid])
@@ -140,6 +143,7 @@ model Product {
   unit         String       @default("unidade")
   price        Float        @default(0)
   stock        Int          @default(0)
+  trackStock   Boolean      @default(false)
   capacityCost Int          @default(1)
   prepTime     Int          @default(30)
   description  String?
@@ -243,4 +247,20 @@ model FlowState {
 
   @@unique([instanceId, jid])
   @@map("flowstate")
+}
+model SeasonalCatalog {
+  id                    String   @id @default(cuid())
+  name                  String   // Ex: "Dia das Mães"
+  eventDate             String   // YYYY-MM-DD
+  preStartDays          Int      @default(15)
+  postEndDays           Int      @default(2)
+  description           String?  @db.Text
+  items                 String?  @db.LongText // JSON: [{ name, price, description, variations }]
+  maxOrders             Int      @default(0) // 0 = sem limite
+  onlySeasonalOnEventDay Boolean @default(false)
+  active                Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("seasonalcatalog")
 }

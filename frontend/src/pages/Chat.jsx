@@ -70,6 +70,14 @@ const Chat = () => {
   const [customerDetails, setCustomerDetails] = useState(null);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, type, data }
 
+  // Audio Recording State
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const recordingTimerRef = useRef(null);
+  const isCancelledRef = useRef(false);
+
   const sentinelRef = useRef(null);
   const messagesEndRef = useRef(null);
   const PAGE_SIZE = 40;
@@ -102,7 +110,7 @@ const Chat = () => {
           api.post(`/instances/${activeInstance.id}/chats/read`, {
             jid: msgJid,
             msgId: msgId
-          }).catch(() => {});
+          }).catch(() => { });
 
           if (text) {
             setMessages(prev => {
@@ -136,10 +144,10 @@ const Chat = () => {
 
     socket.on('chat_update', (data) => {
       if (activeInstance && data.instanceId === activeInstance.id) {
-        setContacts(prev => prev.map(c => 
+        setContacts(prev => prev.map(c =>
           c.jid === data.jid ? { ...c, ...data } : c
         ));
-        
+
         if (activeContact && activeContact.jid === data.jid) {
           setActiveContact(prev => ({ ...prev, ...data }));
         }
@@ -266,7 +274,7 @@ const Chat = () => {
           jid: jid,
           msgId: lastReceived.id
         }).catch(err => console.error("Erro ao marcar como lido:", err));
-        
+
         // Zera o contador visual localmente
         setContacts(prev => prev.map(c => c.jid === jid ? { ...c, unread: 0 } : c));
       }
@@ -310,6 +318,100 @@ const Chat = () => {
       setInputMessage(textToSend);
     }
   };
+
+  const startRecording = async () => {
+    try {
+      isCancelledRef.current = false;
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        if (isCancelledRef.current) {
+          isCancelledRef.current = false;
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
+        if (audioChunksRef.current.length > 0) {
+          await sendAudio(audioBlob);
+        }
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingDuration(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingDuration(prev => prev + 1);
+      }, 1000);
+    } catch (err) {
+      console.error("Erro ao acessar microfone:", err);
+      Toast.fire({ icon: 'error', title: 'Erro ao acessar microfone' });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      clearInterval(recordingTimerRef.current);
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      isCancelledRef.current = true;
+      audioChunksRef.current = [];
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      clearInterval(recordingTimerRef.current);
+    }
+  };
+
+  const sendAudio = async (blob) => {
+    if (!activeContact || !activeInstance) return;
+
+    const formData = new FormData();
+    formData.append('audio', blob, 'recording.ogg');
+    formData.append('jid', activeContact.jid);
+
+    try {
+      const response = await api.post(`/instances/${activeInstance.id}/send-audio`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      const realId = response.data.key.id;
+      setMessages(prev => [
+        ...prev,
+        {
+          id: realId,
+          text: '🎤 Áudio',
+          fromMe: true,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'sent'
+        }
+      ]);
+    } catch (err) {
+      console.error("Erro ao enviar áudio:", err);
+      Toast.fire({ icon: 'error', title: 'Erro ao enviar áudio' });
+    }
+  };
+
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
 
   const toggleAI = async () => {
     if (!activeContact || !activeInstance) return;
@@ -376,8 +478,8 @@ const Chat = () => {
   const handleMessageContextMenu = (e, msg) => {
     e.preventDefault();
     setContextMenu({
-      x: e.pageX,
-      y: e.pageY,
+      x: e.clientX,
+      y: e.clientY,
       type: 'message',
       data: msg
     });
@@ -386,8 +488,8 @@ const Chat = () => {
   const handleChatContextMenu = (e, contact) => {
     e.preventDefault();
     setContextMenu({
-      x: e.pageX,
-      y: e.pageY,
+      x: e.clientX,
+      y: e.clientY,
       type: 'chat',
       data: contact
     });
@@ -478,6 +580,14 @@ const Chat = () => {
             height: 10px;
             box-shadow: 0 0 0 0 rgba(16, 185, 129, 1);
             animation: pulse 2s infinite;
+          }
+          @keyframes pulse-red {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+          }
+          .pulse-red {
+            animation: pulse-red 1.5s infinite;
           }
         `}</style>
         {instances.map(inst => (
@@ -650,21 +760,21 @@ const Chat = () => {
                 </div>
               ))}
 
-              {/* Sentinel — dispara o IntersectionObserver */}
-              <div ref={sentinelRef} style={{ height: '1px' }} />
+            {/* Sentinel — dispara o IntersectionObserver */}
+            <div ref={sentinelRef} style={{ height: '1px' }} />
 
-              {/* Loading more indicator */}
-              {loadingMore && (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '12px' }}>
-                  <div className="animate-spin" style={{ width: '16px', height: '16px', border: '2px solid var(--accent-primary)', borderTopColor: 'transparent', borderRadius: '50%' }} />
-                </div>
-              )}
+            {/* Loading more indicator */}
+            {loadingMore && (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px' }}>
+                <div className="animate-spin" style={{ width: '16px', height: '16px', border: '2px solid var(--accent-primary)', borderTopColor: 'transparent', borderRadius: '50%' }} />
+              </div>
+            )}
 
-              {!hasMoreChats && contacts.length > 0 && (
-                <div style={{ textAlign: 'center', padding: '12px', fontSize: '11px', color: 'var(--text-muted)' }}>
-                  Todas as conversas carregadas
-                </div>
-              )}
+            {!hasMoreChats && contacts.length > 0 && (
+              <div style={{ textAlign: 'center', padding: '12px', fontSize: '11px', color: 'var(--text-muted)' }}>
+                Todas as conversas carregadas
+              </div>
+            )}
           </div>
         </div>
 
@@ -683,7 +793,7 @@ const Chat = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between'
               }}>
-                <div 
+                <div
                   onClick={() => setShowContactInfo(!showContactInfo)}
                   style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer' }}
                   title="Ver detalhes do contato"
@@ -714,8 +824,8 @@ const Chat = () => {
                       if (!p || p.status === 'unavailable') {
                         return p?.lastSeen
                           ? <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
-                              visto por último {new Date(p.lastSeen * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                            </p>
+                            visto por último {new Date(p.lastSeen * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
                           : <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>offline</p>;
                       }
                       if (p.status === 'composing') return <p style={{ fontSize: '11px', color: '#10b981', fontWeight: 600 }}>digitando...</p>;
@@ -856,9 +966,8 @@ const Chat = () => {
 
               {/* Input Area */}
               <div style={{ padding: '20px 25px', backgroundColor: 'var(--bg-secondary)', borderTop: '1px solid var(--border-color)' }}>
-                <form
-                  onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
-                  style={{
+                {isRecording ? (
+                  <div style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '15px',
@@ -866,45 +975,84 @@ const Chat = () => {
                     padding: '8px 15px',
                     borderRadius: '14px',
                     border: '1px solid var(--border-color)'
-                  }}
-                >
-                  <button type="button" className="btn-icon"><Paperclip size={20} /></button>
-                  <input
-                    placeholder="Escreva sua mensagem..."
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
+                  }}>
+                    <button type="button" onClick={cancelRecording} className="btn-icon" style={{ color: '#ef4444' }}><Trash2 size={20} /></button>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div className="pulse-red" style={{ width: '10px', height: '10px', backgroundColor: '#ef4444', borderRadius: '50%' }}></div>
+                      <span style={{ fontSize: '14px', color: '#fff', fontWeight: 600 }}>Gravando... {formatDuration(recordingDuration)}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={stopRecording}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        backgroundColor: '#10b981',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <Send size={18} />
+                    </button>
+                  </div>
+                ) : (
+                  <form
+                    onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }}
                     style={{
-                      flex: 1,
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      outline: 'none',
-                      color: '#fff',
-                      fontSize: '14px',
-                      padding: '8px 0'
-                    }}
-                  />
-                  <button type="button" className="btn-icon"><Mic size={20} /></button>
-                  <button
-                    type="submit"
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      backgroundColor: activeInstance?.color || 'var(--accent-primary)',
-                      color: '#fff',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'center',
-                      border: 'none',
-                      cursor: 'pointer',
-                      transition: 'transform 0.2s'
+                      gap: '15px',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      padding: '8px 15px',
+                      borderRadius: '14px',
+                      border: '1px solid var(--border-color)'
                     }}
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                   >
-                    <Send size={18} />
-                  </button>
-                </form>
+                    <button type="button" className="btn-icon"><Paperclip size={20} /></button>
+                    <input
+                      placeholder="Escreva sua mensagem..."
+                      value={inputMessage}
+                      onChange={(e) => setInputMessage(e.target.value)}
+                      style={{
+                        flex: 1,
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        color: '#fff',
+                        fontSize: '14px',
+                        padding: '8px 0'
+                      }}
+                    />
+                    <button type="button" onClick={startRecording} className="btn-icon"><Mic size={20} /></button>
+                    <button
+                      type="submit"
+                      disabled={!inputMessage.trim()}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        backgroundColor: !inputMessage.trim() ? 'var(--bg-tertiary)' : (activeInstance?.color || 'var(--accent-primary)'),
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        border: 'none',
+                        cursor: inputMessage.trim() ? 'pointer' : 'default',
+                        transition: 'transform 0.2s',
+                        opacity: !inputMessage.trim() ? 0.5 : 1
+                      }}
+                      onMouseEnter={(e) => inputMessage.trim() && (e.currentTarget.style.transform = 'scale(1.05)')}
+                      onMouseLeave={(e) => inputMessage.trim() && (e.currentTarget.style.transform = 'scale(1)')}
+                    >
+                      <Send size={18} />
+                    </button>
+                  </form>
+                )}
               </div>
             </>
           ) : (
@@ -938,7 +1086,7 @@ const Chat = () => {
               </div>
               <h3 style={{ fontSize: '16px', fontWeight: 800, marginBottom: '5px', textAlign: 'center' }}>{activeContact.name || activeContact.jid?.split('@')[0]}</h3>
               <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{activeContact.jid}</p>
-              
+
               <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '15px', justifyContent: 'center' }}>
                 <span className="badge badge-warning" style={{ fontSize: '10px', padding: '4px 8px' }}>CLIENTE ZAP FLY</span>
                 {activeContact.aiEnabled && <span style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10b981', fontSize: '10px', padding: '4px 8px', borderRadius: '6px', fontWeight: 800 }}>IA ATIVA</span>}
@@ -1015,8 +1163,9 @@ const Chat = () => {
       {contextMenu && (
         <div style={{
           position: 'fixed',
-          top: contextMenu.y,
-          left: contextMenu.x,
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
           backgroundColor: '#18181b',
           border: '1px solid rgba(255,255,255,0.1)',
           borderRadius: '12px',

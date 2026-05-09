@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 const prisma = require('./lib/prisma');
 const { calculateFee } = require('./lib/maps');
-const { getStoreStatus, sendRichMessage } = require('./lib/utils');
+const { getStoreStatus, sendRichMessage, formatProduct } = require('./lib/utils');
 const { initFlows, handleFlows, runFlowNode, startFlowMonitor } = require('./lib/flows');
 const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODEL_MAP } = require('./lib/ai');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -29,6 +29,20 @@ const storage = multer.diskStorage({
     }
 });
 const uploadMarketing = multer({ storage });
+
+// Configuração do Multer para Áudios Temporários
+const audioStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const dir = 'assets/temp';
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        cb(null, Date.now() + '.ogg');
+    }
+});
+const uploadAudio = multer({ storage: audioStorage });
+
 
 // Prisma singleton is now loaded from lib/prisma.js
 
@@ -412,6 +426,10 @@ async function initInstance(instanceId) {
         const jid = msg.key.remoteJid;
         const pushName = msg.pushName || 'Desconhecido';
 
+        if (!msg.key.fromMe) {
+            console.log(`[Mensagem] Recebida de: ${jid.split('@')[0]}`);
+        }
+
         // BLOQUEIO DE STATUS E GRUPOS (OPCIONAL)
         if (jid === 'status@broadcast' || jid.includes('@g.us')) return;
 
@@ -639,7 +657,6 @@ async function initInstance(instanceId) {
                                 ).join('\n');
 
                                 const finalSystemPrompt = await buildLilyPrompt(instanceId, jid, formattedHistory, storeInfo, msg.pushName);
-
                                 const messages = [
                                     { role: 'system', content: finalSystemPrompt },
                                     { role: 'user', content: userMessageContent }
@@ -686,10 +703,11 @@ async function initInstance(instanceId) {
                                                 properties: {
                                                     date: { type: "string", description: "A data no formato YYYY-MM-DD" },
                                                     time: { type: "string", description: "O horário no formato HH:MM" },
+                                                    type: { type: "string", description: "O tipo do pedido: 'order' (encomenda) ou 'delivery' (entrega)" }
                                                 },
-                                                required: ["date", "time"],
-                                            },
-                                        },
+                                                required: ["date", "time", "type"]
+                                            }
+                                        }
                                     },
                                     {
                                         type: "function",
@@ -713,26 +731,12 @@ async function initInstance(instanceId) {
                                                     massa: { type: "string", description: "Sabor da massa escolhida" },
                                                     recheio: { type: "string", description: "Sabor do recheio escolhido" },
                                                     topo: { type: "string", description: "Informações sobre o topo do bolo" },
+                                                    carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Produtos ADICIONAIS. IMPORTANTE: Para Kits/Combos, NÃO coloque aqui os itens que já fazem parte do kit, senão o cliente será cobrado em dobro. Use apenas para itens extras comprados à parte." },
                                                     notes: { type: "string", description: "Outras observações gerais" }
                                                 },
                                                 required: ["product", "paymentMethod"],
                                             },
                                         },
-                                    },
-                                    {
-                                        type: "function",
-                                        function: {
-                                            name: "check_availability",
-                                            description: "OBRIGATÓRIO: Chame ANTES de confirmar qualquer agendamento, data ou horário com o cliente. Verifica se há vagas disponíveis para produção no dia e horário informados.",
-                                            parameters: {
-                                                type: "object",
-                                                properties: {
-                                                    date: { type: "string", description: "Data desejada no formato YYYY-MM-DD" },
-                                                    time: { type: "string", description: "Horário desejado no formato HH:MM" }
-                                                },
-                                                required: ["date", "time"]
-                                            }
-                                        }
                                     },
                                     {
                                         type: "function",
@@ -747,7 +751,9 @@ async function initInstance(instanceId) {
                                                     quantity: { type: "string", description: "Novo peso ou quantidade (opcional)" },
                                                     scheduledDate: { type: "string", description: "Nova data YYYY-MM-DD (opcional)" },
                                                     scheduledTime: { type: "string", description: "Novo horário HH:MM (opcional)" },
-                                                    notes: { type: "string", description: "Novas observações ou mudanças nos sabores (opcional)" }
+                                                    notes: { type: "string", description: "Novas observações ou mudanças nos sabores (opcional)" },
+                                                    carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Nova lista completa de produtos extras." },
+                                                    totalValue: { type: "number", description: "Novo valor total do pedido após as alterações (opcional)" }
                                                 },
                                                 required: ["orderId"]
                                             }
@@ -798,6 +804,49 @@ async function initInstance(instanceId) {
                                                 required: ["reason"]
                                             }
                                         }
+                                    },
+                                    {
+                                        type: "function",
+                                        function: {
+                                            name: "get_marketing_media",
+                                            description: "Busca na biblioteca de marketing imagens de produtos ou promoções para mostrar ao cliente.",
+                                            parameters: {
+                                                type: "object",
+                                                properties: {
+                                                    search: { type: "string", description: "Termo de busca (ex: 'vulcão', 'promoção'). Deixe vazio para listar todos." }
+                                                }
+                                            }
+                                        }
+                                    },
+                                    {
+                                        type: "function",
+                                        function: {
+                                            name: "send_marketing_media",
+                                            description: "Envia uma imagem específica da biblioteca de marketing para o cliente.",
+                                            parameters: {
+                                                type: "object",
+                                                properties: {
+                                                    assetId: { type: "string", description: "O ID da imagem/asset a ser enviada." },
+                                                    caption: { type: "string", description: "Legenda opcional para acompanhar a imagem." }
+                                                },
+                                                required: ["assetId"]
+                                            }
+                                        }
+                                    },
+                                    {
+                                        type: "function",
+                                        function: {
+                                            name: "post_status",
+                                            description: "Posta um novo Story (Status) no WhatsApp da loja.",
+                                            parameters: {
+                                                type: "object",
+                                                properties: {
+                                                    text: { type: "string", description: "Texto do status." },
+                                                    assetId: { type: "string", description: "O ID de uma imagem da biblioteca de marketing para postar como status (opcional)." }
+                                                },
+                                                required: ["text"]
+                                            }
+                                        }
                                     }
                                 ];
 
@@ -813,7 +862,7 @@ async function initInstance(instanceId) {
                                         : (lastUserMsgObj?.content || '');
                                     const lastUserMsg = lastUserMsgContent.toLowerCase();
 
-                                    const isDeliveryRequest = /card[aá]pio|o que tem|pronta entrega|o que voc[eê] tem|tem hoje|tem pra hoje|disponível|disponivel|preço|preco|o que vende/i.test(lastUserMsg);
+                                    const isDeliveryRequest = /card[aá]pio|o que tem|pronta entrega|o que voc[eê] tem|tem hoje|tem pra hoje|disponível|disponivel|preço|preco|o que vende|possibilidades|opções|opcoes/i.test(lastUserMsg);
                                     const isOrderRequest = /encomenda|bolo de festa|personalizado|encomendar|quero encomendar/i.test(lastUserMsg);
 
                                     let forcedToolChoice = "auto";
@@ -868,7 +917,6 @@ async function initInstance(instanceId) {
 
                                     // FUNCTION CALLING LOOP
                                     if (responseMessage.tool_calls) {
-                                        console.log(`[AI] IA solicitou execução de ${responseMessage.tool_calls.length} ferramentas.`);
                                         messages.push(responseMessage);
                                         let lastDeliveryFee = 0; // Fallback se a IA esquecer de passar no create_order
 
@@ -877,7 +925,6 @@ async function initInstance(instanceId) {
                                             const args = JSON.parse(toolCall.function.arguments);
                                             let result;
 
-                                            console.log(`[AI] Executando função: ${functionName}`, args);
 
                                             if (functionName === "chamar_gerente") {
                                                 const { reason } = args;
@@ -888,7 +935,7 @@ async function initInstance(instanceId) {
                                                 const prods = await prisma.product.findMany();
 
                                                 let deliveryStr = '';
-                                                prods.filter(p => p.type === 'delivery' && p.stock > 0).forEach(p => {
+                                                prods.filter(p => (p.type === 'delivery' || p.type === 'combo_delivery') && (p.trackStock === false || p.stock > 0)).forEach(p => {
                                                     const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
                                                     let line = `*${p.name}*`;
                                                     if (vars.length > 0) {
@@ -900,68 +947,38 @@ async function initInstance(instanceId) {
                                                 });
 
                                                 const catalogText = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
-
-                                                let introMsg;
-                                                if (!statusLoja.includes('FECHADA')) {
-                                                    introMsg = 'Hoje temos os seguintes produtos de pronta entrega:';
-                                                } else if (isBeforeOpening) {
-                                                    introMsg = 'Ainda não estamos funcionando, mas hoje teremos estes produtos a pronta entrega:';
-                                                } else {
-                                                    introMsg = 'Encerramos a produção hoje, mas para amanhã temos:';
-                                                }
-
-                                                // Balão 1: Introdução
-                                                await sock.sendPresenceUpdate('composing', jid);
-                                                await new Promise(r => setTimeout(r, 1000));
-                                                await sock.sendPresenceUpdate('paused', jid);
-                                                await sock.sendMessage(jid, { text: introMsg });
-
-                                                // Balão 2: Catálogo
-                                                await new Promise(resolve => setTimeout(resolve, 800));
-                                                await sock.sendMessage(jid, { text: catalogText });
-
-                                                // Balão 3: CTA
-                                                await sock.sendPresenceUpdate('composing', jid);
-                                                await new Promise(r => setTimeout(r, 800));
-                                                await sock.sendPresenceUpdate('paused', jid);
-                                                const ctaMsg = isBeforeOpening
-                                                    ? 'Qual destes posso garantir pra você hoje? As unidades são limitadas e costumam voar! 🔥'
-                                                    : 'Qual desses posso separar para você? 😊';
-                                                await sock.sendMessage(jid, { text: ctaMsg });
-
-                                                return; // ENCERRA SEMPRE: impede que o código continue para a chamada da IA
+                                                pendingCatalogMessage = catalogText;
+                                                result = "CATÁLOGO ENVIADO PARA MEMÓRIA. Responda ao cliente usando o formato: [Intro] --- [CTA].";
                                             }
                                             else if (functionName === "get_order_catalog") {
-                                                const prods = await prisma.product.findMany({ where: { type: 'encomenda' } });
+                                                const prods = await prisma.product.findMany({
+                                                    where: {
+                                                        OR: [
+                                                            { type: { in: ['encomenda', 'addon'] } },
+                                                            { type: { contains: 'combo_' } }
+                                                        ]
+                                                    }
+                                                });
                                                 let orderStr = '';
+                                                let addonStr = '';
+
                                                 prods.forEach(p => {
                                                     const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
-                                                    let line = `*${p.name}*`;
-                                                    if (vars.length > 0) {
-                                                        line += '\n' + vars.map(v => `   - ${v.name}: R$ ${v.price.toFixed(2)}`).join('\n');
-                                                    } else {
-                                                        line += ` - R$ ${p.price.toFixed(2)}`;
-                                                    }
-                                                    orderStr += line + '\n\n';
+                                                    const line = formatProduct(p, vars, false);
+
+                                                    if (p.type === 'addon') addonStr += line + '\n';
+                                                    else orderStr += line + '\n\n';
                                                 });
 
-                                                const catalogText = orderStr.trim() || 'Nenhum item para encomenda no momento.';
-
-                                                // Balão 1: Introdução
-                                                await sock.sendMessage(jid, { text: "Olha só o que temos para encomenda:" });
-
-                                                // Balão 2: Catálogo
-                                                await new Promise(resolve => setTimeout(resolve, 800));
-                                                await sock.sendMessage(jid, { text: catalogText });
-
-                                                // Balão 3: CTA
-                                                await new Promise(resolve => setTimeout(resolve, 1000));
-                                                await sock.sendMessage(jid, { text: "Qual desses você gostaria de agendar?" });
-
-                                                return; // ENCERRA SEMPRE
+                                                let catalogText = orderStr.trim() || 'Nenhum item para encomenda no momento.';
+                                                if (addonStr) {
+                                                    catalogText += '\n\n✨ *ADICIONAIS & EXTRAS:*\n' + addonStr.trim();
+                                                }
+                                                pendingCatalogMessage = catalogText;
+                                                result = "CATÁLOGO DE ENCOMENDAS ENVIADO PARA MEMÓRIA. Responda ao cliente usando o formato: [Intro] --- [CTA].";
                                             }
                                             else if (functionName === "check_availability") {
-                                                result = await checkAvailability(args.date, args.time);
+                                                result = await checkAvailability(args.date, args.time, args.type || 'order');
                                             }
                                             else if (functionName === "get_delivery_fee") {
                                                 const feeRes = await calculateFee(args.address);
@@ -1001,11 +1018,9 @@ async function initInstance(instanceId) {
                                                     });
 
                                                     if (recentOrder) {
-                                                        // Se a IA não estiver explicitamente tentando criar um NOVO item diferente
                                                         result = {
                                                             success: false,
-                                                            error: `ALERTA: Já existe um pedido recente (#${recentOrder.id.slice(-5).toUpperCase()}) para este cliente. NÃO DUPLIQUE o pedido. Se o cliente está mudando de ideia, use 'update_order' com este código. Só crie um novo se forem produtos diferentes.`
-
+                                                            error: `BLOQUEIO: Já existe o pedido #${recentOrder.id.slice(-5).toUpperCase()} em aberto. Use 'update_order' com este código para adicionar mais produtos ou atualizar o valor total. NÃO CRIE OUTRO PEDIDO.`
                                                         };
                                                     } else {
                                                         const res = await axios.post('http://localhost:3001/orders', {
@@ -1025,7 +1040,7 @@ async function initInstance(instanceId) {
                                                             pendingPaymentLink = res.data.paymentLink;
                                                             result.message = "Pedido criado. SILÊNCIO ABSOLUTO NO PRÓXIMO TURNO. NÃO GERE NENHUM TEXTO, O SISTEMA ENVIARÁ O LINK.";
                                                         } else {
-                                                            result.message = "Pedido criado. Agradeça o cliente e diga que o pedido já entrou em produção (pois o pagamento será em Dinheiro/Presencial).";
+                                                            result.message = "Pedido criado. Informe que recebemos o pedido (Pagamento em Dinheiro) e que ele está agora aguardando a aprovação da nossa equipe. Peça para o cliente aguardar a confirmação oficial.";
                                                         }
 
                                                         // Se for dinheiro, já cai como pending, então dispara o DING agora
@@ -1040,9 +1055,14 @@ async function initInstance(instanceId) {
                                             else if (functionName === "update_order") {
                                                 try {
                                                     const allOrders = await prisma.order.findMany({ where: { clientJid: jid } });
-                                                    const targetOrder = allOrders.find(o => o.id.slice(-5).toUpperCase() === args.orderId.toUpperCase());
+                                                    const refCode = (args.orderId || "").replace('#', '').trim().toUpperCase();
+                                                    const targetOrder = allOrders.find(o => {
+                                                        const fullId = o.id.toUpperCase();
+                                                        return fullId.endsWith(refCode) || refCode.endsWith(fullId.slice(-5));
+                                                    });
+
                                                     if (!targetOrder) {
-                                                        result = { success: false, error: "Pedido não encontrado com esse código de referência." };
+                                                        result = { success: false, error: `Pedido ${refCode} não encontrado entre seus pedidos ativos.` };
                                                     } else {
                                                         const updateData = {};
                                                         if (args.product) updateData.product = args.product;
@@ -1050,10 +1070,17 @@ async function initInstance(instanceId) {
                                                         if (args.scheduledDate) updateData.scheduledDate = args.scheduledDate;
                                                         if (args.scheduledTime) updateData.scheduledTime = args.scheduledTime;
                                                         if (args.notes) updateData.notes = args.notes;
+                                                        if (args.carrinho_itens_extras) updateData.carrinho_itens_extras = args.carrinho_itens_extras;
+                                                        if (args.totalValue) updateData.totalValue = args.totalValue;
 
-                                                        await axios.patch(`http://localhost:3001/orders/${targetOrder.id}`, updateData);
+                                                        const res = await axios.patch(`http://localhost:3001/orders/${targetOrder.id}`, updateData);
 
                                                         result = { success: true, message: "Pedido atualizado com sucesso." };
+
+                                                        if (res.data.paymentLink) {
+                                                            pendingPaymentLink = res.data.paymentLink;
+                                                            result.message = "Pedido atualizado e novo link gerado. SILÊNCIO ABSOLUTO NO PRÓXIMO TURNO. NÃO GERE NENHUM TEXTO, O SISTEMA ENVIARÁ O LINK.";
+                                                        }
                                                     }
                                                 } catch (err) {
                                                     result = { success: false, error: err.response?.data?.error || err.message };
@@ -1089,6 +1116,71 @@ async function initInstance(instanceId) {
                                                 await sock.sendMessage(settings.managerJid, { text: alertMsg });
                                                 result = { success: true, message: "O gerente foi notificado sobre o seu pedido de cancelamento e entrará em contato em breve." };
                                             }
+                                            else if (functionName === "get_marketing_media") {
+                                                const { search } = args;
+                                                const assets = await prisma.marketingAsset.findMany({
+                                                    where: search ? { name: { contains: search } } : {}
+                                                });
+                                                result = assets.map(a => ({ id: a.id, name: a.name }));
+                                            }
+                                            else if (functionName === "send_marketing_media") {
+                                                const { assetId, caption } = args;
+                                                const asset = await prisma.marketingAsset.findUnique({ where: { id: assetId } });
+                                                if (asset) {
+                                                    await sock.sendMessage(jid, { image: { url: asset.path }, caption: caption || "" });
+                                                    result = { success: true, message: "Imagem enviada com sucesso." };
+                                                } else {
+                                                    result = { success: false, error: "Imagem não encontrada." };
+                                                }
+                                            }
+                                            else if (functionName === "post_status") {
+                                                const { text, assetId } = args;
+                                                if (assetId) {
+                                                    const asset = await prisma.marketingAsset.findUnique({ where: { id: assetId } });
+                                                    if (asset) {
+                                                        await sock.sendMessage('status@broadcast', { image: { url: asset.path }, caption: text });
+                                                        result = { success: true, message: "Status com imagem postado com sucesso." };
+                                                    } else {
+                                                        result = { success: false, error: "Imagem não encontrada para o status." };
+                                                    }
+                                                } else {
+                                                    await sock.sendMessage('status@broadcast', { text });
+                                                    result = { success: true, message: "Status de texto postado com sucesso." };
+                                                }
+                                            }
+
+                                            else if (functionName === "get_delivery_catalog") {
+                                                const allProducts = await prisma.product.findMany();
+                                                const prods = allProducts.filter(p => p.type === 'delivery');
+                                                let deliveryStr = '';
+                                                prods.forEach(p => {
+                                                    const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
+                                                    let line = `*${p.name}*`;
+                                                    if (vars.length > 0) {
+                                                        line += '\n' + vars.map(v => `   - ${v.name}: R$ ${v.price.toFixed(2)}`).join('\n');
+                                                    } else {
+                                                        line += ` - R$ ${p.price.toFixed(2)}`;
+                                                    }
+                                                    deliveryStr += line + '\n\n';
+                                                });
+                                                pendingCatalogMessage = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
+                                                result = { success: true, message: "Catálogo de pronta entrega preparado. O sistema enviará o catálogo agora. SILÊNCIO ABSOLUTO." };
+                                            }
+                                            else if (functionName === "get_order_catalog") {
+                                                const { formatProduct } = require('./lib/utils');
+                                                const allProducts = await prisma.product.findMany();
+                                                let catalogStr = "";
+                                                allProducts.filter(p => p.type === 'encomenda').forEach(p => {
+                                                    const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
+                                                    catalogStr += formatProduct(p, vars) + "\n\n";
+                                                });
+                                                pendingCatalogMessage = catalogStr.trim() || "Poxa, não encontrei itens no momento.";
+                                                result = { success: true, message: "Catálogo de encomendas preparado. O sistema enviará o catálogo agora. SILÊNCIO ABSOLUTO." };
+                                            }
+                                            else if (functionName === "check_availability") {
+                                                const { checkAvailability } = require('./routes/orders');
+                                                result = await checkAvailability(args.date, args.time);
+                                            }
 
                                             messages.push({
                                                 tool_call_id: toolCall.id,
@@ -1100,7 +1192,7 @@ async function initInstance(instanceId) {
 
                                         if (currentToken.cancelled) return;
 
-                                        // ─── SEQUESTRAR O FLUXO: SE GEROU LINK, A IA SE CALA E O SISTEMA ASSUME ───
+                                        // ─── SEQUESTRAR O FLUXO: SE GEROU LINK OU CATÁLOGO, A IA SE CALA E O SISTEMA ASSUME ───
                                         if (pendingPaymentLink) {
                                             // Balão 1: Aviso
                                             await sock.sendPresenceUpdate('composing', jid);
@@ -1121,6 +1213,30 @@ async function initInstance(instanceId) {
                                             await sendRichMessage(sock, jid, 'O pedido será confirmado após o pagamento.');
 
                                             return; // FIM IMEDIATO: a IA não fala mais nada.
+                                        }
+
+                                        if (pendingCatalogMessage) {
+                                            const isDelivery = pendingCatalogMessage.includes('pronta entrega') || !pendingCatalogMessage.includes('Bolo');
+
+                                            // Balão 1: Intro
+                                            await sock.sendPresenceUpdate('composing', jid);
+                                            await new Promise(r => setTimeout(r, 1000));
+                                            await sock.sendPresenceUpdate('paused', jid);
+                                            await sock.sendMessage(jid, { text: isDelivery ? 'Hoje teremos os seguintes produtos de pronta entrega:' : 'Vou te mostrar nossas opções maravilhosas de bolos de encomenda:' });
+
+                                            // Balão 2: Catálogo
+                                            await sock.sendPresenceUpdate('composing', jid);
+                                            await new Promise(r => setTimeout(r, Math.min(pendingCatalogMessage.length * 5, 3000)));
+                                            await sock.sendPresenceUpdate('paused', jid);
+                                            await sock.sendMessage(jid, { text: pendingCatalogMessage });
+
+                                            // Balão 3: CTA
+                                            await sock.sendPresenceUpdate('composing', jid);
+                                            await new Promise(r => setTimeout(r, 1200));
+                                            await sock.sendPresenceUpdate('paused', jid);
+                                            await sock.sendMessage(jid, { text: isDelivery ? 'Qual desses posso separar para você? 😊' : 'Qual destes mais te encantou? Posso te ajudar a escolher o tamanho ideal para sua festa! 😊✨' });
+
+                                            return; // FIM IMEDIATO
                                         }
 
                                         const secondResponse = await ai.chat.completions.create({
@@ -1822,6 +1938,70 @@ app.post('/instances/:id/send', async (req, res) => {
         res.status(500).json({ error: 'Erro ao enviar: ' + err.message });
     }
 });
+
+app.post('/instances/:id/send-audio', uploadAudio.single('audio'), async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { jid } = req.body;
+        const sock = sessions.get(id);
+
+        if (!sock) return res.status(404).json({ error: 'Sessão não encontrada' });
+        if (!jid || !req.file) return res.status(400).json({ error: 'JID e arquivo de áudio são obrigatórios' });
+
+        let finalJid = jid.trim();
+        if (!finalJid.includes('@')) {
+            finalJid = finalJid.includes(':') ? finalJid.split(':')[0] + '@s.whatsapp.net' : finalJid + '@s.whatsapp.net';
+        }
+
+        const audioPath = req.file.path;
+
+        const result = await sock.sendMessage(finalJid, {
+            audio: { url: audioPath },
+            mimetype: 'audio/ogg; codecs=opus',
+            ptt: true
+        });
+
+        // Save outgoing message to DB
+        await prisma.message.create({
+            data: {
+                msgId: result.key.id,
+                instanceId: id,
+                jid: finalJid,
+                text: '🎤 Áudio',
+                fromMe: true,
+                timestamp: new Date(),
+                status: 'sent'
+            }
+        });
+
+        // Update Chat
+        await prisma.chat.upsert({
+            where: { instanceId_jid: { instanceId: id, jid: finalJid } },
+            update: {
+                lastMsg: '🎤 Áudio',
+                lastMsgTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                updatedAt: new Date(),
+            },
+            create: {
+                instanceId: id,
+                jid: finalJid,
+                lastMsg: '🎤 Áudio',
+                lastMsgTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            }
+        });
+
+        // Clean up temp file
+        fs.unlink(audioPath, (err) => {
+            if (err) console.error('Erro ao apagar áudio temporário:', err);
+        });
+
+        res.json(result);
+    } catch (err) {
+        console.error('ERRO AO ENVIAR ÁUDIO:', err);
+        res.status(500).json({ error: 'Erro ao enviar áudio: ' + err.message });
+    }
+});
+
 
 // ─── ROTAS — FLUXOS (FLOW BUILDER) ──────────────────────────────────────────
 

@@ -69,24 +69,6 @@ const Production = () => {
     { id: 'cancelled', title: 'Cancelados', color: '#ef4444', icon: <XCircle size={18} /> }
   ];
 
-  // Referência para o objeto de áudio para podermos parar o loop
-  const audioRef = useRef(null);
-
-  const playDing = () => {
-    if (!audioRef.current) {
-      audioRef.current = new Audio('/alarme.wav');
-      audioRef.current.loop = true;
-    }
-    audioRef.current.play().catch(e => console.warn('Erro ao tocar alarme:', e));
-  };
-
-  const stopDing = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-  };
-
   useEffect(() => {
     fetchOrders();
 
@@ -111,19 +93,10 @@ const Production = () => {
       clearInterval(interval);
       socket.off('new_order_pending');
       socket.off('order_confirmed');
-      stopDing();
     };
   }, [selectedDate, activeType]); // Dependências adicionadas para recarregar ao mudar de dia
 
-  // Monitora a lista de pedidos: toca o alarme se houver pendentes, para se não houver.
-  useEffect(() => {
-    const hasPending = orders.some(o => o.status === 'pending');
-    if (hasPending) {
-      playDing();
-    } else {
-      stopDing();
-    }
-  }, [orders]);
+
 
   const fetchOrders = async () => {
     try {
@@ -172,14 +145,20 @@ const Production = () => {
       color: '#fff',
       html: `
         <div style="text-align: left; font-family: 'Inter', sans-serif;">
-          <div style="margin-bottom: 15px;">
-            <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">PRODUTO</label>
-            <input id="edit-product" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.product || ''}">
+           <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 15px;">
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">PRODUTO</label>
+              <input id="edit-product" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.product || ''}">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">QTD / PESO</label>
+              <input id="edit-quantity" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.quantity || '1'}">
+            </div>
           </div>
           
           <div style="margin-bottom: 15px;">
             <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">VARIAÇÃO / SABOR</label>
-            <input id="edit-variation" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.variation || ''}">
+            <input id="edit-variation" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.variation || 'Opção Padrão'}">
           </div>
           
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
@@ -221,6 +200,7 @@ const Production = () => {
       preConfirm: () => {
         return {
           product: document.getElementById('edit-product').value,
+          quantity: document.getElementById('edit-quantity').value,
           variation: document.getElementById('edit-variation').value,
           scheduledDate: document.getElementById('edit-date').value,
           scheduledTime: document.getElementById('edit-time').value,
@@ -297,14 +277,15 @@ const Production = () => {
     // Botão de ação baseado no status
     let actionBtnHtml = '';
     if (order.status === 'waiting_payment') {
-      actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #fbbf24; color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">CONFIRMAR PAGAMENTO</button>`;
+      actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #fbbf24; color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">MOVER P/ PENDENTES (PAGO)</button>`;
     } else if (order.status === 'pending') {
       const nextLabel = order.type === 'delivery' ? 'INICIAR PRODUÇÃO' : 'ACEITAR PEDIDO';
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #8b5cf6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">${nextLabel}</button>`;
     } else if (order.status === 'accepted') {
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #3b82f6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">INICIAR PRODUÇÃO</button>`;
     } else if (order.status === 'production') {
-      actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #3b82f6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">PEDIDO PRONTO</button>`;
+      const nextLabel = order.type === 'delivery' ? 'MOVER PARA ENTREGA' : 'PEDIDO PRONTO';
+      actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #3b82f6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">${nextLabel}</button>`;
     } else if (order.status === 'ready') {
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #10b981; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">FINALIZAR</button>`;
     }
@@ -469,7 +450,9 @@ const Production = () => {
               ${order.type === 'delivery' ? `<button id="btn-maps-order" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer;">📍 ROTA</button>` : ''}
               <button id="btn-print-order" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); color: #a78bfa; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer;">🖨️ IMPRIMIR</button>
               <button id="btn-edit-order" style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer;">✏️ EDITAR</button>
-              <div style="background: ${order.status === 'waiting_payment' ? '#6b7280' : '#10b981'}; color: #fff; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase;">${order.status}</div>
+              <div style="background: ${columns.find(c => c.id === order.status)?.color || '#6b7280'}; color: #fff; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase;">
+                ${columns.find(c => c.id === order.status)?.title || order.status}
+              </div>
             </div>
           </div>
 
@@ -738,6 +721,8 @@ const Production = () => {
               <div
                 key={order.id}
                 onClick={() => openDetails(order)}
+                onDragStart={(e) => e.dataTransfer.setData("orderId", order.id)}
+                draggable
                 style={{
                   backgroundColor: 'var(--bg-secondary)', padding: '15px', borderRadius: '15px',
                   border: '1px solid var(--border-color)', marginBottom: '10px', cursor: 'pointer'
