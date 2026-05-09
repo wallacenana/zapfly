@@ -258,7 +258,7 @@ async function updateCalendarEvent(order) {
     const phone = order.clientJid ? order.clientJid.split('@')[0] : '';
 
     const waLink = `https://wa.me/${phone}`;
-    const systemLink = `http://localhost:5173/chat?jid=${order.clientJid}`;
+    const systemLink = `${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/chat?jid=${order.clientJid}`;
 
     const isCompleted = order.status === 'completed';
     const cleanProduct = (order.product || '').replace(/^✅\s*/, '');
@@ -901,9 +901,9 @@ router.post('/', async (req, res) => {
                 }
               ],
               back_urls: {
-                success: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/sucesso`,
-                failure: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/falha`,
-                pending: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/pendente`
+                success: `${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/sucesso`,
+                failure: `${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/falha`,
+                pending: `${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/pendente`
               },
               auto_return: 'approved',
               notification_url: `${process.env.PUBLIC_URL || 'http://localhost:3001'}/mercadopago/webhook`,
@@ -1105,9 +1105,9 @@ router.patch('/:id', async (req, res) => {
                 }
               ],
               back_urls: {
-                success: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/sucesso`,
-                failure: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/falha`,
-                pending: `${process.env.PUBLIC_URL || 'http://localhost:5173'}/pendente`
+                success: `${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/sucesso`,
+                failure: `${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/falha`,
+                pending: `${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/pendente`
               },
               auto_return: 'approved',
               notification_url: `${process.env.PUBLIC_URL || 'http://localhost:3001'}/mercadopago/webhook`,

@@ -90,7 +90,7 @@ app.get('/', (req, res) => {
                     window.opener.location.reload();
                     window.close();
                 } else {
-                    window.location.href = 'http://localhost:5173/settings';
+                    window.location.href = '${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/settings';
                 }
             </script>
         `);
@@ -1686,6 +1686,14 @@ app.delete('/instances/:id', async (req, res) => {
     stores.delete(id);
     const sessionDir = path.join(__dirname, 'sessions', id);
     if (fs.existsSync(sessionDir)) fs.rmSync(sessionDir, { recursive: true, force: true });
+    
+    // Deleta os filhos primeiro para evitar Foreign Key Constraint (Cascade)
+    try {
+        await prisma.message.deleteMany({ where: { instanceId: id } });
+        await prisma.chat.deleteMany({ where: { instanceId: id } });
+        await prisma.flowState.deleteMany({ where: { instanceId: id } });
+    } catch(e) { console.error('Erro ao deletar filhos da instância:', e.message) }
+
     await prisma.instance.delete({ where: { id } });
     res.json({ success: true });
 });
