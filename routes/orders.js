@@ -927,6 +927,26 @@ router.post('/', async (req, res) => {
     }
 
 
+    // 3. Notificação ao Cliente via WhatsApp (Lily avisando que recebeu o pedido)
+    let targetInstanceId = req.body.instanceId;
+    if (!targetInstanceId) {
+      const connected = await prisma.instance.findFirst({ where: { status: 'connected' } });
+      if (connected) targetInstanceId = connected.id;
+    }
+
+    if (finalClientJid && finalClientJid !== 'manual_LOJA' && targetInstanceId) {
+      const { getSocket } = require('../index'); 
+      const sock = getSocket(targetInstanceId);
+      if (sock) {
+        const idShort = order.id.slice(-4).toUpperCase();
+        const msg = `Oi ${order.clientName}! ✨\n\nRecebi seu pedido *#${idShort}* pelo nosso cardápio digital! 😍\n\n📝 *Resumo:* ${order.product}\n💰 *Valor:* R$ ${finalTotalValue.toFixed(2)}\n\n${paymentLink ? `🔗 *Link para Pagamento:* ${paymentLink}` : '✅ *Pagamento:* Combinado em Dinheiro'}\n\nAssim que o status do seu pedido mudar, eu te aviso por aqui! 🧁`;
+        
+        await sock.sendMessage(finalClientJid, { text: msg }).catch(err => {
+          console.error('[WhatsApp Notification Error] Falha ao enviar aviso de novo pedido:', err.message);
+        });
+      }
+    }
+
     res.json({ ...order, calendarEventId, paymentLink });
   } catch (e) {
     const fs = require('fs');

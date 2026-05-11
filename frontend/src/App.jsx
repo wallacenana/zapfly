@@ -10,6 +10,7 @@ import Settings from './pages/Settings';
 import Prompts from './pages/Prompts';
 import Estoque from './pages/Estoque';
 import Production from './pages/Production';
+import Menu from './pages/Menu';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
           <Route path="production" element={<Production />} />
           <Route path="settings" element={<Settings />} />
         </Route>
+        <Route path="/menu" element={<Menu />} />
       </Routes>
     </BrowserRouter>
   );
