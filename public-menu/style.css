@@ -1,6 +1,7 @@
+:root {
     --pink: #ff4d94;
-    --brown: #4a2c2a; /* Marrom escuro para encomendas */
-    --active-color: var(--pink); /* Dinâmico */
+    --brown: #4a2c2a;
+    --active-color: #ff4d94;
     --bg-white: #ffffff;
     --bg-gray: #f7f7f7;
     --text-black: #3e3e3e;
@@ -10,7 +11,7 @@
 }
 
 body.theme-order {
-    --active-color: var(--brown);
+    --active-color: #4a2c2a;
 }
 
 * {
