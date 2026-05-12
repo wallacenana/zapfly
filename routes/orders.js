@@ -1335,6 +1335,31 @@ router.delete('/products/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+// ─── CATEGORY MANAGEMENT ───
+router.get('/categories', async (req, res) => {
+  const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
+  res.json(categories);
+});
+
+router.post('/categories', async (req, res) => {
+  try {
+    const { name } = req.body;
+    const cat = await prisma.category.create({ data: { name } });
+    res.json(cat);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao criar categoria' });
+  }
+});
+
+router.delete('/categories/:id', async (req, res) => {
+  try {
+    await prisma.category.delete({ where: { id: req.params.id } });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao excluir categoria' });
+  }
+});
+
 router.get('/history/:phone', async (req, res) => {
     try {
         let phone = req.params.phone.replace(/\D/g, "");

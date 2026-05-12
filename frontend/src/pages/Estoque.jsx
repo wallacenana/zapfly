@@ -20,6 +20,10 @@ const Estoque = () => {
   const [showSeasonalModal, setShowSeasonalModal] = useState(false);
   const [seasonalForm, setSeasonalForm] = useState({ name: '', eventDate: '', preStartDays: 15, postEndDays: 2, description: '', items: [], maxOrders: 0, onlySeasonalOnEventDay: false, active: true });
   const [editingSeasonal, setEditingSeasonal] = useState(null);
+  
+  const [categories, setCategories] = useState([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -45,17 +49,18 @@ const Estoque = () => {
     } catch (err) { console.error(err); }
   }, []);
 
-  const fetchSeasonal = useCallback(async () => {
+  const fetchCategories = useCallback(async () => {
     try {
-      const res = await api.get('/orders/seasonal');
-      setSeasonalCatalogs(res.data);
+      const res = await api.get('/orders/categories');
+      setCategories(res.data);
     } catch (err) { console.error(err); }
   }, []);
 
   useEffect(() => { 
     fetchProducts(); 
     fetchSeasonal();
-  }, [fetchProducts, fetchSeasonal]);
+    fetchCategories();
+  }, [fetchProducts, fetchSeasonal, fetchCategories]);
 
   const handleExternalUpload = async (file) => {
     if (!file) return null;
@@ -183,6 +188,9 @@ const Estoque = () => {
             </button>
           ) : (
             <>
+              <button className="btn" onClick={() => setShowCategoryModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: '#fff', border: '1px solid var(--border-color)', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                <Layers size={20} /> Categorias
+              </button>
               <button className="btn" onClick={() => openAdd(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#a78bfa', border: '1px solid #8b5cf6', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}>
                 Novo Combo
               </button>
@@ -525,7 +533,12 @@ const Estoque = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px', marginBottom: '20px' }}>
                   <div>
                     <label style={labelStyle}>Categoria</label>
-                    <input {...inp} placeholder="Ex: Bolos, Doces, Copos..." value={form.category || ''} onChange={e => setForm(f => ({...f, category: e.target.value}))} />
+                    <select {...inp} value={form.category || ''} onChange={e => setForm(f => ({...f, category: e.target.value}))}>
+                      <option value="">Selecione uma categoria</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.name}>{cat.name}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
@@ -710,6 +723,57 @@ const Estoque = () => {
         .product-card { transition: all 0.2s; cursor: pointer; border: 1px solid var(--border-color); }
         .product-card:hover { transform: translateY(-5px); border-color: #3b82f6; }
       `}</style>
+      {showCategoryModal && createPortal(
+        <div style={modalOverlay}>
+          <div className="card" style={{ ...modalContent, width: '400px' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'25px' }}>
+                <h3 style={{ fontWeight: 800 }}>Gerenciar Categorias</h3>
+                <button onClick={() => setShowCategoryModal(false)} style={closeBtn}><X size={24} /></button>
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={labelStyle}>Nova Categoria</label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input {...inp} placeholder="Ex: Bolos de Festa" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
+                <button className="btn btn-primary" onClick={async () => {
+                  if (!newCategoryName.trim()) return;
+                  try {
+                    await api.post('/orders/categories', { name: newCategoryName });
+                    setNewCategoryName('');
+                    fetchCategories();
+                    Swal.fire({ title: 'Adicionado!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+                  } catch (err) { Swal.fire('Erro', 'Falha ao adicionar categoria.', 'error'); }
+                }}>Add</button>
+              </div>
+            </div>
+
+            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+              <label style={labelStyle}>Categorias Existentes</label>
+              {categories.length === 0 ? (
+                <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>Nenhuma categoria cadastrada.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {categories.map(cat => (
+                    <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px 15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <span style={{ fontSize: '14px', color: '#fff' }}>{cat.name}</span>
+                      <button className="btn-icon" style={{ color: '#ef4444' }} onClick={() => {
+                        Swal.fire({ title: 'Excluir?', text: `Deseja remover a categoria "${cat.name}"?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' }).then(r => {
+                          if (r.isConfirmed) api.delete(`/orders/categories/${cat.id}`).then(() => fetchCategories());
+                        });
+                      }}><Trash2 size={16} /></button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div style={{ marginTop: '25px' }}>
+              <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => setShowCategoryModal(false)}>Fechar</button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };
