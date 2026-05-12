@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import axios from 'axios';
 import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box, Copy, Pencil, Gift, Clock, AlertTriangle } from 'lucide-react';
 
 import Swal from 'sweetalert2';
@@ -55,6 +56,21 @@ const Estoque = () => {
     fetchProducts(); 
     fetchSeasonal();
   }, [fetchProducts, fetchSeasonal]);
+
+  const handleExternalUpload = async (file) => {
+    if (!file) return null;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('secret', 'BlinkMediaSecret123!');
+    try {
+      const res = await axios.post('https://files.blinkvertex.com/upload.php', formData);
+      return res.data.url;
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Erro', 'Falha no upload para o servidor externo', 'error');
+      return null;
+    }
+  };
 
   useEffect(() => {
     const handleEsc = (e) => {
@@ -448,14 +464,8 @@ const Estoque = () => {
                           hidden 
                           accept="image/*" 
                           onChange={async (e) => {
-                            const file = e.target.files[0];
-                            if (!file) return;
-                            const formData = new FormData();
-                            formData.append('image', file);
-                            try {
-                              const res = await api.post('/upload/product', formData);
-                              setForm(f => ({ ...f, image: `${API_URL}${res.data.url}` }));
-                            } catch (err) { Swal.fire('Erro', 'Falha no upload', 'error'); }
+                            const url = await handleExternalUpload(e.target.files[0]);
+                            if (url) setForm(f => ({ ...f, image: url }));
                           }} 
                         />
                       </label>
@@ -584,7 +594,20 @@ const Estoque = () => {
                                   </div>
                                   <div style={{ flex: 2 }}>
                                       <label style={microLabel}>URL Imagem (Opcional)</label>
-                                      <input {...inp} style={{ ...inp.style, padding: '6px 12px', fontSize: '12px' }} placeholder="https://..." value={v.image || ''} onChange={e => { const v2=[...form.variations]; v2[vIdx].image=e.target.value; setForm(f=>({...f, variations:v2})) }} />
+                                      <div style={{ display: 'flex', gap: '4px' }}>
+                                          <input {...inp} style={{ ...inp.style, padding: '6px 12px', fontSize: '12px' }} placeholder="https://..." value={v.image || ''} onChange={e => { const v2=[...form.variations]; v2[vIdx].image=e.target.value; setForm(f=>({...f, variations:v2})) }} />
+                                          <label style={{ ...inp.style, width: 'auto', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px' }}>
+                                              <Layers size={14} />
+                                              <input type="file" hidden accept="image/*" onChange={async (e) => {
+                                                  const url = await handleExternalUpload(e.target.files[0]);
+                                                  if(url) {
+                                                      const v2=[...form.variations];
+                                                      v2[vIdx].image=url;
+                                                      setForm(f=>({...f, variations:v2}));
+                                                  }
+                                              }} />
+                                          </label>
+                                      </div>
                                   </div>
                                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '15px' }}>
                                       <input type="checkbox" id={`hidden-${vIdx}`} checked={v.hidden || false} onChange={e => { const v2=[...form.variations]; v2[vIdx].hidden=e.target.checked; setForm(f=>({...f, variations:v2})) }} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
