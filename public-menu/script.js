@@ -189,9 +189,9 @@ function renderMenu() {
     const container = document.getElementById('menu-sections');
     const query = state.searchQuery.toLowerCase();
     const filtered = state.products.filter(p => {
-        // CORREÇÃO: Filtra itens inativos e a categoria Adicionais
+        // CORREÇÃO: Filtra itens inativos, categoria Adicionais e tipo addon
         if (p.active === false) return false;
-        if (p.category === 'Adicionais') return false;
+        if (p.category === 'Adicionais' || p.type === 'addon') return false;
 
         const matchesTab = (state.activeTab === 'delivery' && p.type === 'delivery') || (state.activeTab === 'order');
         const matchesSearch = p.name.toLowerCase().includes(query) || (p.description && p.description.toLowerCase().includes(query));
