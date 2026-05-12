@@ -637,7 +637,16 @@ router.post('/', async (req, res) => {
   let finalProductName = 'Produto Indefinido';
   try {
     const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
-    let { productId, product, variation, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, type, deliveryAddress, paymentMethod, deliveryFee, massa, recheio, topo, addons, carrinho_itens_extras } = req.body;
+    let { productId, product, variation, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, clientPhone, type, deliveryAddress, paymentMethod, deliveryFee, massa, recheio, topo, addons, carrinho_itens_extras } = req.body;
+
+    // Normaliza telefone para o formato JID do WhatsApp (Brasil 55 por padrão)
+    if (!clientJid && clientPhone) {
+        let cleanPhone = clientPhone.replace(/\D/g, "");
+        if (cleanPhone.length >= 10) {
+            if (!cleanPhone.startsWith("55")) cleanPhone = "55" + cleanPhone;
+            clientJid = `${cleanPhone}@s.whatsapp.net`;
+        }
+    }
 
     // --- SMART DUPLICATE PREVENTION ---
     // Se o cliente já tem um pedido 'waiting_payment' para o MESMO produto criado nos últimos 5 minutos,

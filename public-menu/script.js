@@ -74,28 +74,39 @@ window.initMapsAutocomplete = () => {
         animation: google.maps.Animation.DROP
     });
 
-    // Ao selecionar no Autocomplete
+    // Se já tiver endereço no localStorage, inicializa o mapa nele
+    if (state.userInfo.address) {
+        geocodeAddress(state.userInfo.address);
+    }
+
     autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
         if (!place.geometry) return;
-        
         updateLocation(place.geometry.location, place.formatted_address);
     });
 
-    // Ao arrastar o Pin
     state.mapMarker.addListener('dragend', () => {
         const pos = state.mapMarker.getPosition();
         reverseGeocode(pos);
     });
 
-    // Ao clicar no Mapa
     state.googleMap.addListener('click', (e) => {
         updateLocation(e.latLng);
         reverseGeocode(e.latLng);
     });
 };
 
+function geocodeAddress(address) {
+    if (!state.geocoder) return;
+    state.geocoder.geocode({ address: address }, (results, status) => {
+        if (status === 'OK' && results[0]) {
+            updateLocation(results[0].geometry.location, results[0].formatted_address);
+        }
+    });
+}
+
 function updateLocation(location, address = null) {
+    if (!state.googleMap) return;
     state.googleMap.panTo(location);
     state.mapMarker.setPosition(location);
     if (address) {
@@ -136,7 +147,6 @@ async function calculateDeliveryFee(address) {
     } catch (err) { console.error('Erro ao calcular frete:', err); }
 }
 
-// Mask de Telefone
 function maskPhone(v) {
     v = v.replace(/\D/g, "");
     v = v.replace(/^(\d{2})(\d)/g, "($1) $2");
@@ -150,15 +160,12 @@ async function fetchProducts() {
         state.products = await response.json();
         state.loading = false;
         renderMenu();
-    } catch (err) {
-        console.error('Erro ao buscar produtos:', err);
-    }
+    } catch (err) { console.error('Erro ao buscar produtos:', err); }
 }
 
 function renderMenu() {
     const container = document.getElementById('menu-sections');
     const query = state.searchQuery.toLowerCase();
-    
     const filtered = state.products.filter(p => {
         if (p.active === false) return false;
         const matchesTab = (state.activeTab === 'delivery' && p.type === 'delivery') || (state.activeTab === 'order');
@@ -255,7 +262,12 @@ function initEventListeners() {
     document.getElementById('next-step-btn').addEventListener('click', handleNextStep);
     document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
 
-    // Phone Mask
+    // Restaurar inputs do localStorage
+    document.getElementById('user-name').value = state.userInfo.name || '';
+    document.getElementById('user-phone').value = state.userInfo.phone || '';
+    document.getElementById('user-address').value = state.userInfo.address || '';
+
+    // Mask e Persistence
     const phoneInput = document.getElementById('user-phone');
     phoneInput.addEventListener('input', (e) => {
         e.target.value = maskPhone(e.target.value);
@@ -266,7 +278,6 @@ function initEventListeners() {
     ['user-name', 'user-address'].forEach(id => {
         const el = document.getElementById(id);
         if(el) {
-            el.value = state.userInfo[id.split('-')[1]] || '';
             el.addEventListener('input', (e) => {
                 state.userInfo[id.split('-')[1]] = e.target.value;
                 localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
@@ -303,13 +314,17 @@ function renderStep2() {
     document.getElementById('delivery-step-content').classList.toggle('hidden', !isDelivery);
     document.getElementById('order-step-content').classList.toggle('hidden', isDelivery);
     if (isDelivery && state.googleMap) {
-        setTimeout(() => google.maps.event.trigger(state.googleMap, 'resize'), 100);
+        setTimeout(() => {
+            google.maps.event.trigger(state.googleMap, 'resize');
+            // Recentraliza no marker se ele existir
+            if (state.mapMarker) state.googleMap.panTo(state.mapMarker.getPosition());
+        }, 100);
     }
 }
 
 function handleNextStep() {
     if (state.currentStep === 1) {
-        if (!state.userInfo.name || !state.userInfo.phone) return alert('Preencha seu nome e telefone.');
+        if (!state.userInfo.name || !state.userInfo.phone || state.userInfo.phone.length < 14) return alert('Preencha seu nome e um WhatsApp válido.');
         goToStep(2);
     } else if (state.currentStep === 2) {
         if (state.activeTab === 'delivery' && !state.userInfo.address) return alert('Selecione seu endereço.');
@@ -362,7 +377,7 @@ function updateUI() {
 async function handlePlaceOrder() {
     const cart = getActiveCart();
     const btn = document.getElementById('place-order-btn');
-    btn.disabled = true; btn.innerHTML = 'Processando...';
+    btn.disabled = true; btn.innerHTML = 'Processando Pagamento...';
 
     const payload = {
         clientName: state.userInfo.name,
@@ -384,14 +399,10 @@ async function handlePlaceOrder() {
             body: JSON.stringify(payload)
         });
         const data = await response.json();
-        if (data.id) {
-            if (data.paymentLink) location.href = data.paymentLink; 
-            else showSuccessScreen(data);
+        if (data.paymentLink) {
+            location.href = data.paymentLink; // Redireciona DIRETO para o Mercado Pago
+        } else if (data.id) {
+            alert('Pedido registrado, mas houve um problema ao gerar o link de pagamento. Por favor, entre em contato.');
         } else throw new Error(data.error);
     } catch (err) { alert('Erro: ' + err.message); btn.disabled = false; btn.innerHTML = 'Fazer pedido'; }
-}
-
-function showSuccessScreen(data) {
-    document.getElementById('checkout-modal').classList.add('hidden');
-    document.getElementById('success-screen').classList.remove('hidden');
 }
