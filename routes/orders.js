@@ -1341,11 +1341,7 @@ router.get('/history/:phone', async (req, res) => {
         
         const orders = await prisma.order.findMany({
             where: {
-                OR: [
-                    { clientPhone: req.params.phone },
-                    { clientPhone: phone },
-                    { clientJid: jid }
-                ]
+                clientJid: jid
             },
             orderBy: { createdAt: 'desc' },
             take: 10
