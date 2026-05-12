@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linda Cake - Cardápio Digital</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-overlay"></div>
+            <div class="header-content">
+                <div class="logo-box">
+                    <i data-lucide="cake"></i>
+                </div>
+                <h1>LINDA CAKE</h1>
+                <p>Confeitaria Artesanal</p>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <nav class="tabs-nav">
+            <div class="tabs-container">
+                <button class="tab-btn active" data-tab="delivery">
+                    <i data-lucide="clock"></i> Pronta Entrega
+                </button>
+                <button class="tab-btn" data-tab="order">
+                    <i data-lucide="calendar"></i> Encomendar
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="container">
+            <div id="product-list" class="product-grid">
+                <!-- Products will be injected here -->
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Buscando doçuras...</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Cart Bar -->
+        <div id="cart-bar" class="cart-bar hidden">
+            <button id="open-checkout">
+                <div class="cart-info">
+                    <span id="cart-count">0</span>
+                    <strong>VER CARRINHO</strong>
+                </div>
+                <div class="cart-total">
+                    R$ <span id="cart-total-value">0,00</span>
+                    <i data-lucide="chevron-right"></i>
+                </div>
+            </button>
+        </div>
+
+        <!-- Checkout Modal -->
+        <div id="checkout-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Seu Pedido</h2>
+                    <button id="close-checkout" class="close-btn">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+                
+                <div class="modal-body">
+                    <div id="cart-items" class="cart-items-list"></div>
+
+                    <div class="form-section">
+                        <h3><i data-lucide="user"></i> Dados de Contato</h3>
+                        <div class="input-group">
+                            <i data-lucide="user"></i>
+                            <input type="text" id="client-name" placeholder="Seu Nome Completo">
+                        </div>
+                        <div class="input-group">
+                            <i data-lucide="phone"></i>
+                            <input type="text" id="client-phone" placeholder="WhatsApp (com DDD)">
+                        </div>
+                    </div>
+
+                    <div id="delivery-section" class="form-section">
+                        <h3><i data-lucide="map-pin"></i> Endereço para Entrega</h3>
+                        <div class="input-group">
+                            <i data-lucide="map-pin" style="top: 20px; transform: none;"></i>
+                            <textarea id="delivery-address" placeholder="Rua, número, bairro..."></textarea>
+                        </div>
+                    </div>
+
+                    <div id="order-section" class="form-section hidden">
+                        <h3><i data-lucide="clock"></i> Retirada</h3>
+                        <div class="grid-2">
+                            <input type="date" id="scheduled-date">
+                            <input type="time" id="scheduled-time">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <div class="total-row">
+                        <span>Total do Pedido</span>
+                        <strong id="final-total">R$ 0,00</strong>
+                    </div>
+                    <button id="confirm-order" class="confirm-btn">
+                        CONFIRMAR E PAGAR <i data-lucide="arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Modal -->
+        <div id="success-modal" class="modal hidden">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content success-content">
+                <div class="success-icon">
+                    <i data-lucide="check-circle"></i>
+                </div>
+                <h2>Pedido Realizado!</h2>
+                <p>A Lily já recebeu seu pedido e te chamou no WhatsApp. Verifique suas mensagens!</p>
+                <a id="payment-link" href="#" target="_blank" class="payment-btn">PAGAR AGORA</a>
+                <button id="new-order" class="secondary-btn">Fazer outro pedido</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

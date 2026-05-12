@@ -2119,5 +2119,5 @@ server.listen(PORT, async () => {
     // Inicia os cron jobs (GCal sync + relatório)
     await setupCronJobs((instanceId) => sessions.get(instanceId));
 });
-m o d u l e . e x p o r t s   =   {   g e t S o c k e t :   ( i d )   = >   s e s s i o n s . g e t ( i d )   } ;  
- 
+
+module.exports = { getSocket: (id) => sessions.get(id) };
