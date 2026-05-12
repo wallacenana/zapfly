@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
-import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box, Copy, Pencil, Gift, Clock, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box, Copy, Pencil, Gift, Clock, AlertTriangle, Upload } from 'lucide-react';
 
 import Swal from 'sweetalert2';
 
@@ -448,42 +448,54 @@ const Estoque = () => {
                     <textarea {...inp} style={{ ...inp.style, minHeight: '60px', resize: 'vertical' }} placeholder="Detalhes que o cliente deve saber." value={form.description || ''} onChange={e => setForm(f => ({...f, description: e.target.value}))} />
                 </div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                <div style={{ marginBottom: '20px' }}>
+                    <label style={labelStyle}>Imagem do Produto</label>
+                    <div style={{ 
+                        border: '2px dashed var(--border-color)', 
+                        borderRadius: '12px', 
+                        padding: '20px', 
+                        textAlign: 'center',
+                        backgroundColor: 'rgba(255,255,255,0.02)',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                    }} onClick={() => document.getElementById('main-image-upload').click()}>
+                        {form.image ? (
+                            <div style={{ position: 'relative', display: 'inline-block' }}>
+                                <img src={form.image} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '12px' }} />
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); setForm(f => ({ ...f, image: '' })); }} 
+                                    style={{ position: 'absolute', top: '-10px', right: '-10px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        ) : (
+                            <div style={{ color: 'var(--text-secondary)' }}>
+                                <Upload size={32} style={{ marginBottom: '10px', color: 'var(--active-color)' }} />
+                                <p style={{ fontSize: '14px', fontWeight: 600 }}>Clique para fazer upload da imagem</p>
+                                <p style={{ fontSize: '12px', opacity: 0.6 }}>PNG, JPG ou WebP</p>
+                            </div>
+                        )}
+                        <input 
+                            id="main-image-upload"
+                            type="file" 
+                            hidden 
+                            accept="image/*" 
+                            onChange={async (e) => {
+                                const url = await handleExternalUpload(e.target.files[0]);
+                                if (url) setForm(f => ({ ...f, image: url }));
+                            }} 
+                        />
+                    </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px', marginBottom: '20px' }}>
                   <div>
                     <label style={labelStyle}>Categoria</label>
                     <input {...inp} placeholder="Ex: Bolos, Doces, Copos..." value={form.category || ''} onChange={e => setForm(f => ({...f, category: e.target.value}))} />
                   </div>
-                  <div>
-                    <label style={labelStyle}>URL da Imagem (Opcional)</label>
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input {...inp} placeholder="https://..." value={form.image || ''} onChange={e => setForm(f => ({...f, image: e.target.value}))} />
-                      <label style={{ ...inp.style, width: 'auto', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
-                        <Layers size={18} />
-                        <input 
-                          type="file" 
-                          hidden 
-                          accept="image/*" 
-                          onChange={async (e) => {
-                            const url = await handleExternalUpload(e.target.files[0]);
-                            if (url) setForm(f => ({ ...f, image: url }));
-                          }} 
-                        />
-                      </label>
-                    </div>
-                  </div>
                 </div>
 
-                {form.image && (
-                  <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-                    <img src={form.image} alt="Preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '12px', border: '1px solid var(--border-color)' }} />
-                    <button 
-                      onClick={() => setForm(f => ({ ...f, image: '' }))} 
-                      style={{ display: 'block', margin: '8px auto', fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}
-                    >
-                      Remover imagem
-                    </button>
-                  </div>
-                )}
                 
                 <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <input 
@@ -588,27 +600,6 @@ const Estoque = () => {
                               </div>
 
                               <div style={{ marginBottom: '15px', display: 'flex', gap: '15px', alignItems: 'center' }}>
-                                  <div style={{ flex: 2 }}>
-                                      <label style={microLabel}>Descrição da Categoria (Opcional)</label>
-                                      <input {...inp} style={{ ...inp.style, padding: '6px 12px', fontSize: '12px' }} placeholder="Ex: Serve 2 pessoas, embalagem especial..." value={v.description || ''} onChange={e => { const v2=[...form.variations]; v2[vIdx].description=e.target.value; setForm(f=>({...f, variations:v2})) }} />
-                                  </div>
-                                  <div style={{ flex: 2 }}>
-                                      <label style={microLabel}>URL Imagem (Opcional)</label>
-                                      <div style={{ display: 'flex', gap: '4px' }}>
-                                          <input {...inp} style={{ ...inp.style, padding: '6px 12px', fontSize: '12px' }} placeholder="https://..." value={v.image || ''} onChange={e => { const v2=[...form.variations]; v2[vIdx].image=e.target.value; setForm(f=>({...f, variations:v2})) }} />
-                                          <label style={{ ...inp.style, width: 'auto', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '6px' }}>
-                                              <Layers size={14} />
-                                              <input type="file" hidden accept="image/*" onChange={async (e) => {
-                                                  const url = await handleExternalUpload(e.target.files[0]);
-                                                  if(url) {
-                                                      const v2=[...form.variations];
-                                                      v2[vIdx].image=url;
-                                                      setForm(f=>({...f, variations:v2}));
-                                                  }
-                                              }} />
-                                          </label>
-                                      </div>
-                                  </div>
                                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '15px' }}>
                                       <input type="checkbox" id={`hidden-${vIdx}`} checked={v.hidden || false} onChange={e => { const v2=[...form.variations]; v2[vIdx].hidden=e.target.checked; setForm(f=>({...f, variations:v2})) }} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
                                       <label htmlFor={`hidden-${vIdx}`} style={{ cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: v.hidden ? '#fbbf24' : 'var(--text-muted)' }}>{v.hidden ? '🙈 INVISÍVEL' : '👁️ VISÍVEL'}</label>
