@@ -69,19 +69,19 @@ const Estoque = () => {
     const [draggedItem] = newFiltered.splice(draggedIndex, 1);
     newFiltered.splice(targetIndex, 0, draggedItem);
 
-    const updated = newFiltered.map((p, idx) => ({ ...p, order: idx + 1 }));
+    const updated = newFiltered.map((p, idx) => ({ ...p, displayOrder: idx + 1 }));
     
     // Update local state for immediate feedback
     const newProducts = products.map(p => {
       const match = updated.find(u => u.id === p.id);
-      return match ? { ...p, order: match.order } : p;
-    }).sort((a, b) => (a.order || 0) - (b.order || 0));
+      return match ? { ...p, displayOrder: match.displayOrder } : p;
+    }).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     
     setProducts(newProducts);
 
     try {
       await Promise.all(updated.map(p => 
-        api.patch(`/orders/products/${p.id}`, { order: p.order })
+        api.patch(`/orders/products/${p.id}`, { order: p.displayOrder })
       ));
     } catch (err) { console.error(err); }
   };

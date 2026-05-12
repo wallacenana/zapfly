@@ -251,7 +251,7 @@ function renderMenu() {
     });
 
     // Separar destaques (apenas se não houver busca ativa)
-    const featured = query ? [] : filtered.filter(p => p.featured).sort((a, b) => (a.order || 0) - (b.order || 0));
+    const featured = query ? [] : filtered.filter(p => p.featured).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     const nonFeatured = query ? filtered : filtered.filter(p => !p.featured);
 
     const grouped = nonFeatured.reduce((acc, p) => {
@@ -261,9 +261,9 @@ function renderMenu() {
         return acc;
     }, {});
 
-    // Ordenar itens dentro de cada categoria pelo campo 'order'
+    // Ordenar itens dentro de cada categoria pelo campo 'displayOrder'
     Object.keys(grouped).forEach(cat => {
-        grouped[cat].sort((a, b) => (a.order || 0) - (b.order || 0));
+        grouped[cat].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     });
 
     // Ordenar grupos com base na ordem das categorias

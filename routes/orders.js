@@ -1278,14 +1278,19 @@ router.delete('/stock/:id', async (req, res) => {
 // ─── ROTAS — PRODUTOS / RECEITAS ─────────────────────────────────────────────
 
 router.get('/products', async (req, res) => {
-  const products = await prisma.product.findMany({ 
-    include: { ingredients: { include: { stockItem: true } } },
-    orderBy: [
-      { order: 'asc' },
-      { name: 'asc' }
-    ]
-  });
-  res.json(products);
+  try {
+    const products = await prisma.product.findMany({ 
+      include: { ingredients: { include: { stockItem: true } } },
+      orderBy: [
+        { displayOrder: 'asc' },
+        { name: 'asc' }
+      ]
+    });
+    res.json(products);
+  } catch (err) {
+    console.error('Erro ao buscar produtos:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.post('/products', async (req, res) => {
@@ -1327,7 +1332,7 @@ router.patch('/products/:id', async (req, res) => {
         category: req.body.category,
         image: req.body.image,
         featured: req.body.featured,
-        order: req.body.order !== undefined ? parseInt(req.body.order) : undefined
+        displayOrder: req.body.order !== undefined ? parseInt(req.body.order) : undefined
       }
     });
     res.json(product);
