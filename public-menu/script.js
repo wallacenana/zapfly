@@ -358,16 +358,38 @@ function renderStep1() {
     list.innerHTML = cart.map(item => `
         <div class="checkout-item">
             <div class="item-name-qty">
-                <span class="qty-text">${item.quantity}x</span>
                 <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
             </div>
-            <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <div class="cart-qty-control">
+                    <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
+                        ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
+                    </button>
+                    <span class="qty-val-mini">${item.quantity}</span>
+                    <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
+                        <i data-lucide="plus"></i>
+                    </button>
+                </div>
                 <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
-                <button class="remove-btn" onclick="removeFromCart('${item.itemKey}')"><i data-lucide="trash-2"></i></button>
             </div>
         </div>
     `).join('');
     lucide.createIcons();
+}
+
+function updateCartQty(itemKey, delta) {
+    let cart = getActiveCart();
+    const item = cart.find(i => i.itemKey === itemKey);
+    if (!item) return;
+
+    item.quantity += delta;
+    if (item.quantity <= 0) {
+        cart = cart.filter(i => i.itemKey !== itemKey);
+    }
+    
+    setActiveCart(cart);
+    renderStep1();
+    updateUI();
 }
 
 function removeFromCart(itemKey) {
@@ -420,7 +442,7 @@ function addToCart() {
     const item = state.currentItem;
     if (state.activeTab === 'delivery' && !state.isOpen) return alert('Estamos fechados para pronta entrega no momento. Por favor, utilize a aba de Encomendas para agendar seu pedido.');
     const variation = state.currentVariation;
-    const variations = JSON.parse(item.variations || '[]');
+    const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
     if (variations.length > 0 && !variation) return alert('Por favor, selecione uma opção.');
     const itemKey = variation ? `${item.id}-${variation.name}` : item.id;
     let cart = getActiveCart();
