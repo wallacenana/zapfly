@@ -1298,7 +1298,8 @@ router.post('/products', async (req, res) => {
         comboItems: req.body.comboItems || '[]',
         trackStock: req.body.trackStock ?? false,
         category: req.body.category || 'Geral',
-        image: req.body.image || null
+        image: req.body.image || null,
+        featured: req.body.featured ?? false
       }
     });
     res.json(product);
@@ -1318,7 +1319,8 @@ router.patch('/products/:id', async (req, res) => {
         comboItems: req.body.comboItems,
         trackStock: req.body.trackStock,
         category: req.body.category,
-        image: req.body.image
+        image: req.body.image,
+        featured: req.body.featured
       }
     });
     res.json(product);

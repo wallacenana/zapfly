@@ -229,34 +229,103 @@ function renderMenu() {
     renderPreviousOrders();
     const container = document.getElementById('menu-sections');
     const query = state.searchQuery.toLowerCase();
+    
     const filtered = state.products.filter(p => {
-        // CORREÇÃO: Filtra itens inativos, categoria Adicionais e tipo addon
         if (p.active === false) return false;
         if (p.category === 'Adicionais' || p.type === 'addon') return false;
-
         const matchesTab = (state.activeTab === 'delivery' && p.type === 'delivery') || (state.activeTab === 'order');
         const matchesSearch = p.name.toLowerCase().includes(query) || (p.description && p.description.toLowerCase().includes(query));
         return matchesTab && matchesSearch;
     });
 
-    if (state.activeTab === 'order') {
-        filtered.sort((a, b) => (a.type === 'encomenda' ? -1 : 1) - (b.type === 'encomenda' ? -1 : 1));
-    }
+    // Separar destaques (apenas se não houver busca ativa)
+    const featured = query ? [] : filtered.filter(p => p.featured);
+    const nonFeatured = query ? filtered : filtered.filter(p => !p.featured);
 
-    const grouped = filtered.reduce((acc, p) => {
-        const cat = p.category && p.category !== 'Doces' && p.category !== 'Geral' ? p.category : 'Outros';
+    const grouped = nonFeatured.reduce((acc, p) => {
+        const cat = p.category || 'Geral';
         if (!acc[cat]) acc[cat] = [];
         acc[cat].push(p);
         return acc;
     }, {});
 
-    container.innerHTML = Object.entries(grouped).map(([category, items]) => `
-        <section class="menu-section">
-            ${category !== 'Outros' ? `<h2>${category}</h2>` : ''}
+    let html = '';
+
+    // Renderizar Destaques
+    if (featured.length > 0) {
+        html += `
+            <section class="menu-section featured-section">
+                <div class="section-header">
+                    <i data-lucide="star" style="color: #fbbf24; fill: #fbbf24;"></i>
+                    <h2>Destaques</h2>
+                </div>
+                <div class="featured-list">
+                    ${featured.map(item => renderFeaturedCard(item)).join('')}
+                </div>
+            </section>
+        `;
+    }
+
+    // Renderizar Categorias
+    html += Object.entries(grouped).map(([category, items]) => `
+        <section class="menu-section" id="cat-${category.replace(/\s+/g, '-')}">
+            <h2>${category}</h2>
             <div class="product-list">${items.map(item => renderProductCard(item)).join('')}</div>
         </section>
     `).join('');
+
+    container.innerHTML = html;
+    renderCategoryNav(Object.keys(grouped));
     lucide.createIcons();
+}
+
+function renderFeaturedCard(product) {
+    const variations = JSON.parse(product.variations || '[]').filter(v => !v.hidden);
+    const priceText = variations.length > 0 ? `A partir de R$ ${Math.min(...variations.map(v => v.price)).toFixed(2)}` : `R$ ${parseFloat(product.price).toFixed(2)}`;
+    const images = parseImages(product.image);
+    
+    return `
+        <div class="featured-card" onclick="openItemDetail('${product.id}')">
+            <div class="featured-img-wrapper">
+                ${images.length > 0 ? `<img src="${images[0]}">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
+            </div>
+            <div class="featured-info">
+                <h3>${product.name}</h3>
+                <div class="product-price">${priceText}</div>
+            </div>
+        </div>
+    `;
+}
+
+function renderCategoryNav(categories) {
+    const navContainer = document.getElementById('category-nav-scroll');
+    if (!navContainer) return;
+    
+    if (categories.length <= 1) {
+        navContainer.parentElement.classList.add('hidden');
+        return;
+    }
+    
+    navContainer.parentElement.classList.remove('hidden');
+    navContainer.innerHTML = categories.map(cat => `
+        <button class="nav-cat-btn" onclick="scrollToCategory('cat-${cat.replace(/\s+/g, '-')}')">${cat}</button>
+    `).join('');
+}
+
+function scrollToCategory(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        const offset = 140; // Ajuste conforme o header
+        const bodyRect = document.body.getBoundingClientRect().top;
+        const elementRect = el.getBoundingClientRect().top;
+        const elementPosition = elementRect - bodyRect;
+        const offsetPosition = elementPosition - offset;
+
+        window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+        });
+    }
 }
 
 function renderProductCard(product) {
