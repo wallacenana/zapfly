@@ -449,7 +449,7 @@ const Estoque = () => {
                 </div>
                 
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={labelStyle}>Imagem do Produto</label>
+                    <label style={labelStyle}>Imagens do Produto (Múltiplas fotos)</label>
                     <div style={{ 
                         border: '2px dashed var(--border-color)', 
                         borderRadius: '12px', 
@@ -459,33 +459,66 @@ const Estoque = () => {
                         cursor: 'pointer',
                         transition: 'all 0.2s'
                     }} onClick={() => document.getElementById('main-image-upload').click()}>
-                        {form.image ? (
-                            <div style={{ position: 'relative', display: 'inline-block' }}>
-                                <img src={form.image} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '12px' }} />
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); setForm(f => ({ ...f, image: '' })); }} 
-                                    style={{ position: 'absolute', top: '-10px', right: '-10px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                >
-                                    <X size={14} />
-                                </button>
-                            </div>
-                        ) : (
-                            <div style={{ color: 'var(--text-secondary)' }}>
-                                <Upload size={32} style={{ marginBottom: '10px', color: 'var(--active-color)' }} />
-                                <p style={{ fontSize: '14px', fontWeight: 600 }}>Clique para fazer upload da imagem</p>
-                                <p style={{ fontSize: '12px', opacity: 0.6 }}>PNG, JPG ou WebP</p>
-                            </div>
-                        )}
+                        <div style={{ color: 'var(--text-secondary)' }}>
+                            <Upload size={32} style={{ marginBottom: '10px', color: 'var(--active-color)' }} />
+                            <p style={{ fontSize: '14px', fontWeight: 600 }}>Clique para adicionar fotos</p>
+                            <p style={{ fontSize: '12px', opacity: 0.6 }}>Você pode selecionar várias imagens de uma vez</p>
+                        </div>
                         <input 
                             id="main-image-upload"
                             type="file" 
                             hidden 
+                            multiple
                             accept="image/*" 
                             onChange={async (e) => {
-                                const url = await handleExternalUpload(e.target.files[0]);
-                                if (url) setForm(f => ({ ...f, image: url }));
+                                const files = Array.from(e.target.files);
+                                if (!files.length) return;
+                                
+                                const newImages = [];
+                                for (const file of files) {
+                                    const url = await handleExternalUpload(file);
+                                    if (url) newImages.push(url);
+                                }
+                                
+                                setForm(f => {
+                                    let current = [];
+                                    try {
+                                        current = JSON.parse(f.image || '[]');
+                                        if (!Array.isArray(current)) current = f.image ? [f.image] : [];
+                                    } catch(e) {
+                                        current = f.image ? [f.image] : [];
+                                    }
+                                    return { ...f, image: JSON.stringify([...current, ...newImages]) };
+                                });
                             }} 
                         />
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '10px', marginTop: '15px' }}>
+                        {(() => {
+                            let imgs = [];
+                            try {
+                                imgs = JSON.parse(form.image || '[]');
+                                if (!Array.isArray(imgs)) imgs = form.image ? [form.image] : [];
+                            } catch(e) {
+                                imgs = form.image ? [form.image] : [];
+                            }
+                            return imgs.map((img, idx) => (
+                                <div key={idx} style={{ position: 'relative', width: '80px', height: '80px' }}>
+                                    <img src={img} alt={`Preview ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)' }} />
+                                    <button 
+                                        onClick={(e) => { 
+                                            e.stopPropagation(); 
+                                            const filtered = imgs.filter((_, i) => i !== idx);
+                                            setForm(f => ({ ...f, image: JSON.stringify(filtered) }));
+                                        }} 
+                                        style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                                    >
+                                        <X size={10} />
+                                    </button>
+                                </div>
+                            ));
+                        })()}
                     </div>
                 </div>
 

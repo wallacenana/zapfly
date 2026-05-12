@@ -20,8 +20,19 @@ let state = {
     mapMarker: null,
     geocoder: null,
     isOpen: false,
-    availableSlots: []
+    availableSlots: [],
+    currentCarouselIdx: 0
 };
+
+function parseImages(imgField) {
+    if (!imgField) return [];
+    try {
+        const parsed = JSON.parse(imgField);
+        return Array.isArray(parsed) ? parsed : [imgField];
+    } catch(e) {
+        return [imgField];
+    }
+}
 
 const getActiveCart = () => state.activeTab === 'delivery' ? state.deliveryCart : state.orderCart;
 const setActiveCart = (newCart) => {
@@ -228,7 +239,7 @@ function renderProductCard(product) {
                 <p>${product.description || ''}</p>
                 <div class="product-price">${priceText}</div>
             </div>
-            ${product.image ? `<img src="${product.image}" class="product-img">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
+            ${parseImages(product.image).length > 0 ? `<img src="${parseImages(product.image)[0]}" class="product-img">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
         </div>
     `;
 }
@@ -238,32 +249,64 @@ function openItemDetail(productId) {
     state.currentItem = item;
     state.currentQty = 1;
     state.currentVariation = null;
+    state.currentCarouselIdx = 0;
     const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
+    const images = parseImages(item.image);
     const body = document.getElementById('item-detail-body');
     body.innerHTML = `
-        ${(item.image || variations.some(v => v.image)) ? `<img src="${item.image || variations.find(v => v.image)?.image}" class="item-hero-img">` : ''}
+        <button class="chevron-close-btn" onclick="closeWithAnimation('item-modal')"><i data-lucide="chevron-down"></i></button>
+        ${images.length > 0 ? `
+            <div class="carousel-container">
+                <div class="carousel-track" style="transform: translateX(0%)">
+                    ${images.map(img => `<div class="carousel-slide"><img src="${img}"></div>`).join('')}
+                </div>
+                ${images.length > 1 ? `
+                    <button class="carousel-btn carousel-prev" onclick="moveCarousel(-1)"><i data-lucide="chevron-left"></i></button>
+                    <button class="carousel-btn carousel-next" onclick="moveCarousel(1)"><i data-lucide="chevron-right"></i></button>
+                    <div class="carousel-dots">
+                        ${images.map((_, i) => `<div class="carousel-dot ${i === 0 ? 'active' : ''}"></div>`).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        ` : ''}
         <div class="item-main-info">
             <h2>${item.name}</h2>
             <p>${item.description || ''}</p>
             ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
         </div>
-        ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price}, '${v.image || ''}')"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
+        ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
     `;
     updateDetailFooter();
-    document.getElementById('item-modal').classList.remove('hidden');
+    const modal = document.getElementById('item-modal');
+    modal.classList.remove('hidden', 'closing');
     lucide.createIcons();
 }
 
-function selectVariation(name, price, varImage) {
+function moveCarousel(delta) {
+    const images = parseImages(state.currentItem.image);
+    if (images.length <= 1) return;
+    
+    state.currentCarouselIdx = (state.currentCarouselIdx + delta + images.length) % images.length;
+    
+    const track = document.querySelector('.carousel-track');
+    const dots = document.querySelectorAll('.carousel-dot');
+    
+    track.style.transform = `translateX(-${state.currentCarouselIdx * 100}%)`;
+    dots.forEach((dot, i) => dot.classList.toggle('active', i === state.currentCarouselIdx));
+}
+
+function closeWithAnimation(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.classList.add('closing');
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('closing');
+    }, 400);
+}
+
+function selectVariation(name, price) {
     state.currentVariation = { name, price };
     document.querySelectorAll('.var-option').forEach(el => el.classList.toggle('selected', el.querySelector('.var-label').innerText === name));
-    
-    const heroImg = document.querySelector('.item-hero-img');
-    if (heroImg) {
-        if (varImage) heroImg.src = varImage;
-        else if (state.currentItem.image) heroImg.src = state.currentItem.image;
-    }
-
     updateDetailFooter();
 }
 
@@ -289,8 +332,8 @@ function initEventListeners() {
     document.getElementById('qty-minus').addEventListener('click', () => { if(state.currentQty > 1) { state.currentQty--; updateDetailFooter(); } });
     
     const closeModal = () => {
-        document.getElementById('item-modal').classList.add('hidden');
-        document.getElementById('checkout-modal').classList.add('hidden');
+        if (!document.getElementById('item-modal').classList.contains('hidden')) closeWithAnimation('item-modal');
+        if (!document.getElementById('checkout-modal').classList.contains('hidden')) closeWithAnimation('checkout-modal');
     };
     
     document.querySelector('.close-modal-btn').addEventListener('click', closeModal);
@@ -298,7 +341,6 @@ function initEventListeners() {
 
     document.getElementById('add-to-cart-btn').addEventListener('click', addToCart);
     document.getElementById('view-cart-btn').addEventListener('click', () => goToStep(1));
-    document.getElementById('checkout-back-btn').addEventListener('click', () => { if(state.currentStep > 1) goToStep(state.currentStep - 1); else document.getElementById('checkout-modal').classList.add('hidden'); });
     document.getElementById('next-step-btn').addEventListener('click', handleNextStep);
     document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
 
@@ -341,7 +383,8 @@ function initEventListeners() {
 function goToStep(step) {
     state.currentStep = step;
     document.querySelectorAll('.checkout-step').forEach((el, idx) => el.classList.toggle('hidden', idx + 1 !== step));
-    document.getElementById('checkout-modal').classList.remove('hidden');
+    const modal = document.getElementById('checkout-modal');
+    modal.classList.remove('hidden', 'closing');
     document.getElementById('checkout-step-title').innerText = ["Ver sacola", "Entrega & Agendamento", "Confirmar Pedido"][step - 1];
     
     const isLast = step === 3;
@@ -352,6 +395,11 @@ function goToStep(step) {
     if (step === 2) renderStep2();
     if (step === 3) updateStep3Summary();
 }
+
+document.getElementById('checkout-back-btn').addEventListener('click', () => { 
+    if(state.currentStep > 1) goToStep(state.currentStep - 1); 
+    else closeWithAnimation('checkout-modal'); 
+});
 
 function renderStep1() {
     const cart = getActiveCart();
@@ -457,7 +505,7 @@ function addToCart() {
     if (existing) existing.quantity += state.currentQty;
     else cart.push({ productId: item.id, itemKey, name: item.name, variation: variation ? variation.name : null, price: variation ? variation.price : item.price, quantity: state.currentQty });
     setActiveCart(cart);
-    document.getElementById('item-modal').classList.add('hidden');
+    closeWithAnimation('item-modal');
     updateUI();
 }
 
