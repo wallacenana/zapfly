@@ -598,9 +598,14 @@ async function fetchPreviousOrders() {
     try {
         const phone = state.userInfo.phone.replace(/\D/g, '');
         const res = await fetch(`${API_BASE}/orders/history/${phone}`);
-        state.previousOrders = await res.json();
+        const data = await res.json();
+        state.previousOrders = Array.isArray(data) ? data : [];
         renderPreviousOrders();
-    } catch(e) { console.error(e); }
+    } catch(e) { 
+        console.error(e); 
+        state.previousOrders = [];
+        renderPreviousOrders();
+    }
 }
 
 function renderPreviousOrders() {
@@ -608,7 +613,7 @@ function renderPreviousOrders() {
     const list = document.getElementById('history-list');
     if (!section || !list) return;
 
-    if (state.previousOrders.length === 0) {
+    if (!Array.isArray(state.previousOrders) || state.previousOrders.length === 0) {
         section.classList.add('hidden');
         return;
     }
