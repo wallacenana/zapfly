@@ -24,6 +24,8 @@ const Estoque = () => {
   const [categories, setCategories] = useState([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [categoryForm, setCategoryForm] = useState({ name: '', order: 0 });
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -732,42 +734,87 @@ const Estoque = () => {
       `}</style>
       {showCategoryModal && createPortal(
         <div style={modalOverlay}>
-          <div className="card" style={{ ...modalContent, width: '400px' }}>
+          <div className="card" style={{ ...modalContent, width: '450px' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'25px' }}>
                 <h3 style={{ fontWeight: 800 }}>Gerenciar Categorias</h3>
-                <button onClick={() => setShowCategoryModal(false)} style={closeBtn}><X size={24} /></button>
+                <button onClick={() => { setShowCategoryModal(false); setEditingCategory(null); }} style={closeBtn}><X size={24} /></button>
             </div>
 
-            <div style={{ marginBottom: '20px' }}>
-              <label style={labelStyle}>Nova Categoria</label>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <input {...inp} placeholder="Ex: Bolos de Festa" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} />
-                <button className="btn btn-primary" onClick={async () => {
-                  if (!newCategoryName.trim()) return;
-                  try {
-                    await api.post('/orders/categories', { name: newCategoryName });
-                    setNewCategoryName('');
-                    fetchCategories();
-                    Swal.fire({ title: 'Adicionado!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
-                  } catch (err) { Swal.fire('Erro', 'Falha ao adicionar categoria.', 'error'); }
-                }}>Add</button>
+            <div style={{ marginBottom: '25px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+              <label style={labelStyle}>{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</label>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                   <input 
+                    {...inp} 
+                    placeholder="Nome da Categoria" 
+                    value={editingCategory ? categoryForm.name : newCategoryName} 
+                    onChange={e => editingCategory ? setCategoryForm(f => ({...f, name: e.target.value})) : setNewCategoryName(e.target.value)} 
+                  />
+                   {editingCategory && (
+                     <input 
+                      {...inp} 
+                      type="number"
+                      style={{ ...inp.style, width: '80px' }}
+                      placeholder="Ordem" 
+                      value={categoryForm.order} 
+                      onChange={e => setCategoryForm(f => ({...f, order: e.target.value}))} 
+                    />
+                   )}
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {editingCategory ? (
+                    <>
+                      <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setEditingCategory(null)}>Cancelar</button>
+                      <button className="btn btn-primary" style={{ flex: 2 }} onClick={async () => {
+                        try {
+                          await api.patch(`/orders/categories/${editingCategory}`, categoryForm);
+                          setEditingCategory(null);
+                          fetchCategories();
+                          Swal.fire({ title: 'Atualizado!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+                        } catch (err) { Swal.fire('Erro', 'Falha ao atualizar.', 'error'); }
+                      }}>Salvar Alterações</button>
+                    </>
+                  ) : (
+                    <button className="btn btn-primary" style={{ width: '100%' }} onClick={async () => {
+                      if (!newCategoryName.trim()) return;
+                      try {
+                        await api.post('/orders/categories', { name: newCategoryName });
+                        setNewCategoryName('');
+                        fetchCategories();
+                        Swal.fire({ title: 'Adicionado!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+                      } catch (err) { Swal.fire('Erro', 'Falha ao adicionar.', 'error'); }
+                    }}>Adicionar Categoria</button>
+                  )}
+                </div>
               </div>
             </div>
 
             <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-              <label style={labelStyle}>Categorias Existentes</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <label style={labelStyle}>Categorias Existentes</label>
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Arraste ou edite a ordem</span>
+              </div>
               {categories.length === 0 ? (
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>Nenhuma categoria cadastrada.</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {categories.map(cat => (
                     <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px 15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                      <span style={{ fontSize: '14px', color: '#fff' }}>{cat.name}</span>
-                      <button className="btn-icon" style={{ color: '#ef4444' }} onClick={() => {
-                        Swal.fire({ title: 'Excluir?', text: `Deseja remover a categoria "${cat.name}"?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' }).then(r => {
-                          if (r.isConfirmed) api.delete(`/orders/categories/${cat.id}`).then(() => fetchCategories());
-                        });
-                      }}><Trash2 size={16} /></button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <span style={{ fontSize: '11px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', color: 'var(--text-secondary)' }}>{cat.order}</span>
+                        <span style={{ fontSize: '14px', color: '#fff', fontWeight: 600 }}>{cat.name}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '5px' }}>
+                        <button className="btn-icon" style={{ color: '#3b82f6' }} onClick={() => {
+                          setEditingCategory(cat.id);
+                          setCategoryForm({ name: cat.name, order: cat.order });
+                        }}><Pencil size={16} /></button>
+                        <button className="btn-icon" style={{ color: '#ef4444' }} onClick={() => {
+                          Swal.fire({ title: 'Excluir?', text: `Deseja remover a categoria "${cat.name}"?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' }).then(r => {
+                            if (r.isConfirmed) api.delete(`/orders/categories/${cat.id}`).then(() => fetchCategories());
+                          });
+                        }}><Trash2 size={16} /></button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -775,7 +822,7 @@ const Estoque = () => {
             </div>
 
             <div style={{ marginTop: '25px' }}>
-              <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => setShowCategoryModal(false)}>Fechar</button>
+              <button className="btn btn-secondary" style={{ width: '100%' }} onClick={() => { setShowCategoryModal(false); setEditingCategory(null); }}>Fechar</button>
             </div>
           </div>
         </div>,

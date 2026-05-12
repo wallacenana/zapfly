@@ -212,8 +212,12 @@ function maskPhone(v) {
 
 async function fetchProducts() {
     try {
-        const response = await fetch(`${API_BASE}/orders/products`);
-        state.products = await response.json();
+        const [prodRes, catRes] = await Promise.all([
+            fetch(`${API_BASE}/orders/products`),
+            fetch(`${API_BASE}/orders/categories`)
+        ]);
+        state.products = await prodRes.json();
+        state.categories = await catRes.json();
         state.loading = false;
         
         // History Section
@@ -249,6 +253,15 @@ function renderMenu() {
         return acc;
     }, {});
 
+    // Ordenar grupos com base na ordem das categorias
+    const sortedCategories = Object.keys(grouped).sort((a, b) => {
+        const catA = state.categories?.find(c => c.name === a);
+        const catB = state.categories?.find(c => c.name === b);
+        const orderA = catA ? catA.order : 999;
+        const orderB = catB ? catB.order : 999;
+        return orderA - orderB;
+    });
+
     let html = '';
 
     // Renderizar Destaques
@@ -267,15 +280,18 @@ function renderMenu() {
     }
 
     // Renderizar Categorias
-    html += Object.entries(grouped).map(([category, items]) => `
-        <section class="menu-section" id="cat-${category.replace(/\s+/g, '-')}">
-            <h2>${category}</h2>
-            <div class="product-list">${items.map(item => renderProductCard(item)).join('')}</div>
-        </section>
-    `).join('');
+    html += sortedCategories.map(category => {
+        const items = grouped[category];
+        return `
+            <section class="menu-section" id="cat-${category.replace(/\s+/g, '-')}">
+                <h2>${category}</h2>
+                <div class="product-list">${items.map(item => renderProductCard(item)).join('')}</div>
+            </section>
+        `;
+    }).join('');
 
     container.innerHTML = html;
-    renderCategoryNav(Object.keys(grouped));
+    renderCategoryNav(sortedCategories);
     lucide.createIcons();
 }
 

@@ -1337,7 +1337,12 @@ router.delete('/products/:id', async (req, res) => {
 
 // ─── CATEGORY MANAGEMENT ───
 router.get('/categories', async (req, res) => {
-  const categories = await prisma.category.findMany({ orderBy: { name: 'asc' } });
+  const categories = await prisma.category.findMany({ 
+    orderBy: [
+      { order: 'asc' },
+      { name: 'asc' }
+    ] 
+  });
   res.json(categories);
 });
 
@@ -1357,6 +1362,22 @@ router.delete('/categories/:id', async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao excluir categoria' });
+  }
+});
+
+router.patch('/categories/:id', async (req, res) => {
+  try {
+    const { name, order } = req.body;
+    const cat = await prisma.category.update({
+      where: { id: req.params.id },
+      data: { 
+        name, 
+        order: parseInt(order) || 0 
+      }
+    });
+    res.json(cat);
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao atualizar categoria' });
   }
 });
 

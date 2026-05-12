@@ -170,6 +170,7 @@ model Ingredient {
 model Category {
   id        String    @id @default(cuid())
   name      String    @unique
+  order     Int       @default(0)
   @@map("category")
 }
 
