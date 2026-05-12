@@ -369,6 +369,11 @@ function initEventListeners() {
     document.querySelector('.close-modal-btn').addEventListener('click', closeModal);
     document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeModal(); });
 
+    document.getElementById('history-toggle-btn').addEventListener('click', () => {
+        document.getElementById('history-modal').classList.remove('hidden', 'closing');
+        renderPreviousOrders();
+    });
+
     document.getElementById('add-to-cart-btn').addEventListener('click', addToCart);
     document.getElementById('view-cart-btn').addEventListener('click', () => goToStep(1));
     document.getElementById('next-step-btn').addEventListener('click', handleNextStep);
@@ -609,16 +614,14 @@ async function fetchPreviousOrders() {
 }
 
 function renderPreviousOrders() {
-    const section = document.getElementById('history-section');
-    const list = document.getElementById('history-list');
-    if (!section || !list) return;
+    const list = document.getElementById('history-modal-list');
+    if (!list) return;
 
     if (!Array.isArray(state.previousOrders) || state.previousOrders.length === 0) {
-        section.classList.add('hidden');
+        list.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-gray);">Você ainda não possui pedidos anteriores.</p>`;
         return;
     }
 
-    section.classList.remove('hidden');
     // Pegar apenas itens únicos para não repetir
     const uniqueItems = [];
     const seen = new Set();
@@ -630,15 +633,19 @@ function renderPreviousOrders() {
         }
     });
 
-    list.innerHTML = uniqueItems.slice(0, 4).map(o => `
-        <div class="history-item">
-            <div class="history-info">
+    list.innerHTML = uniqueItems.slice(0, 6).map(o => `
+        <div class="history-card" onclick="reorderItem('${o.id}')">
+            <div class="history-card-info">
                 <strong>${o.product}</strong>
                 ${o.variation ? `<p>${o.variation}</p>` : ''}
             </div>
-            <button class="order-again-btn" onclick="reorderItem('${o.id}')">Pedir de novo</button>
+            <div class="history-card-action">
+                <span>Pedir de novo</span>
+                <i data-lucide="chevron-right"></i>
+            </div>
         </div>
     `).join('');
+    lucide.createIcons();
 }
 
 function reorderItem(orderId) {
@@ -654,6 +661,7 @@ function reorderItem(orderId) {
         state.currentQty = 1;
         state.currentVariation = order.variation ? { name: order.variation, price: order.totalPrice / order.quantity } : null;
         addToCart();
+        closeWithAnimation('history-modal');
         goToStep(1);
     } else {
         alert('Este produto não está mais disponível no cardápio.');

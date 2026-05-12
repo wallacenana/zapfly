@@ -25,7 +25,7 @@
                     </div>
                 </div>
                 <div class="nav-actions">
-                    <button class="icon-btn"><i data-lucide="search"></i></button>
+                    <button id="history-toggle-btn" class="icon-btn"><i data-lucide="history"></i></button>
                 </div>
             </div>
         </header>
@@ -46,12 +46,7 @@
             </div>
         </div>
 
-        <!-- History Section -->
-        <div id="history-section" class="container hidden">
-            <h3 style="margin: 20px 0 10px; font-size: 1.1rem; color: var(--text-main);">Pedir novamente</h3>
-            <div id="history-list" class="history-grid"></div>
-        </div>
-
+        <!-- Main Menu -->
         <!-- Main Menu -->
         <main class="container main-menu">
             <div id="menu-sections">
@@ -91,6 +86,19 @@
                         Adicionar <span id="add-btn-price">R$ 0,00</span>
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- History Modal -->
+        <div id="history-modal" class="modal hidden">
+            <div class="modal-overlay" onclick="closeWithAnimation('history-modal')"></div>
+            <div class="modal-content history-modal-content">
+                <button class="chevron-close-btn" onclick="closeWithAnimation('history-modal')"><i data-lucide="chevron-down"></i></button>
+                <div class="history-modal-header">
+                    <h3>Últimos pedidos</h3>
+                    <p>Peça novamente em um clique</p>
+                </div>
+                <div id="history-modal-list" class="history-modal-list"></div>
             </div>
         </div>
 

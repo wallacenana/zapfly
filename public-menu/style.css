@@ -640,44 +640,47 @@ body.theme-order .delivery-fee-badge {
     text-align: center;
 }
 
-/* History Section */
-.history-grid {
-    display: flex;
-    gap: 12px;
-    overflow-x: auto;
-    padding: 4px 0 16px;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+/* History Modal & Cards */
+.history-modal-header {
+    padding: 24px 0 16px;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 16px;
 }
-.history-grid::-webkit-scrollbar { display: none; }
+.history-modal-header h3 { font-size: 1.25rem; color: var(--text-main); margin-bottom: 4px; }
+.history-modal-header p { font-size: 0.9rem; color: var(--text-gray); }
 
-.history-item {
-    min-width: 180px;
+.history-modal-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-bottom: 24px;
+}
+
+.history-card {
     background: #fff;
     border: 1px solid var(--border-color);
     border-radius: 12px;
-    padding: 12px;
+    padding: 16px;
     display: flex;
-    flex-direction: column;
+    align-items: center;
     justify-content: space-between;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-}
-.history-info strong { font-size: 0.85rem; display: block; color: var(--text-main); margin-bottom: 2px; }
-.history-info p { font-size: 0.7rem; color: var(--text-gray); margin: 0; }
-
-.order-again-btn {
-    margin-top: 10px;
-    background: var(--active-color);
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    padding: 8px;
-    font-size: 0.75rem;
-    font-weight: 700;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: transform 0.2s, border-color 0.2s;
 }
-.order-again-btn:active { opacity: 0.8; }
+.history-card:active { transform: scale(0.98); border-color: var(--active-color); }
+
+.history-card-info strong { font-size: 1rem; color: var(--text-main); display: block; }
+.history-card-info p { font-size: 0.8rem; color: var(--text-gray); margin-top: 2px; }
+
+.history-card-action {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--active-color);
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+.history-card-action i { width: 16px; height: 16px; }
 
 /* Carousel Styles */
 .carousel-container {
