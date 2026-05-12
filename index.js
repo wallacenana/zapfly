@@ -9,7 +9,6 @@ const path = require('path');
 const cors = require('cors');
 const OpenAI = require('openai');
 const fs = require('fs');
-const path = require('path');
 const prisma = require('./lib/prisma');
 const { calculateFee } = require('./lib/maps');
 const { getStoreStatus, sendRichMessage, formatProduct } = require('./lib/utils');
@@ -85,7 +84,6 @@ const aiMessageBuffer = {};
 app.use(cors({ origin: "*" }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.json());
-app.use(cors());
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/orders', (req, res, next) => {
     req.sockGetter = (instId) => {
