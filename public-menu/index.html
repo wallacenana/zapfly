@@ -38,7 +38,7 @@
             </div>
         </nav>
 
-        <!-- Search Bar (Optional but nice) -->
+        <!-- Search Bar -->
         <div class="container search-container">
             <div class="search-box">
                 <i data-lucide="search"></i>
@@ -49,7 +49,6 @@
         <!-- Main Menu -->
         <main class="container main-menu">
             <div id="menu-sections">
-                <!-- Sections will be injected here -->
                 <div class="loading-state">
                     <div class="spinner"></div>
                     <p>Carregando cardápio...</p>
@@ -70,14 +69,12 @@
             </div>
         </footer>
 
-        <!-- Item Detail Modal (iFood Style Popup) -->
+        <!-- Item Detail Modal -->
         <div id="item-modal" class="modal hidden">
             <div class="modal-overlay"></div>
             <div class="modal-content item-detail-content">
                 <button class="close-modal-btn"><i data-lucide="x"></i></button>
-                <div id="item-detail-body">
-                    <!-- Item detail content injected here -->
-                </div>
+                <div id="item-detail-body"></div>
                 <div class="modal-footer-sticky">
                     <div class="qty-selector">
                         <button class="qty-btn" id="qty-minus"><i data-lucide="minus"></i></button>
@@ -91,51 +88,78 @@
             </div>
         </div>
 
-        <!-- Checkout Modal -->
+        <!-- Multi-Step Checkout Modal -->
         <div id="checkout-modal" class="modal hidden">
             <div class="modal-overlay"></div>
             <div class="modal-content checkout-content">
                 <div class="modal-header">
-                    <button class="back-btn"><i data-lucide="arrow-left"></i></button>
-                    <h2>Finalizar pedido</h2>
+                    <button class="back-btn" id="checkout-back-btn"><i data-lucide="arrow-left"></i></button>
+                    <h2 id="checkout-step-title">Finalizar pedido</h2>
                 </div>
+                
                 <div class="modal-scroll-body">
-                    <div id="checkout-items-list" class="checkout-items"></div>
-                    
-                    <div class="checkout-form">
-                        <section class="form-section">
-                            <h3>Seus dados</h3>
-                            <input type="text" id="user-name" placeholder="Nome completo" class="ifood-input">
-                            <input type="text" id="user-phone" placeholder="WhatsApp (DDD + Número)" class="ifood-input">
-                        </section>
-
-                        <section id="delivery-info" class="form-section">
-                            <h3>Endereço de entrega</h3>
-                            <input type="text" id="user-address" placeholder="Rua, número, bairro e referências" class="ifood-input">
-                        </section>
-
-                        <section id="order-info" class="form-section hidden">
-                            <h3>Data e hora da retirada</h3>
-                            <div class="input-row">
-                                <input type="date" id="order-date" class="ifood-input">
-                                <input type="time" id="order-time" class="ifood-input">
-                            </div>
-                        </section>
+                    <!-- Step 1: Items & Identity -->
+                    <div id="step-1" class="checkout-step">
+                        <div id="checkout-items-list" class="checkout-items"></div>
+                        <div class="checkout-form">
+                            <section class="form-section">
+                                <h3>Seus dados</h3>
+                                <input type="text" id="user-name" placeholder="Nome completo" class="ifood-input">
+                                <input type="text" id="user-phone" placeholder="WhatsApp (DDD + Número)" class="ifood-input">
+                            </section>
+                        </div>
                     </div>
 
-                    <div class="order-summary">
-                        <div class="summary-line">
-                            <span>Subtotal</span>
-                            <span id="summary-subtotal">R$ 0,00</span>
+                    <!-- Step 2: Address & Map (Delivery) OR Scheduling (Order) -->
+                    <div id="step-2" class="checkout-step hidden">
+                        <div id="delivery-step-content">
+                            <section class="form-section">
+                                <h3>Endereço de entrega</h3>
+                                <p style="font-size: 0.8rem; color: var(--text-gray); margin-bottom: 12px;">Selecione seu endereço no mapa para calcular o frete.</p>
+                                <input type="text" id="user-address" placeholder="Rua, número, bairro..." class="ifood-input">
+                                <div id="map-container"></div>
+                            </section>
                         </div>
-                        <div class="summary-line total">
-                            <span>Total</span>
-                            <span id="summary-total">R$ 0,00</span>
+                        <div id="order-step-content" class="hidden">
+                            <section class="form-section">
+                                <h3>Agendamento</h3>
+                                <div class="input-row">
+                                    <input type="date" id="order-date" class="ifood-input">
+                                    <input type="time" id="order-time" class="ifood-input">
+                                </div>
+                            </section>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Final Review & Total -->
+                    <div id="step-3" class="checkout-step hidden">
+                        <div class="order-summary-review">
+                            <h3>Resumo do Pedido</h3>
+                            <div id="review-items-list"></div>
+                            
+                            <div class="order-summary" style="margin-top: 20px;">
+                                <div class="summary-line">
+                                    <span>Produtos</span>
+                                    <span id="summary-subtotal">R$ 0,00</span>
+                                </div>
+                                <div class="summary-line" id="delivery-fee-line">
+                                    <span>Taxa de Entrega</span>
+                                    <span id="summary-fee">R$ 0,00</span>
+                                </div>
+                                <div class="summary-line total">
+                                    <span>Total</span>
+                                    <span id="summary-total">R$ 0,00</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+
                 <div class="modal-footer-sticky">
-                    <button id="place-order-btn" class="primary-btn">
+                    <button id="next-step-btn" class="primary-btn">
+                        <span>Continuar</span> <i data-lucide="chevron-right"></i>
+                    </button>
+                    <button id="place-order-btn" class="primary-btn hidden">
                         Fazer pedido <i data-lucide="chevron-right"></i>
                     </button>
                 </div>
@@ -145,9 +169,7 @@
         <!-- Success Screen -->
         <div id="success-screen" class="full-screen hidden">
             <div class="success-box">
-                <div class="success-check">
-                    <i data-lucide="check"></i>
-                </div>
+                <div class="success-check"><i data-lucide="check"></i></div>
                 <h2>Pedido enviado!</h2>
                 <p>A Lily já te mandou uma mensagem no WhatsApp para confirmar o status.</p>
                 <div class="success-actions">

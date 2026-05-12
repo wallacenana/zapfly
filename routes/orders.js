@@ -83,6 +83,19 @@ router.get('/settings/public', async (req, res) => {
   }
 });
 
+router.post('/calculate-fee', async (req, res) => {
+  try {
+    const { address } = req.body;
+    if (!address) return res.status(400).json({ error: 'Endereço é obrigatório' });
+    
+    const { calculateFee } = require('../lib/maps');
+    const result = await calculateFee(address);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Sincroniza eventos do Google Calendar para o banco local
 async function syncCalendarEvents() {
   if (global.isSyncingGCal) return { fetched: 0, pushed: 0 };
