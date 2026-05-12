@@ -21,7 +21,8 @@ let state = {
     geocoder: null,
     isOpen: false,
     availableSlots: [],
-    currentCarouselIdx: 0
+    currentCarouselIdx: 0,
+    previousOrders: []
 };
 
 function parseImages(imgField) {
@@ -38,15 +39,37 @@ const getActiveCart = () => state.activeTab === 'delivery' ? state.deliveryCart 
 const setActiveCart = (newCart) => {
     if (state.activeTab === 'delivery') state.deliveryCart = newCart;
     else state.orderCart = newCart;
+    saveCart();
 };
 
+function saveCart() {
+    const carts = {
+        delivery: { items: state.deliveryCart, expires: Date.now() + (24 * 60 * 60 * 1000) },
+        order: { items: state.orderCart, expires: Date.now() + (7 * 24 * 60 * 60 * 1000) }
+    };
+    localStorage.setItem('linda_cake_carts', JSON.stringify(carts));
+}
+
+function loadCart() {
+    const saved = localStorage.getItem('linda_cake_carts');
+    if (!saved) return;
+    try {
+        const carts = JSON.parse(saved);
+        const now = Date.now();
+        if (carts.delivery && carts.delivery.expires > now) state.deliveryCart = carts.delivery.items;
+        if (carts.order && carts.order.expires > now) state.orderCart = carts.order.items;
+    } catch(e) { console.error("Erro ao carregar carrinho", e); }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    loadCart();
     lucide.createIcons();
     fetchPublicSettings();
     fetchProducts();
     fetchSlots();
     initEventListeners();
     updateUI();
+    if (state.userInfo.phone) fetchPreviousOrders();
 });
 
 async function fetchPublicSettings() {
@@ -192,11 +215,18 @@ async function fetchProducts() {
         const response = await fetch(`${API_BASE}/orders/products`);
         state.products = await response.json();
         state.loading = false;
+        
+        // History Section
+        const historyContainer = document.getElementById('history-section');
+        if (historyContainer) historyContainer.classList.remove('hidden');
+
+        // Main Menu
         renderMenu();
     } catch (err) { console.error('Erro ao buscar produtos:', err); }
 }
 
 function renderMenu() {
+    renderPreviousOrders();
     const container = document.getElementById('menu-sections');
     const query = state.searchQuery.toLowerCase();
     const filtered = state.products.filter(p => {
@@ -523,21 +553,104 @@ async function handlePlaceOrder() {
     const cart = getActiveCart();
     const btn = document.getElementById('place-order-btn');
     btn.disabled = true; btn.innerHTML = 'Processando Pagamento...';
+    
     const payload = {
-        clientName: state.userInfo.name, clientPhone: state.userInfo.phone,
+        clientName: state.userInfo.name,
+        clientPhone: state.userInfo.phone,
         product: cart[0].name + (cart[0].variation ? ` (${cart[0].variation})` : ''),
-        quantity: cart[0].quantity, type: state.activeTab,
+        quantity: cart[0].quantity,
+        type: state.activeTab,
         deliveryAddress: state.activeTab === 'delivery' ? state.userInfo.address : null,
         scheduledDate: state.activeTab === 'order' ? document.getElementById('order-date').value : null,
         scheduledTime: state.activeTab === 'order' ? document.getElementById('order-time').value : null,
         deliveryFee: state.activeTab === 'delivery' ? state.deliveryFee : 0,
-        carrinho_itens_extras: cart.slice(1).map(item => ({ name: item.name + (item.variation ? ` (${item.variation})` : ''), price: item.price, quantity: item.quantity }))
+        carrinho_itens_extras: cart.slice(1).map(item => ({
+            name: item.name + (item.variation ? ` (${item.variation})` : ''),
+            price: item.price,
+            quantity: item.quantity
+        }))
     };
+
     try {
-        const response = await fetch(`${API_BASE}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        const response = await fetch(`${API_BASE}/orders`, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(payload) 
+        });
         const data = await response.json();
-        if (data.paymentLink) location.href = data.paymentLink;
-        else if (data.id) alert('Pedido registrado, mas houve um problema ao gerar o link de pagamento. Por favor, entre em contato.');
-        else throw new Error(data.error);
-    } catch (err) { alert('Erro: ' + err.message); btn.disabled = false; btn.innerHTML = 'Fazer pedido'; }
+        if (data.paymentLink) {
+            setActiveCart([]);
+            location.href = data.paymentLink;
+        } else if (data.id) {
+            alert('Pedido registrado, mas houve um problema ao gerar o link de pagamento. Por favor, entre em contato.');
+        } else {
+            throw new Error(data.error);
+        }
+    } catch (err) {
+        alert('Erro: ' + err.message);
+        btn.disabled = false;
+        btn.innerHTML = 'Fazer pedido';
+    }
+}
+
+async function fetchPreviousOrders() {
+    if (!state.userInfo.phone) return;
+    try {
+        const phone = state.userInfo.phone.replace(/\D/g, '');
+        const res = await fetch(`${API_BASE}/orders/history/${phone}`);
+        state.previousOrders = await res.json();
+        renderPreviousOrders();
+    } catch(e) { console.error(e); }
+}
+
+function renderPreviousOrders() {
+    const section = document.getElementById('history-section');
+    const list = document.getElementById('history-list');
+    if (!section || !list) return;
+
+    if (state.previousOrders.length === 0) {
+        section.classList.add('hidden');
+        return;
+    }
+
+    section.classList.remove('hidden');
+    // Pegar apenas itens únicos para não repetir
+    const uniqueItems = [];
+    const seen = new Set();
+    state.previousOrders.forEach(o => {
+        const key = `${o.product}-${o.variation || ''}`;
+        if (!seen.has(key)) {
+            seen.add(key);
+            uniqueItems.push(o);
+        }
+    });
+
+    list.innerHTML = uniqueItems.slice(0, 4).map(o => `
+        <div class="history-item">
+            <div class="history-info">
+                <strong>${o.product}</strong>
+                ${o.variation ? `<p>${o.variation}</p>` : ''}
+            </div>
+            <button class="order-again-btn" onclick="reorderItem('${o.id}')">Pedir de novo</button>
+        </div>
+    `).join('');
+}
+
+function reorderItem(orderId) {
+    const order = state.previousOrders.find(o => o.id === orderId);
+    if (!order) return;
+    
+    // Tenta encontrar o produto original no menu para pegar o ID correto e imagem
+    const baseName = order.product.split('(')[0].trim();
+    const product = state.products.find(p => p.name.toLowerCase().includes(baseName.toLowerCase()));
+    
+    if (product) {
+        state.currentItem = product;
+        state.currentQty = 1;
+        state.currentVariation = order.variation ? { name: order.variation, price: order.totalPrice / order.quantity } : null;
+        addToCart();
+        goToStep(1);
+    } else {
+        alert('Este produto não está mais disponível no cardápio.');
+    }
 }

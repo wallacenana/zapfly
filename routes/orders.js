@@ -1333,6 +1333,30 @@ router.delete('/products/:id', async (req, res) => {
   res.json({ ok: true });
 });
 
+router.get('/history/:phone', async (req, res) => {
+    try {
+        let phone = req.params.phone.replace(/\D/g, "");
+        if (phone.length >= 10 && !phone.startsWith("55")) phone = "55" + phone;
+        const jid = `${phone}@s.whatsapp.net`;
+        
+        const orders = await prisma.order.findMany({
+            where: {
+                OR: [
+                    { clientPhone: req.params.phone },
+                    { clientPhone: phone },
+                    { clientJid: jid }
+                ]
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 10
+        });
+        res.json(orders);
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao buscar histórico' });
+    }
+});
+
 // ─── ROTAS — GOOGLE CALENDAR ─────────────────────────────────────────────────
 
 router.get('/calendar-events', async (req, res) => {

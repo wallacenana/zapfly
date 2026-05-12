@@ -640,6 +640,45 @@ body.theme-order .delivery-fee-badge {
     text-align: center;
 }
 
+/* History Section */
+.history-grid {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding: 4px 0 16px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.history-grid::-webkit-scrollbar { display: none; }
+
+.history-item {
+    min-width: 180px;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+.history-info strong { font-size: 0.85rem; display: block; color: var(--text-main); margin-bottom: 2px; }
+.history-info p { font-size: 0.7rem; color: var(--text-gray); margin: 0; }
+
+.order-again-btn {
+    margin-top: 10px;
+    background: var(--active-color);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.order-again-btn:active { opacity: 0.8; }
+
 /* Carousel Styles */
 .carousel-container {
     position: relative;
