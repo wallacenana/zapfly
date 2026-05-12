@@ -157,9 +157,9 @@ h3 { font-size: 0.9rem; font-weight: 700; }
 .search-box input {
     background: none;
     border: none;
-    width: 100%;
-    outline: none;
+    flex: 1;
     font-size: 0.95rem;
+    outline: none;
     color: var(--text-black);
 }
 
@@ -184,18 +184,21 @@ h3 { font-size: 0.9rem; font-weight: 700; }
 
 /* Product Card iFood Style */
 .product-card {
-    background: white;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 16px;
     display: flex;
-    justify-content: space-between;
     gap: 16px;
+    padding: 16px 0;
     cursor: pointer;
+    border-bottom: 1px solid var(--border);
     transition: 0.2s;
 }
 
-.product-card:hover { border-color: var(--active-color); }
+.product-card:last-child {
+    border-bottom: none;
+}
+
+.product-card:hover { 
+    opacity: 0.8;
+}
 
 .product-info { flex: 1; }
 .product-info h3 { margin-bottom: 4px; font-size: 1rem; }
@@ -388,11 +391,17 @@ body.theme-order .var-option.selected {
 }
 
 .qty-btn {
-    background: none;
-    border: none;
+    background: var(--bg-gray);
+    border: 1px solid var(--border);
     color: var(--active-color);
     padding: 8px;
+    border-radius: 50%;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
 }
 
 #detail-qty { font-weight: 700; min-width: 20px; text-align: center; }
@@ -400,8 +409,8 @@ body.theme-order .var-option.selected {
 /* Primary Button */
 .primary-btn {
     flex: 1;
-    background: var(--active-color);
-    color: white;
+    background: var(--active-color) !important;
+    color: #ffffff !important;
     border: none;
     padding: 14px;
     border-radius: 8px;
@@ -412,6 +421,7 @@ body.theme-order .var-option.selected {
     align-items: center;
     justify-content: center;
     gap: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .primary-btn:active { opacity: 0.9; transform: scale(0.98); }

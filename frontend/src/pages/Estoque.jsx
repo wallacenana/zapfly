@@ -11,7 +11,7 @@ const Estoque = () => {
   const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [isComboMode, setIsComboMode] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: 'Doces', image: '', price: 0, stock: 0, trackStock: false, capacityCost: 1, variations: [], comboItems: [] });
+  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: '', image: '', price: 0, stock: 0, trackStock: false, capacityCost: 1, variations: [], comboItems: [] });
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState(null);
 
@@ -67,7 +67,7 @@ const Estoque = () => {
   const openAdd = (asCombo = false) => {
     setEditing(null);
     setIsComboMode(asCombo);
-    setForm({ name: '', description: '', type: tab, category: 'Doces', image: '', price: 0, stock: 0, trackStock: tab === 'delivery', capacityCost: 1, variations: [], comboItems: [] });
+    setForm({ name: '', description: '', type: tab, category: '', image: '', price: 0, stock: 0, trackStock: tab === 'delivery', capacityCost: 1, variations: [], comboItems: [] });
     setShowModal(true);
   };
 

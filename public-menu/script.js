@@ -92,10 +92,12 @@ function renderMenu() {
     const container = document.getElementById('menu-sections');
     const query = state.searchQuery.toLowerCase();
     
-    // Produtos filtrados por Aba + Busca
+    // Produtos filtrados por Aba + Busca + Ativo
     const filtered = state.products.filter(p => {
+        if (p.active === false) return false; // Esconde invisíveis
+
         const matchesTab = (state.activeTab === 'delivery' && p.type === 'delivery') || 
-                          (state.activeTab === 'order'); // Na aba Encomenda, mostra tudo
+                          (state.activeTab === 'order'); 
         
         const matchesSearch = p.name.toLowerCase().includes(query) || 
                              (p.description && p.description.toLowerCase().includes(query)) ||
@@ -103,6 +105,15 @@ function renderMenu() {
         
         return matchesTab && matchesSearch;
     });
+
+    // Ordenação: Na aba de Encomendas, prioriza itens do tipo 'encomenda'
+    if (state.activeTab === 'order') {
+        filtered.sort((a, b) => {
+            if (a.type === 'encomenda' && b.type !== 'encomenda') return -1;
+            if (a.type !== 'encomenda' && b.type === 'encomenda') return 1;
+            return 0;
+        });
+    }
 
     if (filtered.length === 0) {
         container.innerHTML = `<div class="loading-state"><p>${state.searchQuery ? 'Nenhum resultado encontrado.' : 'Nenhum item disponível.'}</p></div>`;
@@ -119,7 +130,7 @@ function renderMenu() {
 
     container.innerHTML = Object.entries(grouped).map(([category, items]) => `
         <section class="menu-section">
-            <h2>${category}</h2>
+            ${category !== 'Outros' ? `<h2>${category}</h2>` : ''}
             <div class="product-list">
                 ${items.map(item => renderProductCard(item)).join('')}
             </div>
