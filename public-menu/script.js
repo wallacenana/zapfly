@@ -17,7 +17,8 @@ let state = {
     currentStep: 1,
     deliveryFee: 0,
     googleMap: null,
-    mapMarker: null
+    mapMarker: null,
+    geocoder: null
 };
 
 const getActiveCart = () => state.activeTab === 'delivery' ? state.deliveryCart : state.orderCart;
@@ -55,30 +56,64 @@ window.initMapsAutocomplete = () => {
     const input = document.getElementById('user-address');
     const autocomplete = new google.maps.places.Autocomplete(input);
     autocomplete.setComponentRestrictions({ country: 'br' });
+    state.geocoder = new google.maps.Geocoder();
     
-    // Init Map
-    const mapCenter = { lat: -2.5307, lng: -44.3068 }; // São Luís, MA (Default)
+    const mapCenter = { lat: -2.5307, lng: -44.3068 }; 
     state.googleMap = new google.maps.Map(document.getElementById('map-container'), {
-        zoom: 14,
+        zoom: 16,
         center: mapCenter,
-        disableDefaultUI: true
+        disableDefaultUI: false,
+        mapTypeControl: false,
+        streetViewControl: false
     });
-    state.mapMarker = new google.maps.Marker({ map: state.googleMap, position: mapCenter });
 
+    state.mapMarker = new google.maps.Marker({ 
+        map: state.googleMap, 
+        position: mapCenter, 
+        draggable: true,
+        animation: google.maps.Animation.DROP
+    });
+
+    // Ao selecionar no Autocomplete
     autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
         if (!place.geometry) return;
         
-        state.userInfo.address = place.formatted_address;
-        localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
+        updateLocation(place.geometry.location, place.formatted_address);
+    });
 
-        // Update Map
-        state.googleMap.setCenter(place.geometry.location);
-        state.mapMarker.setPosition(place.geometry.location);
-        
-        calculateDeliveryFee(place.formatted_address);
+    // Ao arrastar o Pin
+    state.mapMarker.addListener('dragend', () => {
+        const pos = state.mapMarker.getPosition();
+        reverseGeocode(pos);
+    });
+
+    // Ao clicar no Mapa
+    state.googleMap.addListener('click', (e) => {
+        updateLocation(e.latLng);
+        reverseGeocode(e.latLng);
     });
 };
+
+function updateLocation(location, address = null) {
+    state.googleMap.panTo(location);
+    state.mapMarker.setPosition(location);
+    if (address) {
+        document.getElementById('user-address').value = address;
+        state.userInfo.address = address;
+        localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
+        calculateDeliveryFee(address);
+    }
+}
+
+function reverseGeocode(latLng) {
+    state.geocoder.geocode({ location: latLng }, (results, status) => {
+        if (status === 'OK' && results[0]) {
+            const address = results[0].formatted_address;
+            updateLocation(latLng, address);
+        }
+    });
+}
 
 async function calculateDeliveryFee(address) {
     try {
@@ -91,10 +126,16 @@ async function calculateDeliveryFee(address) {
         if (data.fee !== undefined) {
             state.deliveryFee = data.fee;
             updateStep3Summary();
-        } else if (data.error) {
-            alert(data.error);
         }
     } catch (err) { console.error('Erro ao calcular frete:', err); }
+}
+
+// Mask de Telefone
+function maskPhone(v) {
+    v = v.replace(/\D/g, "");
+    v = v.replace(/^(\d{2})(\d)/g, "($1) $2");
+    v = v.replace(/(\d)(\d{4})$/, "$1-$2");
+    return v;
 }
 
 async function fetchProducts() {
@@ -105,7 +146,6 @@ async function fetchProducts() {
         renderMenu();
     } catch (err) {
         console.error('Erro ao buscar produtos:', err);
-        document.getElementById('menu-sections').innerHTML = `<p class="error">Erro ao carregar cardápio.</p>`;
     }
 }
 
@@ -209,7 +249,15 @@ function initEventListeners() {
     document.getElementById('next-step-btn').addEventListener('click', handleNextStep);
     document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
 
-    ['user-name', 'user-phone', 'user-address'].forEach(id => {
+    // Phone Mask
+    const phoneInput = document.getElementById('user-phone');
+    phoneInput.addEventListener('input', (e) => {
+        e.target.value = maskPhone(e.target.value);
+        state.userInfo.phone = e.target.value;
+        localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
+    });
+
+    ['user-name', 'user-address'].forEach(id => {
         const el = document.getElementById(id);
         if(el) {
             el.value = state.userInfo[id.split('-')[1]] || '';
@@ -226,7 +274,6 @@ function goToStep(step) {
     document.querySelectorAll('.checkout-step').forEach((el, idx) => el.classList.toggle('hidden', idx + 1 !== step));
     document.getElementById('checkout-modal').classList.remove('hidden');
     
-    // Update Header/Footer
     const titles = ["Ver sacola", "Entrega & Agendamento", "Confirmar Pedido"];
     document.getElementById('checkout-step-title').innerText = titles[step - 1];
     
@@ -332,7 +379,7 @@ async function handlePlaceOrder() {
         });
         const data = await response.json();
         if (data.id) {
-            if (data.paymentLink) location.href = data.paymentLink; // Redireciona direto para o Mercado Pago
+            if (data.paymentLink) location.href = data.paymentLink; 
             else showSuccessScreen(data);
         } else throw new Error(data.error);
     } catch (err) { alert('Erro: ' + err.message); btn.disabled = false; btn.innerHTML = 'Fazer pedido'; }
@@ -341,5 +388,4 @@ async function handlePlaceOrder() {
 function showSuccessScreen(data) {
     document.getElementById('checkout-modal').classList.add('hidden');
     document.getElementById('success-screen').classList.remove('hidden');
-    if (state.activeTab === 'delivery') state.deliveryCart = []; else state.orderCart = [];
 }
