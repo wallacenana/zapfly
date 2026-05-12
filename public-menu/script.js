@@ -34,10 +34,22 @@ async function fetchProducts() {
 // Renderização
 function renderProducts() {
     const list = document.getElementById('product-list');
-    const filtered = state.products.filter(p => p.category === state.activeTab);
+    
+    // Mapeamento: Aba 'order' no front-end corresponde ao tipo 'encomenda' no banco
+    const filtered = state.products.filter(p => {
+        if (state.activeTab === 'delivery') return p.type === 'delivery';
+        if (state.activeTab === 'order') return p.type === 'encomenda' || p.type === 'order';
+        return false;
+    });
     
     if (filtered.length === 0) {
-        list.innerHTML = `<div class="empty-state"><p>Nenhum item disponível nesta categoria.</p></div>`;
+        list.innerHTML = `
+            <div class="empty-state" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                <i data-lucide="shopping-bag" style="width: 48px; height: 48px; margin-bottom: 10px; opacity: 0.5;"></i>
+                <p>Nenhum item disponível nesta categoria.</p>
+            </div>
+        `;
+        lucide.createIcons();
         return;
     }
 
