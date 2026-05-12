@@ -922,39 +922,14 @@ router.post('/', async (req, res) => {
     // 2. Mercado Pago (Link de Pagamento)
     let paymentLink = null;
     if (paymentMethod !== 'Dinheiro') {
-      try {
-        if (!settings.mercadopagoToken) {
-          console.error('[MercadoPago] ERRO: mercadopagoToken não configurado nas settings!');
-        } else {
-          const mpClient = new MercadoPagoConfig({ accessToken: settings.mercadopagoToken });
-          const preference = new Preference(mpClient);
-
-          const prefRes = await preference.create({
-            body: {
-              items: [
-                {
-                  title: order.product,
-                  quantity: 1,
-                  unit_price: finalTotalValue,
-                  currency_id: 'BRL'
-                }
-              ],
-              back_urls: {
-                success: `${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/sucesso`,
-                failure: `${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/falha`,
-                pending: `${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/pendente`
-              },
-              auto_return: 'approved',
-              notification_url: `${process.env.PUBLIC_URL || 'http://localhost:3001'}/mercadopago/webhook`,
-              external_reference: order.id
-            }
-          });
-
-          paymentLink = prefRes.init_point;
-        }
-      } catch (mpErr) {
-        console.error('[MercadoPago] ERRO FATAL ao gerar link:', mpErr.message);
-        if (mpErr.response) console.error('[MercadoPago] Detalhes do erro:', JSON.stringify(mpErr.response.data));
+      paymentLink = await createPaymentLink(order, settings);
+      
+      // Update the order with the generated link
+      if (paymentLink) {
+        order = await prisma.order.update({
+          where: { id: order.id },
+          data: { paymentLink }
+        });
       }
     }
 
@@ -1150,32 +1125,10 @@ router.patch('/:id', async (req, res) => {
       try {
         const settings = await prisma.setting.findUnique({ where: { id: 'global' } });
         if (settings?.mercadopagoToken) {
-          const mpClient = new MercadoPagoConfig({ accessToken: settings.mercadopagoToken });
-          const preference = new Preference(mpClient);
-
-          const prefRes = await preference.create({
-            body: {
-              items: [
-                {
-                  title: order.product,
-                  quantity: 1,
-                  unit_price: order.totalValue,
-                  currency_id: 'BRL'
-                }
-              ],
-              back_urls: {
-                success: `${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/sucesso`,
-                failure: `${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/falha`,
-                pending: `${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/pendente`
-              },
-              auto_return: 'approved',
-              notification_url: `${process.env.PUBLIC_URL || 'http://localhost:3001'}/mercadopago/webhook`,
-              external_reference: order.id
-            }
-          });
-
-          const paymentLink = prefRes.init_point;
-          order = await prisma.order.update({ where: { id }, data: { paymentLink } });
+          const paymentLink = await createPaymentLink(order, settings);
+          if (paymentLink) {
+            order = await prisma.order.update({ where: { id }, data: { paymentLink } });
+          }
         }
       } catch (mpErr) {
         console.error('[MercadoPago] ERRO ao regenerar link:', mpErr.message);
