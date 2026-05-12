@@ -219,7 +219,7 @@ function renderMenu() {
 }
 
 function renderProductCard(product) {
-    const variations = JSON.parse(product.variations || '[]');
+    const variations = JSON.parse(product.variations || '[]').filter(v => !v.hidden);
     const priceText = variations.length > 0 ? `A partir de R$ ${Math.min(...variations.map(v => v.price)).toFixed(2)}` : `R$ ${parseFloat(product.price).toFixed(2)}`;
     return `
         <div class="product-card" onclick="openItemDetail('${product.id}')">
@@ -238,7 +238,7 @@ function openItemDetail(productId) {
     state.currentItem = item;
     state.currentQty = 1;
     state.currentVariation = null;
-    const variations = JSON.parse(item.variations || '[]');
+    const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
     const body = document.getElementById('item-detail-body');
     body.innerHTML = `
         ${item.image ? `<img src="${item.image}" class="item-hero-img">` : ''}
