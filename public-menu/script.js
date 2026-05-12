@@ -189,7 +189,10 @@ function renderMenu() {
     const container = document.getElementById('menu-sections');
     const query = state.searchQuery.toLowerCase();
     const filtered = state.products.filter(p => {
+        // CORREÇÃO: Filtra itens inativos e a categoria Adicionais
         if (p.active === false) return false;
+        if (p.category === 'Adicionais') return false;
+
         const matchesTab = (state.activeTab === 'delivery' && p.type === 'delivery') || (state.activeTab === 'order');
         const matchesSearch = p.name.toLowerCase().includes(query) || (p.description && p.description.toLowerCase().includes(query));
         return matchesTab && matchesSearch;
@@ -200,7 +203,7 @@ function renderMenu() {
     }
 
     const grouped = filtered.reduce((acc, p) => {
-        const cat = p.category && p.category !== 'Doces' ? p.category : 'Outros';
+        const cat = p.category && p.category !== 'Doces' && p.category !== 'Geral' ? p.category : 'Outros';
         if (!acc[cat]) acc[cat] = [];
         acc[cat].push(p);
         return acc;
@@ -291,6 +294,20 @@ function initEventListeners() {
     document.getElementById('checkout-back-btn').addEventListener('click', () => { if(state.currentStep > 1) goToStep(state.currentStep - 1); else document.getElementById('checkout-modal').classList.add('hidden'); });
     document.getElementById('next-step-btn').addEventListener('click', handleNextStep);
     document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
+
+    // Listener para carregar horários disponíveis ao selecionar data
+    document.getElementById('order-date').addEventListener('change', (e) => {
+        const dateStr = e.target.value;
+        if (!dateStr) return;
+        
+        const date = new Date(dateStr + 'T12:00:00');
+        const dayOfWeek = date.getDay();
+        
+        const slots = state.availableSlots.filter(s => s.dayOfWeek === dayOfWeek);
+        const timeSelect = document.getElementById('order-time');
+        
+        timeSelect.innerHTML = `<option value="">Horário</option>` + slots.map(s => `<option value="${s.startTime}">${s.startTime}</option>`).join('');
+    });
 
     document.getElementById('user-name').value = state.userInfo.name || '';
     document.getElementById('user-phone').value = state.userInfo.phone || '';
