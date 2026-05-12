@@ -572,3 +572,29 @@ body.theme-order .delivery-fee-badge {
     .modal-content { border-radius: 12px; height: auto; max-height: 90vh; }
     .checkout-content { height: 90vh; }
 }
+
+/* Store Status */
+.status-dot {
+    width: 8px;
+    height: 8px;
+    background: #4ade80;
+    border-radius: 50%;
+}
+.status-dot.offline { background: #ff4d4d; }
+.store-status.closed { color: #ff4d4d; }
+
+/* Remove Button */
+.remove-btn {
+    background: none;
+    border: none;
+    color: #ff4d4d;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.remove-btn:hover { background: #fff5f5; }
+.remove-btn i { width: 18px; height: 18px; }

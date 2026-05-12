@@ -18,7 +18,9 @@ let state = {
     deliveryFee: 0,
     googleMap: null,
     mapMarker: null,
-    geocoder: null
+    geocoder: null,
+    isOpen: false,
+    availableSlots: []
 };
 
 const getActiveCart = () => state.activeTab === 'delivery' ? state.deliveryCart : state.orderCart;
@@ -31,6 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
     fetchPublicSettings();
     fetchProducts();
+    fetchSlots();
     initEventListeners();
     updateUI();
 });
@@ -41,6 +44,37 @@ async function fetchPublicSettings() {
         state.publicSettings = await response.json();
         if (state.publicSettings.googleApiKey) loadGoogleMaps(state.publicSettings.googleApiKey);
     } catch (err) { console.error('Erro ao carregar configurações:', err); }
+}
+
+async function fetchSlots() {
+    try {
+        const response = await fetch(`${API_BASE}/orders/available-slots`);
+        state.availableSlots = await response.json();
+        checkStoreStatus();
+    } catch (err) { console.error('Erro ao buscar slots:', err); }
+}
+
+function checkStoreStatus() {
+    const now = new Date();
+    const day = now.getDay();
+    const time = now.getHours() * 60 + now.getMinutes();
+
+    const todaySlots = state.availableSlots.filter(s => s.dayOfWeek === day);
+    state.isOpen = todaySlots.some(s => {
+        const [sh, sm] = s.startTime.split(':').map(Number);
+        const [eh, em] = s.endTime.split(':').map(Number);
+        const start = sh * 60 + sm;
+        const end = eh * 60 + em;
+        return time >= start && time <= end;
+    });
+
+    const statusEl = document.querySelector('.store-status');
+    if (statusEl) {
+        statusEl.innerHTML = state.isOpen 
+            ? `<span class="status-dot online"></span> Aberto agora` 
+            : `<span class="status-dot offline"></span> Fechado para entrega (Apenas agendamento)`;
+        statusEl.classList.toggle('closed', !state.isOpen);
+    }
 }
 
 function loadGoogleMaps(apiKey) {
@@ -74,10 +108,7 @@ window.initMapsAutocomplete = () => {
         animation: google.maps.Animation.DROP
     });
 
-    // Se já tiver endereço no localStorage, inicializa o mapa nele
-    if (state.userInfo.address) {
-        geocodeAddress(state.userInfo.address);
-    }
+    if (state.userInfo.address) geocodeAddress(state.userInfo.address);
 
     autocomplete.addListener('place_changed', () => {
         const place = autocomplete.getPlace();
@@ -85,11 +116,7 @@ window.initMapsAutocomplete = () => {
         updateLocation(place.geometry.location, place.formatted_address);
     });
 
-    state.mapMarker.addListener('dragend', () => {
-        const pos = state.mapMarker.getPosition();
-        reverseGeocode(pos);
-    });
-
+    state.mapMarker.addListener('dragend', () => reverseGeocode(state.mapMarker.getPosition()));
     state.googleMap.addListener('click', (e) => {
         updateLocation(e.latLng);
         reverseGeocode(e.latLng);
@@ -99,9 +126,7 @@ window.initMapsAutocomplete = () => {
 function geocodeAddress(address) {
     if (!state.geocoder) return;
     state.geocoder.geocode({ address: address }, (results, status) => {
-        if (status === 'OK' && results[0]) {
-            updateLocation(results[0].geometry.location, results[0].formatted_address);
-        }
+        if (status === 'OK' && results[0]) updateLocation(results[0].geometry.location, results[0].formatted_address);
     });
 }
 
@@ -119,10 +144,7 @@ function updateLocation(location, address = null) {
 
 function reverseGeocode(latLng) {
     state.geocoder.geocode({ location: latLng }, (results, status) => {
-        if (status === 'OK' && results[0]) {
-            const address = results[0].formatted_address;
-            updateLocation(latLng, address);
-        }
+        if (status === 'OK' && results[0]) updateLocation(latLng, results[0].formatted_address);
     });
 }
 
@@ -178,7 +200,7 @@ function renderMenu() {
     }
 
     const grouped = filtered.reduce((acc, p) => {
-        const cat = p.category || 'Outros';
+        const cat = p.category && p.category !== 'Doces' ? p.category : 'Outros';
         if (!acc[cat]) acc[cat] = [];
         acc[cat].push(p);
         return acc;
@@ -255,19 +277,25 @@ function initEventListeners() {
 
     document.getElementById('qty-plus').addEventListener('click', () => { state.currentQty++; updateDetailFooter(); });
     document.getElementById('qty-minus').addEventListener('click', () => { if(state.currentQty > 1) { state.currentQty--; updateDetailFooter(); } });
-    document.querySelector('.close-modal-btn').addEventListener('click', () => document.getElementById('item-modal').classList.add('hidden'));
+    
+    const closeModal = () => {
+        document.getElementById('item-modal').classList.add('hidden');
+        document.getElementById('checkout-modal').classList.add('hidden');
+    };
+    
+    document.querySelector('.close-modal-btn').addEventListener('click', closeModal);
+    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeModal(); });
+
     document.getElementById('add-to-cart-btn').addEventListener('click', addToCart);
     document.getElementById('view-cart-btn').addEventListener('click', () => goToStep(1));
     document.getElementById('checkout-back-btn').addEventListener('click', () => { if(state.currentStep > 1) goToStep(state.currentStep - 1); else document.getElementById('checkout-modal').classList.add('hidden'); });
     document.getElementById('next-step-btn').addEventListener('click', handleNextStep);
     document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
 
-    // Restaurar inputs do localStorage
     document.getElementById('user-name').value = state.userInfo.name || '';
     document.getElementById('user-phone').value = state.userInfo.phone || '';
     document.getElementById('user-address').value = state.userInfo.address || '';
 
-    // Mask e Persistence
     const phoneInput = document.getElementById('user-phone');
     phoneInput.addEventListener('input', (e) => {
         e.target.value = maskPhone(e.target.value);
@@ -290,9 +318,7 @@ function goToStep(step) {
     state.currentStep = step;
     document.querySelectorAll('.checkout-step').forEach((el, idx) => el.classList.toggle('hidden', idx + 1 !== step));
     document.getElementById('checkout-modal').classList.remove('hidden');
-    
-    const titles = ["Ver sacola", "Entrega & Agendamento", "Confirmar Pedido"];
-    document.getElementById('checkout-step-title').innerText = titles[step - 1];
+    document.getElementById('checkout-step-title').innerText = ["Ver sacola", "Entrega & Agendamento", "Confirmar Pedido"][step - 1];
     
     const isLast = step === 3;
     document.getElementById('next-step-btn').classList.toggle('hidden', isLast);
@@ -306,7 +332,33 @@ function goToStep(step) {
 function renderStep1() {
     const cart = getActiveCart();
     const list = document.getElementById('checkout-items-list');
-    list.innerHTML = cart.map(item => `<div class="checkout-item"><div class="item-name-qty"><span class="qty-text">${item.quantity}x</span><div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div></div><div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div></div>`).join('');
+    if (cart.length === 0) {
+        list.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-gray);">Sua sacola está vazia.</p>`;
+        document.getElementById('next-step-btn').disabled = true;
+        return;
+    }
+    document.getElementById('next-step-btn').disabled = false;
+    list.innerHTML = cart.map(item => `
+        <div class="checkout-item">
+            <div class="item-name-qty">
+                <span class="qty-text">${item.quantity}x</span>
+                <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                <button class="remove-btn" onclick="removeFromCart('${item.itemKey}')"><i data-lucide="trash-2"></i></button>
+            </div>
+        </div>
+    `).join('');
+    lucide.createIcons();
+}
+
+function removeFromCart(itemKey) {
+    let cart = getActiveCart();
+    cart = cart.filter(i => i.itemKey !== itemKey);
+    setActiveCart(cart);
+    renderStep1();
+    updateUI();
 }
 
 function renderStep2() {
@@ -316,7 +368,6 @@ function renderStep2() {
     if (isDelivery && state.googleMap) {
         setTimeout(() => {
             google.maps.event.trigger(state.googleMap, 'resize');
-            // Recentraliza no marker se ele existir
             if (state.mapMarker) state.googleMap.panTo(state.mapMarker.getPosition());
         }, 100);
     }
@@ -325,6 +376,7 @@ function renderStep2() {
 function handleNextStep() {
     if (state.currentStep === 1) {
         if (!state.userInfo.name || !state.userInfo.phone || state.userInfo.phone.length < 14) return alert('Preencha seu nome e um WhatsApp válido.');
+        if (state.activeTab === 'delivery' && !state.isOpen) return alert('Estamos fechados para pronta entrega no momento. Por favor, utilize a aba de Encomendas para agendar seu pedido.');
         goToStep(2);
     } else if (state.currentStep === 2) {
         if (state.activeTab === 'delivery' && !state.userInfo.address) return alert('Selecione seu endereço.');
@@ -349,6 +401,7 @@ function updateStep3Summary() {
 
 function addToCart() {
     const item = state.currentItem;
+    if (state.activeTab === 'delivery' && !state.isOpen) return alert('Estamos fechados para pronta entrega no momento. Por favor, utilize a aba de Encomendas para agendar seu pedido.');
     const variation = state.currentVariation;
     const variations = JSON.parse(item.variations || '[]');
     if (variations.length > 0 && !variation) return alert('Por favor, selecione uma opção.');
@@ -367,10 +420,8 @@ function updateUI() {
     const footer = document.getElementById('cart-footer');
     if (cart.length > 0) {
         footer.classList.remove('hidden');
-        const qty = cart.reduce((acc, i) => acc + i.quantity, 0);
-        const total = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
-        document.getElementById('cart-qty-badge').innerText = qty;
-        document.getElementById('cart-total-footer').innerText = `R$ ${total.toFixed(2)}`;
+        document.getElementById('cart-qty-badge').innerText = cart.reduce((acc, i) => acc + i.quantity, 0);
+        document.getElementById('cart-total-footer').innerText = `R$ ${cart.reduce((acc, i) => acc + (i.price * i.quantity), 0).toFixed(2)}`;
     } else footer.classList.add('hidden');
 }
 
@@ -378,31 +429,21 @@ async function handlePlaceOrder() {
     const cart = getActiveCart();
     const btn = document.getElementById('place-order-btn');
     btn.disabled = true; btn.innerHTML = 'Processando Pagamento...';
-
     const payload = {
-        clientName: state.userInfo.name,
-        clientPhone: state.userInfo.phone,
+        clientName: state.userInfo.name, clientPhone: state.userInfo.phone,
         product: cart[0].name + (cart[0].variation ? ` (${cart[0].variation})` : ''),
-        quantity: cart[0].quantity,
-        type: state.activeTab,
+        quantity: cart[0].quantity, type: state.activeTab,
         deliveryAddress: state.activeTab === 'delivery' ? state.userInfo.address : null,
         scheduledDate: state.activeTab === 'order' ? document.getElementById('order-date').value : null,
         scheduledTime: state.activeTab === 'order' ? document.getElementById('order-time').value : null,
         deliveryFee: state.activeTab === 'delivery' ? state.deliveryFee : 0,
         carrinho_itens_extras: cart.slice(1).map(item => ({ name: item.name + (item.variation ? ` (${item.variation})` : ''), price: item.price, quantity: item.quantity }))
     };
-
     try {
-        const response = await fetch(`${API_BASE}/orders`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        const response = await fetch(`${API_BASE}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         const data = await response.json();
-        if (data.paymentLink) {
-            location.href = data.paymentLink; // Redireciona DIRETO para o Mercado Pago
-        } else if (data.id) {
-            alert('Pedido registrado, mas houve um problema ao gerar o link de pagamento. Por favor, entre em contato.');
-        } else throw new Error(data.error);
+        if (data.paymentLink) location.href = data.paymentLink;
+        else if (data.id) alert('Pedido registrado, mas houve um problema ao gerar o link de pagamento. Por favor, entre em contato.');
+        else throw new Error(data.error);
     } catch (err) { alert('Erro: ' + err.message); btn.disabled = false; btn.innerHTML = 'Fazer pedido'; }
 }

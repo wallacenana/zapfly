@@ -1297,7 +1297,7 @@ router.post('/products', async (req, res) => {
         variations: variations || '[]',
         comboItems: req.body.comboItems || '[]',
         trackStock: req.body.trackStock ?? false,
-        category: req.body.category || 'Doces',
+        category: req.body.category || 'Geral',
         image: req.body.image || null
       }
     });
