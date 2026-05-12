@@ -1260,7 +1260,9 @@ router.post('/products', async (req, res) => {
         unit: unit || 'unidade',
         variations: variations || '[]',
         comboItems: req.body.comboItems || '[]',
-        trackStock: req.body.trackStock ?? false
+        trackStock: req.body.trackStock ?? false,
+        category: req.body.category || 'Doces',
+        image: req.body.image || null
       }
     });
     res.json(product);
@@ -1278,7 +1280,9 @@ router.patch('/products/:id', async (req, res) => {
       data: {
         name, description, type, price, stock, capacityCost, variations, unit,
         comboItems: req.body.comboItems,
-        trackStock: req.body.trackStock
+        trackStock: req.body.trackStock,
+        category: req.body.category,
+        image: req.body.image
       }
     });
     res.json(product);

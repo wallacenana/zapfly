@@ -5,6 +5,7 @@ const pino = require('pino');
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const path = require('path');
 const cors = require('cors');
 const OpenAI = require('openai');
 const fs = require('fs');
@@ -42,6 +43,19 @@ const audioStorage = multer.diskStorage({
     }
 });
 const uploadAudio = multer({ storage: audioStorage });
+ 
+const productStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const dir = 'assets/products';
+        if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'product-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+const uploadProduct = multer({ storage: productStorage });
 
 
 // Prisma singleton is now loaded from lib/prisma.js
@@ -71,6 +85,8 @@ const aiMessageBuffer = {};
 app.use(cors({ origin: "*" }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.json());
+app.use(cors());
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/orders', (req, res, next) => {
     req.sockGetter = (instId) => {
         if (instId) return sessions.get(instId);
@@ -1944,6 +1960,17 @@ app.post('/instances/:id/send', async (req, res) => {
     } catch (err) {
         console.error('ERRO FATAL NO ENVIO:', err);
         res.status(500).json({ error: 'Erro ao enviar: ' + err.message });
+    }
+});
+
+// Rota de Upload de Imagem de Produto
+app.post('/upload/product', uploadProduct.single('image'), (req, res) => {
+    try {
+        if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada' });
+        const imageUrl = `/assets/products/${req.file.filename}`;
+        res.json({ url: imageUrl });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 

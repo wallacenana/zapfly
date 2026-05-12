@@ -4,14 +4,14 @@ import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box
 
 import Swal from 'sweetalert2';
 
-import { api } from '../api';
+import { api, API_URL } from '../api';
 
 const Estoque = () => {
   const [tab, setTab] = useState('delivery'); // 'delivery', 'encomenda' ou 'addon'
   const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [isComboMode, setIsComboMode] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', price: 0, stock: 0, trackStock: false, capacityCost: 1, variations: [], comboItems: [] });
+  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: 'Doces', image: '', price: 0, stock: 0, trackStock: false, capacityCost: 1, variations: [], comboItems: [] });
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState(null);
 
@@ -67,7 +67,7 @@ const Estoque = () => {
   const openAdd = (asCombo = false) => {
     setEditing(null);
     setIsComboMode(asCombo);
-    setForm({ name: '', description: '', type: tab, price: 0, stock: 0, trackStock: tab === 'delivery', capacityCost: 1, variations: [], comboItems: [] });
+    setForm({ name: '', description: '', type: tab, category: 'Doces', image: '', price: 0, stock: 0, trackStock: tab === 'delivery', capacityCost: 1, variations: [], comboItems: [] });
     setShowModal(true);
   };
 
@@ -431,6 +431,49 @@ const Estoque = () => {
                     <label style={labelStyle}>Descrição (Opcional)</label>
                     <textarea {...inp} style={{ ...inp.style, minHeight: '60px', resize: 'vertical' }} placeholder="Detalhes que o cliente deve saber." value={form.description || ''} onChange={e => setForm(f => ({...f, description: e.target.value}))} />
                 </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                  <div>
+                    <label style={labelStyle}>Categoria</label>
+                    <input {...inp} placeholder="Ex: Bolos, Doces, Copos..." value={form.category || ''} onChange={e => setForm(f => ({...f, category: e.target.value}))} />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>URL da Imagem (Opcional)</label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input {...inp} placeholder="https://..." value={form.image || ''} onChange={e => setForm(f => ({...f, image: e.target.value}))} />
+                      <label style={{ ...inp.style, width: 'auto', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
+                        <Layers size={18} />
+                        <input 
+                          type="file" 
+                          hidden 
+                          accept="image/*" 
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            const formData = new FormData();
+                            formData.append('image', file);
+                            try {
+                              const res = await api.post('/upload/product', formData);
+                              setForm(f => ({ ...f, image: `${API_URL}${res.data.url}` }));
+                            } catch (err) { Swal.fire('Erro', 'Falha no upload', 'error'); }
+                          }} 
+                        />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {form.image && (
+                  <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+                    <img src={form.image} alt="Preview" style={{ maxWidth: '100%', maxHeight: '150px', borderRadius: '12px', border: '1px solid var(--border-color)' }} />
+                    <button 
+                      onClick={() => setForm(f => ({ ...f, image: '' }))} 
+                      style={{ display: 'block', margin: '8px auto', fontSize: '11px', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer' }}
+                    >
+                      Remover imagem
+                    </button>
+                  </div>
+                )}
                 
                 <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <input 

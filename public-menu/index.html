@@ -12,121 +12,148 @@
 </head>
 <body>
     <div id="app">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-overlay"></div>
-            <div class="header-content">
-                <div class="logo-box">
-                    <i data-lucide="cake"></i>
+        <!-- Top Navigation (iFood Style) -->
+        <header class="top-nav">
+            <div class="container nav-wrapper">
+                <div class="store-info">
+                    <div class="store-logo">
+                        <i data-lucide="cake"></i>
+                    </div>
+                    <div class="store-details">
+                        <h1>Linda Cake</h1>
+                        <p class="store-status"><span class="status-dot"></span> Aberto agora</p>
+                    </div>
                 </div>
-                <h1>LINDA CAKE</h1>
-                <p>Confeitaria Artesanal</p>
+                <div class="nav-actions">
+                    <button class="icon-btn"><i data-lucide="search"></i></button>
+                </div>
             </div>
         </header>
 
-        <!-- Tabs -->
-        <nav class="tabs-nav">
-            <div class="tabs-container">
-                <button class="tab-btn active" data-tab="delivery">
-                    <i data-lucide="clock"></i> Pronta Entrega
-                </button>
-                <button class="tab-btn" data-tab="order">
-                    <i data-lucide="calendar"></i> Encomendar
-                </button>
+        <!-- Category Tabs -->
+        <nav class="category-tabs">
+            <div class="container tabs-scroll">
+                <button class="cat-tab active" data-tab="delivery">Entrega</button>
+                <button class="cat-tab" data-tab="order">Encomendas</button>
             </div>
         </nav>
 
-        <!-- Main Content -->
-        <main class="container">
-            <div id="product-list" class="product-grid">
-                <!-- Products will be injected here -->
-                <div class="loading">
+        <!-- Search Bar (Optional but nice) -->
+        <div class="container search-container">
+            <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="search-input" placeholder="Buscar no cardápio">
+            </div>
+        </div>
+
+        <!-- Main Menu -->
+        <main class="container main-menu">
+            <div id="menu-sections">
+                <!-- Sections will be injected here -->
+                <div class="loading-state">
                     <div class="spinner"></div>
-                    <p>Buscando doçuras...</p>
+                    <p>Carregando cardápio...</p>
                 </div>
             </div>
         </main>
 
-        <!-- Cart Bar -->
-        <div id="cart-bar" class="cart-bar hidden">
-            <button id="open-checkout">
-                <div class="cart-info">
-                    <span id="cart-count">0</span>
-                    <strong>VER CARRINHO</strong>
-                </div>
-                <div class="cart-total">
-                    R$ <span id="cart-total-value">0,00</span>
-                    <i data-lucide="chevron-right"></i>
-                </div>
-            </button>
-        </div>
-
-        <!-- Checkout Modal -->
-        <div id="checkout-modal" class="modal hidden">
-            <div class="modal-backdrop"></div>
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2>Seu Pedido</h2>
-                    <button id="close-checkout" class="close-btn">
-                        <i data-lucide="x"></i>
-                    </button>
-                </div>
-                
-                <div class="modal-body">
-                    <div id="cart-items" class="cart-items-list"></div>
-
-                    <div class="form-section">
-                        <h3><i data-lucide="user"></i> Dados de Contato</h3>
-                        <div class="input-group">
-                            <i data-lucide="user"></i>
-                            <input type="text" id="client-name" placeholder="Seu Nome Completo">
-                        </div>
-                        <div class="input-group">
-                            <i data-lucide="phone"></i>
-                            <input type="text" id="client-phone" placeholder="WhatsApp (com DDD)">
-                        </div>
+        <!-- Cart Footer -->
+        <footer id="cart-footer" class="cart-footer hidden">
+            <div class="container">
+                <button id="view-cart-btn" class="primary-btn cart-btn">
+                    <div class="cart-btn-content">
+                        <span id="cart-qty-badge">0</span>
+                        <strong>Ver sacola</strong>
                     </div>
+                    <span id="cart-total-footer">R$ 0,00</span>
+                </button>
+            </div>
+        </footer>
 
-                    <div id="delivery-section" class="form-section">
-                        <h3><i data-lucide="map-pin"></i> Endereço para Entrega</h3>
-                        <div class="input-group">
-                            <i data-lucide="map-pin" style="top: 20px; transform: none;"></i>
-                            <textarea id="delivery-address" placeholder="Rua, número, bairro..."></textarea>
-                        </div>
-                    </div>
-
-                    <div id="order-section" class="form-section hidden">
-                        <h3><i data-lucide="clock"></i> Retirada</h3>
-                        <div class="grid-2">
-                            <input type="date" id="scheduled-date">
-                            <input type="time" id="scheduled-time">
-                        </div>
-                    </div>
+        <!-- Item Detail Modal (iFood Style Popup) -->
+        <div id="item-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content item-detail-content">
+                <button class="close-modal-btn"><i data-lucide="x"></i></button>
+                <div id="item-detail-body">
+                    <!-- Item detail content injected here -->
                 </div>
-
-                <div class="modal-footer">
-                    <div class="total-row">
-                        <span>Total do Pedido</span>
-                        <strong id="final-total">R$ 0,00</strong>
+                <div class="modal-footer-sticky">
+                    <div class="qty-selector">
+                        <button class="qty-btn" id="qty-minus"><i data-lucide="minus"></i></button>
+                        <span id="detail-qty">1</span>
+                        <button class="qty-btn" id="qty-plus"><i data-lucide="plus"></i></button>
                     </div>
-                    <button id="confirm-order" class="confirm-btn">
-                        CONFIRMAR E PAGAR <i data-lucide="arrow-right"></i>
+                    <button id="add-to-cart-btn" class="primary-btn">
+                        Adicionar <span id="add-btn-price">R$ 0,00</span>
                     </button>
                 </div>
             </div>
         </div>
 
-        <!-- Success Modal -->
-        <div id="success-modal" class="modal hidden">
-            <div class="modal-backdrop"></div>
-            <div class="modal-content success-content">
-                <div class="success-icon">
-                    <i data-lucide="check-circle"></i>
+        <!-- Checkout Modal -->
+        <div id="checkout-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content checkout-content">
+                <div class="modal-header">
+                    <button class="back-btn"><i data-lucide="arrow-left"></i></button>
+                    <h2>Finalizar pedido</h2>
                 </div>
-                <h2>Pedido Realizado!</h2>
-                <p>A Lily já recebeu seu pedido e te chamou no WhatsApp. Verifique suas mensagens!</p>
-                <a id="payment-link" href="#" target="_blank" class="payment-btn">PAGAR AGORA</a>
-                <button id="new-order" class="secondary-btn">Fazer outro pedido</button>
+                <div class="modal-scroll-body">
+                    <div id="checkout-items-list" class="checkout-items"></div>
+                    
+                    <div class="checkout-form">
+                        <section class="form-section">
+                            <h3>Seus dados</h3>
+                            <input type="text" id="user-name" placeholder="Nome completo" class="ifood-input">
+                            <input type="text" id="user-phone" placeholder="WhatsApp (DDD + Número)" class="ifood-input">
+                        </section>
+
+                        <section id="delivery-info" class="form-section">
+                            <h3>Endereço de entrega</h3>
+                            <textarea id="user-address" placeholder="Rua, número, bairro e referências" class="ifood-input"></textarea>
+                        </section>
+
+                        <section id="order-info" class="form-section hidden">
+                            <h3>Data e hora da retirada</h3>
+                            <div class="input-row">
+                                <input type="date" id="order-date" class="ifood-input">
+                                <input type="time" id="order-time" class="ifood-input">
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="order-summary">
+                        <div class="summary-line">
+                            <span>Subtotal</span>
+                            <span id="summary-subtotal">R$ 0,00</span>
+                        </div>
+                        <div class="summary-line total">
+                            <span>Total</span>
+                            <span id="summary-total">R$ 0,00</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer-sticky">
+                    <button id="place-order-btn" class="primary-btn">
+                        Fazer pedido <i data-lucide="chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Success Screen -->
+        <div id="success-screen" class="full-screen hidden">
+            <div class="success-box">
+                <div class="success-check">
+                    <i data-lucide="check"></i>
+                </div>
+                <h2>Pedido enviado!</h2>
+                <p>A Lily já te mandou uma mensagem no WhatsApp para confirmar o status.</p>
+                <div class="success-actions">
+                    <a id="ext-payment-link" href="#" target="_blank" class="primary-btn">Pagar agora</a>
+                    <button class="text-btn" onclick="location.reload()">Início</button>
+                </div>
             </div>
         </div>
     </div>

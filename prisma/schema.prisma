@@ -140,6 +140,8 @@ model Product {
   id           String       @id @default(cuid())
   name         String
   type         String       @default("encomenda")
+  category     String?      @default("Doces")
+  image        String?      @db.Text
   unit         String       @default("unidade")
   price        Float        @default(0)
   stock        Int          @default(0)
