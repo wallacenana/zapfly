@@ -150,6 +150,7 @@ model Product {
   prepTime     Int          @default(30)
   description  String?
   featured     Boolean      @default(false)
+  order        Int          @default(0)
   variations   String?      @db.Text
   comboItems   String?      @db.Text
   ingredients  Ingredient[]

@@ -57,6 +57,35 @@ const Estoque = () => {
     } catch (err) { console.error(err); }
   };
 
+  const handleProductDragStart = (e, index) => {
+    e.dataTransfer.setData('draggedProductIndex', index);
+  };
+
+  const handleProductDrop = async (e, targetIndex) => {
+    const draggedIndex = parseInt(e.dataTransfer.getData('draggedProductIndex'));
+    if (isNaN(draggedIndex) || draggedIndex === targetIndex) return;
+
+    const newFiltered = [...filtered];
+    const [draggedItem] = newFiltered.splice(draggedIndex, 1);
+    newFiltered.splice(targetIndex, 0, draggedItem);
+
+    const updated = newFiltered.map((p, idx) => ({ ...p, order: idx + 1 }));
+    
+    // Update local state for immediate feedback
+    const newProducts = products.map(p => {
+      const match = updated.find(u => u.id === p.id);
+      return match ? { ...p, order: match.order } : p;
+    }).sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    setProducts(newProducts);
+
+    try {
+      await Promise.all(updated.map(p => 
+        api.patch(`/orders/products/${p.id}`, { order: p.order })
+      ));
+    } catch (err) { console.error(err); }
+  };
+
   const fetchProducts = useCallback(async () => {
     try {
       const res = await api.get('/orders/products');
@@ -298,11 +327,18 @@ const Estoque = () => {
             </div>
           ))
         ) : (
-          filtered.map(p => {
+          filtered.map((p, idx) => {
             const isExpanded = expanded === p.id;
             const isCombo = p.comboItems && p.comboItems.length > 0;
             return (
-              <div key={p.id} style={{ backgroundColor: '#18181b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', transition: 'all 0.2s' }}>
+              <div 
+                key={p.id} 
+                draggable 
+                onDragStart={(e) => handleProductDragStart(e, idx)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleProductDrop(e, idx)}
+                style={{ backgroundColor: '#18181b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', transition: 'all 0.2s', cursor: 'grab' }}
+              >
                 <div 
                   onClick={() => setExpanded(isExpanded ? null : p.id)}
                   style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent', borderBottom: isExpanded ? '1px solid rgba(255,255,255,0.05)' : 'none' }}

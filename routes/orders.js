@@ -1278,7 +1278,13 @@ router.delete('/stock/:id', async (req, res) => {
 // ─── ROTAS — PRODUTOS / RECEITAS ─────────────────────────────────────────────
 
 router.get('/products', async (req, res) => {
-  const products = await prisma.product.findMany({ include: { ingredients: { include: { stockItem: true } } } });
+  const products = await prisma.product.findMany({ 
+    include: { ingredients: { include: { stockItem: true } } },
+    orderBy: [
+      { order: 'asc' },
+      { name: 'asc' }
+    ]
+  });
   res.json(products);
 });
 
@@ -1320,7 +1326,8 @@ router.patch('/products/:id', async (req, res) => {
         trackStock: req.body.trackStock,
         category: req.body.category,
         image: req.body.image,
-        featured: req.body.featured
+        featured: req.body.featured,
+        order: req.body.order !== undefined ? parseInt(req.body.order) : undefined
       }
     });
     res.json(product);
