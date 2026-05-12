@@ -1,12 +1,16 @@
-:root {
-    --primary: #ea1d2c; /* iFood Red - User wants pink, so I'll use their pink */
     --pink: #ff4d94;
+    --brown: #4a2c2a; /* Marrom escuro para encomendas */
+    --active-color: var(--pink); /* Dinâmico */
     --bg-white: #ffffff;
     --bg-gray: #f7f7f7;
     --text-black: #3e3e3e;
     --text-gray: #717171;
     --border: #e8e8e8;
     --shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+body.theme-order {
+    --active-color: var(--brown);
 }
 
 * {
@@ -61,7 +65,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--pink);
+    color: var(--active-color);
     border: 1px solid var(--border);
 }
 
@@ -85,7 +89,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
 .icon-btn {
     background: none;
     border: none;
-    color: var(--pink);
+    color: var(--active-color);
     cursor: pointer;
 }
 
@@ -121,7 +125,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
 }
 
 .cat-tab.active {
-    color: var(--pink);
+    color: var(--active-color);
 }
 
 .cat-tab.active::after {
@@ -131,7 +135,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
     left: 0;
     right: 0;
     height: 2px;
-    background: var(--pink);
+    background: var(--active-color);
 }
 
 /* Search Box */
@@ -149,7 +153,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
     gap: 12px;
 }
 
-.search-box i { color: var(--pink); width: 20px; }
+.search-box i { color: var(--active-color); width: 20px; }
 .search-box input {
     background: none;
     border: none;
@@ -191,7 +195,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
     transition: 0.2s;
 }
 
-.product-card:hover { border-color: var(--pink); }
+.product-card:hover { border-color: var(--active-color); }
 
 .product-info { flex: 1; }
 .product-info h3 { margin-bottom: 4px; font-size: 1rem; }
@@ -205,10 +209,8 @@ h3 { font-size: 0.9rem; font-weight: 700; }
     overflow: hidden;
 }
 
-.product-price {
-    font-weight: 600;
-    font-size: 0.95rem;
-}
+.store-logo { color: var(--active-color); }
+.product-price { color: var(--active-color); }
 
 .product-img {
     width: 90px;
@@ -327,7 +329,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
 
 .item-main-info h2 { margin-bottom: 8px; }
 .item-main-info p { color: var(--text-gray); font-size: 0.9rem; margin-bottom: 12px; }
-.item-main-info .price { font-size: 1.1rem; font-weight: 700; color: var(--pink); }
+.item-main-info .price { font-size: 1.1rem; font-weight: 700; color: var(--active-color); }
 
 /* Variations inside detail */
 .variation-section {
@@ -356,8 +358,12 @@ h3 { font-size: 0.9rem; font-weight: 700; }
 }
 
 .var-option.selected {
-    border-color: var(--pink);
+    border-color: var(--active-color);
     background: #fff5f7;
+}
+
+body.theme-order .var-option.selected {
+    background: #fbf8f7;
 }
 
 .var-label { font-weight: 600; font-size: 0.9rem; }
@@ -384,7 +390,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
 .qty-btn {
     background: none;
     border: none;
-    color: var(--pink);
+    color: var(--active-color);
     padding: 8px;
     cursor: pointer;
 }
@@ -394,7 +400,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
 /* Primary Button */
 .primary-btn {
     flex: 1;
-    background: var(--pink);
+    background: var(--active-color);
     color: white;
     border: none;
     padding: 14px;
@@ -422,7 +428,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
 }
 
 .modal-header h2 { margin: 0; font-size: 1rem; }
-.back-btn { background: none; border: none; color: var(--pink); cursor: pointer; }
+.back-btn { background: none; border: none; color: var(--active-color); cursor: pointer; }
 
 .modal-scroll-body { flex: 1; overflow-y: auto; padding: 16px; }
 
@@ -435,7 +441,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
 }
 
 .item-name-qty { display: flex; gap: 8px; }
-.qty-text { color: var(--pink); font-weight: 700; min-width: 24px; }
+.qty-text { color: var(--active-color); font-weight: 700; min-width: 24px; }
 
 .ifood-input {
     width: 100%;
@@ -449,7 +455,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
     outline: none;
 }
 
-.ifood-input:focus { border-color: var(--pink); }
+.ifood-input:focus { border-color: var(--active-color); }
 
 .order-summary {
     background: var(--bg-gray);
@@ -473,6 +479,16 @@ h3 { font-size: 0.9rem; font-weight: 700; }
     color: var(--text-black);
     font-weight: 700;
     font-size: 1rem;
+}
+
+/* Map Placeholder */
+#map-container {
+    width: 100%;
+    height: 180px;
+    background: #eee;
+    border-radius: 8px;
+    margin-top: 12px;
+    overflow: hidden;
 }
 
 /* Success Screen */
@@ -504,7 +520,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
 .success-box p { color: var(--text-gray); margin-bottom: 32px; }
 
 .success-actions { display: grid; gap: 12px; }
-.text-btn { background: none; border: none; color: var(--pink); font-weight: 600; cursor: pointer; padding: 12px; }
+.text-btn { background: none; border: none; color: var(--active-color); font-weight: 600; cursor: pointer; padding: 12px; }
 
 /* Utils */
 .hidden { display: none !important; }
@@ -513,7 +529,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
     width: 32px;
     height: 32px;
     border: 3px solid var(--bg-gray);
-    border-top-color: var(--pink);
+    border-top-color: var(--active-color);
     border-radius: 50%;
     margin: 0 auto 16px;
     animation: spin 1s linear infinite;

@@ -5,21 +5,74 @@ const API_BASE = 'http://157.230.239.80:3001';
 let state = {
     products: [],
     activeTab: 'delivery',
-    cart: [],
+    deliveryCart: [],
+    orderCart: [],
     loading: true,
-    currentItem: null, // Para o modal de detalhes
+    searchQuery: '',
+    currentItem: null,
     currentQty: 1,
     currentVariation: null,
-    userInfo: JSON.parse(localStorage.getItem('linda_cake_user') || '{"name":"","phone":"","address":""}')
+    userInfo: JSON.parse(localStorage.getItem('linda_cake_user') || '{"name":"","phone":"","address":""}'),
+    publicSettings: { googleApiKey: '', deliveryRules: [], businessName: 'Linda Cake' }
+};
+
+// Getters para o carrinho ativo
+const getActiveCart = () => state.activeTab === 'delivery' ? state.deliveryCart : state.orderCart;
+const setActiveCart = (newCart) => {
+    if (state.activeTab === 'delivery') state.deliveryCart = newCart;
+    else state.orderCart = newCart;
 };
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
+    fetchPublicSettings();
     fetchProducts();
     initEventListeners();
     updateUI();
 });
+
+// Busca de Configurações (API Key, Regras de Entrega)
+async function fetchPublicSettings() {
+    try {
+        const response = await fetch(`${API_BASE}/orders/settings/public`);
+        state.publicSettings = await response.json();
+        
+        if (state.publicSettings.googleApiKey) {
+            loadGoogleMaps(state.publicSettings.googleApiKey);
+        }
+    } catch (err) {
+        console.error('Erro ao carregar configurações:', err);
+    }
+}
+
+// Carregamento Dinâmico do Google Maps
+function loadGoogleMaps(apiKey) {
+    if (window.google) return;
+    const script = document.createElement('script');
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMapsAutocomplete`;
+    script.async = true;
+    script.defer = true;
+    document.head.appendChild(script);
+}
+
+// Callback do Google Maps
+window.initMapsAutocomplete = () => {
+    const input = document.getElementById('user-address');
+    const autocomplete = new google.maps.places.Autocomplete(input);
+    autocomplete.setComponentRestrictions({ country: 'br' });
+    
+    autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (!place.geometry) return;
+        
+        // Salva endereço no state
+        state.userInfo.address = place.formatted_address;
+        localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
+        
+        // Aqui poderia disparar cálculo de frete via API se necessário
+    });
+};
 
 // Busca de Produtos
 async function fetchProducts() {
@@ -30,23 +83,29 @@ async function fetchProducts() {
         renderMenu();
     } catch (err) {
         console.error('Erro ao buscar produtos:', err);
-        document.getElementById('menu-sections').innerHTML = `<p class="error">Erro ao carregar cardápio. Verifique sua conexão.</p>`;
+        document.getElementById('menu-sections').innerHTML = `<p class="error">Erro ao carregar cardápio.</p>`;
     }
 }
 
-// Renderização do Menu por Categorias (Estilo iFood)
+// Renderização AJAX do Menu
 function renderMenu() {
     const container = document.getElementById('menu-sections');
+    const query = state.searchQuery.toLowerCase();
     
-    // Filtra produtos pelo tipo de aba (delivery vs encomenda)
+    // Produtos filtrados por Aba + Busca
     const filtered = state.products.filter(p => {
-        if (state.activeTab === 'delivery') return p.type === 'delivery';
-        if (state.activeTab === 'order') return p.type === 'encomenda' || p.type === 'order';
-        return false;
+        const matchesTab = (state.activeTab === 'delivery' && p.type === 'delivery') || 
+                          (state.activeTab === 'order'); // Na aba Encomenda, mostra tudo
+        
+        const matchesSearch = p.name.toLowerCase().includes(query) || 
+                             (p.description && p.description.toLowerCase().includes(query)) ||
+                             (p.category && p.category.toLowerCase().includes(query));
+        
+        return matchesTab && matchesSearch;
     });
 
     if (filtered.length === 0) {
-        container.innerHTML = `<div class="loading-state"><p>Nenhum item disponível nesta categoria.</p></div>`;
+        container.innerHTML = `<div class="loading-state"><p>${state.searchQuery ? 'Nenhum resultado encontrado.' : 'Nenhum item disponível.'}</p></div>`;
         return;
     }
 
@@ -91,7 +150,7 @@ function renderProductCard(product) {
     `;
 }
 
-// Modal de Detalhes (Popup)
+// Detalhes do Item
 function openItemDetail(productId) {
     const item = state.products.find(p => p.id === productId);
     state.currentItem = item;
@@ -101,21 +160,6 @@ function openItemDetail(productId) {
     const variations = JSON.parse(item.variations || '[]');
     const body = document.getElementById('item-detail-body');
 
-    let variationsHtml = '';
-    if (variations.length > 0) {
-        variationsHtml = `
-            <div class="variation-section">
-                <h4>Escolha uma opção</h4>
-                ${variations.map((v, idx) => `
-                    <div class="var-option" onclick="selectVariation('${v.name}', ${v.price})">
-                        <div class="var-label">${v.name}</div>
-                        <div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
-    }
-
     body.innerHTML = `
         ${item.image ? `<img src="${item.image}" class="item-hero-img">` : ''}
         <div class="item-main-info">
@@ -123,7 +167,17 @@ function openItemDetail(productId) {
             <p>${item.description || ''}</p>
             ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
         </div>
-        ${variationsHtml}
+        ${variations.length > 0 ? `
+            <div class="variation-section">
+                <h4>Escolha uma opção</h4>
+                ${variations.map(v => `
+                    <div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})">
+                        <div class="var-label">${v.name}</div>
+                        <div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div>
+                    </div>
+                `).join('')}
+            </div>
+        ` : ''}
     `;
 
     updateDetailFooter();
@@ -133,76 +187,56 @@ function openItemDetail(productId) {
 
 function selectVariation(name, price) {
     state.currentVariation = { name, price };
-    
-    // Visual update of selection
     document.querySelectorAll('.var-option').forEach(el => {
-        el.classList.remove('selected');
-        if (el.querySelector('.var-label').innerText === name) {
-            el.classList.add('selected');
-        }
+        el.classList.toggle('selected', el.querySelector('.var-label').innerText === name);
     });
-
     updateDetailFooter();
 }
 
 function updateDetailFooter() {
     const basePrice = state.currentVariation ? state.currentVariation.price : (state.currentItem?.price || 0);
-    const total = basePrice * state.currentQty;
-    document.getElementById('add-btn-price').innerText = `R$ ${total.toFixed(2)}`;
+    document.getElementById('add-btn-price').innerText = `R$ ${(basePrice * state.currentQty).toFixed(2)}`;
     document.getElementById('detail-qty').innerText = state.currentQty;
 }
 
-// Event Listeners Centralizados
+// Event Listeners
 function initEventListeners() {
-    // Tabs
+    // Busca AJAX
+    document.getElementById('search-input').addEventListener('input', (e) => {
+        state.searchQuery = e.target.value;
+        renderMenu();
+    });
+
+    // Troca de Abas + Temas
     document.querySelectorAll('.cat-tab').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             state.activeTab = btn.dataset.tab;
+            
+            // Troca o tema visual
+            document.body.className = state.activeTab === 'order' ? 'theme-order' : '';
+            
             renderMenu();
+            updateUI();
         });
     });
 
-    // Modal Details
-    document.querySelector('.close-modal-btn').addEventListener('click', () => {
-        document.getElementById('item-modal').classList.add('hidden');
-    });
+    // Qty Selector no Modal
+    document.getElementById('qty-plus').addEventListener('click', () => { state.currentQty++; updateDetailFooter(); });
+    document.getElementById('qty-minus').addEventListener('click', () => { if(state.currentQty > 1) { state.currentQty--; updateDetailFooter(); } });
 
-    document.getElementById('qty-plus').addEventListener('click', () => {
-        state.currentQty++;
-        updateDetailFooter();
-    });
-
-    document.getElementById('qty-minus').addEventListener('click', () => {
-        if (state.currentQty > 1) {
-            state.currentQty--;
-            updateDetailFooter();
-        }
-    });
-
-    document.getElementById('add-to-cart-btn').addEventListener('click', () => {
-        const variations = JSON.parse(state.currentItem.variations || '[]');
-        if (variations.length > 0 && !state.currentVariation) {
-            alert('Por favor, selecione uma opção.');
-            return;
-        }
-        addToCart();
-    });
-
-    // Cart Logic
+    // Modais
+    document.querySelector('.close-modal-btn').addEventListener('click', () => document.getElementById('item-modal').classList.add('hidden'));
+    document.getElementById('add-to-cart-btn').addEventListener('click', addToCart);
     document.getElementById('view-cart-btn').addEventListener('click', openCheckout);
-    document.querySelector('.back-btn').addEventListener('click', () => {
-        document.getElementById('checkout-modal').classList.add('hidden');
-    });
-
+    document.querySelector('.back-btn').addEventListener('click', () => document.getElementById('checkout-modal').classList.add('hidden'));
     document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
 
     // Inputs Persistence
     ['user-name', 'user-phone', 'user-address'].forEach(id => {
         const el = document.getElementById(id);
-        el.value = state.userInfo[id.split('-')[1]] || '';
-        el.addEventListener('input', (e) => {
+        if(el) el.addEventListener('input', (e) => {
             state.userInfo[id.split('-')[1]] = e.target.value;
             localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
         });
@@ -212,13 +246,21 @@ function initEventListeners() {
 function addToCart() {
     const item = state.currentItem;
     const variation = state.currentVariation;
-    const itemKey = variation ? `${item.id}-${variation.name}` : item.id;
+    const variations = JSON.parse(item.variations || '[]');
     
-    const existing = state.cart.find(c => c.itemKey === itemKey);
+    if (variations.length > 0 && !variation) {
+        alert('Por favor, selecione uma opção.');
+        return;
+    }
+
+    const itemKey = variation ? `${item.id}-${variation.name}` : item.id;
+    let cart = getActiveCart();
+    
+    const existing = cart.find(c => c.itemKey === itemKey);
     if (existing) {
         existing.quantity += state.currentQty;
     } else {
-        state.cart.push({
+        cart.push({
             productId: item.id,
             itemKey,
             name: item.name,
@@ -228,17 +270,19 @@ function addToCart() {
         });
     }
 
+    setActiveCart(cart);
     document.getElementById('item-modal').classList.add('hidden');
     updateUI();
 }
 
 function updateUI() {
+    const cart = getActiveCart();
     const footer = document.getElementById('cart-footer');
-    if (state.cart.length > 0) {
+    
+    if (cart.length > 0) {
         footer.classList.remove('hidden');
-        const qty = state.cart.reduce((acc, i) => acc + i.quantity, 0);
-        const total = state.cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
-        
+        const qty = cart.reduce((acc, i) => acc + i.quantity, 0);
+        const total = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
         document.getElementById('cart-qty-badge').innerText = qty;
         document.getElementById('cart-total-footer').innerText = `R$ ${total.toFixed(2)}`;
     } else {
@@ -247,8 +291,9 @@ function updateUI() {
 }
 
 function openCheckout() {
+    const cart = getActiveCart();
     const list = document.getElementById('checkout-items-list');
-    list.innerHTML = state.cart.map(item => `
+    list.innerHTML = cart.map(item => `
         <div class="checkout-item">
             <div class="item-name-qty">
                 <span class="qty-text">${item.quantity}x</span>
@@ -261,45 +306,39 @@ function openCheckout() {
         </div>
     `).join('');
 
-    const total = state.cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
+    const total = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
     document.getElementById('summary-subtotal').innerText = `R$ ${total.toFixed(2)}`;
     document.getElementById('summary-total').innerText = `R$ ${total.toFixed(2)}`;
 
-    // Toggle info sections
-    if (state.activeTab === 'delivery') {
-        document.getElementById('delivery-info').classList.remove('hidden');
-        document.getElementById('order-info').classList.add('hidden');
-    } else {
-        document.getElementById('delivery-info').classList.add('hidden');
-        document.getElementById('order-info').classList.remove('hidden');
-    }
+    // Toggle Seções do Formulário
+    const isDelivery = state.activeTab === 'delivery';
+    document.getElementById('delivery-info').classList.toggle('hidden', !isDelivery);
+    document.getElementById('order-info').classList.toggle('hidden', isDelivery);
 
     document.getElementById('checkout-modal').classList.remove('hidden');
 }
 
 async function handlePlaceOrder() {
+    const cart = getActiveCart();
     const name = document.getElementById('user-name').value;
     const phone = document.getElementById('user-phone').value;
     const btn = document.getElementById('place-order-btn');
 
-    if (!name || !phone) {
-        alert('Preencha seu nome e telefone.');
-        return;
-    }
+    if (!name || !phone) { alert('Preencha nome e telefone.'); return; }
 
     btn.disabled = true;
-    btn.innerHTML = '<div class="spinner" style="width:20px;height:20px;margin:0"></div>';
+    btn.innerHTML = 'Processando...';
 
     const payload = {
         clientName: name,
         clientPhone: phone,
-        product: state.cart[0].name + (state.cart[0].variation ? ` (${state.cart[0].variation})` : ''),
-        quantity: state.cart[0].quantity,
+        product: cart[0].name + (cart[0].variation ? ` (${cart[0].variation})` : ''),
+        quantity: cart[0].quantity,
         type: state.activeTab,
         deliveryAddress: state.activeTab === 'delivery' ? document.getElementById('user-address').value : null,
         scheduledDate: state.activeTab === 'order' ? document.getElementById('order-date').value : null,
         scheduledTime: state.activeTab === 'order' ? document.getElementById('order-time').value : null,
-        carrinho_itens_extras: state.cart.slice(1).map(item => ({
+        carrinho_itens_extras: cart.slice(1).map(item => ({
             name: item.name + (item.variation ? ` (${item.variation})` : ''),
             price: item.price,
             quantity: item.quantity
@@ -312,28 +351,23 @@ async function handlePlaceOrder() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-
         const data = await response.json();
-        if (data.id) {
-            showSuccessScreen(data);
-        } else {
-            throw new Error(data.error || 'Erro ao processar');
-        }
+        if (data.id) showSuccessScreen(data);
+        else throw new Error(data.error);
     } catch (err) {
         alert('Erro: ' + err.message);
         btn.disabled = false;
-        btn.innerHTML = 'Fazer pedido <i data-lucide="chevron-right"></i>';
-        lucide.createIcons();
+        btn.innerHTML = 'Fazer pedido';
     }
 }
 
 function showSuccessScreen(data) {
     document.getElementById('checkout-modal').classList.add('hidden');
     document.getElementById('success-screen').classList.remove('hidden');
-    if (data.paymentLink) {
-        document.getElementById('ext-payment-link').href = data.paymentLink;
-    } else {
-        document.getElementById('ext-payment-link').classList.add('hidden');
-    }
-    lucide.createIcons();
+    if (data.paymentLink) document.getElementById('ext-payment-link').href = data.paymentLink;
+    else document.getElementById('ext-payment-link').classList.add('hidden');
+    
+    // Limpa apenas o carrinho da aba ativa
+    if (state.activeTab === 'delivery') state.deliveryCart = [];
+    else state.orderCart = [];
 }

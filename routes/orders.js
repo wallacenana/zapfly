@@ -69,6 +69,20 @@ async function getGoogleCalendar() {
   }
 }
 
+router.get('/settings/public', async (req, res) => {
+  try {
+    const settings = await getSettings();
+    res.json({
+      businessName: settings?.businessName || 'Linda Cake',
+      googleApiKey: settings?.googleApiKey || '',
+      deliveryRules: JSON.parse(settings?.deliveryRules || '[]'),
+      maxDeliveryKm: settings?.maxDeliveryKm || 15
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Sincroniza eventos do Google Calendar para o banco local
 async function syncCalendarEvents() {
   if (global.isSyncingGCal) return { fetched: 0, pushed: 0 };
