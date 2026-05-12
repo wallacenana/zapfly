@@ -176,7 +176,7 @@ h3 { font-size: 0.9rem; font-weight: 700; }
 .product-list {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 16px;
 }
 
 @media (min-width: 768px) {
@@ -187,18 +187,17 @@ h3 { font-size: 0.9rem; font-weight: 700; }
 .product-card {
     display: flex;
     gap: 16px;
-    padding: 16px 0;
+    padding: 16px;
     cursor: pointer;
-    border-bottom: 1px solid var(--border);
-    transition: 0.2s;
-}
-
-.product-card:last-child {
-    border-bottom: none;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    transition: all 0.2s;
+    background: white;
 }
 
 .product-card:hover { 
-    opacity: 0.8;
+    border-color: var(--active-color);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .product-info { flex: 1; }
