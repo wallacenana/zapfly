@@ -642,7 +642,7 @@ body.theme-order .delivery-fee-badge {
 
 /* History Modal & Cards */
 .history-modal-header {
-    padding: 24px 0 16px;
+    padding: 44px 0 16px;
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 16px;
 }
@@ -779,17 +779,19 @@ body.theme-order .delivery-fee-badge {
 
 .chevron-close-btn {
     position: absolute;
-    top: 12px;
-    left: 12px;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 20;
-    background: rgba(255,255,255,0.9);
+    background: #f1f3f5;
     border: none;
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    color: var(--text-gray);
 }
