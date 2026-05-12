@@ -49,6 +49,13 @@ const Estoque = () => {
     } catch (err) { console.error(err); }
   }, []);
 
+  const fetchSeasonal = useCallback(async () => {
+    try {
+      const res = await api.get('/orders/seasonal');
+      setSeasonalCatalogs(res.data);
+    } catch (err) { console.error(err); }
+  }, []);
+
   const fetchCategories = useCallback(async () => {
     try {
       const res = await api.get('/orders/categories');
