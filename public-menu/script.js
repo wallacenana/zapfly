@@ -237,6 +237,14 @@ function renderMenu() {
     const filtered = state.products.filter(p => {
         if (p.active === false) return false;
         if (p.category === 'Adicionais' || p.type === 'addon') return false;
+
+        // Verificar se tem variações e se todas estão escondidas
+        const variations = JSON.parse(p.variations || '[]');
+        if (variations.length > 0) {
+            const hasVisibleVar = variations.some(v => !v.hidden);
+            if (!hasVisibleVar) return false;
+        }
+
         const matchesTab = (state.activeTab === 'delivery' && p.type === 'delivery') || (state.activeTab === 'order');
         const matchesSearch = p.name.toLowerCase().includes(query) || (p.description && p.description.toLowerCase().includes(query));
         return matchesTab && matchesSearch;

@@ -20,6 +20,7 @@ const Estoque = () => {
   const [showSeasonalModal, setShowSeasonalModal] = useState(false);
   const [seasonalForm, setSeasonalForm] = useState({ name: '', eventDate: '', preStartDays: 15, postEndDays: 2, description: '', items: [], maxOrders: 0, onlySeasonalOnEventDay: false, active: true });
   const [editingSeasonal, setEditingSeasonal] = useState(null);
+  const [showHidden, setShowHidden] = useState(false);
   
   const [categories, setCategories] = useState([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -209,7 +210,17 @@ const Estoque = () => {
     setShowSeasonalModal(true);
   };
 
-  const filtered = products.filter(p => p.type === tab || p.type === `combo_${tab}`);
+  const filtered = products.filter(p => {
+    const matchesTab = p.type === tab || p.type === `combo_${tab}`;
+    if (!matchesTab) return false;
+
+    if (!showHidden && p.variations.length > 0) {
+      const hasVisible = p.variations.some(v => !v.hidden);
+      if (!hasVisible) return false;
+    }
+
+    return true;
+  });
   const inp = { style: { width:'100%', padding:'10px 14px', borderRadius:'10px', backgroundColor:'var(--bg-tertiary)', border:'1px solid var(--border-color)', color:'#fff', fontSize:'14px', outline: 'none' } };
 
   return (
@@ -253,6 +264,10 @@ const Estoque = () => {
         <button onClick={() => setTab('seasonal')} style={{ ...tabBtn, backgroundColor: tab === 'seasonal' ? '#ec4899' : 'var(--bg-secondary)', color: tab === 'seasonal' ? '#fff' : 'var(--text-secondary)' }}>
           <Gift size={18} /> Datas Comemorativas
         </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+           <input type="checkbox" id="showHiddenToggle" checked={showHidden} onChange={e => setShowHidden(e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+           <label htmlFor="showHiddenToggle" style={{ fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600 }}>Mostrar itens ocultos</label>
+        </div>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -342,7 +357,7 @@ const Estoque = () => {
                       </div>
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '15px' }}>
-                        {p.variations.map((v, i) => (
+                        {p.variations.filter(v => showHidden || !v.hidden).map((v, i) => (
                           <div key={i} style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
                             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
