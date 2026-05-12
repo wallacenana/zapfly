@@ -125,6 +125,12 @@ async function calculateDeliveryFee(address) {
         const data = await response.json();
         if (data.fee !== undefined) {
             state.deliveryFee = data.fee;
+            const badge = document.getElementById('step2-delivery-fee');
+            const value = document.getElementById('step2-fee-value');
+            if (badge && value) {
+                badge.classList.remove('hidden');
+                value.innerText = `R$ ${data.fee.toFixed(2)}`;
+            }
             updateStep3Summary();
         }
     } catch (err) { console.error('Erro ao calcular frete:', err); }
