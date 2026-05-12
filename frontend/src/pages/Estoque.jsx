@@ -582,6 +582,10 @@ const Estoque = () => {
                                       <label style={microLabel}>Descrição da Categoria (Opcional)</label>
                                       <input {...inp} style={{ ...inp.style, padding: '6px 12px', fontSize: '12px' }} placeholder="Ex: Serve 2 pessoas, embalagem especial..." value={v.description || ''} onChange={e => { const v2=[...form.variations]; v2[vIdx].description=e.target.value; setForm(f=>({...f, variations:v2})) }} />
                                   </div>
+                                  <div style={{ flex: 2 }}>
+                                      <label style={microLabel}>URL Imagem (Opcional)</label>
+                                      <input {...inp} style={{ ...inp.style, padding: '6px 12px', fontSize: '12px' }} placeholder="https://..." value={v.image || ''} onChange={e => { const v2=[...form.variations]; v2[vIdx].image=e.target.value; setForm(f=>({...f, variations:v2})) }} />
+                                  </div>
                                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', paddingTop: '15px' }}>
                                       <input type="checkbox" id={`hidden-${vIdx}`} checked={v.hidden || false} onChange={e => { const v2=[...form.variations]; v2[vIdx].hidden=e.target.checked; setForm(f=>({...f, variations:v2})) }} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
                                       <label htmlFor={`hidden-${vIdx}`} style={{ cursor: 'pointer', fontSize: '11px', fontWeight: 700, color: v.hidden ? '#fbbf24' : 'var(--text-muted)' }}>{v.hidden ? '🙈 INVISÍVEL' : '👁️ VISÍVEL'}</label>

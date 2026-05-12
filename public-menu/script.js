@@ -241,22 +241,29 @@ function openItemDetail(productId) {
     const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
     const body = document.getElementById('item-detail-body');
     body.innerHTML = `
-        ${item.image ? `<img src="${item.image}" class="item-hero-img">` : ''}
+        ${(item.image || variations.some(v => v.image)) ? `<img src="${item.image || variations.find(v => v.image)?.image}" class="item-hero-img">` : ''}
         <div class="item-main-info">
             <h2>${item.name}</h2>
             <p>${item.description || ''}</p>
             ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
         </div>
-        ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
+        ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price}, '${v.image || ''}')"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
     `;
     updateDetailFooter();
     document.getElementById('item-modal').classList.remove('hidden');
     lucide.createIcons();
 }
 
-function selectVariation(name, price) {
+function selectVariation(name, price, varImage) {
     state.currentVariation = { name, price };
     document.querySelectorAll('.var-option').forEach(el => el.classList.toggle('selected', el.querySelector('.var-label').innerText === name));
+    
+    const heroImg = document.querySelector('.item-hero-img');
+    if (heroImg) {
+        if (varImage) heroImg.src = varImage;
+        else if (state.currentItem.image) heroImg.src = state.currentItem.image;
+    }
+
     updateDetailFooter();
 }
 
