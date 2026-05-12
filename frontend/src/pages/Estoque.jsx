@@ -27,6 +27,35 @@ const Estoque = () => {
   const [editingCategory, setEditingCategory] = useState(null);
   const [categoryForm, setCategoryForm] = useState({ name: '', order: 0 });
 
+  const handleDragStart = (e, index) => {
+    e.dataTransfer.setData('draggedIndex', index);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e, targetIndex) => {
+    const draggedIndex = parseInt(e.dataTransfer.getData('draggedIndex'));
+    if (draggedIndex === targetIndex) return;
+
+    const newCategories = [...categories];
+    const [draggedItem] = newCategories.splice(draggedIndex, 1);
+    newCategories.splice(targetIndex, 0, draggedItem);
+
+    // Update orders locally
+    const updated = newCategories.map((cat, idx) => ({ ...cat, order: idx + 1 }));
+    setCategories(updated);
+
+    // Save to backend
+    try {
+      await Promise.all(updated.map(cat => 
+        api.patch(`/orders/categories/${cat.id}`, { order: cat.order })
+      ));
+      fetchCategories();
+    } catch (err) { console.error(err); }
+  };
+
   const fetchProducts = useCallback(async () => {
     try {
       const res = await api.get('/orders/products');
@@ -798,9 +827,26 @@ const Estoque = () => {
                 <p style={{ fontSize: '12px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>Nenhuma categoria cadastrada.</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {categories.map(cat => (
-                    <div key={cat.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px 15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  {categories.map((cat, idx) => (
+                    <div 
+                      key={cat.id} 
+                      draggable 
+                      onDragStart={(e) => handleDragStart(e, idx)}
+                      onDragOver={handleDragOver}
+                      onDrop={(e) => handleDrop(e, idx)}
+                      style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        backgroundColor: 'rgba(255,255,255,0.02)', 
+                        padding: '10px 15px', 
+                        borderRadius: '8px', 
+                        border: '1px solid rgba(255,255,255,0.05)',
+                        cursor: 'grab'
+                      }}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}><Layers size={14} /></div>
                         <span style={{ fontSize: '11px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', color: 'var(--text-secondary)' }}>{cat.order}</span>
                         <span style={{ fontSize: '14px', color: '#fff', fontWeight: 600 }}>{cat.name}</span>
                       </div>
