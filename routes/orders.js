@@ -356,6 +356,9 @@ async function createPaymentLink(order, settings) {
     const client = new MercadoPagoConfig({ accessToken: settings.mercadopagoToken });
     const preference = new Preference(client);
 
+    const managerPhone = settings?.managerJid ? settings.managerJid.split('@')[0] : '5511999999999';
+    const redirectUrl = `https://wa.me/${managerPhone}?text=Ol%C3%A1%2C+meu+pedido+%23${order.id.slice(-4).toUpperCase()}+teve+o+pagamento+processado.`;
+
     const preferenceBody = {
       body: {
         items: [
@@ -368,9 +371,9 @@ async function createPaymentLink(order, settings) {
           }
         ],
         back_urls: {
-          success: 'https://wa.me/5511999999999',
-          failure: 'https://wa.me/5511999999999',
-          pending: 'https://wa.me/5511999999999'
+          success: redirectUrl,
+          failure: redirectUrl,
+          pending: redirectUrl
         },
         auto_return: 'approved',
         notification_url: `${process.env.PUBLIC_URL}/mercadopago/webhook`,
