@@ -2147,8 +2147,8 @@ process.on('uncaughtException', (err) => {
 });
 
 const PORT = 3001;
-server.listen(PORT, async () => {
-    console.log(`Backend rodando em http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', async () => {
+    console.log(`Backend rodando em http://0.0.0.0:${PORT}`);
     const instances = await prisma.instance.findMany();
     for (const inst of instances) {
         initInstance(inst.id);
