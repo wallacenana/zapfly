@@ -609,11 +609,11 @@ router.get('/', async (req, res) => {
   const where = {};
 
   // LÓGICA INTELIGENTE:
-  // Se veio data (Kanban pedindo), trazemos os pendentes (caixa de entrada global) + pedidos do dia.
+  // Se veio data (Kanban pedindo), trazemos os pendentes, em produção e prontos (caixa de entrada global) + pedidos do dia.
   // Se não veio data (Agenda pedindo), trazemos todos os ativos para o mini-calendário funcionar.
   if (date) {
     where.OR = [
-      { status: 'pending' },
+      { status: { in: ['pending', 'production', 'ready'] } },
       { scheduledDate: date }
     ];
   } else {
