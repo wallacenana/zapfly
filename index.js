@@ -108,7 +108,7 @@ app.get('/', (req, res) => {
                     window.opener.location.reload();
                     window.close();
                 } else {
-                    window.location.href = '${process.env.FRONTEND_URL || 'http://157.230.239.80:5173'}/settings';
+                    window.location.href = '${process.env.FRONTEND_URL || 'https://dash.digizap.com.br'}/settings';
                 }
             </script>
         `);
@@ -360,19 +360,27 @@ app.get('/auth/google/calendars', async (req, res) => {
 });
 
 // Salva o calendário selecionado
-app.patch('/auth/google/calendar', async (req, res) => {
-    const { calendarId } = req.body;
-    await prisma.setting.update({ where: { id: 'global' }, data: { gcalCalendarId: calendarId } });
-    res.json({ ok: true });
+app.patch('/auth/google/calendar', authenticate, async (req, res) => {
+    try {
+        const { calendarId } = req.body;
+        await prisma.setting.update({ where: { userId: req.user.id }, data: { gcalCalendarId: calendarId } });
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // Desconectar o Google Calendar
-app.post('/auth/google/disconnect', async (req, res) => {
-    await prisma.setting.update({
-        where: { id: 'global' },
-        data: { gcalEnabled: false, gcalAccessToken: null, gcalRefreshToken: null, gcalTokenExpiry: null },
-    });
-    res.json({ ok: true });
+app.post('/auth/google/disconnect', authenticate, async (req, res) => {
+    try {
+        await prisma.setting.update({
+            where: { userId: req.user.id },
+            data: { gcalEnabled: false, gcalAccessToken: null, gcalRefreshToken: null, gcalTokenExpiry: null },
+        });
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 
@@ -409,7 +417,7 @@ async function initInstance(instanceId) {
         version,
         auth: state,
         printQRInTerminal: false,
-        browser: ['ZAP Fly', 'Chrome', '1.0.0'],
+        browser: ['DigiZap', 'Chrome', '1.0.0'],
         logger: pino({ level: 'silent' }),
         syncFullHistory: true
     });

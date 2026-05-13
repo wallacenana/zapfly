@@ -152,7 +152,7 @@ export default function Login() {
             <Zap size={32} color="#fff" />
           </div>
           <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#f4f4f5', fontFamily: "'Outfit', sans-serif", marginBottom: '6px' }}>
-            ZapFly
+            DigiZap
           </h1>
           <p style={{ color: '#71717a', fontSize: '14px' }}>
             {step === STEP.LOGIN ? 'Entre na sua conta para continuar' : 'Verificação de segurança'}
@@ -364,7 +364,7 @@ export default function Login() {
         </div>
 
         <p style={{ textAlign: 'center', color: '#3f3f46', fontSize: '12px', marginTop: '24px' }}>
-          ZapFly © {new Date().getFullYear()} — Plataforma de automação WhatsApp
+          DigiZap © {new Date().getFullYear()} — Plataforma de automação WhatsApp
         </p>
       </div>
     </div>

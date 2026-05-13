@@ -78,7 +78,7 @@ router.get('/settings/public', async (req, res) => {
 
     const settings = await getSettings(user.id);
     res.json({
-      businessName: settings?.businessName || user.name || 'ZapFly Shop',
+      businessName: settings?.businessName || user.name || 'DigiZap Shop',
       googleApiKey: settings?.googleApiKey || '',
       deliveryRules: JSON.parse(settings?.deliveryRules || '[]'),
       maxDeliveryKm: settings?.maxDeliveryKm || 15

@@ -8,8 +8,8 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('zapfly_token');
-    const storedUser = localStorage.getItem('zapfly_user');
+    const token = localStorage.getItem('digizap_token');
+    const storedUser = localStorage.getItem('digizap_user');
     if (token && storedUser) {
       setUser(JSON.parse(storedUser));
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -18,15 +18,15 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = useCallback((token, userData) => {
-    localStorage.setItem('zapfly_token', token);
-    localStorage.setItem('zapfly_user', JSON.stringify(userData));
+    localStorage.setItem('digizap_token', token);
+    localStorage.setItem('digizap_user', JSON.stringify(userData));
     api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     setUser(userData);
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem('zapfly_token');
-    localStorage.removeItem('zapfly_user');
+    localStorage.removeItem('digizap_token');
+    localStorage.removeItem('digizap_user');
     delete api.defaults.headers.common['Authorization'];
     setUser(null);
   }, []);

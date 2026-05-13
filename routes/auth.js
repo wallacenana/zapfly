@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'zapfly-secret-key-super-safe';
-const APP_NAME = 'ZapFly';
+const APP_NAME = 'DigiZap';
 
 // ─── Mailer map (userId -> transporter)
 let mailerInstances = {};
@@ -291,8 +291,8 @@ router.post('/test-email', async (req, res) => {
     await mailer.sendMail({
       from: `"${settings?.businessName || APP_NAME}" <${settings.smtpUser}>`,
       to,
-      subject: '✅ Teste de Email - ZapFly',
-      html: `<div style="font-family:sans-serif;padding:30px;background:#09090b;color:#f4f4f5;border-radius:12px"><h2 style="color:#10b981">Funcionou! 🎉</h2><p>Seu servidor SMTP está configurado corretamente no ZapFly.</p></div>`,
+      subject: '✅ Teste de Email - DigiZap',
+      html: `<div style="font-family:sans-serif;padding:30px;background:#09090b;color:#f4f4f5;border-radius:12px"><h2 style="color:#10b981">Funcionou! 🎉</h2><p>Seu servidor SMTP está configurado corretamente no DigiZap.</p></div>`,
     });
     res.json({ message: 'Email de teste enviado com sucesso.' });
   } catch (err) {
