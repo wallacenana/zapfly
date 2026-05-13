@@ -543,9 +543,9 @@ const Production = () => {
     const orderType = o.type || 'order';
     const matchType = orderType === activeType;
 
-    // Apenas pedidos "Pendente" furam o filtro de data (como uma Caixa de Entrada universal).
-    // Todo o restante (aguardando, aceito, produção, pronto, histórico) obedece rigorosamente à data selecionada.
-    const bypassDateFilter = o.status === 'pending';
+    // Apenas pedidos Pendentes, Em Produção e Prontos furam o filtro de data.
+    // Pedidos concluídos, cancelados ou agendados ('order' mas em accepted) obedecem à data selecionada.
+    const bypassDateFilter = ['pending', 'production', 'ready'].includes(o.status);
     const matchDate = bypassDateFilter ? true : (o.scheduledDate === selectedDate);
 
     return matchType && matchSearch && matchDate;

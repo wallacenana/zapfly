@@ -648,6 +648,25 @@ router.post('/', async (req, res) => {
         if (cleanPhone.length >= 10) {
             if (!cleanPhone.startsWith("55")) cleanPhone = "55" + cleanPhone;
             clientJid = `${cleanPhone}@s.whatsapp.net`;
+            
+            // Tenta obter o JID real pelo Baileys para resolver a questão do 9º dígito
+            try {
+              const sockGetter = req.app.get('getSock');
+              if (sockGetter) {
+                const sock = sockGetter(req.body.instanceId || 'global');
+                if (sock && sock.onWhatsApp) {
+                  const result = await sock.onWhatsApp(clientJid);
+                  if (result && result.length > 0 && result[0].exists) {
+                    clientJid = result[0].jid;
+                    console.log(`[WhatsApp] JID validado e corrigido pela Baileys: ${clientJid}`);
+                  } else {
+                    console.warn(`[WhatsApp] Número não encontrado no WhatsApp (Baileys): ${clientJid}`);
+                  }
+                }
+              }
+            } catch (err) {
+              console.error('[WhatsApp] Erro ao validar número:', err.message);
+            }
         }
     }
 
