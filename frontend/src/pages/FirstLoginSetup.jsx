@@ -4,8 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { Loader2, Lock, ShieldCheck, Smartphone, Mail, Eye, EyeOff, CheckCircle2, Copy, Check } from 'lucide-react';
 
 const STEP = {
-  CHANGE_PASSWORD: 'change_password',
-  CHOOSE_METHOD: 'choose_method',
+  CHANGE_PASSWORD: 'must_change_password',
+  CHOOSE_METHOD: 'setup_2fa',
   SETUP_EMAIL: 'setup_email',
   SETUP_TOTP: 'setup_totp',
   DONE: 'done',
