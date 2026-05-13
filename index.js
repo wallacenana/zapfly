@@ -1,6 +1,8 @@
 require('dotenv').config();
 const { google } = require('googleapis');
-const { makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason, makeInMemoryStore } = require('@whiskeysockets/baileys');
+const Baileys = require('@whiskeysockets/baileys');
+const { makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason } = Baileys;
+const makeInMemoryStore = Baileys.makeInMemoryStore || require('@whiskeysockets/baileys/lib/Utils/make-in-memory-store').default || Baileys.default?.makeInMemoryStore;
 const pino = require('pino');
 const express = require('express');
 const http = require('http');
