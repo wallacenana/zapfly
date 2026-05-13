@@ -1,10 +1,13 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, GitMerge, MessageSquare, Megaphone, Users, Calendar, Settings, Smartphone, Bot, PackageOpen, BellRing, Grid2X2 } from 'lucide-react';
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, GitMerge, MessageSquare, Calendar, Settings, Smartphone, Bot, PackageOpen, BellRing, Grid2X2, LogOut } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { api, socket } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 
 const Layout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const audioRef = useRef(null);
   const [hasPendingOrders, setHasPendingOrders] = useState(false);
 
@@ -153,30 +156,36 @@ const Layout = () => {
 
         <div style={{ marginTop: 'auto', padding: '15px', borderTop: '1px solid var(--border-color)' }}>
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            padding: '8px',
-            borderRadius: '12px',
+            display: 'flex', alignItems: 'center', gap: '10px',
+            padding: '8px', borderRadius: '12px',
             backgroundColor: 'var(--bg-tertiary)'
           }}>
             <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              background: 'linear-gradient(45deg, #71717a, #3f3f46)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '12px',
-              fontWeight: 700
+              width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
+              background: 'linear-gradient(135deg, #3b82f6, #7c3aed)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '12px', fontWeight: 800, color: '#fff'
             }}>
-              WA
+              {user?.name?.charAt(0)?.toUpperCase() || 'U'}
             </div>
-            <div style={{ overflow: 'hidden' }}>
-              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>Wallace Admin</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Plano Pro</div>
+            <div style={{ overflow: 'hidden', flex: 1 }}>
+              <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user?.name || 'Usuário'}</div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{user?.role === 'ADMIN' ? 'Admin' : 'Usuário'}</div>
             </div>
+            <button
+              onClick={() => { logout(); navigate('/login'); }}
+              title="Sair"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: 'var(--text-muted)', padding: '6px', borderRadius: '8px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.2s', flexShrink: 0
+              }}
+              onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(239,68,68,0.1)'; e.currentTarget.style.color = '#ef4444'; }}
+              onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+            >
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
       </aside>
