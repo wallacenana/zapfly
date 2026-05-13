@@ -15,63 +15,86 @@ const APP_NAME = 'DigiZap';
 let mailerInstances = {};
 
 const getMailer = async (userId) => {
-  console.log(`[AUTH-DEBUG] Buscando mailer para userId: ${userId}`);
-  if (mailerInstances[userId]) return mailerInstances[userId];
+  console.log(`[AUTH-DEBUG] 🔍 Iniciando getMailer para o usuário: ${userId}`);
   
-  const settings = await prisma.setting.findUnique({ where: { userId } });
+  const settings = await prisma.setting.findUnique({ where: { userId } }).catch(() => null);
   
-  const host = settings?.smtpHost || process.env.SMTP_HOST;
-  const port = settings?.smtpPort || parseInt(process.env.SMTP_PORT || '587');
-  const user = settings?.smtpUser || process.env.SMTP_USER;
-  const pass = settings?.smtpPass || process.env.SMTP_PASS;
+  // Pega do .env primeiro para debugar o que está vindo do sistema
+  const envHost = process.env.SMTP_HOST;
+  const envPort = process.env.SMTP_PORT;
+  const envUser = process.env.SMTP_USER;
+  const envPass = process.env.SMTP_PASS;
 
-  console.log(`[AUTH-DEBUG] Config SMTP: Host=${host}, Port=${port}, User=${user}`);
+  console.log(`[AUTH-DEBUG] 📝 Valores no .env: Host=${envHost}, Port=${envPort}, User=${envUser}`);
+
+  const host = settings?.smtpHost || envHost;
+  const portStr = settings?.smtpPort ? settings.smtpPort.toString() : (envPort || '587');
+  const port = parseInt(portStr);
+  const user = settings?.smtpUser || envUser;
+  const pass = settings?.smtpPass || envPass;
+
+  console.log(`[AUTH-DEBUG] 🚀 Usando para envio: Host=${host}, Port=${port}, User=${user}`);
 
   if (!host || !user || !pass) {
-    console.log('[AUTH-DEBUG] ❌ Falha: Host, User ou Pass não encontrados no banco nem no .env');
+    console.log('[AUTH-DEBUG] ❌ Erro: Faltam dados de SMTP (Host/User/Pass).');
     return null;
   }
   
-  mailerInstances[userId] = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
-  return mailerInstances[userId];
+  try {
+    const transporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465, // SSL para 465, STARTTLS para outros
+      auth: { user, pass },
+      timeout: 10000 // 10 segundos de timeout para não travar
+    });
+    return transporter;
+  } catch (e) {
+    console.error('[AUTH-DEBUG] ❌ Erro ao criar o transporter:', e.message);
+    return null;
+  }
 };
 
 const sendOtpEmail = async (userId, toEmail, code, userName) => {
-  const mailer = await getMailer(userId);
-  const settings = await prisma.setting.findUnique({ where: { userId } });
-  
-  // Decide o remetente: prioridade para o banco, fallback para o .env
-  const fromEmail = settings?.smtpUser || process.env.SMTP_FROM || process.env.SMTP_USER;
-  const businessName = settings?.businessName || APP_NAME;
+  try {
+    const mailer = await getMailer(userId);
+    const settings = await prisma.setting.findUnique({ where: { userId } }).catch(() => null);
+    
+    const fromEmail = settings?.smtpUser || process.env.SMTP_FROM || process.env.SMTP_USER;
+    const businessName = settings?.businessName || APP_NAME;
 
-  if (!mailer) {
-    console.log(`[AUTH] ⚠️ SMTP não configurado. Código para ${toEmail}: ${code}`);
-    return;
-  }
+    if (!mailer) {
+      console.log(`[AUTH-DEBUG] ⚠️ Abortando: Mailer não pôde ser criado para ${toEmail}`);
+      return;
+    }
 
-  await mailer.sendMail({
-    from: `"${businessName}" <${fromEmail}>`,
-    to: toEmail,
-    subject: `🔐 Seu código de acesso ${APP_NAME}: ${code}`,
-    html: `
-      <div style="font-family:Inter,sans-serif;background:#09090b;color:#f4f4f5;padding:40px;max-width:480px;margin:auto;border-radius:16px">
-        <h2 style="color:#3b82f6;margin-bottom:8px">${APP_NAME}</h2>
-        <p style="color:#a1a1aa;margin-bottom:32px">Verificação em 2 etapas</p>
-        <p>Olá, <strong>${userName}</strong>!</p>
-        <p style="color:#a1a1aa">Seu código de verificação é:</p>
-        <div style="background:#18181b;border:1px solid #27272a;border-radius:12px;padding:24px;text-align:center;margin:24px 0">
-          <span style="font-size:40px;font-weight:800;letter-spacing:12px;color:#3b82f6">${code}</span>
+    console.log(`[AUTH-DEBUG] 📧 Tentando disparar e-mail para ${toEmail}...`);
+
+    const info = await mailer.sendMail({
+      from: `"${businessName}" <${fromEmail}>`,
+      to: toEmail,
+      subject: `🔐 Seu código de acesso ${APP_NAME}: ${code}`,
+      html: `
+        <div style="font-family:Inter,sans-serif;background:#09090b;color:#f4f4f5;padding:40px;max-width:480px;margin:auto;border-radius:16px">
+          <h2 style="color:#3b82f6;margin-bottom:8px">${APP_NAME}</h2>
+          <p style="color:#a1a1aa;margin-bottom:32px">Verificação em 2 etapas</p>
+          <p>Olá, <strong>${userName}</strong>!</p>
+          <p style="color:#a1a1aa">Seu código de verificação é:</p>
+          <div style="background:#18181b;border:1px solid #27272a;border-radius:12px;padding:24px;text-align:center;margin:24px 0">
+            <span style="font-size:40px;font-weight:800;letter-spacing:12px;color:#3b82f6">${code}</span>
+          </div>
+          <p style="color:#71717a;font-size:13px">Este código expira em <strong>10 minutos</strong>. Se não foi você, ignore este email.</p>
         </div>
-        <p style="color:#71717a;font-size:13px">Este código expira em <strong>10 minutos</strong>. Se não foi você, ignore este email.</p>
-      </div>
-    `,
-  });
-  console.log(`[AUTH] ✅ E-mail enviado com sucesso para ${toEmail}`);
+      `,
+    });
+
+    console.log(`[AUTH-DEBUG] ✅ SUCESSO: E-mail enviado para ${toEmail}. Resposta: ${info.response}`);
+  } catch (err) {
+    console.error(`[AUTH-DEBUG] ❌ ERRO NO SMTP: Falha ao enviar para ${toEmail}`);
+    console.error(`[AUTH-DEBUG] Motivo: ${err.message}`);
+    if (err.code) console.error(`[AUTH-DEBUG] Código do Erro: ${err.code}`);
+    if (err.command) console.error(`[AUTH-DEBUG] Comando SMTP: ${err.command}`);
+  }
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
