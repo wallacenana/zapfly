@@ -8,6 +8,8 @@ datasource db {
 }
 
 model Instance {
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id])
   id        String    @id @default(uuid())
   name      String
   status    String    @default("disconnected")
@@ -38,20 +40,20 @@ model Flow {
 }
 
 model Chat {
-  id          String    @id @default(uuid())
-  instanceId  String
-  jid         String
-  name        String?
-  unreadCount Int       @default(0)
-  lastMsg     String?
-  lastMsgTime String?
-  aiEnabled   Boolean   @default(false)
-  adminJid    String?
-  isGroup     Boolean   @default(false)
-  lastPixAnalysis String?  @db.Text
-  updatedAt   DateTime  @updatedAt
-  instance    Instance  @relation(fields: [instanceId], references: [id])
-  messages    Message[]
+  id              String    @id @default(uuid())
+  instanceId      String
+  jid             String
+  name            String?
+  unreadCount     Int       @default(0)
+  lastMsg         String?
+  lastMsgTime     String?
+  aiEnabled       Boolean   @default(false)
+  adminJid        String?
+  isGroup         Boolean   @default(false)
+  lastPixAnalysis String?   @db.Text
+  updatedAt       DateTime  @updatedAt
+  instance        Instance  @relation(fields: [instanceId], references: [id])
+  messages        Message[]
 
   @@unique([instanceId, jid])
   @@map("chat")
@@ -78,6 +80,8 @@ model Message {
 }
 
 model Order {
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id])
   id              String    @id @default(cuid())
   instanceId      String
   clientName      String?
@@ -107,40 +111,48 @@ model Order {
   createdAt       DateTime  @default(now())
   productRelation Product?  @relation(fields: [productId], references: [id])
   customer        Customer? @relation(fields: [clientJid], references: [jid])
+
   @@map("order")
 }
 
 model Customer {
-  id               String   @id @default(cuid())
-  jid              String   @unique
+  userId           String?
+  user             User?     @relation(fields: [userId], references: [id])
+  id               String    @id @default(cuid())
+  jid              String    @unique
   name             String?
   address          String?
-  lastDeliveryFee  Float?   @default(0)
+  lastDeliveryFee  Float?    @default(0)
   paymentMethod    String?
   lastOrderDate    DateTime?
   preferredProduct String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
   orders           Order[]
 
   @@map("customer")
 }
 
 model StockItem {
+  userId      String?
+  user        User?        @relation(fields: [userId], references: [id])
   id          String       @id @default(cuid())
   name        String
   unit        String       @default("kg")
   quantity    Float        @default(0)
   minQuantity Float        @default(1)
   ingredients Ingredient[]
+
   @@map("stockitem")
 }
 
 model Product {
+  userId       String?
+  user         User?        @relation(fields: [userId], references: [id])
   id           String       @id @default(cuid())
   name         String
-  type             String       @default("encomenda")
-  category         String?      @default("Doces")
+  type         String       @default("encomenda")
+  category     String?      @default("Doces")
   image        String?      @db.Text
   unit         String       @default("unidade")
   price        Float        @default(0)
@@ -155,6 +167,7 @@ model Product {
   comboItems   String?      @db.Text
   ingredients  Ingredient[]
   orders       Order[]
+
   @@map("product")
 }
 
@@ -165,26 +178,35 @@ model Ingredient {
   quantityPer Float
   stockItem   StockItem @relation(fields: [stockItemId], references: [id])
   product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+
   @@map("ingredient")
 }
 
 model Category {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  order     Int       @default(0)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+  id     String  @id @default(cuid())
+  name   String  @unique
+  order  Int     @default(0)
+
   @@map("category")
 }
 
 model AvailableSlot {
-  id        String @id @default(cuid())
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id])
+  id        String  @id @default(cuid())
   dayOfWeek Int
   startTime String
   endTime   String
-  maxOrders Int    @default(3)
+  maxOrders Int     @default(3)
+
   @@map("availableslot")
 }
 
 model CalendarEvent {
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
   id          String   @id
   title       String
   description String?
@@ -192,6 +214,7 @@ model CalendarEvent {
   endAt       DateTime
   allDay      Boolean  @default(false)
   syncedAt    DateTime @default(now())
+
   @@map("calendarevent")
 }
 
@@ -203,47 +226,54 @@ model CakeOrder {
   quantity     String?
   sender       String?
   createdAt    DateTime @default(now())
+
   @@map("cakeorder")
 }
 
 model Setting {
-  id                 String  @id @default("global")
-  openaiKey          String? @db.Text
-  claudeKey          String? @db.Text
-  mercadopagoToken   String? @db.Text
+  userId               String?
+  user                 User?   @relation(fields: [userId], references: [id])
+  id                   String  @id @default("global")
+  openaiKey            String? @db.Text
+  claudeKey            String? @db.Text
+  mercadopagoToken     String? @db.Text
   mercadopagoPublicKey String? @db.Text
-  activeModel        String  @default("openai")
-  gcalEnabled        Boolean @default(false)
-  gcalClientId       String? @db.Text
-  gcalClientSecret   String? @db.Text
-  gcalAccessToken    String? @db.Text
-  gcalRefreshToken   String? @db.Text
-  gcalTokenExpiry    String? @db.Text
-  gcalCalendarId     String?
-  gcalSyncHour       Int     @default(6)
-  businessName       String?
-  businessAddress    String?
-  businessLocation   String?
-  googleApiKey       String? @default("")
-  deliveryRules      String? @db.Text // JSON: [{ maxKm: 3, fee: 5 }]
-  managerJid         String?
-  deliveryJid        String?
-  dailyMaxOrders     Int     @default(10)
-  maxDeliveryKm      Float   @default(15.0)
-  dailyDeliveryItems String? @db.Text
-  reportEnabled      Boolean @default(false)
-  reportHour         Int     @default(7)
-  reminderHours      Int     @default(2)
-  pixReceiverName    String? @db.Text
-  pixReceiverKey     String? @db.Text
+  activeModel          String  @default("openai")
+  gcalEnabled          Boolean @default(false)
+  gcalClientId         String? @db.Text
+  gcalClientSecret     String? @db.Text
+  gcalAccessToken      String? @db.Text
+  gcalRefreshToken     String? @db.Text
+  gcalTokenExpiry      String? @db.Text
+  gcalCalendarId       String?
+  gcalSyncHour         Int     @default(6)
+  businessName         String?
+  businessAddress      String?
+  businessLocation     String?
+  googleApiKey         String? @default("")
+  deliveryRules        String? @db.Text // JSON: [{ maxKm: 3, fee: 5 }]
+  managerJid           String?
+  deliveryJid          String?
+  dailyMaxOrders       Int     @default(10)
+  maxDeliveryKm        Float   @default(15.0)
+  dailyDeliveryItems   String? @db.Text
+  reportEnabled        Boolean @default(false)
+  reportHour           Int     @default(7)
+  reminderHours        Int     @default(2)
+  pixReceiverName      String? @db.Text
+  pixReceiverKey       String? @db.Text
+
   @@map("setting")
 }
 
 model MarketingAsset {
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
   id        String   @id @default(uuid())
-  name      String   // Nome que você usará para pedir à Lily (ex: "Vulcão")
-  path      String   // Caminho da imagem no servidor
+  name      String // Nome que você usará para pedir à Lily (ex: "Vulcão")
+  path      String // Caminho da imagem no servidor
   createdAt DateTime @default(now())
+
   @@map("marketingasset")
 }
 
@@ -259,19 +289,49 @@ model FlowState {
   @@unique([instanceId, jid])
   @@map("flowstate")
 }
+
 model SeasonalCatalog {
-  id                    String   @id @default(cuid())
-  name                  String   // Ex: "Dia das Mães"
-  eventDate             String   // YYYY-MM-DD
-  preStartDays          Int      @default(15)
-  postEndDays           Int      @default(2)
-  description           String?  @db.Text
-  items                 String?  @db.LongText // JSON: [{ name, price, description, variations }]
-  maxOrders             Int      @default(0) // 0 = sem limite
-  onlySeasonalOnEventDay Boolean @default(false)
-  active                Boolean  @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  userId                 String?
+  user                   User?    @relation(fields: [userId], references: [id])
+  id                     String   @id @default(cuid())
+  name                   String // Ex: "Dia das Mães"
+  eventDate              String // YYYY-MM-DD
+  preStartDays           Int      @default(15)
+  postEndDays            Int      @default(2)
+  description            String?  @db.Text
+  items                  String?  @db.LongText // JSON: [{ name, price, description, variations }]
+  maxOrders              Int      @default(0) // 0 = sem limite
+  onlySeasonalOnEventDay Boolean  @default(false)
+  active                 Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   @@map("seasonalcatalog")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("USER")
+  phone     String?
+  otpSecret String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  instances        Instance[]
+  products         Product[]
+  categories       Category[]
+  orders           Order[]
+  customers        Customer[]
+  stockItems       StockItem[]
+  settings         Setting[]
+  marketingAssets  MarketingAsset[]
+  seasonalCatalogs SeasonalCatalog[]
+  availableSlots   AvailableSlot[]
+  calendarEvents   CalendarEvent[]
+
+  @@map("user")
 }
