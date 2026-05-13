@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { api } from '../api';
 import { useAuth } from '../contexts/AuthContext';
+import FirstLoginSetup from './FirstLoginSetup';
 import { Loader2, Zap, Lock, Mail, ShieldCheck, ArrowRight, RefreshCw } from 'lucide-react';
 
 const STEP = { LOGIN: 'LOGIN', OTP: 'OTP' };
@@ -8,9 +9,11 @@ const STEP = { LOGIN: 'LOGIN', OTP: 'OTP' };
 export default function Login() {
   const { login } = useAuth();
   const [step, setStep] = useState(STEP.LOGIN);
+  const [setupData, setSetupData] = useState(null); // { setupToken, step }
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [tempToken, setTempToken] = useState('');
+  const [twoFactorMethod, setTwoFactorMethod] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -37,7 +40,13 @@ export default function Login() {
     setLoading(true);
     try {
       const res = await api.post('/auth/login', { email, password });
+      // First-login setup flow
+      if (res.data.requiresSetup) {
+        setSetupData({ setupToken: res.data.setupToken, step: res.data.step });
+        return;
+      }
       setTempToken(res.data.tempToken);
+      setTwoFactorMethod(res.data.twoFactorMethod);
       setStep(STEP.OTP);
       setCountdown(60);
     } catch (err) {
@@ -103,6 +112,11 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  // Se precisar de setup (primeiro login ou sem 2FA), mostra o fluxo guiado
+  if (setupData) {
+    return <FirstLoginSetup setupToken={setupData.setupToken} startStep={setupData.step} />;
+  }
 
   return (
     <div style={{
@@ -253,10 +267,14 @@ export default function Login() {
                   <ShieldCheck size={26} color="#10b981" />
                 </div>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#f4f4f5', marginBottom: '6px', fontFamily: "'Outfit', sans-serif" }}>
-                  Verificação em 2 Etapas
+                  Verificação de Segurança
                 </h3>
                 <p style={{ fontSize: '13px', color: '#71717a', lineHeight: 1.6 }}>
-                  Enviamos um código de 6 dígitos para o WhatsApp do seu número cadastrado.
+                  {twoFactorMethod === 'totp' ? (
+                    'Digite o código de 6 dígitos gerado pelo seu aplicativo autenticador.'
+                  ) : (
+                    'Enviamos um código de verificação de 6 dígitos para o seu e-mail cadastrado.'
+                  )}
                 </p>
               </div>
 

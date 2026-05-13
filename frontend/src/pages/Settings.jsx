@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Save, Shield, MessageSquare, Bell, Calendar, MapPin, Truck, Plus, Trash2, Key, Cpu, ExternalLink, CheckCircle2, Image, Upload } from 'lucide-react';
+import { Save, Shield, MessageSquare, Bell, Calendar, MapPin, Truck, Plus, Trash2, Key, Cpu, ExternalLink, CheckCircle2, Image, Upload, Mail } from 'lucide-react';
 import { api, API_URL } from '../api';
 import Swal from 'sweetalert2';
 
@@ -33,7 +33,12 @@ const Settings = () => {
     gcalEnabled: false,
     reminderHours: 2,
     pixReceiverName: '',
-    pixReceiverKey: ''
+    pixReceiverKey: '',
+    smtpHost: '',
+    smtpPort: 587,
+    smtpUser: '',
+    smtpPass: '',
+    smtpFrom: ''
   });
   const [slots, setSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(true);
@@ -189,6 +194,7 @@ const Settings = () => {
     { id: 'delivery', label: 'Logística & Frete', icon: Truck },
     { id: 'schedules', label: 'Horários', icon: Calendar },
     { id: 'bot', label: 'Integrações (IA/GCal)', icon: Cpu },
+    { id: 'email', label: 'Email (SMTP)', icon: Mail },
     { id: 'marketing', label: 'Mídias de Marketing', icon: Image }
   ];
 
@@ -549,6 +555,69 @@ const Settings = () => {
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'email' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+              <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '10px' }}>
+                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Configuração de Email (SMTP)</h3>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '6px' }}>Usado para enviar o código de verificação (OTP) no login dos usuários.</p>
+              </div>
+
+              <div style={{ ...subCard, borderLeftColor: '#3b82f6' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
+                  <Mail size={20} color="#3b82f6" />
+                  <span style={{ fontWeight: 800 }}>Servidor de Saída</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '15px', marginBottom: '15px' }}>
+                  <div>
+                    <label style={microLabel}>Host SMTP</label>
+                    <input {...inp} value={settings.smtpHost || ''} onChange={e => setSettings({ ...settings, smtpHost: e.target.value })} placeholder="smtp.gmail.com" />
+                  </div>
+                  <div style={{ width: '110px' }}>
+                    <label style={microLabel}>Porta</label>
+                    <input {...inp} type="number" value={settings.smtpPort || 587} onChange={e => setSettings({ ...settings, smtpPort: parseInt(e.target.value) })} />
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                  <div>
+                    <label style={microLabel}>Usuário / Email</label>
+                    <input {...inp} type="email" value={settings.smtpUser || ''} onChange={e => setSettings({ ...settings, smtpUser: e.target.value })} placeholder="seu@email.com" />
+                  </div>
+                  <div>
+                    <label style={microLabel}>Senha / App Password</label>
+                    <input {...inp} type="password" value={settings.smtpPass || ''} onChange={e => setSettings({ ...settings, smtpPass: e.target.value })} placeholder="••••••••••••" />
+                  </div>
+                </div>
+                <div>
+                  <label style={microLabel}>Nome do Remetente ("De:")</label>
+                  <input {...inp} value={settings.smtpFrom || ''} onChange={e => setSettings({ ...settings, smtpFrom: e.target.value })} placeholder="ZapFly <noreply@seudominio.com>" />
+                </div>
+              </div>
+
+              <div style={{ padding: '18px 20px', borderRadius: '14px', background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.15)' }}>
+                <p style={{ fontSize: '13px', color: '#93c5fd', lineHeight: 1.7 }}>
+                  💡 <strong>Gmail:</strong> Use uma <em>Senha de App</em> (não sua senha normal). Acesse <code style={{ background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: '4px' }}>myaccount.google.com/apppasswords</code> para gerar.<br />
+                  💡 <strong>Hostinger / cPanel:</strong> Use as credenciais do email criado no painel, porta <strong>587</strong> (TLS) ou <strong>465</strong> (SSL).
+                </p>
+              </div>
+
+              <button
+                onClick={async () => {
+                  const { value: testEmail } = await Swal.fire({ title: 'Enviar email de teste', input: 'email', inputPlaceholder: 'Digite o email de destino', showCancelButton: true, confirmButtonText: 'Enviar' });
+                  if (!testEmail) return;
+                  try {
+                    await import('../api').then(({ api }) => api.post('/auth/test-email', { to: testEmail }));
+                    Swal.fire({ title: 'Email enviado!', text: `Verifique a caixa de ${testEmail}`, icon: 'success', timer: 3000, showConfirmButton: false });
+                  } catch (err) {
+                    Swal.fire('Erro', err.response?.data?.error || 'Falha ao enviar. Verifique as configurações.', 'error');
+                  }
+                }}
+                style={{ ...smallLink, display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', borderRadius: '12px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', color: '#10b981', fontWeight: 700 }}
+              >
+                <Mail size={16} /> Testar Configuração
+              </button>
             </div>
           )}
 

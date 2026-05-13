@@ -8,8 +8,8 @@ datasource db {
 }
 
 model Instance {
-  userId    String?
-  user      User?     @relation(fields: [userId], references: [id])
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
   id        String    @id @default(uuid())
   name      String
   status    String    @default("disconnected")
@@ -80,8 +80,8 @@ model Message {
 }
 
 model Order {
-  userId          String?
-  user            User?     @relation(fields: [userId], references: [id])
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
   id              String    @id @default(cuid())
   instanceId      String
   clientName      String?
@@ -110,16 +110,16 @@ model Order {
   addons          String?
   createdAt       DateTime  @default(now())
   productRelation Product?  @relation(fields: [productId], references: [id])
-  customer        Customer? @relation(fields: [clientJid], references: [jid])
+  customer        Customer? @relation(fields: [clientJid, userId], references: [jid, userId])
 
   @@map("order")
 }
 
 model Customer {
-  userId           String?
-  user             User?     @relation(fields: [userId], references: [id])
+  userId           String
+  user             User      @relation(fields: [userId], references: [id])
   id               String    @id @default(cuid())
-  jid              String    @unique
+  jid              String
   name             String?
   address          String?
   lastDeliveryFee  Float?    @default(0)
@@ -130,12 +130,14 @@ model Customer {
   updatedAt        DateTime  @updatedAt
   orders           Order[]
 
+  @@unique([jid, userId])
+  @@index([userId])
   @@map("customer")
 }
 
 model StockItem {
-  userId      String?
-  user        User?        @relation(fields: [userId], references: [id])
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
   id          String       @id @default(cuid())
   name        String
   unit        String       @default("kg")
@@ -147,8 +149,8 @@ model StockItem {
 }
 
 model Product {
-  userId       String?
-  user         User?        @relation(fields: [userId], references: [id])
+  userId       String
+  user         User         @relation(fields: [userId], references: [id])
   id           String       @id @default(cuid())
   name         String
   type         String       @default("encomenda")
@@ -183,30 +185,31 @@ model Ingredient {
 }
 
 model Category {
-  userId String?
-  user   User?   @relation(fields: [userId], references: [id])
-  id     String  @id @default(cuid())
-  name   String  @unique
-  order  Int     @default(0)
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  id     String @id @default(cuid())
+  name   String
+  order  Int    @default(0)
 
+  @@unique([name, userId])
   @@map("category")
 }
 
 model AvailableSlot {
-  userId    String?
-  user      User?   @relation(fields: [userId], references: [id])
-  id        String  @id @default(cuid())
+  userId    String
+  user      User   @relation(fields: [userId], references: [id])
+  id        String @id @default(cuid())
   dayOfWeek Int
   startTime String
   endTime   String
-  maxOrders Int     @default(3)
+  maxOrders Int    @default(3)
 
   @@map("availableslot")
 }
 
 model CalendarEvent {
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
   id          String   @id
   title       String
   description String?
@@ -219,6 +222,8 @@ model CalendarEvent {
 }
 
 model CakeOrder {
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
   id           Int      @id @default(autoincrement())
   clientName   String
   deliveryDate String
@@ -227,13 +232,14 @@ model CakeOrder {
   sender       String?
   createdAt    DateTime @default(now())
 
+  @@index([userId])
   @@map("cakeorder")
 }
 
 model Setting {
-  userId               String?
-  user                 User?   @relation(fields: [userId], references: [id])
-  id                   String  @id @default("global")
+  id                   String  @id @default(cuid())
+  userId               String  @unique
+  user                 User    @relation(fields: [userId], references: [id])
   openaiKey            String? @db.Text
   claudeKey            String? @db.Text
   mercadopagoToken     String? @db.Text
@@ -262,14 +268,19 @@ model Setting {
   reminderHours        Int     @default(2)
   pixReceiverName      String? @db.Text
   pixReceiverKey       String? @db.Text
+  smtpHost             String?
+  smtpPort             Int?    @default(587)
+  smtpUser             String?
+  smtpPass             String? @db.Text
+  smtpFrom             String?
 
   @@map("setting")
 }
 
 model MarketingAsset {
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id])
   id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
   name      String // Nome que você usará para pedir à Lily (ex: "Vulcão")
   path      String // Caminho da imagem no servidor
   createdAt DateTime @default(now())
@@ -291,9 +302,9 @@ model FlowState {
 }
 
 model SeasonalCatalog {
-  userId                 String?
-  user                   User?    @relation(fields: [userId], references: [id])
   id                     String   @id @default(cuid())
+  userId                 String
+  user                   User     @relation(fields: [userId], references: [id])
   name                   String // Ex: "Dia das Mães"
   eventDate              String // YYYY-MM-DD
   preStartDays           Int      @default(15)
@@ -310,16 +321,20 @@ model SeasonalCatalog {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  password  String
-  name      String
-  role      String   @default("USER")
-  phone     String?
-  otpSecret String?
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  email              String   @unique
+  password           String
+  name               String
+  slug               String?  @unique
+  role               String   @default("USER")
+  phone              String?
+  otpSecret          String?  @db.Text // Temporary email OTP code or TOTP secret
+  mustChangePassword Boolean  @default(true)
+  twoFactorMethod    String? // 'email' | 'totp'
+  twoFactorVerified  Boolean  @default(false)
+  active             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   instances        Instance[]
   products         Product[]
@@ -332,6 +347,7 @@ model User {
   seasonalCatalogs SeasonalCatalog[]
   availableSlots   AvailableSlot[]
   calendarEvents   CalendarEvent[]
+  cakeOrders       CakeOrder[]
 
   @@map("user")
 }
