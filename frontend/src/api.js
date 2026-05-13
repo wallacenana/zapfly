@@ -3,8 +3,15 @@ import { io } from 'socket.io-client';
 
 // Detecta o host atual. Se for localhost, usa 3001. Se for IP, usa o mesmo IP na porta 3001.
 const getBaseUrl = () => {
-  // Força o painel local a se conectar ao backend na DigitalOcean
-  return 'http://157.230.239.80:3001';
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return 'http://localhost:3001';
+    }
+    // Em produção, usa o subdomínio da API
+    return 'https://api.digizap.com.br';
+  }
+  return 'http://localhost:3001';
 };
 
 

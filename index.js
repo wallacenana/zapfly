@@ -45,7 +45,7 @@ const audioStorage = multer.diskStorage({
     }
 });
 const uploadAudio = multer({ storage: audioStorage });
- 
+
 const productStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         const dir = 'assets/products';
@@ -209,9 +209,9 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 // ─── ROTAS — MARKETING ASSETS (STORIES) ──────────────────────────────────
 app.get('/marketing-assets', authenticate, async (req, res) => {
     try {
-        const assets = await prisma.marketingAsset.findMany({ 
+        const assets = await prisma.marketingAsset.findMany({
             where: { userId: req.user.id },
-            orderBy: { createdAt: 'desc' } 
+            orderBy: { createdAt: 'desc' }
         });
         res.json(assets);
     } catch (err) {
@@ -237,8 +237,8 @@ app.post('/marketing-assets', authenticate, uploadMarketing.single('file'), asyn
 
 app.delete('/marketing-assets/:id', authenticate, async (req, res) => {
     try {
-        const asset = await prisma.marketingAsset.findUnique({ 
-            where: { id: req.params.id, userId: req.user.id } 
+        const asset = await prisma.marketingAsset.findUnique({
+            where: { id: req.params.id, userId: req.user.id }
         });
         if (asset) {
             const fullPath = path.join(__dirname, asset.path);
@@ -273,7 +273,7 @@ function getOAuth2Client(req) {
 app.get('/auth/google', authenticate, async (req, res) => {
     const oauth2Client = getOAuth2Client(req);
     const origin = req.query.origin || req.get('referer') || `http://${req.get('host')}`;
-    
+
     if (!oauth2Client) {
         return res.redirect(`${origin.split('?')[0]}?gcal_error=missing_env_credentials`);
     }
@@ -290,7 +290,7 @@ app.get('/auth/google', authenticate, async (req, res) => {
 app.get('/auth/google/callback', async (req, res) => {
     const { code, state: userId, error } = req.query;
     const origin = process.env.FRONTEND_URL || 'http://localhost:5173';
-    
+
     if (error) return res.redirect(`${origin}/settings?gcal_error=${error}`);
     if (!userId) return res.redirect(`${origin}/settings?gcal_error=no_user_context`);
 
@@ -1712,13 +1712,13 @@ app.delete('/instances/:id', async (req, res) => {
     stores.delete(id);
     const sessionDir = path.join(__dirname, 'sessions', id);
     if (fs.existsSync(sessionDir)) fs.rmSync(sessionDir, { recursive: true, force: true });
-    
+
     // Deleta os filhos primeiro para evitar Foreign Key Constraint (Cascade)
     try {
         await prisma.message.deleteMany({ where: { instanceId: id } });
         await prisma.chat.deleteMany({ where: { instanceId: id } });
         await prisma.flowState.deleteMany({ where: { instanceId: id } });
-    } catch(e) { console.error('Erro ao deletar filhos da instância:', e.message) }
+    } catch (e) { console.error('Erro ao deletar filhos da instância:', e.message) }
 
     await prisma.instance.delete({ where: { id } });
     res.json({ success: true });
@@ -2147,8 +2147,8 @@ process.on('uncaughtException', (err) => {
 });
 
 const PORT = 3001;
-server.listen(PORT, '0.0.0.0', async () => {
-    console.log(`Backend rodando em http://0.0.0.0:${PORT}`);
+server.listen(PORT, async () => {
+    console.log(`Backend rodando em http://localhost:${PORT}`);
     const instances = await prisma.instance.findMany();
     for (const inst of instances) {
         initInstance(inst.id);
