@@ -28,15 +28,22 @@ const getMailer = async (userId) => {
   console.log(`[AUTH-DEBUG] 📝 Valores no .env: Host=${envHost}, Port=${envPort}, User=${envUser}`);
 
   const host = settings?.smtpHost || envHost;
-  const portStr = settings?.smtpPort ? settings.smtpPort.toString() : (envPort || '587');
-  const port = parseInt(portStr);
+  
+  // Lógica corrigida: Se o banco tiver algo > 0, usa banco. Senão, usa .env. Senão, 587.
+  let port = 587;
+  if (settings?.smtpPort && settings.smtpPort > 0) {
+    port = parseInt(settings.smtpPort);
+  } else if (envPort) {
+    port = parseInt(envPort);
+  }
+
   const user = settings?.smtpUser || envUser;
   const pass = settings?.smtpPass || envPass;
 
-  console.log(`[AUTH-DEBUG] 🚀 Usando para envio: Host=${host}, Port=${port}, User=${user}`);
+  console.log(`[AUTH-DEBUG] 🚀 FINAL: Host=${host}, Port=${port}, User=${user}, Secure=${port === 465}`);
 
   if (!host || !user || !pass) {
-    console.log('[AUTH-DEBUG] ❌ Erro: Faltam dados de SMTP (Host/User/Pass).');
+    console.log('[AUTH-DEBUG] ❌ Erro: Faltam dados de SMTP.');
     return null;
   }
   
