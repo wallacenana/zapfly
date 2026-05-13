@@ -159,7 +159,8 @@ router.post('/setup-2fa', async (req, res) => {
     if (method === 'email') {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       await prisma.user.update({ where: { id: user.id }, data: { otpSecret: code } });
-      await sendOtpEmail(user.id, user.email, code, user.name);
+      // Envia em segundo plano para não travar o frontend
+      sendOtpEmail(user.id, user.email, code, user.name).catch(e => console.error('Erro ao enviar OTP Email:', e));
       return res.json({ method: 'email' });
     }
 
