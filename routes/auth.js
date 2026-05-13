@@ -15,17 +15,22 @@ const APP_NAME = 'DigiZap';
 let mailerInstances = {};
 
 const getMailer = async (userId) => {
+  console.log(`[AUTH-DEBUG] Buscando mailer para userId: ${userId}`);
   if (mailerInstances[userId]) return mailerInstances[userId];
   
   const settings = await prisma.setting.findUnique({ where: { userId } });
   
-  // Tenta pegar do Banco, se não tiver, tenta do .env
   const host = settings?.smtpHost || process.env.SMTP_HOST;
   const port = settings?.smtpPort || parseInt(process.env.SMTP_PORT || '587');
   const user = settings?.smtpUser || process.env.SMTP_USER;
   const pass = settings?.smtpPass || process.env.SMTP_PASS;
 
-  if (!host || !user || !pass) return null;
+  console.log(`[AUTH-DEBUG] Config SMTP: Host=${host}, Port=${port}, User=${user}`);
+
+  if (!host || !user || !pass) {
+    console.log('[AUTH-DEBUG] ❌ Falha: Host, User ou Pass não encontrados no banco nem no .env');
+    return null;
+  }
   
   mailerInstances[userId] = nodemailer.createTransport({
     host,
@@ -164,14 +169,22 @@ router.post('/setup-2fa', async (req, res) => {
 
     if (method === 'email') {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
+      console.log(`[AUTH-DEBUG] Gerado código ${code} para ${user.email}`);
       await prisma.user.update({ where: { id: user.id }, data: { otpSecret: code } });
-      // Envia em segundo plano para não travar o frontend
-      sendOtpEmail(user.id, user.email, code, user.name).catch(e => console.error('Erro ao enviar OTP Email:', e));
+      
+      console.log('[AUTH-DEBUG] Disparando sendOtpEmail...');
+      sendOtpEmail(user.id, user.email, code, user.name).catch(e => {
+        console.error('[AUTH-ERROR] ❌ Erro fatal no envio:', e.message);
+        console.error(e);
+      });
+
       return res.json({ method: 'email' });
     }
 
+    console.log(`[AUTH-DEBUG] ❌ Método inválido recebido: ${method}`);
     res.status(400).json({ error: 'Método inválido. Use "email" ou "totp".' });
   } catch (err) {
+    console.error('[AUTH-ERROR] ❌ Erro no catch do setup-2fa:', err.message);
     res.status(401).json({ error: 'Token expirado ou inválido.' });
   }
 });
