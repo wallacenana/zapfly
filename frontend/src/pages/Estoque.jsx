@@ -130,16 +130,71 @@ const Estoque = () => {
     fetchCategories();
   }, [fetchProducts, fetchSeasonal, fetchCategories]);
 
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          const MAX_SIZE = 600; // Optimal size for menu thumbnails
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob((blob) => {
+            const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+              type: 'image/webp',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          }, 'image/webp', 0.8);
+        };
+      };
+    });
+  };
+
   const handleExternalUpload = async (file) => {
     if (!file) return null;
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('secret', 'BlinkMediaSecret123!');
+    
+    // Mostra um loading enquanto comprime/envia
+    Swal.fire({
+      title: 'Otimizando Imagem...',
+      text: 'Preparando para o cardápio rápido',
+      allowOutsideClick: false,
+      didOpen: () => { Swal.showLoading() }
+    });
+
     try {
+      const compressedFile = await compressImage(file);
+      const formData = new FormData();
+      formData.append('file', compressedFile);
+      formData.append('secret', 'BlinkMediaSecret123!');
+      
       const res = await axios.post('https://files.blinkvertex.com/upload.php', formData);
+      Swal.close();
       return res.data.url;
     } catch (err) {
       console.error(err);
+      Swal.close();
       Swal.fire('Erro', 'Falha no upload para o servidor externo', 'error');
       return null;
     }
