@@ -38,14 +38,19 @@ const getMailer = async (userId) => {
 
 const sendOtpEmail = async (userId, toEmail, code, userName) => {
   const mailer = await getMailer(userId);
-  const user = await prisma.user.findUnique({ where: { id: userId } });
+  const settings = await prisma.setting.findUnique({ where: { userId } });
+  
+  // Decide o remetente: prioridade para o banco, fallback para o .env
+  const fromEmail = settings?.smtpUser || process.env.SMTP_FROM || process.env.SMTP_USER;
+  const businessName = settings?.businessName || APP_NAME;
+
   if (!mailer) {
-    console.log(`[AUTH] OTP para ${toEmail}: ${code}`);
+    console.log(`[AUTH] ⚠️ SMTP não configurado. Código para ${toEmail}: ${code}`);
     return;
   }
-  const settings = await prisma.setting.findUnique({ where: { userId } });
+
   await mailer.sendMail({
-    from: `"${settings?.businessName || APP_NAME}" <${settings.smtpUser}>`,
+    from: `"${businessName}" <${fromEmail}>`,
     to: toEmail,
     subject: `🔐 Seu código de acesso ${APP_NAME}: ${code}`,
     html: `
@@ -61,6 +66,7 @@ const sendOtpEmail = async (userId, toEmail, code, userName) => {
       </div>
     `,
   });
+  console.log(`[AUTH] ✅ E-mail enviado com sucesso para ${toEmail}`);
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
