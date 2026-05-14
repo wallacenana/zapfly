@@ -15,9 +15,14 @@ const authenticate = (req, res, next) => {
   }
 
   const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: 'Token não fornecido' });
+  const queryToken = req.query.token;
 
-  const token = authHeader.split(' ')[1];
+  if (!authHeader && !queryToken) {
+    return res.status(401).json({ error: 'Token não fornecido' });
+  }
+
+  const token = authHeader ? authHeader.split(' ')[1] : queryToken;
+  
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;

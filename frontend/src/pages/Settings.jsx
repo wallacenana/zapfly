@@ -75,6 +75,22 @@ const Settings = () => {
     }
   };
 
+  const connectGoogle = () => {
+    const token = localStorage.getItem('digizap_token');
+    const width = 500;
+    const height = 600;
+    const left = window.screen.width / 2 - width / 2;
+    const top = window.screen.height / 2 - height / 2;
+    const win = window.open(`${API_URL}/auth/google?token=${token}`, 'google_auth', `width=${width},height=${height},left=${left},top=${top}`);
+    
+    const checkTimer = setInterval(() => {
+      if (win.closed) {
+        clearInterval(checkTimer);
+        loadSettings();
+      }
+    }, 1000);
+  };
+
   const fetchCalendars = async () => {
     try {
       const res = await api.get('/auth/google/calendars');
@@ -167,20 +183,6 @@ const Settings = () => {
     }
   };
 
-  const connectGoogle = () => {
-    const width = 500;
-    const height = 600;
-    const left = window.screen.width / 2 - width / 2;
-    const top = window.screen.height / 2 - height / 2;
-    const win = window.open(`${API_URL}/auth/google`, 'google_auth', `width=${width},height=${height},left=${left},top=${top}`);
-
-    const checkTimer = setInterval(() => {
-      if (win.closed) {
-        clearInterval(checkTimer);
-        loadSettings();
-      }
-    }, 1000);
-  };
 
   const addDeliveryRule = () => setSettings(s => ({ ...s, deliveryRules: [...s.deliveryRules, { maxKm: 5, fee: 10 }] }));
   const updateRule = (idx, field, val) => {
