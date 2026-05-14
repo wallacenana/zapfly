@@ -28,7 +28,6 @@ const Layout = ({ children }) => {
     { path: '/connections', label: 'Conexões', icon: Zap },
     { path: '/production', label: 'Cozinha / Produção', icon: ShoppingBag },
     { path: '/agenda', label: 'Agenda de Pedidos', icon: Calendar },
-    { path: '/menu', label: 'Meus Produtos', icon: Package },
     { path: '/inventory', label: 'Estoque', icon: Users },
     { path: '/flows', label: 'Automações (Fluxos)', icon: MessageSquare },
     { path: '/prompts', label: 'Lily AI (Prompts)', icon: Bot },

@@ -33,7 +33,6 @@ function App() {
             <Route path="/connections" element={<Layout><Connections /></Layout>} />
             <Route path="/production" element={<Layout><Production /></Layout>} />
             <Route path="/agenda" element={<Layout><Agenda /></Layout>} />
-            <Route path="/menu" element={<Layout><Menu /></Layout>} />
             <Route path="/inventory" element={<Layout><Estoque /></Layout>} />
             <Route path="/flows" element={<Layout><Flows /></Layout>} />
             <Route path="/flows/edit/:id" element={<Layout><FlowEditor /></Layout>} />
