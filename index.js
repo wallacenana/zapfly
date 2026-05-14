@@ -1663,12 +1663,12 @@ app.get('/instances', authenticate, async (req, res) => {
 app.post('/instances', authenticate, async (req, res) => {
     try {
         const { name, color } = req.body;
-        const instance = await prisma.instance.create({ 
-            data: { 
-                name, 
+        const instance = await prisma.instance.create({
+            data: {
+                name,
                 userId: req.user.id,
-                color: color || '#3b82f6' 
-            } 
+                color: color || '#3b82f6'
+            }
         });
         await initInstance(instance.id);
         res.json(instance);
