@@ -95,7 +95,7 @@ model FlowState {
   resumeAt   DateTime?
   updatedAt  DateTime @default(now()) @updatedAt
 
-  @@unique([jid, instanceId], name: "jid_instanceId_flow")
+  @@unique([instanceId, jid], name: "instanceId_jid")
   @@map("flow_state")
 }
 
