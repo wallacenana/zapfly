@@ -804,7 +804,7 @@ router.post('/calendar-sync', authenticate, async (req, res) => {
   const userId = req.user.id;
   try {
     const result = await syncCalendarEvents(userId);
-    res.json(result);
+    res.json({ synced: result.fetched, pushed: result.pushed });
   } catch (err) {
     console.error('[Manual Sync Error]', err);
     res.status(500).json({ error: err.message });
