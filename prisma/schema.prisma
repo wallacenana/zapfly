@@ -16,7 +16,7 @@ model User {
   role              String            @default("user")
   active            Boolean           @default(true)
   mustChangePassword Boolean          @default(false)
-  twoFactorMethod   String            @default("none") // none, email, totp
+  twoFactorMethod   String            @default("none")
   twoFactorVerified Boolean           @default(false)
   otpSecret         String?           @db.Text
   twoFactorSecret   String?           @db.Text
@@ -46,10 +46,56 @@ model Instance {
   color     String?  @default("#3b82f6")
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+  chats     Chat[]
+  messages  Message[]
+  flowStates FlowState[]
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
   @@map("instance")
+}
+
+model Chat {
+  id         String   @id @default(uuid())
+  jid        String
+  name       String?
+  isGroup    Boolean  @default(false)
+  lastMsg    String?  @db.Text
+  aiEnabled  Boolean  @default(true)
+  instanceId String
+  instance   Instance @relation(fields: [instanceId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@unique([jid, instanceId], name: "jid_instanceId")
+  @@map("chat")
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  jid        String
+  fromMe     Boolean  @default(false)
+  body       String?  @db.Text
+  type       String   @default("text")
+  timestamp  Int
+  instanceId String
+  instance   Instance @relation(fields: [instanceId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@map("message")
+}
+
+model FlowState {
+  id         String   @id @default(uuid())
+  jid        String
+  instanceId String
+  instance   Instance @relation(fields: [instanceId], references: [id])
+  step       String?
+  data       Json?
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@unique([jid, instanceId], name: "jid_instanceId_flow")
+  @@map("flow_state")
 }
 
 model Category {
@@ -72,7 +118,7 @@ model Product {
   price           Float     @default(0)
   imageUrl        String?   @db.Text
   image           String?   @db.Text
-  category        String?   // Campo original que estava sendo usado
+  category        String?
   categoryName    String?
   categoryId      String?
   categoryRel     Category? @relation(fields: [categoryId], references: [id])
