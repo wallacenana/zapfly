@@ -671,7 +671,7 @@ const Settings = () => {
                 {marketingAssets.map(asset => (
                   <div key={asset.id} style={{ borderRadius: '14px', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', position: 'relative' }}>
                     <img
-                      src={`${API_URL}${asset.path}`}
+                      src={asset.url && asset.url.startsWith('http') ? asset.url : `${API_URL}${asset.url || asset.path}`}
                       alt={asset.name}
                       style={{ width: '100%', height: '160px', objectFit: 'cover', display: 'block' }}
                     />
