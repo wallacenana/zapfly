@@ -114,6 +114,7 @@ model Customer {
 model Order {
   id              String   @id @default(uuid())
   productId       String?
+  productRelation Product? @relation(fields: [productId], references: [id])
   product         String?
   variation       String?
   quantity        String?
