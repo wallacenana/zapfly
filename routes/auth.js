@@ -19,11 +19,11 @@ const getMailer = async (userId) => {
 
   const settings = await prisma.setting.findUnique({ where: { userId } }).catch(() => null);
 
-  // Pega do .env primeiro para debugar o que está vindo do sistema
   const envHost = process.env.SMTP_HOST;
   const envPort = process.env.SMTP_PORT;
   const envUser = process.env.SMTP_USER;
-  const envPass = process.env.SMTP_PASS;
+  // Remove aspas simples/duplas ao redor da senha se o .env tiver colocado
+  const envPass = (process.env.SMTP_PASS || '').replace(/^['"]+|['"]+$/g, '');
 
   console.log(`[AUTH-DEBUG] 🚀 FINAL: Host=${envHost}, Port=${envPort}, User=${envUser}, Secure=${envPort === 465}`);
 
@@ -211,13 +211,17 @@ router.post('/setup-2fa', async (req, res) => {
 // Verifica o código e marca o 2FA como configurado
 router.post('/setup-2fa/verify', async (req, res) => {
   const { setupToken, method, code } = req.body;
+  console.log(`[2FA-VERIFY] Recebido: method=${method}, code=${code}`);
   try {
     const decoded = jwt.verify(setupToken, JWT_SECRET);
+    console.log(`[2FA-VERIFY] Token decodificado: setupStep=${decoded.setupStep}, userId=${decoded.id}`);
     if (decoded.setupStep !== 'setup_2fa')
       return res.status(400).json({ error: 'Token inválido para esta etapa.' });
 
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+    console.log(`[2FA-VERIFY] User encontrado: ${user.email}, otpSecret=${user.otpSecret ? 'existe' : 'VAZIO'}`);
 
     let valid = false;
     if (method === 'totp') {
@@ -227,8 +231,10 @@ router.post('/setup-2fa/verify', async (req, res) => {
         token: code,
         window: 2,
       });
+      console.log(`[2FA-VERIFY] Resultado TOTP: ${valid ? '✅ VÁLIDO' : '❌ INVÁLIDO'}`);
     } else if (method === 'email') {
       valid = user.otpSecret === code;
+      console.log(`[2FA-VERIFY] Resultado EMAIL: esperado=${user.otpSecret}, recebido=${code}, match=${valid}`);
     }
 
     if (!valid) return res.status(401).json({ error: 'Código inválido. Tente novamente.' });
@@ -238,11 +244,11 @@ router.post('/setup-2fa/verify', async (req, res) => {
       data: {
         twoFactorMethod: method,
         twoFactorVerified: true,
-        // Para TOTP, mantém o secret permanentemente; para email, limpa
         otpSecret: method === 'email' ? null : user.otpSecret,
       },
     });
 
+    console.log(`[2FA-VERIFY] ✅ 2FA configurado com sucesso para ${user.email}`);
     const finalToken = makeToken({ id: user.id, role: user.role, slug: user.slug }, '7d');
     res.json({
       token: finalToken,
