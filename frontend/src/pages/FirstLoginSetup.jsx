@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import { Loader2, Lock, ShieldCheck, Smartphone, Mail, Eye, EyeOff, CheckCircle2, Copy, Check } from 'lucide-react';
@@ -49,6 +50,7 @@ const btnPrimary = (extra = {}) => ({
 
 export default function FirstLoginSetup({ setupToken: initialToken, startStep }) {
   const { login } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState(startStep || STEP.CHANGE_PASSWORD);
   const [setupToken, setSetupToken] = useState(initialToken || '');
   const [loading, setLoading] = useState(false);
@@ -108,6 +110,7 @@ export default function FirstLoginSetup({ setupToken: initialToken, startStep })
     try {
       const res = await api.post('/auth/setup-2fa/verify', { setupToken, method, code });
       login(res.data.token, res.data.user);
+      navigate('/dashboard', { replace: true });
     } catch (e) {
       err(e.response?.data?.error || 'Código inválido.');
       setOtp(['', '', '', '', '', '']);

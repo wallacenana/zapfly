@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FirstLoginSetup from './FirstLoginSetup';
@@ -7,9 +8,10 @@ import { Loader2, Zap, Lock, Mail, ShieldCheck, ArrowRight, RefreshCw } from 'lu
 const STEP = { LOGIN: 'LOGIN', OTP: 'OTP' };
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
+  const navigate = useNavigate();
   const [step, setStep] = useState(STEP.LOGIN);
-  const [setupData, setSetupData] = useState(null); // { setupToken, step }
+  const [setupData, setSetupData] = useState(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [tempToken, setTempToken] = useState('');
@@ -19,6 +21,11 @@ export default function Login() {
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
   const otpRefs = useRef([]);
+
+  // Redireciona para o dashboard assim que o login for concluído
+  useEffect(() => {
+    if (user) navigate('/dashboard', { replace: true });
+  }, [user, navigate]);
 
   // Countdown para reenvio de OTP
   useEffect(() => {

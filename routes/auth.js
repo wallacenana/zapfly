@@ -33,16 +33,20 @@ const getMailer = async (userId) => {
   }
 
   try {
+    const portNum = parseInt(envPort || '587');
     const transporter = nodemailer.createTransport({
       host: envHost,
-      port: parseInt(envPort || '587'),
-      secure: parseInt(envPort) === 465, // Agora sim: compara número com número
+      port: portNum,
+      secure: portNum === 465,       // true só para 465 (SSL direto)
+      requireTLS: portNum === 587,   // true para 587 (STARTTLS)
       auth: { 
         user: envUser, 
         pass: envPass 
       },
-      timeout: 10000
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
     });
+    console.log(`[AUTH-DEBUG] Transporter criado com sucesso (${portNum === 465 ? 'SSL' : 'STARTTLS'})`);
     return transporter;
   } catch (e) {
     console.error('[AUTH-DEBUG] ❌ Erro ao criar o transporter:', e.message);
