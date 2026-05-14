@@ -214,7 +214,6 @@ app.post('/mercadopago/webhook', async (req, res) => {
     }
 });
 
-// 笏笏笏 PUBLIC MENU ROUTE 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 app.get('/public/menu/:slug', async (req, res) => {
     try {
         const slug = req.params.slug.toLowerCase();
