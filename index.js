@@ -196,7 +196,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                         if (updatedOrder.clientJid) {
                             const sock = sessions.get(updatedOrder.instanceId || 'global') || Array.from(sessions.values())[0];
                             if (sock) {
-                                const msg = `�腸 *PAGAMENTO APROVADO!* �諜\n\nOi, *${updatedOrder.clientName}*! Seu pagamento foi aprovado e seu pedido jﾃ｡ estﾃ｡ na nossa fila de produﾃｧﾃ｣o. �ｧ鯛昨沚ｳ笨ｨ\n\nAvisaremos vocﾃｪ assim que estiver pronto! 笶､�汁;
+                                const msg = `�腸 *PAGAMENTO APROVADO!* �諜\n\nOi, *${updatedOrder.clientName}*! Seu pagamento foi aprovado e seu pedido jﾃ｡ estﾃ｡ na nossa fila de produﾃｧﾃ｣o. �ｧ鯛昨沚ｳ笨ｨ\n\nAvisaremos vocﾃｪ assim que estiver pronto! 笶､�汁`;
                                 await sock.sendMessage(updatedOrder.clientJid, { text: msg }).catch(() => { });
                             }
                         }
@@ -219,7 +219,7 @@ app.get('/public/menu/:slug', async (req, res) => {
     try {
         const slug = req.params.slug.toLowerCase();
         console.log(`[Public Menu] Buscando loja: ${slug}`);
-        
+
         const user = await prisma.user.findUnique({
             where: { slug },
             include: {
@@ -229,8 +229,8 @@ app.get('/public/menu/:slug', async (req, res) => {
         });
 
         if (!user) {
-            console.warn(`[Public Menu] Loja nﾃ｣o encontrada: ${slug}`);
-            return res.status(404).json({ error: 'Loja nﾃ｣o encontrada' });
+            console.warn(`[Public Menu] Loja nao encontrada: ${slug}`);
+            return res.status(404).json({ error: 'Loja nao encontrada' });
         }
 
         const settings = Array.isArray(user.settings) ? user.settings[0] : user.settings;
@@ -344,7 +344,7 @@ app.get('/auth/google', authenticate, async (req, res) => {
     const url = oauth2Client.generateAuthUrl({
         access_type: 'offline',
         scope: GCAL_SCOPES,
-        prompt: 'consent', // forﾃｧa refresh_token sempre
+        prompt: 'consent', // forca refresh_token sempre
         state: req.user.id // Passa o userId no state para recuperar no callback
     });
     res.redirect(url);
@@ -1595,11 +1595,9 @@ async function initInstance(instanceId) {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
             clearInterval(saveInterval);
-            
-            // Se a instﾃ｢ncia nﾃ｣o estiver no mapa de sessﾃｵes, significa que foi removida propositalmente (ex: Reiniciar)
-            // Ou se o erro for logout, nﾃ｣o reconecta.
-            // Se o socket que estǭ fechando NǟO FOR o socket atual no mapa, 
-            // significa que é uma conexão antiga de um Restart.
+
+            // Se o socket que esta fechando NAO FOR o socket atual no mapa, 
+            // significa que e uma conexao antiga de um Restart.
             const manualRemoval = (sessions.get(instanceId) !== sock);
 
             await prisma.instance.update({ where: { id: instanceId }, data: { status: 'disconnected' } }).catch(() => { });
