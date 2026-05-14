@@ -24,6 +24,8 @@ model User {
   customers        Customer[]
   settings         Setting?
   marketingAssets  MarketingAsset[]
+
+  @@map("user")
 }
 
 model Category {
@@ -35,6 +37,8 @@ model Category {
   products  Product[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  @@map("category")
 }
 
 model Product {
@@ -50,6 +54,8 @@ model Product {
   user        User      @relation(fields: [userId], references: [id])
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  @@map("product")
 }
 
 model Customer {
@@ -62,6 +68,8 @@ model Customer {
   orders    Order[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("customer")
 }
 
 model Order {
@@ -79,6 +87,8 @@ model Order {
   user            User     @relation(fields: [userId], references: [id])
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@map("order")
 }
 
 model Setting {
@@ -138,4 +148,6 @@ model MarketingAsset {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
+
+  @@map("marketing_asset")
 }
