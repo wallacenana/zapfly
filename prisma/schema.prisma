@@ -17,15 +17,31 @@ model User {
   twoFactorEnabled Boolean           @default(false)
   isFirstLogin     Boolean           @default(true)
   createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  updatedAt        DateTime          @default(now()) @updatedAt
   products         Product[]
   categories       Category[]
   orders           Order[]
   customers        Customer[]
   settings         Setting?
   marketingAssets  MarketingAsset[]
+  instances        Instance[]
+  stockItems       StockItem[]
+  calendarEvents   CalendarEvent[]
+  seasonalCatalogs SeasonalCatalog[]
 
   @@map("user")
+}
+
+model Instance {
+  id        String   @id @default(uuid())
+  name      String
+  status    String   @default("disconnected")
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("instance")
 }
 
 model Category {
@@ -36,57 +52,87 @@ model Category {
   user      User      @relation(fields: [userId], references: [id])
   products  Product[]
   createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  updatedAt DateTime  @default(now()) @updatedAt
 
   @@map("category")
 }
 
 model Product {
-  id          String    @id @default(uuid())
-  name        String
-  description String?
-  price       Float
-  imageUrl    String?
-  categoryName String   // Nome da categoria (para compatibilidade legada)
-  categoryId  String?
-  category    Category? @relation(fields: [categoryId], references: [id])
-  userId      String
-  user        User      @relation(fields: [userId], references: [id])
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id              String    @id @default(uuid())
+  name            String
+  description     String?   @db.Text
+  price           Float     @default(0)
+  imageUrl        String?   @db.Text
+  image           String?   @db.Text // Algumas partes usam 'image' em vez de 'imageUrl'
+  categoryName    String?
+  categoryId      String?
+  category        Category? @relation(fields: [categoryId], references: [id])
+  type            String    @default("delivery") // delivery, encomenda, addon
+  variations      String?   @db.Text // JSON
+  comboItems      String?   @db.Text // JSON
+  trackStock      Boolean   @default(false)
+  stock           Int       @default(0)
+  capacityCost    Int       @default(1)
+  featured        Boolean   @default(false)
+  displayOrder    Int       @default(0)
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
 
   @@map("product")
 }
 
 model Customer {
-  id        String   @id @default(uuid())
-  name      String
-  phone     String   @unique
-  address   String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  orders    Order[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(uuid())
+  jid             String
+  name            String?
+  phone           String?
+  address         String?  @db.Text
+  lastOrderDate   DateTime?
+  lastDeliveryFee Float?    @default(0)
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  orders          Order[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
 
+  @@unique([jid, userId], name: "jid_userId")
   @@map("customer")
 }
 
 model Order {
   id              String   @id @default(uuid())
-  items           Json
-  total           Float
+  productId       String?
+  product         String?
+  variation       String?
+  quantity        String?
+  notes           String?  @db.Text
+  scheduledDate   String?
+  scheduledTime   String?
+  clientName      String?
+  clientJid       String?
+  clientPhone     String?
+  type            String   @default("order")
+  deliveryAddress String?  @db.Text
+  paymentMethod   String?
+  paymentStatus   String   @default("pending")
+  deliveryFee     Float    @default(0)
+  totalValue      Float    @default(0)
   status          String   @default("pending")
-  paymentMethod   String
-  customerName    String
-  customerPhone   String
-  customerAddress String?
+  massa           String?
+  recheio         String?
+  topo            String?
+  addons          String?  @db.Text // JSON
+  calendarEventId String?
+  instanceId      String?  @default("global")
+  reminderSent    Boolean  @default(false)
   customerId      String?
   customer        Customer? @relation(fields: [customerId], references: [id])
   userId          String
   user            User     @relation(fields: [userId], references: [id])
   createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  updatedAt       DateTime @default(now()) @updatedAt
 
   @@map("order")
 }
@@ -128,8 +174,8 @@ model Setting {
   smtpUser             String?
   smtpPass             String? @db.Text
   smtpFrom             String?
-  logoUrl              String?
-  faviconUrl           String?
+  logoUrl              String? @db.Text
+  faviconUrl           String? @db.Text
   accentColor          String? @default("#ff4d6d")
   buttonColor          String? @default("#ff4d6d")
   accentColorOrders    String? @default("#4a2c2a")
@@ -141,10 +187,57 @@ model Setting {
   @@map("setting")
 }
 
+model StockItem {
+  id          String   @id @default(uuid())
+  name        String
+  quantity    Float    @default(0)
+  unit        String   @default("un")
+  minQuantity Float    @default(0)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@map("stock_item")
+}
+
+model CalendarEvent {
+  id          String   @id
+  title       String
+  description String?  @db.Text
+  startAt     DateTime
+  endAt       DateTime
+  allDay      Boolean  @default(false)
+  syncedAt    DateTime @default(now())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("calendar_event")
+}
+
+model SeasonalCatalog {
+  id                      String   @id @default(uuid())
+  name                    String
+  eventDate               String
+  preStartDays            Int      @default(15)
+  postEndDays             Int      @default(2)
+  description             String?  @db.Text
+  items                   String?  @db.Text // JSON
+  maxOrders               Int      @default(0)
+  onlySeasonalOnEventDay  Boolean  @default(false)
+  active                  Boolean  @default(true)
+  userId                  String
+  user                    User     @relation(fields: [userId], references: [id])
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @default(now()) @updatedAt
+
+  @@map("seasonal_catalog")
+}
+
 model MarketingAsset {
   id        String   @id @default(uuid())
   name      String
-  url       String
+  url       String   @db.Text
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
