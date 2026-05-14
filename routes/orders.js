@@ -762,10 +762,17 @@ router.post('/categories/reorder', authenticate, async (req, res) => {
   const { items } = req.body; // Array de { id, order }
 
   try {
+    // Prisma requires unique fields in update where clauses.
+    // Since we need to update multiple, we'll verify first or just update by id.
+    const allCategories = await prisma.category.findMany({ where: { userId } });
+    const userCategoryIds = allCategories.map(c => c.id);
+
+    const validItems = items.filter(item => userCategoryIds.includes(item.id));
+
     await prisma.$transaction(
-      items.map(item => 
+      validItems.map(item => 
         prisma.category.update({
-          where: { id: item.id, userId },
+          where: { id: item.id },
           data: { order: item.order }
         })
       )
@@ -779,18 +786,36 @@ router.post('/categories/reorder', authenticate, async (req, res) => {
 router.patch('/categories/:id', authenticate, async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
-  const cat = await prisma.category.update({
-    where: { id, userId },
-    data: req.body
-  });
-  res.json(cat);
+  try {
+    const existing = await prisma.category.findUnique({ where: { id } });
+    if (!existing || existing.userId !== userId) return res.status(403).json({ error: "Não autorizado" });
+    
+    const updateData = { ...req.body };
+    delete updateData.id;
+    delete updateData.userId;
+
+    const cat = await prisma.category.update({
+      where: { id },
+      data: updateData
+    });
+    res.json(cat);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.delete('/categories/:id', authenticate, async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
-  await prisma.category.delete({ where: { id, userId } });
-  res.json({ success: true });
+  try {
+    const existing = await prisma.category.findUnique({ where: { id } });
+    if (!existing || existing.userId !== userId) return res.status(403).json({ error: "Não autorizado" });
+
+    await prisma.category.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.get('/history/:phone', authenticate, async (req, res) => {
@@ -867,9 +892,17 @@ router.patch('/products/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
+    const existing = await prisma.product.findUnique({ where: { id } });
+    if (!existing || existing.userId !== userId) return res.status(403).json({ error: "Não autorizado" });
+    
+    // Filtra dados invalidos
+    const updateData = { ...req.body };
+    delete updateData.id;
+    delete updateData.userId;
+
     const product = await prisma.product.update({
-      where: { id, userId },
-      data: req.body
+      where: { id },
+      data: updateData
     });
     res.json(product);
   } catch (err) {
@@ -881,7 +914,12 @@ router.delete('/products/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
-    await prisma.product.delete({ where: { id, userId } });
+    const existing = await prisma.product.findUnique({ where: { id } });
+    if (!existing || existing.userId !== userId) return res.status(403).json({ error: "Não autorizado" });
+
+    await prisma.product.delete({
+      where: { id }
+    });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
