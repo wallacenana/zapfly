@@ -16,37 +16,22 @@ let mailerInstances = {};
 
 const getMailer = async (userId) => {
   console.log(`[AUTH-DEBUG] 🔍 Iniciando getMailer para o usuário: ${userId}`);
-  
+
   const settings = await prisma.setting.findUnique({ where: { userId } }).catch(() => null);
-  
+
   // Pega do .env primeiro para debugar o que está vindo do sistema
   const envHost = process.env.SMTP_HOST;
   const envPort = process.env.SMTP_PORT;
   const envUser = process.env.SMTP_USER;
   const envPass = process.env.SMTP_PASS;
 
-  console.log(`[AUTH-DEBUG] 📝 Valores no .env: Host=${envHost}, Port=${envPort}, User=${envUser}`);
+  console.log(`[AUTH-DEBUG] 🚀 FINAL: Host=${envHost}, Port=${envPort}, User=${envUser}, Secure=${envPort === 465}`);
 
-  const host = settings?.smtpHost || envHost;
-  
-  // Lógica corrigida: Se o banco tiver algo > 0, usa banco. Senão, usa .env. Senão, 587.
-  let port = 587;
-  if (settings?.smtpPort && settings.smtpPort > 0) {
-    port = parseInt(settings.smtpPort);
-  } else if (envPort) {
-    port = parseInt(envPort);
-  }
-
-  const user = settings?.smtpUser || envUser;
-  const pass = settings?.smtpPass || envPass;
-
-  console.log(`[AUTH-DEBUG] 🚀 FINAL: Host=${host}, Port=${port}, User=${user}, Secure=${port === 465}`);
-
-  if (!host || !user || !pass) {
+  if (!envHost || !envUser || !envPass) {
     console.log('[AUTH-DEBUG] ❌ Erro: Faltam dados de SMTP.');
     return null;
   }
-  
+
   try {
     const transporter = nodemailer.createTransport({
       host,
@@ -66,7 +51,7 @@ const sendOtpEmail = async (userId, toEmail, code, userName) => {
   try {
     const mailer = await getMailer(userId);
     const settings = await prisma.setting.findUnique({ where: { userId } }).catch(() => null);
-    
+
     const fromEmail = settings?.smtpUser || process.env.SMTP_FROM || process.env.SMTP_USER;
     const businessName = settings?.businessName || APP_NAME;
 
@@ -201,7 +186,7 @@ router.post('/setup-2fa', async (req, res) => {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       console.log(`[AUTH-DEBUG] Gerado código ${code} para ${user.email}`);
       await prisma.user.update({ where: { id: user.id }, data: { otpSecret: code } });
-      
+
       console.log('[AUTH-DEBUG] Disparando sendOtpEmail...');
       sendOtpEmail(user.id, user.email, code, user.name).catch(e => {
         console.error('[AUTH-ERROR] ❌ Erro fatal no envio:', e.message);
@@ -333,11 +318,11 @@ router.post('/test-email', async (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     const userId = decoded.id;
     if (!to) return res.status(400).json({ error: 'Destinatário não informado.' });
-    
+
     const mailer = await getMailer(userId);
     if (!mailer) return res.status(400).json({ error: 'SMTP não configurado. Salve as configurações primeiro.' });
     const settings = await prisma.setting.findUnique({ where: { userId } });
-    
+
     await mailer.sendMail({
       from: `"${settings?.businessName || APP_NAME}" <${settings.smtpUser}>`,
       to,
@@ -351,7 +336,7 @@ router.post('/test-email', async (req, res) => {
 });
 
 module.exports = router;
-module.exports.invalidateMailer = (userId) => { 
+module.exports.invalidateMailer = (userId) => {
   if (userId) delete mailerInstances[userId];
   else mailerInstances = {};
 };
