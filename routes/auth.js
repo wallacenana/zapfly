@@ -34,11 +34,14 @@ const getMailer = async (userId) => {
 
   try {
     const transporter = nodemailer.createTransport({
-      envHost,
-      envPort,
-      secure: envPort === 465, // SSL para 465, STARTTLS para outros
-      auth: { user: envUser, pass: envPass },
-      timeout: 10000 // 10 segundos de timeout para não travar
+      host: envHost,
+      port: parseInt(envPort || '587'),
+      secure: parseInt(envPort) === 465, // Agora sim: compara número com número
+      auth: { 
+        user: envUser, 
+        pass: envPass 
+      },
+      timeout: 10000
     });
     return transporter;
   } catch (e) {
