@@ -45,6 +45,7 @@ function AppRoutes() {
         </PrivateRoute>
       }>
         <Route index element={<Dashboard />} />
+        <Route path="dashboard" element={<Dashboard />} />
         <Route path="inventory" element={<Estoque />} />
         <Route path="production" element={<Production />} />
         <Route path="agenda" element={<Agenda />} />
