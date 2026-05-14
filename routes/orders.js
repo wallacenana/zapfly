@@ -800,6 +800,17 @@ router.get('/history/:phone', authenticate, async (req, res) => {
     res.json(orders);
 });
 
+router.post('/calendar-sync', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const result = await syncCalendarEvents(userId);
+    res.json(result);
+  } catch (err) {
+    console.error('[Manual Sync Error]', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/calendar-events', authenticate, async (req, res) => {
   const userId = req.user.id;
   const events = await prisma.calendarEvent.findMany({ where: { userId }, orderBy: { startAt: 'asc' } });
