@@ -120,7 +120,7 @@ const Prompts = () => {
   }
 
   return (
-    <div style={{ display: 'flex', gap: '30px', height: '100%' }}>
+    <div style={{ display: 'flex', gap: '30px', height: '100%', padding: '30px' }}>
       {/* Sidebar de Instâncias */}
       <div style={{ width: '280px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
         <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Conexões</h3>

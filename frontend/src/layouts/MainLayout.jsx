@@ -28,7 +28,7 @@ const MainLayout = () => {
     { path: '/agenda', icon: <Calendar size={20} />, label: 'Agenda' },
     { path: '/flows', icon: <Zap size={20} />, label: 'Automação' },
     { path: '/connections', icon: <Share2 size={20} />, label: 'Conexões' },
-    { path: '/prompts', icon: <MessageSquare size={20} />, label: 'Lily AI' },
+    { path: '/prompts', icon: <MessageSquare size={20} />, label: 'Prompts' },
     { path: '/site-settings', icon: <Globe size={20} />, label: 'Cardápio' },
     { path: '/settings', icon: <Settings size={20} />, label: 'Configurações' },
   ];
