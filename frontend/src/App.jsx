@@ -2,6 +2,9 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
+// Contexts
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+
 // Layouts
 import MainLayout from './layouts/MainLayout';
 
@@ -22,38 +25,49 @@ import Prompts from './pages/Prompts';
 
 // Auth Guard
 const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  if (!token) return <Navigate to="/login" />;
+  const { user, loading } = useAuth();
+  
+  if (loading) return null; // Ou um loading spinner
+  
+  if (!user) return <Navigate to="/login" />;
   return children;
 };
 
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/first-login" element={<FirstLoginSetup />} />
+      
+      <Route path="/" element={
+        <PrivateRoute>
+          <MainLayout />
+        </PrivateRoute>
+      }>
+        <Route index element={<Dashboard />} />
+        <Route path="inventory" element={<Estoque />} />
+        <Route path="production" element={<Production />} />
+        <Route path="agenda" element={<Agenda />} />
+        <Route path="connections" element={<Connections />} />
+        <Route path="chat" element={<Chat />} />
+        <Route path="flows" element={<Flows />} />
+        <Route path="flows/edit/:id" element={<FlowEditor />} />
+        <Route path="prompts" element={<Prompts />} />
+        <Route path="settings" element={<Settings />} />
+        <Route path="site-settings" element={<SiteSettings />} />
+      </Route>
+    </Routes>
+  );
+}
+
 function App() {
   return (
-    <Router>
-      <Toaster position="top-right" />
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/first-login" element={<FirstLoginSetup />} />
-        
-        <Route path="/" element={
-          <PrivateRoute>
-            <MainLayout />
-          </PrivateRoute>
-        }>
-          <Route index element={<Dashboard />} />
-          <Route path="inventory" element={<Estoque />} />
-          <Route path="production" element={<Production />} />
-          <Route path="agenda" element={<Agenda />} />
-          <Route path="connections" element={<Connections />} />
-          <Route path="chat" element={<Chat />} />
-          <Route path="flows" element={<Flows />} />
-          <Route path="flows/edit/:id" element={<FlowEditor />} />
-          <Route path="prompts" element={<Prompts />} />
-          <Route path="settings" element={<Settings />} />
-          <Route path="site-settings" element={<SiteSettings />} />
-        </Route>
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Toaster position="top-right" />
+        <AppRoutes />
+      </Router>
+    </AuthProvider>
   );
 }
 

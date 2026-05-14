@@ -13,10 +13,12 @@ import {
   MessageCircle,
   Zap
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const menuItems = [
     { path: '/', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
@@ -32,7 +34,7 @@ const MainLayout = () => {
   ];
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    logout();
     navigate('/login');
   };
 
