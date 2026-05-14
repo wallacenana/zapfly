@@ -110,7 +110,18 @@ app.get('/settings', authenticate, async (req, res) => {
 
 app.post('/settings', authenticate, async (req, res) => {
     try {
-        const data = req.body;
+        const { 
+            businessName, logoUrl, faviconUrl, 
+            accentColor, buttonColor, buttonTextColor, 
+            backgroundColor, textColor 
+        } = req.body;
+
+        const data = {
+            businessName, logoUrl, faviconUrl,
+            accentColor, buttonColor, buttonTextColor,
+            backgroundColor, textColor
+        };
+
         const settings = await prisma.setting.upsert({
             where: { userId: req.user.id },
             update: data,
@@ -118,6 +129,7 @@ app.post('/settings', authenticate, async (req, res) => {
         });
         res.json(settings);
     } catch (err) {
+        console.error('[Settings Save Error]', err);
         res.status(500).json({ error: err.message });
     }
 });
