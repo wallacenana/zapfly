@@ -388,7 +388,7 @@ async function createPaymentLink(order, settings) {
           pending: redirectUrl
         },
         auto_return: 'approved',
-        notification_url: `${process.env.PUBLIC_URL}/mercadopago/webhook`,
+        notification_url: `${process.env.PUBLIC_URL}/mercadopago/webhook?userId=${order.userId}`,
         external_reference: order.id,
         payment_methods: {
           default_payment_method_id: order.paymentMethod?.toLowerCase().includes('pix') ? 'pix' : undefined,

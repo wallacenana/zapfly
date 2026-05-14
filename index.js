@@ -134,8 +134,11 @@ app.post('/mercadopago/webhook', async (req, res) => {
 
             try {
                 // Busca detalhes do pagamento no MP
-                const settings = await getSettings();
+                const userId = req.query.userId;
+                const settings = await getSettings(userId);
+
                 if (!settings?.mercadopagoToken) {
+                    console.warn(`[MercadoPago Webhook] Token não encontrado para o usuário: ${userId}`);
                     processingPayments.delete(paymentId);
                     return res.sendStatus(200);
                 }
@@ -644,10 +647,12 @@ async function initInstance(instanceId) {
 
                         // Juntamos o texto para o motor de fluxos (usando o combinedText já calculado)
                         const textForFlow = combinedText;
+                        const instanceData = await getCachedInstance(instanceId);
+                        const userId = instanceData?.userId;
 
                         let flowHandled = false;
                         if (!msg.key.fromMe) {
-                            flowHandled = await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages);
+                            flowHandled = await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages, userId);
                         }
                         if (flowHandled) return;
 
@@ -662,9 +667,9 @@ async function initInstance(instanceId) {
                                 }
                             }
 
-                            const ai = await getOpenAI();
+                            const ai = await getOpenAI(userId);
                             if (ai) {
-                                const settings = await getSettings();
+                                const settings = await getSettings(userId);
 
                                 let promptText = (combinedText ? combinedText : "");
 
@@ -690,7 +695,7 @@ async function initInstance(instanceId) {
                                     `${m.fromMe ? 'Lily' : 'Cliente'}: ${m.text || '[Imagem/Arquivo]'}`
                                 ).join('\n');
 
-                                const finalSystemPrompt = await buildLilyPrompt(instanceId, jid, formattedHistory, storeInfo, msg.pushName);
+                                const finalSystemPrompt = await buildLilyPrompt(instanceId, jid, formattedHistory, storeInfo, msg.pushName, userId);
                                 const messages = [
                                     { role: 'system', content: finalSystemPrompt },
                                     { role: 'user', content: userMessageContent }
@@ -920,7 +925,7 @@ async function initInstance(instanceId) {
                                         }
                                     }
 
-                                    const modelToUse = MODEL_MAP[settings?.activeModel] || 'gpt-4o';
+                                    const modelToUse = (settings && settings.activeModel) ? (MODEL_MAP[settings.activeModel] || 'gpt-4o') : 'gpt-4o';
 
                                     const completion = await ai.chat.completions.create({
                                         model: modelToUse,
@@ -1414,7 +1419,7 @@ async function initInstance(instanceId) {
                                 if (flowState) {
                                     const flow = await prisma.flow.findUnique({ where: { id: flowState.flowId } });
                                     if (flow && flow.status === 'Ativo') {
-                                        await runFlowNode(sock, instanceId, jid, flow, flowState.currentNodeId, null, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages, textForFlow);
+                                        await runFlowNode(sock, instanceId, jid, flow, flowState.currentNodeId, null, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages, textForFlow, userId);
                                     }
                                 }
                             } else {
@@ -1542,9 +1547,9 @@ app.post('/instances/:id/ai-test', async (req, res) => {
 });
 
 // API Routes
-app.get('/config/keys', async (req, res) => {
-    let config = await getSettings();
-    if (!config) config = await prisma.setting.create({ data: { id: 'global', activeModel: 'openai' } });
+app.get('/config/keys', authenticate, async (req, res) => {
+    let config = await getSettings(req.user.id);
+    if (!config) config = await prisma.setting.create({ data: { userId: req.user.id, activeModel: 'openai' } });
     res.json({
         openai: config.openaiKey,
         claude: config.claudeKey,
@@ -1566,12 +1571,11 @@ app.get('/config/keys', async (req, res) => {
         mercadopagoPublicKey: config.mercadopagoPublicKey,
         mercadopagoToken: config.mercadopagoToken,
         pixReceiverName: config.pixReceiverName,
-        pixReceiverKey: config.pixReceiverKey,
-        gcalCalendarId: config.gcalCalendarId
+        pixReceiverKey: config.pixReceiverKey
     });
 });
 
-app.post('/config/keys', async (req, res) => {
+app.post('/config/keys', authenticate, async (req, res) => {
     const {
         openai, claude, activeModel, gcalSyncHour,
         businessName, businessAddress, businessLocation,
@@ -1582,7 +1586,7 @@ app.post('/config/keys', async (req, res) => {
         pixReceiverName, pixReceiverKey
     } = req.body;
 
-    const currentConfig = await getSettings();
+    const currentConfig = await getSettings(req.user.id);
 
     const updateData = {
         openaiKey: openai,
@@ -1606,36 +1610,37 @@ app.post('/config/keys', async (req, res) => {
         pixReceiverKey
     };
 
-    console.log(`[Config Save] Salvando configurações globais...`);
+    console.log(`[Config Save] Salvando configurações do usuário ${req.user.id}...`);
 
     const config = await prisma.setting.upsert({
-        where: { id: 'global' },
+        where: { userId: req.user.id },
         update: updateData,
-        create: { id: 'global', ...updateData, gcalEnabled: false }
+        create: { userId: req.user.id, ...updateData, gcalEnabled: false }
     });
 
     openaiInstance = null;
-    invalidateSettingsCache(); // força reload das configurações no próximo uso
+    invalidateSettingsCache(req.user.id); // força reload das configurações no próximo uso
     res.json(config);
 });
 
-app.get('/config/slots', async (req, res) => {
+app.get('/config/slots', authenticate, async (req, res) => {
     try {
-        const slots = await prisma.availableSlot.findMany({ orderBy: { dayOfWeek: 'asc' } });
+        const slots = await prisma.availableSlot.findMany({ where: { userId: req.user.id }, orderBy: { dayOfWeek: 'asc' } });
         res.json(slots);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-app.post('/config/slots', async (req, res) => {
+app.post('/config/slots', authenticate, async (req, res) => {
     try {
         const { slots } = req.body; // Array de { dayOfWeek, startTime, endTime }
 
         // Limpa slots atuais e recria
-        await prisma.availableSlot.deleteMany({});
+        await prisma.availableSlot.deleteMany({ where: { userId: req.user.id } });
         const created = await prisma.availableSlot.createMany({
             data: slots.map(s => ({
+                userId: req.user.id,
                 dayOfWeek: parseInt(s.dayOfWeek),
                 startTime: s.startTime,
                 endTime: s.endTime,
@@ -1650,15 +1655,21 @@ app.post('/config/slots', async (req, res) => {
 
 // Rotas de Google Auth duplicadas removidas
 
-app.get('/instances', async (req, res) => {
-    const instances = await prisma.instance.findMany();
+app.get('/instances', authenticate, async (req, res) => {
+    const instances = await prisma.instance.findMany({ where: { userId: req.user.id } });
     res.json(instances);
 });
 
-app.post('/instances', async (req, res) => {
+app.post('/instances', authenticate, async (req, res) => {
     try {
         const { name, color } = req.body;
-        const instance = await prisma.instance.create({ data: { name, color: color || '#3b82f6' } });
+        const instance = await prisma.instance.create({ 
+            data: { 
+                name, 
+                userId: req.user.id,
+                color: color || '#3b82f6' 
+            } 
+        });
         await initInstance(instance.id);
         res.json(instance);
     } catch (err) {
