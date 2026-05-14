@@ -64,7 +64,8 @@ const uploadProduct = multer({ storage: productStorage });
 
 const {
     getSettings,
-    invalidateSettingsCache
+    invalidateSettingsCache,
+    getCachedInstance
 } = require('./lib/cache');
 
 const { router: ordersRouter, setupCronJobs, checkAvailability, updateCalendarEvent } = require('./routes/orders');
