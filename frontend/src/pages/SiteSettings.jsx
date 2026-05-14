@@ -102,7 +102,7 @@ const SiteSettings = () => {
         <motion.div 
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            style={{ maxWidth: '1100px', margin: '0 auto' }}
+            style={{ maxWidth: '1100px', margin: '0 auto', padding: '30px' }}
         >
             <header style={{ marginBottom: '35px' }}>
                 <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '12px' }}>
