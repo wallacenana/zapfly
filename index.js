@@ -90,6 +90,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.json());
 app.use('/auth', require('./routes/auth'));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public-menu')));
 app.use('/orders', (req, res, next) => {
     req.sockGetter = (instId) => {
         if (instId) return sessions.get(instId);
@@ -211,22 +213,24 @@ app.post('/mercadopago/webhook', async (req, res) => {
 // ─── PUBLIC MENU ROUTE ──────────────────────────────────────────────────────
 app.get('/public/menu/:slug', async (req, res) => {
     try {
-        const { slug } = req.params;
+        const slug = req.params.slug.toLowerCase();
+        console.log(`[Public Menu] Buscando loja: ${slug}`);
+        
         const user = await prisma.user.findUnique({
             where: { slug },
             include: {
                 settings: true,
-                products: {
-                    where: { active: true }
-                }
+                products: true
             }
         });
 
         if (!user) {
+            console.warn(`[Public Menu] Loja não encontrada: ${slug}`);
             return res.status(404).json({ error: 'Loja não encontrada' });
         }
 
         const settings = Array.isArray(user.settings) ? user.settings[0] : user.settings;
+        console.log(`[Public Menu] Loja encontrada: ${user.name} (ID: ${user.id})`);
 
         res.json({
             businessName: settings?.businessName || user.name,
@@ -235,7 +239,8 @@ app.get('/public/menu/:slug', async (req, res) => {
             userId: user.id
         });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error('[Public Menu Error]', err);
+        res.status(500).json({ error: 'Erro interno no servidor', details: err.message });
     }
 });
 
@@ -438,6 +443,32 @@ app.post('/auth/google/disconnect', authenticate, async (req, res) => {
     }
 });
 
+// ─── CATCH-ALL PARA SLUGS E HOME ──────────────────────────────────────────────
+app.get('/:slug', async (req, res) => {
+    try {
+        const { slug } = req.params;
+        // Ignora rotas que não são slugs (ex: favicon, robots, ou rotas de API que falharam)
+        if (slug.includes('.') || slug === 'api' || slug === 'orders' || slug === 'auth') {
+            return res.status(404).send('Not Found');
+        }
+
+        const user = await prisma.user.findUnique({ where: { slug } });
+        if (user) {
+            return res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
+        }
+        
+        // Se não for um slug válido, manda pra home
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    } catch (e) {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    }
+});
+
+// Rota raiz (Home)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 // ─── INICIA O SERVIDOR ────────────────────────────────────────────────────────
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
@@ -465,6 +496,8 @@ module.exports = { getSocket: (id) => sessions.get(id) };
 // Controle de reconexão com backoff por instância
 const reconnectAttempts = {};
 
+let cachedWAVersion = null;
+
 async function initInstance(instanceId) {
     const sessionDir = path.join(__dirname, 'sessions', instanceId);
     if (!fs.existsSync(sessionDir)) {
@@ -473,14 +506,16 @@ async function initInstance(instanceId) {
 
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
-    // Busca a versão mais recente do WhatsApp Web, com fallback para versão estável conhecida
-    let version;
-    try {
-        const result = await fetchLatestBaileysVersion();
-        version = result.version;
-    } catch (e) {
-        console.warn(`[Baileys] Falha ao buscar versão do WA Web. Usando fallback.`);
-        version = [2, 3000, 1015901307]; // versão estável de fallback
+    // Busca a versão mais recente do WhatsApp Web (Cache para performance)
+    let version = cachedWAVersion || [2, 3000, 1015901307];
+    if (!cachedWAVersion) {
+        try {
+            const result = await fetchLatestBaileysVersion();
+            version = result.version;
+            cachedWAVersion = version;
+        } catch (e) {
+            console.warn(`[Baileys] Falha ao buscar versão do WA Web. Usando fallback.`);
+        }
     }
 
     const store = makeInMemoryStore({ logger: pino({ level: 'silent' }) });
@@ -1580,10 +1615,15 @@ async function initInstance(instanceId) {
             const statusCode = lastDisconnect?.error?.output?.statusCode;
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
             clearInterval(saveInterval);
+            
+            // Se a instância não estiver no mapa de sessões, significa que foi removida propositalmente (ex: Reiniciar)
+            // Ou se o erro for logout, não reconecta.
+            const manualRemoval = !sessions.has(instanceId);
+
             await prisma.instance.update({ where: { id: instanceId }, data: { status: 'disconnected' } }).catch(() => { });
             io.emit('connection_update', { instanceId, status: 'disconnected' });
 
-            if (shouldReconnect) {
+            if (shouldReconnect && !manualRemoval) {
                 // Backoff exponencial: evita loop de reconexão rápida
                 const attempts = reconnectAttempts[instanceId] || 0;
                 const delay = Math.min(1000 * Math.pow(2, attempts), 60000); // max 60s
@@ -1591,9 +1631,13 @@ async function initInstance(instanceId) {
                 console.log(`[Baileys] Instância ${instanceId} reconectando em ${delay / 1000}s (tentativa ${attempts + 1})...`);
                 setTimeout(() => initInstance(instanceId), delay);
             } else {
-                // Deslogado — limpa contador de tentativas
+                // Deslogado ou remoção manual — limpa contador de tentativas
                 delete reconnectAttempts[instanceId];
-                console.log(`[Baileys] Instância ${instanceId} deslogada. Não haverá reconexão automática.`);
+                if (manualRemoval) {
+                    console.log(`[Baileys] Instância ${instanceId} removida manualmente. Ignorando auto-reconexão.`);
+                } else {
+                    console.log(`[Baileys] Instância ${instanceId} deslogada. Não haverá reconexão automática.`);
+                }
             }
         }
     });
@@ -1837,13 +1881,22 @@ app.post('/instances/:id/restart', authenticate, async (req, res) => {
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
         if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
+        console.log(`[Restart] Reiniciando instância ${id} solicitada por ${req.user.id}`);
+
         const sock = sessions.get(id);
         if (sock) {
-            try { sock.end(); } catch (e) { }
+            // Remove do mapa ANTES de fechar para evitar que o evento 'close' dispare auto-reconnect
             sessions.delete(id);
+            try { sock.end(); } catch (e) { }
         }
-        await initInstance(id);
-        res.json({ success: true });
+
+        // Reseta contador de tentativas
+        delete reconnectAttempts[id];
+
+        // Inicia em background para não travar a resposta HTTP
+        initInstance(id).catch(err => console.error(`[Restart Error] Falha ao iniciar ${id}:`, err));
+
+        res.json({ success: true, message: 'Reinicialização iniciada' });
     } catch (err) {
         console.error('[Instance Restart Error]', err);
         res.status(500).json({ error: err.message });

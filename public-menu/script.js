@@ -1,5 +1,7 @@
 // Configurações
-const API_BASE = 'http://157.230.239.80:3001';
+const API_BASE = window.location.origin;
+// Detecta o slug da URL (ex: domain.com/linda-cake -> linda-cake)
+const STORE_SLUG = window.location.pathname.split('/')[1] || 'linda-cake';
 
 // Estado da Aplicação
 let state = {
@@ -12,8 +14,8 @@ let state = {
     currentItem: null,
     currentQty: 1,
     currentVariation: null,
-    userInfo: JSON.parse(localStorage.getItem('linda_cake_user') || '{"name":"","phone":"","address":""}'),
-    publicSettings: { googleApiKey: '', deliveryRules: [], businessName: 'Linda Cake' },
+    userInfo: JSON.parse(localStorage.getItem('zapfly_user') || '{"name":"","phone":"","address":""}'),
+    publicSettings: { googleApiKey: '', deliveryRules: [], businessName: 'Carregando...' },
     currentStep: 1,
     deliveryFee: 0,
     googleMap: null,
@@ -74,9 +76,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function fetchPublicSettings() {
     try {
-        const response = await fetch(`${API_BASE}/orders/settings/public`);
-        state.publicSettings = await response.json();
-        if (state.publicSettings.googleApiKey) loadGoogleMaps(state.publicSettings.googleApiKey);
+        const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
+        const data = await response.json();
+        state.publicSettings = {
+            ...state.publicSettings,
+            businessName: data.businessName,
+            businessAddress: data.businessAddress
+        };
+        // Atualiza o título e nome na página
+        document.title = `${data.businessName} - Cardápio Digital`;
+        const h1 = document.querySelector('.store-details h1');
+        if (h1) h1.innerText = data.businessName;
+
+        // Se houver configurações extras de entrega no backend, poderíamos pegar aqui
+        // const settingsRes = await fetch(`${API_BASE}/orders/settings/public`);
+        // ...
     } catch (err) { console.error('Erro ao carregar configurações:', err); }
 }
 
@@ -212,12 +226,10 @@ function maskPhone(v) {
 
 async function fetchProducts() {
     try {
-        const [prodRes, catRes] = await Promise.all([
-            fetch(`${API_BASE}/orders/products`),
-            fetch(`${API_BASE}/orders/categories`)
-        ]);
-        state.products = await prodRes.json();
-        state.categories = await catRes.json();
+        const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
+        const data = await response.json();
+        state.products = data.products;
+        state.categories = []; // Podemos buscar categorias se o endpoint retornar ou gerar do cardápio
         state.loading = false;
         
         // History Section
@@ -678,7 +690,7 @@ async function handlePlaceOrder() {
         const response = await fetch(`${API_BASE}/orders`, { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify(payload) 
+            body: JSON.stringify({ ...payload, slug: STORE_SLUG }) 
         });
         const data = await response.json();
         if (data.paymentLink) {

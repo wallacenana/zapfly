@@ -3,15 +3,12 @@ import { Save, Shield, MessageSquare, Bell, Calendar, MapPin, Truck, Plus, Trash
 import { api, API_URL } from '../api';
 import Swal from 'sweetalert2';
 
-const API_CONFIG = `${API_URL}/config/keys`;
-const API_CALENDARS = `${API_URL}/auth/google/calendars`;
-const API_DISCONNECT_GCAL = `${API_URL}/auth/google/disconnect`;
-
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('business');
   const [loading, setLoading] = useState(true);
   const [calendars, setCalendars] = useState([]);
   const [settings, setSettings] = useState({
+    slug: '',
     businessName: '',
     businessAddress: '',
     businessLocation: '',
@@ -47,6 +44,7 @@ const Settings = () => {
       if (res.data) {
         setSettings({
           ...res.data,
+          slug: res.data.slug || '',
           openaiKey: res.data.openai || '',
           claudeKey: res.data.claude || '',
           googleApiKey: res.data.googleApiKey || '',
@@ -179,11 +177,33 @@ const Settings = () => {
   };
 
 
+  const [slugStatus, setSlugStatus] = useState({ available: null, suggestion: '' });
+  const [checkingSlug, setCheckingSlug] = useState(false);
+
   const addDeliveryRule = () => setSettings(s => ({ ...s, deliveryRules: [...s.deliveryRules, { maxKm: 5, fee: 10 }] }));
   const updateRule = (idx, field, val) => {
     const rules = [...settings.deliveryRules];
     rules[idx][field] = parseFloat(val);
     setSettings(s => ({ ...s, deliveryRules: rules }));
+  };
+
+  const checkSlugAvailability = async (val) => {
+    if (!val || val.length < 3) return;
+    setCheckingSlug(true);
+    try {
+      const res = await api.get(`/public/check-slug/${val}`);
+      setSlugStatus({ available: res.data.available, suggestion: res.data.suggestion || '' });
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCheckingSlug(false);
+    }
+  };
+
+  const handleSlugChange = (e) => {
+    const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+    setSettings({ ...settings, slug: val });
+    setSlugStatus({ available: null, suggestion: '' });
   };
 
   const tabs = [
@@ -237,7 +257,7 @@ const Settings = () => {
                 <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Perfil do Negócio</h3>
               </div>
               <div style={{ ...subCard, borderLeftColor: 'var(--primary)' }}>
-                <label style={labelStyle}>🔗 Link do Cardápio Digital</label>
+                <label style={labelStyle}>🔗 Link do Cardápio Digital (Slug)</label>
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                   <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: '14px', flexShrink: 0 }}>
                     digizap.com.br/
@@ -245,20 +265,35 @@ const Settings = () => {
                   <input
                     {...inp}
                     value={settings.slug || ''}
-                    onChange={e => setSettings({ ...settings, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
+                    onChange={handleSlugChange}
                     placeholder="nome-da-sua-loja"
                   />
-                  {settings.slug && (
+                  <button 
+                    onClick={() => checkSlugAvailability(settings.slug)}
+                    disabled={checkingSlug || !settings.slug}
+                    className="btn btn-outline"
+                    style={{ padding: '12px 20px', borderRadius: '12px', fontSize: '14px' }}
+                  >
+                    {checkingSlug ? '...' : 'Verificar'}
+                  </button>
+                  {settings.slug && slugStatus.available === true && (
                     <a
                       href={`/${settings.slug}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      style={{ padding: '12px 20px', background: 'var(--primary)', color: 'white', borderRadius: '12px', textDecoration: 'none', fontWeight: 700, fontSize: '14px' }}
+                      className="btn btn-primary"
+                      style={{ padding: '12px 20px', borderRadius: '12px', textDecoration: 'none', fontWeight: 700, fontSize: '14px' }}
                     >
                       Abrir
                     </a>
                   )}
                 </div>
+                {slugStatus.available === true && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '8px', fontWeight: 800 }}>✓ Link disponível!</p>}
+                {slugStatus.available === false && (
+                  <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '8px', fontWeight: 700 }}>
+                    ✗ Este link já está em uso. {slugStatus.suggestion && <>Sugestão: <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#3b82f6' }} onClick={() => { setSettings({ ...settings, slug: slugStatus.suggestion }); setSlugStatus({ available: true, suggestion: '' }); }}>{slugStatus.suggestion}</span></>}
+                  </p>
+                )}
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
                   Este será o endereço público do seu cardápio. Divulgue este link para seus clientes.
                 </p>
