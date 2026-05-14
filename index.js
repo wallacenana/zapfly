@@ -95,6 +95,39 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/auth', require('./routes/auth'));
+
+// 笏€笏€笏€ CONFIGURAﾃﾃ髭S DO SITE (BRANDING) 笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€
+app.get('/settings', authenticate, async (req, res) => {
+    try {
+        const settings = await prisma.setting.findUnique({
+            where: { userId: req.user.id }
+        });
+        res.json(settings || {});
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/settings', authenticate, async (req, res) => {
+    try {
+        const data = req.body;
+        const settings = await prisma.setting.upsert({
+            where: { userId: req.user.id },
+            update: data,
+            create: { ...data, userId: req.user.id }
+        });
+        res.json(settings);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/marketing/upload', authenticate, uploadMarketing.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    const fileUrl = `https://files.digizap.com.br/marketing/${req.file.filename}`;
+    res.json({ url: fileUrl });
+});
+
 app.use('/orders', (req, res, next) => {
     req.sockGetter = (instId) => {
         if (instId) return sessions.get(instId);
@@ -274,39 +307,6 @@ app.get('/public/check-slug/:slug', async (req, res) => {
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
-});
-
-// 笏€笏€笏€ CONFIGURAﾃﾃ髭S DO SITE (BRANDING) 笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€
-app.get('/settings', authenticate, async (req, res) => {
-    try {
-        const settings = await prisma.setting.findUnique({
-            where: { userId: req.user.id }
-        });
-        res.json(settings || {});
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post('/settings', authenticate, async (req, res) => {
-    try {
-        const data = req.body;
-        const settings = await prisma.setting.upsert({
-            where: { userId: req.user.id },
-            update: data,
-            create: { ...data, userId: req.user.id }
-        });
-        res.json(settings);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-app.post('/marketing/upload', authenticate, uploadMarketing.single('file'), (req, res) => {
-    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
-    // Usando o novo domﾃｭnio solicitado pelo usuﾃ｡rio
-    const fileUrl = `https://files.digizap.com.br/marketing/${req.file.filename}`;
-    res.json({ url: fileUrl });
 });
 
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
