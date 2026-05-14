@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Palette, Layout, Globe, Upload, Save, Eye, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { Palette, Layout as LayoutIcon, Globe, Upload, Save, Eye, CheckCircle, RefreshCw } from 'lucide-react';
 import { api, API_URL } from '../api';
 import toast from 'react-hot-toast';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 const SiteSettings = () => {
     const [loading, setLoading] = useState(true);
@@ -39,7 +39,6 @@ const SiteSettings = () => {
     const handleSave = async () => {
         setSaving(true);
         try {
-            // Filtramos apenas os campos necessários para evitar erro 500 por campos inexistentes no modelo
             const payload = {
                 businessName: settings.businessName,
                 logoUrl: settings.logoUrl,
@@ -80,104 +79,96 @@ const SiteSettings = () => {
     };
 
     if (loading) return (
-        <div className="flex flex-col items-center justify-center h-full text-white gap-4">
-            <RefreshCw className="animate-spin" size={32} />
-            <p className="font-medium">Carregando Identidade Visual...</p>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '300px', gap: '15px' }}>
+            <RefreshCw className="animate-spin" size={32} color="var(--accent-primary)" />
+            <p style={{ color: 'var(--text-secondary)', fontWeight: 600 }}>Carregando Identidade Visual...</p>
         </div>
     );
 
     return (
         <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            className="p-8 max-w-7xl mx-auto"
+            style={{ maxWidth: '1100px', margin: '0 auto' }}
         >
-            <header className="mb-10">
-                <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
-                    <Palette className="text-pink-500" size={32} />
-                    Personalização do Site
+            <header style={{ marginBottom: '35px' }}>
+                <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <Palette color="var(--accent-primary)" size={32} />
+                    Identidade Visual do Site
                 </h1>
-                <p className="text-slate-400 mt-2">Dê a cara da sua marca para o seu cardápio digital</p>
+                <p style={{ color: 'var(--text-secondary)', marginTop: '5px' }}>Personalize as cores e mídias do seu cardápio digital público.</p>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '30px' }}>
                 
                 {/* CONFIGURAÇÕES */}
-                <div className="space-y-8">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
                     
                     {/* Sessão de Imagens */}
-                    <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 space-y-6">
-                        <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
-                            <Layout className="text-blue-400" size={20} />
-                            Elementos Visuais
+                    <section className="card" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <LayoutIcon size={18} color="var(--accent-primary)" />
+                            Mídias Principais
                         </h3>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
                             {/* Logo */}
-                            <div className="space-y-3">
-                                <label className="text-xs font-black uppercase tracking-wider text-slate-500">Logo do Cardápio</label>
-                                <div className="relative group overflow-hidden bg-slate-800 rounded-2xl aspect-square flex items-center justify-center border-2 border-dashed border-slate-700 hover:border-pink-500/50 transition-all">
+                            <div>
+                                <label style={labelStyle}>Logo do Cardápio</label>
+                                <div style={uploadBox}>
                                     {settings.logoUrl ? (
-                                        <img src={settings.logoUrl} className="w-full h-full object-contain p-4" alt="Logo" />
+                                        <img src={settings.logoUrl} style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} alt="Logo" />
                                     ) : (
-                                        <Upload className="text-slate-600 group-hover:text-pink-500 transition-colors" size={32} />
+                                        <Upload color="var(--text-muted)" size={28} />
                                     )}
-                                    <input 
-                                        type="file" 
-                                        onChange={(e) => handleUpload('logo', e)}
-                                        className="absolute inset-0 opacity-0 cursor-pointer" 
-                                    />
+                                    <input type="file" onChange={(e) => handleUpload('logo', e)} style={fileInput} />
                                 </div>
-                                <p className="text-[10px] text-slate-500 text-center">PNG ou JPG transparente (Recomendado)</p>
+                                <p style={hintStyle}>PNG transparente recomendado</p>
                             </div>
 
                             {/* Favicon */}
-                            <div className="space-y-3">
-                                <label className="text-xs font-black uppercase tracking-wider text-slate-500">Favicon (Ícone da Aba)</label>
-                                <div className="relative group overflow-hidden bg-slate-800 rounded-2xl aspect-square flex items-center justify-center border-2 border-dashed border-slate-700 hover:border-blue-500/50 transition-all">
+                            <div>
+                                <label style={labelStyle}>Ícone da Aba (Favicon)</label>
+                                <div style={uploadBox}>
                                     {settings.faviconUrl ? (
-                                        <img src={settings.faviconUrl} className="w-16 h-16 object-contain" alt="Favicon" />
+                                        <img src={settings.faviconUrl} style={{ width: '48px', height: '48px', objectFit: 'contain' }} alt="Favicon" />
                                     ) : (
-                                        <Globe className="text-slate-600 group-hover:text-blue-500 transition-colors" size={32} />
+                                        <Globe color="var(--text-muted)" size={28} />
                                     )}
-                                    <input 
-                                        type="file" 
-                                        onChange={(e) => handleUpload('favicon', e)}
-                                        className="absolute inset-0 opacity-0 cursor-pointer" 
-                                    />
+                                    <input type="file" onChange={(e) => handleUpload('favicon', e)} style={fileInput} />
                                 </div>
-                                <p className="text-[10px] text-slate-500 text-center">Formato .ico ou .png circular</p>
+                                <p style={hintStyle}>Formato quadrado (32x32px)</p>
                             </div>
                         </div>
                     </section>
 
                     {/* Sessão de Cores */}
-                    <section className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 space-y-6">
-                        <h3 className="text-lg font-bold text-white flex items-center gap-2 mb-2">
-                            <Palette className="text-pink-400" size={20} />
-                            Paleta de Cores
+                    <section className="card" style={{ padding: '30px', borderLeft: '5px solid #10b981' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Palette size={18} color="#10b981" />
+                            Paleta de Cores do Site
                         </h3>
 
-                        <div className="space-y-4">
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                             {[
-                                { id: 'accentColor', label: 'Cor de Destaque (Accent)', desc: 'Ícones e elementos secundários' },
-                                { id: 'buttonColor', label: 'Cor dos Botões', desc: 'Botão principal de finalizar pedido' },
-                                { id: 'buttonTextColor', label: 'Cor do Texto do Botão', desc: 'Texto dentro do botão principal' },
-                                { id: 'backgroundColor', label: 'Cor do Fundo do Site', desc: 'Cor geral de fundo do cardápio' },
-                                { id: 'textColor', label: 'Cor do Texto Geral', desc: 'Títulos e descrições de produtos' },
+                                { id: 'accentColor', label: 'Cor de Destaque', desc: 'Ícones e links' },
+                                { id: 'buttonColor', label: 'Cor do Botão', desc: 'Botão finalizar pedido' },
+                                { id: 'buttonTextColor', label: 'Texto do Botão', desc: 'Cor do texto no botão' },
+                                { id: 'backgroundColor', label: 'Fundo do Site', desc: 'Fundo do cardápio' },
+                                { id: 'textColor', label: 'Cor dos Textos', desc: 'Nomes e descrições' },
                             ].map((item) => (
-                                <div key={item.id} className="flex items-center justify-between p-4 bg-slate-800/40 rounded-2xl border border-slate-700/50">
+                                <div key={item.id} style={colorRow}>
                                     <div>
-                                        <p className="text-sm font-bold text-white">{item.label}</p>
-                                        <p className="text-[11px] text-slate-500">{item.desc}</p>
+                                        <p style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>{item.label}</p>
+                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item.desc}</p>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="text-xs font-mono text-slate-400 uppercase">{settings[item.id]}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{settings[item.id]}</span>
                                         <input 
                                             type="color" 
                                             value={settings[item.id]}
                                             onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value })}
-                                            className="w-10 h-10 rounded-lg cursor-pointer bg-transparent border-none"
+                                            style={colorPicker}
                                         />
                                     </div>
                                 </div>
@@ -188,94 +179,94 @@ const SiteSettings = () => {
                     <button 
                         onClick={handleSave}
                         disabled={saving}
-                        className="w-full py-4 bg-gradient-to-r from-pink-600 to-rose-500 text-white rounded-2xl font-black text-lg shadow-xl shadow-pink-900/20 hover:scale-[1.02] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                        className="btn btn-primary"
+                        style={{ padding: '18px', fontSize: '16px', borderRadius: '15px' }}
                     >
-                        {saving ? <RefreshCw className="animate-spin" size={24} /> : <Save size={24} />}
-                        {saving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
+                        {saving ? <RefreshCw className="animate-spin" size={20} /> : <Save size={20} />}
+                        {saving ? 'Salvando...' : 'Salvar Identidade Visual'}
                     </button>
                 </div>
 
-                {/* PREVIEW EM TEMPO REAL (SMARTPHONE) */}
-                <div className="hidden lg:flex flex-col items-center sticky top-8">
-                    <div className="mb-4 text-center">
-                        <h4 className="text-white font-bold flex items-center gap-2">
-                            <Eye className="text-blue-400" size={18} />
-                            Prévia Real
+                {/* PREVIEW */}
+                <div style={{ position: 'sticky', top: '90px', height: 'fit-content' }}>
+                    <div style={{ marginBottom: '15px', textAlign: 'center' }}>
+                        <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                            <Eye size={16} color="var(--accent-primary)" />
+                            Simulador de Celular
                         </h4>
-                        <p className="text-xs text-slate-500">Veja como seus clientes verão seu site</p>
                     </div>
 
-                    <div className="relative w-[320px] h-[640px] bg-slate-950 rounded-[3rem] border-[8px] border-slate-800 shadow-2xl overflow-hidden">
-                        {/* Notch */}
-                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-slate-800 rounded-b-2xl z-20"></div>
-
-                        {/* Conteúdo do Site Simulado */}
-                        <div className="w-full h-full overflow-y-auto" style={{ backgroundColor: settings.backgroundColor }}>
-                            {/* Header do Site */}
-                            <div className="p-6 text-center space-y-4 pt-12">
-                                <div className="w-20 h-20 mx-auto rounded-2xl bg-white/10 flex items-center justify-center shadow-lg">
+                    {/* Smartphone Mockup */}
+                    <div style={phoneFrame}>
+                        <div style={phoneNotch}></div>
+                        
+                        <div style={{ ...phoneScreen, backgroundColor: settings.backgroundColor }}>
+                            {/* Header */}
+                            <div style={{ padding: '40px 20px 20px', textAlign: 'center' }}>
+                                <div style={{ width: '70px', height: '70px', margin: '0 auto 15px', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
                                     {settings.logoUrl ? (
-                                        <img src={settings.logoUrl} className="max-w-[80%] max-h-[80%] object-contain" />
+                                        <img src={settings.logoUrl} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                                     ) : (
-                                        <div className="w-12 h-12 rounded-full bg-slate-200/20"></div>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.1)' }}></div>
                                     )}
                                 </div>
-                                <h1 className="text-xl font-black" style={{ color: settings.textColor }}>
-                                    {settings.businessName || 'Sua Loja'}
-                                </h1>
+                                <h1 style={{ fontSize: '18px', fontWeight: 900, color: settings.textColor }}>{settings.businessName || 'Sua Loja'}</h1>
                             </div>
 
-                            {/* Categorias */}
-                            <div className="px-4 flex gap-2 overflow-x-auto pb-4">
-                                {['Promoções', 'Bolos', 'Doces'].map((cat, i) => (
-                                    <div key={cat} className="px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap" 
-                                        style={{ 
-                                            backgroundColor: i === 0 ? settings.buttonColor : 'rgba(0,0,0,0.05)',
-                                            color: i === 0 ? settings.buttonTextColor : settings.textColor
-                                        }}
-                                    >
-                                        {cat}
-                                    </div>
-                                ))}
+                            {/* Mini Menu */}
+                            <div style={{ padding: '0 15px', display: 'flex', gap: '8px', overflowX: 'hidden' }}>
+                                <div style={{ padding: '6px 15px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, backgroundColor: settings.buttonColor, color: settings.buttonTextColor }}>Bolos</div>
+                                <div style={{ padding: '6px 15px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, backgroundColor: 'rgba(0,0,0,0.05)', color: settings.textColor }}>Doces</div>
                             </div>
 
-                            {/* Produtos */}
-                            <div className="p-4 space-y-4">
+                            {/* Product List */}
+                            <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 {[1, 2].map(i => (
-                                    <div key={i} className="bg-white rounded-2xl p-3 shadow-sm flex gap-3 border border-slate-100">
-                                        <div className="w-20 h-20 bg-slate-100 rounded-xl flex-shrink-0"></div>
-                                        <div className="flex-1 space-y-1">
-                                            <div className="h-4 w-3/4 bg-slate-200 rounded"></div>
-                                            <div className="h-3 w-1/2 bg-slate-100 rounded"></div>
-                                            <div className="h-5 w-1/4 rounded mt-2" style={{ backgroundColor: `${settings.accentColor}20`, color: settings.accentColor }}></div>
+                                    <div key={i} style={{ padding: '10px', backgroundColor: '#fff', borderRadius: '12px', display: 'flex', gap: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                                        <div style={{ width: '60px', height: '60px', backgroundColor: '#f4f4f5', borderRadius: '8px' }}></div>
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ width: '70%', height: '10px', backgroundColor: '#e4e4e7', borderRadius: '4px', marginBottom: '6px' }}></div>
+                                            <div style={{ width: '40%', height: '14px', borderRadius: '4px', backgroundColor: `${settings.accentColor}20`, color: settings.accentColor, fontSize: '10px', fontWeight: 800, display: 'flex', alignItems: 'center', paddingLeft: '5px' }}>R$ 45,00</div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
-                            {/* Botão Flutuante */}
-                            <div className="absolute bottom-6 left-4 right-4 p-4 rounded-2xl shadow-2xl flex items-center justify-center font-black text-sm"
-                                style={{ backgroundColor: settings.buttonColor, color: settings.buttonTextColor }}>
-                                FINALIZAR PEDIDO (2 itens)
+                            {/* Finalizar Button */}
+                            <div style={{ 
+                                position: 'absolute', 
+                                bottom: '20px', 
+                                left: '15px', 
+                                right: '15px', 
+                                padding: '15px', 
+                                borderRadius: '12px', 
+                                backgroundColor: settings.buttonColor, 
+                                color: settings.buttonTextColor,
+                                textAlign: 'center',
+                                fontWeight: 900,
+                                fontSize: '12px',
+                                boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                            }}>
+                                FINALIZAR PEDIDO
                             </div>
                         </div>
                     </div>
-                    
-                    <div className="mt-6 flex items-center gap-4 bg-slate-900/80 px-6 py-3 rounded-full border border-slate-800">
-                        <div className="flex items-center gap-2">
-                            <CheckCircle className="text-emerald-500" size={16} />
-                            <span className="text-[11px] text-slate-300 font-medium italic">Responsivo</span>
-                        </div>
-                        <div className="w-px h-4 bg-slate-700"></div>
-                        <div className="flex items-center gap-2">
-                            <CheckCircle className="text-emerald-500" size={16} />
-                            <span className="text-[11px] text-slate-300 font-medium italic">Otimizado</span>
-                        </div>
-                    </div>
                 </div>
+
             </div>
         </motion.div>
     );
 };
+
+// Styles
+const labelStyle = { display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' };
+const hintStyle = { fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px', textAlign: 'center' };
+const uploadBox = { position: 'relative', height: '120px', backgroundColor: 'var(--bg-tertiary)', border: '2px dashed var(--border-color)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', transition: 'all 0.2s' };
+const fileInput = { position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' };
+const colorRow = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border-color)' };
+const colorPicker = { width: '36px', height: '36px', borderRadius: '8px', border: 'none', backgroundColor: 'transparent', cursor: 'pointer' };
+const phoneFrame = { width: '310px', height: '580px', margin: '0 auto', backgroundColor: '#18181b', borderRadius: '40px', border: '8px solid #27272a', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', overflow: 'hidden' };
+const phoneNotch = { position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '100px', height: '18px', backgroundColor: '#27272a', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px', zIndex: 10 };
+const phoneScreen = { width: '100%', height: '100%', overflow: 'hidden', position: 'relative' };
 
 export default SiteSettings;

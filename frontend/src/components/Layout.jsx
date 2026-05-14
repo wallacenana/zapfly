@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -13,7 +13,8 @@ import {
   Menu as MenuIcon, 
   X,
   Palette,
-  Bot
+  Bot,
+  Activity
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -41,79 +42,112 @@ const Layout = ({ children }) => {
   };
 
   return (
-    <div className="flex h-screen bg-[#09090b] text-slate-200 overflow-hidden font-sans">
+    <div className="app-container">
       {/* Sidebar */}
-      <aside className={`${isSidebarOpen ? 'w-72' : 'w-20'} bg-[#121214] border-r border-slate-800 transition-all duration-300 flex flex-col z-50`}>
+      <aside className="sidebar" style={{ 
+          width: isSidebarOpen ? 'var(--sidebar-width)' : '80px',
+          transition: 'width 0.3s ease'
+      }}>
         {/* Logo */}
-        <div className="p-6 flex items-center gap-3">
-          <div className="w-10 h-10 bg-pink-600 rounded-xl flex items-center justify-center shadow-lg shadow-pink-900/20 flex-shrink-0">
-            <Zap className="text-white fill-white" size={24} />
+        <div className="sidebar-header" style={{ justifyContent: isSidebarOpen ? 'flex-start' : 'center' }}>
+          <div style={{ 
+              width: '40px', 
+              height: '40px', 
+              backgroundColor: '#3b82f6', 
+              borderRadius: '10px', 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              flexShrink: 0
+          }}>
+            <Zap size={20} color="white" fill="white" />
           </div>
-          {isSidebarOpen && <span className="font-black text-2xl tracking-tighter text-white">DIGIZAP</span>}
+          {isSidebarOpen && <span>DIGIZAP</span>}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto custom-scrollbar">
+        <nav className="sidebar-nav">
           {menuItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
-              className={`
-                flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all group
-                ${location.pathname === item.path 
-                  ? 'bg-pink-600/10 text-pink-500 shadow-sm' 
-                  : 'hover:bg-slate-800/50 text-slate-400 hover:text-slate-100'}
-              `}
+              className={`nav-item ${location.pathname === item.path ? 'active' : ''}`}
+              style={{ justifyContent: isSidebarOpen ? 'flex-start' : 'center' }}
             >
-              <item.icon size={22} className={location.pathname === item.path ? 'text-pink-500' : 'group-hover:scale-110 transition-transform'} />
-              {isSidebarOpen && <span className="font-bold text-sm tracking-tight">{item.label}</span>}
-              {location.pathname === item.path && isSidebarOpen && (
-                <div className="ml-auto w-1.5 h-1.5 bg-pink-500 rounded-full shadow-[0_0_8px_rgba(236,72,153,0.8)]"></div>
-              )}
+              <item.icon size={20} />
+              {isSidebarOpen && <span>{item.label}</span>}
             </Link>
           ))}
         </nav>
 
         {/* User / Logout */}
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-900/50 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-700 to-slate-800 flex items-center justify-center font-black text-white">
-              {userName.charAt(0)}
+        <div style={{ marginTop: 'auto', padding: '20px 0' }}>
+            <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '12px', 
+                padding: '12px', 
+                backgroundColor: 'var(--bg-tertiary)', 
+                borderRadius: '12px',
+                marginBottom: '10px'
+            }}>
+                <div style={{ 
+                    width: '32px', 
+                    height: '32px', 
+                    borderRadius: '8px', 
+                    backgroundColor: 'var(--border-color)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '12px'
+                }}>
+                    {userName.charAt(0)}
+                </div>
+                {isSidebarOpen && <span style={{ fontSize: '13px', fontWeight: 600 }}>{userName}</span>}
             </div>
-            {isSidebarOpen && (
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-black text-white truncate">{userName}</p>
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Plano Pro</p>
-              </div>
-            )}
-          </div>
-          <button 
-            onClick={handleLogout}
-            className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-slate-500 hover:bg-red-500/10 hover:text-red-500 transition-all font-bold text-sm"
-          >
-            <LogOut size={22} />
-            {isSidebarOpen && <span>Sair do Painel</span>}
-          </button>
+            
+            <button 
+                onClick={handleLogout}
+                className="btn-secondary"
+                style={{ 
+                    width: '100%', 
+                    padding: '10px', 
+                    justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+                    gap: '12px',
+                    border: 'none',
+                    backgroundColor: 'transparent'
+                }}
+            >
+                <LogOut size={18} />
+                {isSidebarOpen && <span>Sair</span>}
+            </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 relative">
+      <main className="main-content" style={{ 
+          marginLeft: isSidebarOpen ? 'var(--sidebar-width)' : '80px',
+          transition: 'margin-left 0.3s ease'
+      }}>
         {/* Topbar */}
-        <header className="h-20 border-b border-slate-800 flex items-center justify-between px-8 bg-[#09090b]/80 backdrop-blur-md sticky top-0 z-40">
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 hover:text-white transition-colors">
+        <header className="header">
+          <button 
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="btn-icon"
+          >
             {isSidebarOpen ? <X size={20} /> : <MenuIcon size={20} />}
           </button>
           
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-              <span className="text-[11px] font-black text-emerald-500 uppercase tracking-widest">Sistema Operacional</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <div className="badge badge-success" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: 'currentColor' }}></div>
+                Sistema Online
             </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto bg-gradient-to-b from-[#09090b] to-[#020617] p-8">
+        <div className="page-content">
           {children}
         </div>
       </main>
