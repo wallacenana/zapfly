@@ -311,7 +311,7 @@ app.get('/public/check-slug/:slug', async (req, res) => {
 
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
-// 笏笏笏 ROTAS 窶� MARKETING ASSETS (STORIES) 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+// ROTAS - MARKETING ASSETS (STORIES)
 app.get('/marketing-assets', authenticate, async (req, res) => {
     try {
         const assets = await prisma.marketingAsset.findMany({
