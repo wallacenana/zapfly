@@ -2367,9 +2367,10 @@ app.post('/instances/:id/send-audio', uploadAudio.single('audio'), async (req, r
 
 // 笏笏笏 ROTAS 窶� FLUXOS (FLOW BUILDER) 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
 
-app.get('/flows', async (req, res) => {
+app.get('/flows', authenticate, async (req, res) => {
     try {
         const flows = await prisma.flow.findMany({
+            where: { userId: req.user.id },
             orderBy: { updatedAt: 'desc' }
         });
         res.json(flows);
@@ -2378,10 +2379,10 @@ app.get('/flows', async (req, res) => {
     }
 });
 
-app.get('/flows/:id', async (req, res) => {
+app.get('/flows/:id', authenticate, async (req, res) => {
     try {
         const flow = await prisma.flow.findUnique({
-            where: { id: req.params.id }
+            where: { id: req.params.id, userId: req.user.id }
         });
         if (!flow) return res.status(404).json({ error: 'Flow nﾃ｣o encontrado' });
         res.json(flow);
@@ -2390,7 +2391,7 @@ app.get('/flows/:id', async (req, res) => {
     }
 });
 
-app.post('/flows', async (req, res) => {
+app.post('/flows', authenticate, async (req, res) => {
     try {
         const { id, name, trigger, status, data, instanceId } = req.body;
         const flowPayload = {
@@ -2398,7 +2399,8 @@ app.post('/flows', async (req, res) => {
             trigger: trigger || 'whatsapp.inbound',
             status: status || 'Rascunho',
             data: typeof data === 'string' ? data : JSON.stringify(data || { nodes: [], edges: [] }),
-            instanceId: instanceId || null
+            instanceId: instanceId || null,
+            userId: req.user.id
         };
 
         if (id) {
@@ -2418,7 +2420,7 @@ app.post('/flows', async (req, res) => {
     }
 });
 
-app.patch('/flows/:id', async (req, res) => {
+app.patch('/flows/:id', authenticate, async (req, res) => {
     try {
         const { name, trigger, status, data, instanceId } = req.body;
         const flow = await prisma.flow.update({

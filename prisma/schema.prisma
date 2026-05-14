@@ -214,15 +214,16 @@ model Order {
 }
 
 model Flow {
-  id        String   @id @default(uuid())
-  name      String
-  trigger   String
-  content   String?  @db.Text
-  active    Boolean  @default(true)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  id         String   @id @default(uuid())
+  name       String
+  trigger    String
+  data       String?  @db.Text
+  status     String   @default("Rascunho")
+  instanceId String?
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
 
   @@map("flow")
 }
