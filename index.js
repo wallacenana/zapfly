@@ -125,11 +125,24 @@ app.post('/settings', authenticate, async (req, res) => {
         console.log('[DEBUG] Tentando salvar configurações para o usuário:', req.user.id);
         console.log('[DEBUG] Dados do payload:', JSON.stringify(data, null, 2));
 
-        const settings = await prisma.setting.upsert({
-            where: { userId: req.user.id },
-            update: data,
-            create: { ...data, userId: req.user.id }
+        // Tenta encontrar uma configuração existente
+        const existing = await prisma.setting.findUnique({
+            where: { userId: req.user.id }
         });
+
+        let settings;
+        if (existing) {
+            // Se já existe, atualiza
+            settings = await prisma.setting.update({
+                where: { userId: req.user.id },
+                data: data
+            });
+        } else {
+            // Se não existe, cria do zero
+            settings = await prisma.setting.create({
+                data: { ...data, userId: req.user.id }
+            });
+        }
         
         console.log('[DEBUG] Configurações salvas com sucesso!');
         res.json(settings);
