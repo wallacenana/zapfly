@@ -367,10 +367,10 @@ app.post('/marketing-assets', authenticate, uploadMarketing.single('file'), asyn
         const { name, url } = req.body;
         
         // Se o frontend já mandou a URL do bucket PHP, usamos ela. 
-        // Caso contrário, usamos o caminho do arquivo local (legado).
-        const finalPath = url || (req.file ? `/assets/marketing/${req.file.filename}` : null);
+        // Caso contrário, usamos o domínio de arquivos correto.
+        const finalUrl = url || (req.file ? `https://files.digizap.com.br/marketing/${req.file.filename}` : null);
 
-        if (!finalPath) {
+        if (!finalUrl) {
             return res.status(400).json({ error: "Nenhum arquivo ou URL fornecida" });
         }
 
@@ -378,7 +378,7 @@ app.post('/marketing-assets', authenticate, uploadMarketing.single('file'), asyn
             data: {
                 userId: req.user.id,
                 name: name || 'Sem nome',
-                path: finalPath
+                url: finalUrl
             }
         });
         res.json(asset);
