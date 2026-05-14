@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Save, Shield, MessageSquare, Bell, Calendar, MapPin, Truck, Plus, Trash2, Key, Cpu, ExternalLink, CheckCircle2, Image, Upload, Mail } from 'lucide-react';
 import { api, API_URL } from '../api';
+import axios from 'axios';
 import Swal from 'sweetalert2';
 
 const Settings = () => {
@@ -131,16 +132,31 @@ const Settings = () => {
     const formData = new FormData();
     formData.append('name', uploadName);
     formData.append('file', fileInputRef.current.files[0]);
+    formData.append('secret', 'BlinkMediaSecret123!'); // Chave secreta do seu PHP
+
     try {
-      await api.post('/marketing-assets', formData, {
+      // 1. Sobe o arquivo para o bucket PHP
+      const uploadRes = await axios.post('https://files.digizap.com.br/upload.php', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      setUploadName('');
-      fileInputRef.current.value = '';
-      await loadMarketingAssets();
-      Swal.fire({ title: 'Foto adicionada!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+
+      if (uploadRes.data.success) {
+          // 2. Salva a referência da URL no banco de dados do Node.js
+          await api.post('/marketing-assets', {
+              name: uploadName,
+              url: uploadRes.data.url // Passamos a URL final do bucket
+          });
+
+          setUploadName('');
+          fileInputRef.current.value = '';
+          await loadMarketingAssets();
+          Swal.fire({ title: 'Foto adicionada!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+      } else {
+          throw new Error(uploadRes.data.error || 'Erro no servidor de arquivos');
+      }
     } catch (err) {
-      Swal.fire('Erro', 'Não foi possível subir a imagem.', 'error');
+      console.error(err);
+      Swal.fire('Erro', 'Não foi possível subir a imagem: ' + (err.message || ''), 'error');
     }
   };
 

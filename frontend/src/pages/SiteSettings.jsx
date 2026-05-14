@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Palette, Layout as LayoutIcon, Globe, Upload, Save, Eye, CheckCircle, RefreshCw } from 'lucide-react';
 import { api, API_URL } from '../api';
+import axios from 'axios';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
@@ -65,16 +66,24 @@ const SiteSettings = () => {
 
         const formData = new FormData();
         formData.append('file', file);
+        formData.append('secret', 'BlinkMediaSecret123!'); // Chave exigida pelo seu PHP
 
         const tId = toast.loading(`Enviando ${type === 'logo' ? 'Logo' : 'Ícone'}...`);
         try {
-            const res = await api.post('/marketing/upload', formData, {
+            // Upload direto para o servidor de arquivos PHP
+            const res = await axios.post('https://files.digizap.com.br/upload.php', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            setSettings(prev => ({ ...prev, [type === 'logo' ? 'logoUrl' : 'faviconUrl']: res.data.url }));
-            toast.success(`${type === 'logo' ? 'Logo' : 'Ícone'} atualizado!`, { id: tId });
+            
+            if (res.data.success) {
+                setSettings(prev => ({ ...prev, [type === 'logo' ? 'logoUrl' : 'faviconUrl']: res.data.url }));
+                toast.success(`${type === 'logo' ? 'Logo' : 'Ícone'} atualizado!`, { id: tId });
+            } else {
+                throw new Error(res.data.error || 'Erro desconhecido');
+            }
         } catch (err) {
-            toast.error('Erro no upload.', { id: tId });
+            console.error('Erro no upload:', err);
+            toast.error('Erro no upload: ' + (err.message || 'Falha na conexão'), { id: tId });
         }
     };
 

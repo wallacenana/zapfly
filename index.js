@@ -326,12 +326,21 @@ app.get('/marketing-assets', authenticate, async (req, res) => {
 
 app.post('/marketing-assets', authenticate, uploadMarketing.single('file'), async (req, res) => {
     try {
-        const { name } = req.body;
+        const { name, url } = req.body;
+        
+        // Se o frontend já mandou a URL do bucket PHP, usamos ela. 
+        // Caso contrário, usamos o caminho do arquivo local (legado).
+        const finalPath = url || (req.file ? `/assets/marketing/${req.file.filename}` : null);
+
+        if (!finalPath) {
+            return res.status(400).json({ error: "Nenhum arquivo ou URL fornecida" });
+        }
+
         const asset = await prisma.marketingAsset.create({
             data: {
                 userId: req.user.id,
                 name: name || 'Sem nome',
-                path: `/assets/marketing/${req.file.filename}`
+                path: finalPath
             }
         });
         res.json(asset);
