@@ -330,17 +330,17 @@ app.get('/auth/google/callback', async (req, res) => {
 });
 
 // Status da conexão com o Google Calendar
-app.get('/auth/google/status', async (req, res) => {
-    const settings = await getSettings();
+app.get('/auth/google/status', authenticate, async (req, res) => {
+    const settings = await getSettings(req.user.id);
     const connected = !!(settings?.gcalRefreshToken);
     const hasCredentials = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
     res.json({ connected, calendarId: settings?.gcalCalendarId, hasCredentials });
 });
 
 // Lista os calendários disponíveis na conta conectada
-app.get('/auth/google/calendars', async (req, res) => {
+app.get('/auth/google/calendars', authenticate, async (req, res) => {
     try {
-        const settings = await getSettings();
+        const settings = await getSettings(req.user.id);
         if (!settings?.gcalRefreshToken) return res.status(401).json({ error: 'Não conectado' });
 
         const oauth2Client = getOAuth2Client(req);
@@ -1678,18 +1678,23 @@ app.post('/instances', authenticate, async (req, res) => {
     }
 });
 
-app.patch('/instances/:id', async (req, res) => {
+app.patch('/instances/:id', authenticate, async (req, res) => {
     const { id } = req.params;
     const { name, color, botPrompt, knowledge } = req.body;
     const instance = await prisma.instance.update({
-        where: { id },
+        where: { id, userId: req.user.id },
         data: { name, color, botPrompt, knowledge }
     });
     res.json(instance);
 });
 
-app.post('/instances/:id/logout', async (req, res) => {
+app.post('/instances/:id/logout', authenticate, async (req, res) => {
     const { id } = req.params;
+
+    // Verifica propriedade
+    const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
     const sock = sessions.get(id);
     if (sock) {
         try {
@@ -1705,9 +1710,14 @@ app.post('/instances/:id/logout', async (req, res) => {
     res.json({ success: true });
 });
 
-app.post('/instances/:id/restart', async (req, res) => {
+app.post('/instances/:id/restart', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
+
+        // Verifica propriedade
+        const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
         const sock = sessions.get(id);
         if (sock) {
             try { sock.end(); } catch (e) { }
@@ -1721,8 +1731,13 @@ app.post('/instances/:id/restart', async (req, res) => {
     }
 });
 
-app.delete('/instances/:id', async (req, res) => {
+app.delete('/instances/:id', authenticate, async (req, res) => {
     const { id } = req.params;
+
+    // Verifica propriedade
+    const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
     const sock = sessions.get(id);
     if (sock) {
         sock.end();
@@ -1743,7 +1758,11 @@ app.delete('/instances/:id', async (req, res) => {
     res.json({ success: true });
 });
 
-app.get('/instances/:id/chats', async (req, res) => {
+app.get('/instances/:id/chats', authenticate, async (req, res) => {
+    // Verifica propriedade
+    const instance = await prisma.instance.findUnique({ where: { id: req.params.id, userId: req.user.id } });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
     const skip = parseInt(req.query.skip) || 0;
     const take = parseInt(req.query.take) || 40;
     const isGroup = req.query.group === 'true' ? true : req.query.group === 'false' ? false : undefined;
@@ -1776,9 +1795,14 @@ app.get('/instances/:id/chats', async (req, res) => {
     res.json({ chats: chatsWithFlow, total, hasMore: skip + take < total });
 });
 
-app.patch('/instances/:id/chats/:jid', async (req, res) => {
+app.patch('/instances/:id/chats/:jid', authenticate, async (req, res) => {
     const { id, jid } = req.params;
     const { aiEnabled } = req.body;
+
+    // Verifica propriedade
+    const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
     const chat = await prisma.chat.update({
         where: { instanceId_jid: { instanceId: id, jid } },
         data: { aiEnabled }
@@ -1786,8 +1810,13 @@ app.patch('/instances/:id/chats/:jid', async (req, res) => {
     res.json(chat);
 });
 
-app.get('/instances/:id/messages/:jid', async (req, res) => {
+app.get('/instances/:id/messages/:jid', authenticate, async (req, res) => {
     const { id, jid } = req.params;
+
+    // Verifica propriedade
+    const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
     // Carrega apenas as últimas 20 mensagens para manter o carregamento instantâneo
     let messages = await prisma.message.findMany({
         where: { instanceId: id, jid },
@@ -1813,9 +1842,14 @@ app.get('/instances/:id/messages/:jid', async (req, res) => {
     await prisma.chat.updateMany({ where: { instanceId: id, jid }, data: { unreadCount: 0 } }).catch(() => { });
 });
 
-app.get('/instances/:id/profile-pic/:jid', async (req, res) => {
+app.get('/instances/:id/profile-pic/:jid', authenticate, async (req, res) => {
     try {
         const { id, jid } = req.params;
+
+        // Verifica propriedade
+        const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
         const sock = sessions.get(id);
         if (!sock) return res.status(404).json({ error: 'Sessão não encontrada' });
 
@@ -1830,9 +1864,14 @@ app.get('/instances/:id/profile-pic/:jid', async (req, res) => {
 });
 
 // Apagar mensagem
-app.post('/instances/:id/messages/delete', async (req, res) => {
+app.post('/instances/:id/messages/delete', authenticate, async (req, res) => {
     const { id } = req.params;
     const { jid, msgId, fromMe, forEveryone } = req.body;
+
+    // Verifica propriedade
+    const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
     const sock = sessions.get(id);
     if (!sock) return res.status(404).json({ error: 'Instância não conectada' });
 
@@ -1851,9 +1890,14 @@ app.post('/instances/:id/messages/delete', async (req, res) => {
 });
 
 // Marcar conversa como lida (Visto)
-app.post('/instances/:id/chats/read', async (req, res) => {
+app.post('/instances/:id/chats/read', authenticate, async (req, res) => {
     const { id } = req.params;
     const { jid, msgId } = req.body;
+
+    // Verifica propriedade
+    const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
     const sock = sessions.get(id);
     if (!sock) return res.status(404).json({ error: 'Instância não conectada' });
 
@@ -1872,9 +1916,13 @@ app.post('/instances/:id/chats/read', async (req, res) => {
 });
 
 // Marcar como não lido (Manual)
-app.patch('/instances/:id/chats/:jid/unread', async (req, res) => {
+app.patch('/instances/:id/chats/:jid/unread', authenticate, async (req, res) => {
     const { id, jid } = req.params;
     try {
+        // Verifica propriedade
+        const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
         await prisma.chat.updateMany({
             where: { instanceId: id, jid },
             data: { unreadCount: 1 }
@@ -1886,13 +1934,17 @@ app.patch('/instances/:id/chats/:jid/unread', async (req, res) => {
 });
 
 // Apagar conversa inteira
-app.delete('/instances/:id/chats/:jid', async (req, res) => {
+app.delete('/instances/:id/chats/:jid', authenticate, async (req, res) => {
     const { id, jid } = req.params;
     try {
+        // Verifica propriedade
+        const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
         // Remove do banco local as mensagens, o chat e o ESTADO DO FLUXO
-        const mDel = await prisma.message.deleteMany({ where: { instanceId: id, jid } });
-        const cDel = await prisma.chat.deleteMany({ where: { instanceId: id, jid } });
-        const fDel = await prisma.flowState.deleteMany({ where: { instanceId: id, jid } }).catch(() => { });
+        await prisma.message.deleteMany({ where: { instanceId: id, jid } });
+        await prisma.chat.deleteMany({ where: { instanceId: id, jid } });
+        await prisma.flowState.deleteMany({ where: { instanceId: id, jid } }).catch(() => { });
 
         // Avisa o front-end para limpar o indicador visual
         io.emit('chat_update', { instanceId: id, jid, inFlow: false });
@@ -1903,13 +1955,16 @@ app.delete('/instances/:id/chats/:jid', async (req, res) => {
     }
 });
 
-app.post('/instances/:id/send', async (req, res) => {
+app.post('/instances/:id/send', authenticate, async (req, res) => {
     try {
         const { id } = req.params;
+
+        // Verifica propriedade
+        const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
         let { jid, text } = req.body;
         const sock = sessions.get(id);
-
-        if (!sock) return res.status(404).json({ error: 'Sessão não encontrada' });
         if (!jid || typeof jid !== 'string' || !text) {
             return res.status(400).json({ error: 'JID (string) e texto são obrigatórios' });
         }
