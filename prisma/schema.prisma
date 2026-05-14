@@ -92,6 +92,7 @@ model FlowState {
   instance   Instance @relation(fields: [instanceId], references: [id])
   step       String?
   data       Json?
+  resumeAt   DateTime?
   updatedAt  DateTime @default(now()) @updatedAt
 
   @@unique([jid, instanceId], name: "jid_instanceId_flow")
