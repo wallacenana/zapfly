@@ -1,5 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import PrivateRoute from './components/PrivateRoute';
+import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Connections from './pages/Connections';
@@ -13,42 +16,36 @@ import Prompts from './pages/Prompts';
 import Settings from './pages/Settings';
 import SiteSettings from './pages/SiteSettings';
 import FirstLoginSetup from './pages/FirstLoginSetup';
-import Layout from './components/Layout';
 import { Toaster } from 'react-hot-toast';
-
-const PrivateRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
-  const mustChangePassword = localStorage.getItem('mustChangePassword') === 'true';
-  
-  if (!token) return <Navigate to="/login" />;
-  if (mustChangePassword && window.location.pathname !== '/setup') return <Navigate to="/setup" />;
-  
-  return <Layout>{children}</Layout>;
-};
 
 function App() {
   return (
-    <Router>
-      <Toaster position="top-right" />
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/setup" element={<PrivateRoute><FirstLoginSetup /></PrivateRoute>} />
-        
-        <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-        <Route path="/connections" element={<PrivateRoute><Connections /></PrivateRoute>} />
-        <Route path="/menu" element={<PrivateRoute><Menu /></PrivateRoute>} />
-        <Route path="/production" element={<PrivateRoute><Production /></PrivateRoute>} />
-        <Route path="/agenda" element={<PrivateRoute><Agenda /></PrivateRoute>} />
-        <Route path="/inventory" element={<PrivateRoute><Estoque /></PrivateRoute>} />
-        <Route path="/flows" element={<PrivateRoute><Flows /></PrivateRoute>} />
-        <Route path="/flows/edit/:id" element={<PrivateRoute><FlowEditor /></PrivateRoute>} />
-        <Route path="/prompts" element={<PrivateRoute><Prompts /></PrivateRoute>} />
-        <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
-        <Route path="/site" element={<PrivateRoute><SiteSettings /></PrivateRoute>} />
-        
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
-    </Router>
+    <AuthProvider>
+      <Router>
+        <Toaster position="top-right" />
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          
+          {/* Rotas Protegidas */}
+          <Route element={<PrivateRoute />}>
+            <Route path="/setup" element={<FirstLoginSetup />} />
+            <Route path="/" element={<Layout><Dashboard /></Layout>} />
+            <Route path="/connections" element={<Layout><Connections /></Layout>} />
+            <Route path="/production" element={<Layout><Production /></Layout>} />
+            <Route path="/agenda" element={<Layout><Agenda /></Layout>} />
+            <Route path="/menu" element={<Layout><Menu /></Layout>} />
+            <Route path="/inventory" element={<Layout><Estoque /></Layout>} />
+            <Route path="/flows" element={<Layout><Flows /></Layout>} />
+            <Route path="/flows/edit/:id" element={<Layout><FlowEditor /></Layout>} />
+            <Route path="/prompts" element={<Layout><Prompts /></Layout>} />
+            <Route path="/settings" element={<Layout><Settings /></Layout>} />
+            <Route path="/site" element={<Layout><SiteSettings /></Layout>} />
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 

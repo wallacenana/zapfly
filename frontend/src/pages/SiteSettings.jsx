@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Palette, Layout, Globe, Upload, Save, Eye, CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { api, API_URL } from '../api';
 import toast from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const SiteSettings = () => {
     const [loading, setLoading] = useState(true);
@@ -86,7 +87,11 @@ const SiteSettings = () => {
     );
 
     return (
-        <div className="p-8 max-w-7xl mx-auto">
+        <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-8 max-w-7xl mx-auto"
+        >
             <header className="mb-10">
                 <h1 className="text-3xl font-extrabold text-white flex items-center gap-3">
                     <Palette className="text-pink-500" size={32} />
