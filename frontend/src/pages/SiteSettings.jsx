@@ -14,6 +14,8 @@ const SiteSettings = () => {
         faviconUrl: '',
         accentColor: '#ff4d6d',
         buttonColor: '#ff4d6d',
+        accentColorOrders: '#4a2c2a',
+        buttonColorOrders: '#4a2c2a',
         buttonTextColor: '#ffffff',
         backgroundColor: '#ffffff',
         textColor: '#333333'
@@ -46,6 +48,8 @@ const SiteSettings = () => {
                 faviconUrl: settings.faviconUrl,
                 accentColor: settings.accentColor,
                 buttonColor: settings.buttonColor,
+                accentColorOrders: settings.accentColorOrders,
+                buttonColorOrders: settings.buttonColorOrders,
                 buttonTextColor: settings.buttonTextColor,
                 backgroundColor: settings.backgroundColor,
                 textColor: settings.textColor
@@ -158,30 +162,73 @@ const SiteSettings = () => {
                             Paleta de Cores do Site
                         </h3>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                            {[
-                                { id: 'accentColor', label: 'Cor de Destaque', desc: 'Ícones e links' },
-                                { id: 'buttonColor', label: 'Cor do Botão', desc: 'Botão finalizar pedido' },
-                                { id: 'buttonTextColor', label: 'Texto do Botão', desc: 'Cor do texto no botão' },
-                                { id: 'backgroundColor', label: 'Fundo do Site', desc: 'Fundo do cardápio' },
-                                { id: 'textColor', label: 'Cor dos Textos', desc: 'Nomes e descrições' },
-                            ].map((item) => (
-                                <div key={item.id} style={colorRow}>
-                                    <div>
-                                        <p style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>{item.label}</p>
-                                        <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item.desc}</p>
-                                    </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{settings[item.id]}</span>
-                                        <input 
-                                            type="color" 
-                                            value={settings[item.id]}
-                                            onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value })}
-                                            style={colorPicker}
-                                        />
-                                    </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            {/* Sessão Delivery */}
+                            <div>
+                                <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#10b981', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '1px' }}>Cores Aba Delivery (Entrega)</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {[
+                                        { id: 'accentColor', label: 'Cor de Destaque', desc: 'Preços e ícones' },
+                                        { id: 'buttonColor', label: 'Cor do Botão', desc: 'Botão finalizar' },
+                                    ].map(item => (
+                                        <div key={item.id} style={colorRow}>
+                                            <div>
+                                                <p style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{item.label}</p>
+                                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item.desc}</p>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{settings[item.id]}</span>
+                                                <input type="color" value={settings[item.id]} onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value })} style={colorPicker} />
+                                            </div>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                            </div>
+
+                            {/* Sessão Encomendas */}
+                            <div>
+                                <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#4a2c2a', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '1px' }}>Cores Aba Encomendas</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {[
+                                        { id: 'accentColorOrders', label: 'Cor de Destaque (Encomendas)', desc: 'Preços e ícones' },
+                                        { id: 'buttonColorOrders', label: 'Cor do Botão (Encomendas)', desc: 'Botão finalizar' },
+                                    ].map(item => (
+                                        <div key={item.id} style={colorRow}>
+                                            <div>
+                                                <p style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{item.label}</p>
+                                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item.desc}</p>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{settings[item.id]}</span>
+                                                <input type="color" value={settings[item.id]} onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value })} style={colorPicker} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Sessão Geral */}
+                            <div>
+                                <h4 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--accent-primary)', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '1px' }}>Cores Gerais</h4>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    {[
+                                        { id: 'buttonTextColor', label: 'Texto do Botão', desc: 'Cor do texto no botão' },
+                                        { id: 'backgroundColor', label: 'Fundo do Site', desc: 'Fundo do cardápio' },
+                                        { id: 'textColor', label: 'Cor dos Textos', desc: 'Nomes e descrições' },
+                                    ].map(item => (
+                                        <div key={item.id} style={colorRow}>
+                                            <div>
+                                                <p style={{ fontSize: '13px', fontWeight: 700, color: '#fff' }}>{item.label}</p>
+                                                <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item.desc}</p>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{settings[item.id]}</span>
+                                                <input type="color" value={settings[item.id]} onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value })} style={colorPicker} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </section>
 

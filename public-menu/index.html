@@ -9,18 +9,18 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=1.5">
     <link rel="icon" type="image/png" href="https://files.digizap.com.br/uploads/2026/05/6a036241d7ea3_1778606657.png">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
 <body>
     <div id="app">
-        <!-- Top Navigation (iFood Style) -->
         <header class="top-nav">
             <div class="container nav-wrapper">
                 <div class="store-info">
                     <div class="store-logo">
+                        <img id="store-logo-img" style="display: none; width: 100%; height: 100%; object-fit: contain;">
                         <div class="logo-placeholder"><i data-lucide="store"></i></div>
                     </div>
                     <div class="store-details">
@@ -36,7 +36,6 @@
             </div>
         </header>
 
-        <!-- Category Tabs -->
         <nav class="category-tabs">
             <div class="container tabs-scroll">
                 <button class="cat-tab active" data-tab="delivery">Entrega</button>
@@ -44,7 +43,6 @@
             </div>
         </nav>
 
-        <!-- Search Bar -->
         <div class="container search-container">
             <div class="search-box">
                 <i data-lucide="search"></i>
@@ -52,19 +50,14 @@
             </div>
         </div>
 
-        <!-- Category Nav -->
         <div id="category-nav" class="container category-nav hidden">
             <div id="category-nav-scroll" class="category-nav-scroll"></div>
         </div>
 
-        <!-- Main Menu -->
         <main class="container main-menu">
-            <div id="menu-sections">
-                <!-- Os produtos serão carregados aqui -->
-            </div>
+            <div id="menu-sections"></div>
         </main>
 
-        <!-- Cart Footer -->
         <footer id="cart-footer" class="cart-footer hidden">
             <div class="container">
                 <button id="view-cart-btn" class="primary-btn cart-btn">
@@ -77,7 +70,7 @@
             </div>
         </footer>
 
-        <!-- Item Detail Modal -->
+        <!-- Modais -->
         <div id="item-modal" class="modal hidden">
             <div class="modal-overlay"></div>
             <div class="modal-content item-detail-content">
@@ -89,129 +82,84 @@
                         <span id="detail-qty">1</span>
                         <button class="qty-btn" id="qty-plus"><i data-lucide="plus"></i></button>
                     </div>
-                    <button id="add-to-cart-btn" class="primary-btn">
-                        Adicionar <span id="add-btn-price">R$ 0,00</span>
-                    </button>
+                    <button id="add-to-cart-btn" class="primary-btn">Adicionar <span id="add-btn-price"></span></button>
                 </div>
             </div>
         </div>
 
-        <!-- History Modal -->
-        <div id="history-modal" class="modal hidden">
-            <div class="modal-overlay" onclick="closeWithAnimation('history-modal')"></div>
-            <div class="modal-content history-modal-content">
-                <button class="chevron-close-btn" onclick="closeWithAnimation('history-modal')"><i
-                        data-lucide="chevron-down"></i></button>
-                <div class="history-modal-header">
-                    <h3>Últimos pedidos</h3>
-                    <p>Peça novamente em um clique</p>
-                </div>
-                <div id="history-modal-list" class="history-modal-list"></div>
-            </div>
-        </div>
-
-        <!-- Multi-Step Checkout Modal -->
         <div id="checkout-modal" class="modal hidden">
             <div class="modal-overlay"></div>
             <div class="modal-content checkout-content">
                 <div class="modal-header">
-                    <button class="back-btn" id="checkout-back-btn"><i data-lucide="arrow-left"></i></button>
-                    <h2 id="checkout-step-title">Finalizar pedido</h2>
+                    <button id="checkout-back-btn" class="back-btn"><i data-lucide="chevron-left"></i></button>
+                    <h2 id="checkout-step-title">Finalizar Pedido</h2>
+                    <button class="close-modal-btn"><i data-lucide="x"></i></button>
                 </div>
 
                 <div class="modal-scroll-body">
-                    <!-- Step 1: Items & Identity -->
-                    <div id="step-1" class="checkout-step">
+                    <!-- Step 1: Cart -->
+                    <div class="checkout-step" id="step-1">
                         <div id="checkout-items-list" class="checkout-items"></div>
-                        <div class="checkout-form">
-                            <section class="form-section">
-                                <h3>Seus dados</h3>
-                                <input type="text" id="user-name" placeholder="Nome completo" class="ifood-input">
-                                <input type="text" id="user-phone" placeholder="WhatsApp (DDD + Número)"
-                                    class="ifood-input">
-                            </section>
+                    </div>
+
+                    <!-- Step 2: Details -->
+                    <div class="checkout-step hidden" id="step-2">
+                        <div class="form-group">
+                            <label>Nome Completo</label>
+                            <input type="text" id="user-name" class="ifood-input" placeholder="Seu nome">
+                        </div>
+                        <div class="form-group">
+                            <label>WhatsApp</label>
+                            <input type="tel" id="user-phone" class="ifood-input" placeholder="(00) 00000-0000">
+                        </div>
+                        <div class="form-group">
+                            <label>Endereço de Entrega</label>
+                            <textarea id="user-address" class="ifood-input"
+                                placeholder="Rua, número, bairro..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Data</label>
+                            <input type="date" id="order-date" class="ifood-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Horário</label>
+                            <select id="order-time" class="ifood-input">
+                                <option value="">Selecione uma data primeiro</option>
+                            </select>
                         </div>
                     </div>
 
-                    <!-- Step 2: Address & Map (Delivery) OR Scheduling (Order) -->
-                    <div id="step-2" class="checkout-step hidden">
-                        <div id="delivery-step-content">
-                            <section class="form-section">
-                                <h3>Endereço de entrega</h3>
-                                <p style="font-size: 0.8rem; color: var(--text-gray); margin-bottom: 12px;">Selecione
-                                    seu endereço no mapa para calcular o frete.</p>
-                                <input type="text" id="user-address" placeholder="Rua, número, bairro..."
-                                    class="ifood-input">
-                                <div id="map-container"></div>
-                                <div id="step2-delivery-fee" class="delivery-fee-badge hidden">
-                                    <span>Taxa de Entrega</span>
-                                    <strong id="step2-fee-value">R$ 0,00</strong>
-                                </div>
-                            </section>
-                        </div>
-                        <div id="order-step-content" class="hidden">
-                            <section class="form-section">
-                                <h3>Agendamento</h3>
-                                <div class="input-row">
-                                    <input type="date" id="order-date" class="ifood-input">
-                                    <select id="order-time" class="ifood-input">
-                                        <option value="">Horário</option>
-                                    </select>
-                                </div>
-                            </section>
-                        </div>
-                    </div>
-
-                    <!-- Step 3: Final Review & Total -->
-                    <div id="step-3" class="checkout-step hidden">
-                        <div class="order-summary-review">
-                            <h3>Resumo do Pedido</h3>
-                            <div id="review-items-list"></div>
-
-                            <div class="order-summary" style="margin-top: 20px;">
-                                <div class="summary-line">
-                                    <span>Produtos</span>
-                                    <span id="summary-subtotal">R$ 0,00</span>
-                                </div>
-                                <div class="summary-line" id="delivery-fee-line">
-                                    <span>Taxa de Entrega</span>
-                                    <span id="summary-fee">R$ 0,00</span>
-                                </div>
-                                <div class="summary-line total">
-                                    <span>Total</span>
-                                    <span id="summary-total">R$ 0,00</span>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Step 3: Summary -->
+                    <div class="checkout-step hidden" id="step-3">
+                        <div id="order-summary-content"></div>
                     </div>
                 </div>
 
                 <div class="modal-footer-sticky">
-                    <button id="next-step-btn" class="primary-btn">
-                        <span>Continuar</span> <i data-lucide="chevron-right"></i>
-                    </button>
-                    <button id="place-order-btn" class="primary-btn hidden">
-                        Fazer pedido <i data-lucide="chevron-right"></i>
-                    </button>
+                    <button id="next-step-btn" class="primary-btn">Próximo</button>
+                    <button id="place-order-btn" class="primary-btn hidden">Confirmar Pedido</button>
                 </div>
             </div>
         </div>
 
-        <!-- Success Screen -->
-        <div id="success-screen" class="full-screen hidden">
-            <div class="success-box">
-                <div class="success-check"><i data-lucide="check"></i></div>
-                <h2>Pedido enviado!</h2>
-                <p>A Lily já te mandou uma mensagem no WhatsApp para confirmar o status.</p>
-                <div class="success-actions">
-                    <a id="ext-payment-link" href="#" target="_blank" class="primary-btn">Pagar agora</a>
-                    <button class="text-btn" onclick="location.reload()">Início</button>
+        <div id="history-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="history-modal-header">
+                    <h3>Meus Pedidos</h3>
+                    <button class="close-modal-btn"><i data-lucide="x"></i></button>
                 </div>
+                <div id="history-list" class="history-modal-list"></div>
             </div>
         </div>
     </div>
 
-    <script src="script.js?v=1.2"></script>
+    <script>
+        const pathParts = window.location.pathname.split('/').filter(p => p);
+        const API_BASE = 'https://api.digizap.com.br';
+    </script>
+    <script src="script.js?v=1.6"></script>
+    <script>lucide.createIcons();</script>
 </body>
 
 </html>

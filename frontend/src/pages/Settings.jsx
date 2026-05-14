@@ -141,18 +141,18 @@ const Settings = () => {
       });
 
       if (uploadRes.data.success) {
-          // 2. Salva a referência da URL no banco de dados do Node.js
-          await api.post('/marketing-assets', {
-              name: uploadName,
-              url: uploadRes.data.url // Passamos a URL final do bucket
-          });
+        // 2. Salva a referência da URL no banco de dados do Node.js
+        await api.post('/marketing-assets', {
+          name: uploadName,
+          url: uploadRes.data.url // Passamos a URL final do bucket
+        });
 
-          setUploadName('');
-          fileInputRef.current.value = '';
-          await loadMarketingAssets();
-          Swal.fire({ title: 'Foto adicionada!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+        setUploadName('');
+        fileInputRef.current.value = '';
+        await loadMarketingAssets();
+        Swal.fire({ title: 'Foto adicionada!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
       } else {
-          throw new Error(uploadRes.data.error || 'Erro no servidor de arquivos');
+        throw new Error(uploadRes.data.error || 'Erro no servidor de arquivos');
       }
     } catch (err) {
       console.error(err);
@@ -284,7 +284,7 @@ const Settings = () => {
                     onChange={handleSlugChange}
                     placeholder="nome-da-sua-loja"
                   />
-                  <button 
+                  <button
                     onClick={() => checkSlugAvailability(settings.slug)}
                     disabled={checkingSlug || !settings.slug}
                     className="btn btn-outline"

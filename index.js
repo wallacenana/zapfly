@@ -112,14 +112,16 @@ app.post('/settings', authenticate, async (req, res) => {
     try {
         const { 
             businessName, logoUrl, faviconUrl, 
-            accentColor, buttonColor, buttonTextColor, 
-            backgroundColor, textColor 
+            accentColor, buttonColor, 
+            accentColorOrders, buttonColorOrders,
+            buttonTextColor, backgroundColor, textColor 
         } = req.body;
 
         const data = {
             businessName, logoUrl, faviconUrl,
-            accentColor, buttonColor, buttonTextColor,
-            backgroundColor, textColor
+            accentColor, buttonColor,
+            accentColorOrders, buttonColorOrders,
+            buttonTextColor, backgroundColor, textColor
         };
 
         console.log('[DEBUG] Tentando salvar configurações para o usuário:', req.user.id);
@@ -305,6 +307,8 @@ app.get('/public/menu/:slug', async (req, res) => {
             faviconUrl: settings?.faviconUrl,
             accentColor: settings?.accentColor || '#ff4d6d',
             buttonColor: settings?.buttonColor || '#ff4d6d',
+            accentColorOrders: settings?.accentColorOrders || '#4a2c2a',
+            buttonColorOrders: settings?.buttonColorOrders || '#4a2c2a',
             buttonTextColor: settings?.buttonTextColor || '#ffffff',
             backgroundColor: settings?.backgroundColor || '#ffffff',
             textColor: settings?.textColor || '#333333',

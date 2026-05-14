@@ -1,5 +1,4 @@
 // Configurações
-const API_BASE = 'https://api.digizap.com.br';
 const BASE_DOMAIN = 'digizap.com.br';
 
 // Detecta se estamos na HOME exatamente
@@ -107,14 +106,6 @@ async function fetchPublicSettings() {
             ...data
         };
 
-        // Aplica cores dinâmicas
-        const root = document.documentElement;
-        root.style.setProperty('--primary-color', data.accentColor);
-        root.style.setProperty('--btn-bg', data.buttonColor);
-        root.style.setProperty('--btn-text', data.buttonTextColor);
-        root.style.setProperty('--bg-color', data.backgroundColor);
-        root.style.setProperty('--text-main', data.textColor);
-
         // Favicon
         if (data.faviconUrl) {
             let fav = document.querySelector('link[rel="icon"]');
@@ -125,6 +116,8 @@ async function fetchPublicSettings() {
             }
             fav.href = data.faviconUrl;
         }
+
+        updateTheme(); // Aplica o tema inicial
 
         // Logo
         const logoImg = document.getElementById('store-logo-img');
@@ -519,6 +512,7 @@ function initEventListeners() {
             btn.classList.add('active');
             state.activeTab = btn.dataset.tab;
             document.body.className = state.activeTab === 'order' ? 'theme-order' : '';
+            updateTheme(); // Muda as cores ao trocar de aba
             renderMenu(); updateUI();
         });
     });
@@ -831,4 +825,27 @@ function reorderItem(orderId) {
     } else {
         alert('Este produto não está mais disponível no cardápio.');
     }
+}
+
+function updateTheme() {
+    const data = state.publicSettings;
+    if (!data) return;
+
+    const root = document.documentElement;
+    const isOrder = state.activeTab === 'order';
+
+    // Escolhe as cores baseadas na aba ativa
+    const accent = isOrder ? (data.accentColorOrders || '#4a2c2a') : (data.accentColor || '#ff4d6d');
+    const button = isOrder ? (data.buttonColorOrders || '#4a2c2a') : (data.buttonColor || '#ff4d6d');
+
+    // Aplica as variáveis
+    root.style.setProperty('--primary-color', accent);
+    root.style.setProperty('--btn-bg', button);
+    root.style.setProperty('--btn-text', data.buttonTextColor || '#ffffff');
+    root.style.setProperty('--bg-color', data.backgroundColor || '#ffffff');
+    root.style.setProperty('--text-main', data.textColor || '#333333');
+    root.style.setProperty('--border', `${data.textColor || '#333333'}15`);
+    root.style.setProperty('--bg-gray', `${data.textColor || '#333333'}08`);
+    root.style.setProperty('--text-black', data.textColor || '#333333');
+    root.style.setProperty('--text-gray', `${data.textColor || '#333333'}99`);
 }
