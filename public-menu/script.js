@@ -3,8 +3,8 @@ const API_BASE = 'https://api.digizap.com.br';
 const BASE_DOMAIN = 'digizap.com.br';
 
 // Detecta se estamos na HOME exatamente
-const isHome = (window.location.hostname === BASE_DOMAIN || window.location.hostname === 'www.' + BASE_DOMAIN) && 
-               (window.location.pathname === '/' || window.location.pathname === '');
+const isHome = (window.location.hostname === BASE_DOMAIN || window.location.hostname === 'www.' + BASE_DOMAIN) &&
+    (window.location.pathname === '/' || window.location.pathname === '');
 
 // Detecta o slug da URL (ex: domain.com/linda-cake -> linda-cake)
 const pathSegments = window.location.pathname.split('/').filter(p => p);
@@ -39,7 +39,7 @@ function parseImages(imgField) {
     try {
         const parsed = JSON.parse(imgField);
         return Array.isArray(parsed) ? parsed : [imgField];
-    } catch(e) {
+    } catch (e) {
         return [imgField];
     }
 }
@@ -67,7 +67,7 @@ function loadCart() {
         const now = Date.now();
         if (carts.delivery && carts.delivery.expires > now) state.deliveryCart = carts.delivery.items;
         if (carts.order && carts.order.expires > now) state.orderCart = carts.order.items;
-    } catch(e) { console.error("Erro ao carregar carrinho", e); }
+    } catch (e) { console.error("Erro ao carregar carrinho", e); }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -80,11 +80,11 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         return;
     }
-    
+
     // Se tiver slug, carrega o cardápio
     loadCart();
     lucide.createIcons();
-    
+
     // Inicia o carregamento e aguarda
     Promise.all([
         fetchPublicSettings(),
@@ -101,7 +101,7 @@ async function fetchPublicSettings() {
         const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
         if (!response.ok) throw new Error('Loja não encontrada');
         const data = await response.json();
-        
+
         state.publicSettings = {
             ...state.publicSettings,
             ...data
@@ -145,7 +145,7 @@ async function fetchPublicSettings() {
             statusEl.innerText = '● Aberto agora';
             statusEl.className = 'status-badge open';
         }
-    } catch (err) { 
+    } catch (err) {
         console.error('Erro ao carregar configurações:', err);
         document.body.innerHTML = `
             <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
@@ -172,8 +172,8 @@ function checkStoreStatus() {
 
     const statusEl = document.querySelector('.store-status');
     if (statusEl) {
-        statusEl.innerHTML = state.isOpen 
-            ? `<span class="status-dot online"></span> Aberto agora` 
+        statusEl.innerHTML = state.isOpen
+            ? `<span class="status-dot online"></span> Aberto agora`
             : `<span class="status-dot offline"></span> Fechado para entrega (Apenas agendamento)`;
         statusEl.classList.toggle('closed', !state.isOpen);
     }
@@ -193,8 +193,8 @@ window.initMapsAutocomplete = () => {
     const autocomplete = new google.maps.places.Autocomplete(input);
     autocomplete.setComponentRestrictions({ country: 'br' });
     state.geocoder = new google.maps.Geocoder();
-    
-    const mapCenter = { lat: -2.5307, lng: -44.3068 }; 
+
+    const mapCenter = { lat: -2.5307, lng: -44.3068 };
     state.googleMap = new google.maps.Map(document.getElementById('map-container'), {
         zoom: 16,
         center: mapCenter,
@@ -203,9 +203,9 @@ window.initMapsAutocomplete = () => {
         streetViewControl: false
     });
 
-    state.mapMarker = new google.maps.Marker({ 
-        map: state.googleMap, 
-        position: mapCenter, 
+    state.mapMarker = new google.maps.Marker({
+        map: state.googleMap,
+        position: mapCenter,
         draggable: true,
         animation: google.maps.Animation.DROP
     });
@@ -285,7 +285,7 @@ async function fetchProducts() {
         state.products = data.products;
         state.categories = []; // Podemos buscar categorias se o endpoint retornar ou gerar do cardápio
         state.loading = false;
-        
+
         // History Section
         const historyContainer = document.getElementById('history-section');
         if (historyContainer) historyContainer.classList.remove('hidden');
@@ -300,7 +300,7 @@ function renderMenu() {
     const container = document.getElementById('menu-sections');
     if (!container) return;
     const query = state.searchQuery.toLowerCase();
-    
+
     const filtered = state.products.filter(p => {
         if (p.active === false) return false;
         if (p.category === 'Adicionais' || p.type === 'addon') return false;
@@ -379,7 +379,7 @@ function renderFeaturedCard(product) {
     const variations = JSON.parse(product.variations || '[]').filter(v => !v.hidden);
     const priceText = variations.length > 0 ? `A partir de R$ ${Math.min(...variations.map(v => v.price)).toFixed(2)}` : `R$ ${parseFloat(product.price).toFixed(2)}`;
     const images = parseImages(product.image);
-    
+
     return `
         <div class="featured-card" onclick="openItemDetail('${product.id}')">
             <div class="featured-img-wrapper">
@@ -396,12 +396,12 @@ function renderFeaturedCard(product) {
 function renderCategoryNav(categories) {
     const navContainer = document.getElementById('category-nav-scroll');
     if (!navContainer) return;
-    
+
     if (categories.length <= 1) {
         navContainer.parentElement.classList.add('hidden');
         return;
     }
-    
+
     navContainer.parentElement.classList.remove('hidden');
     navContainer.innerHTML = categories.map(cat => `
         <button class="nav-cat-btn" onclick="scrollToCategory('cat-${cat.replace(/\s+/g, '-')}')">${cat}</button>
@@ -480,12 +480,12 @@ function openItemDetail(productId) {
 function moveCarousel(delta) {
     const images = parseImages(state.currentItem.image);
     if (images.length <= 1) return;
-    
+
     state.currentCarouselIdx = (state.currentCarouselIdx + delta + images.length) % images.length;
-    
+
     const track = document.querySelector('.carousel-track');
     const dots = document.querySelectorAll('.carousel-dot');
-    
+
     track.style.transform = `translateX(-${state.currentCarouselIdx * 100}%)`;
     dots.forEach((dot, i) => dot.classList.toggle('active', i === state.currentCarouselIdx));
 }
@@ -524,15 +524,15 @@ function initEventListeners() {
     });
 
     document.getElementById('qty-plus').addEventListener('click', () => { state.currentQty++; updateDetailFooter(); });
-    document.getElementById('qty-minus').addEventListener('click', () => { if(state.currentQty > 1) { state.currentQty--; updateDetailFooter(); } });
-    
+    document.getElementById('qty-minus').addEventListener('click', () => { if (state.currentQty > 1) { state.currentQty--; updateDetailFooter(); } });
+
     const closeModal = () => {
         if (!document.getElementById('item-modal').classList.contains('hidden')) closeWithAnimation('item-modal');
         if (!document.getElementById('checkout-modal').classList.contains('hidden')) closeWithAnimation('checkout-modal');
     };
-    
+
     document.querySelector('.close-modal-btn').addEventListener('click', closeModal);
-    document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
     document.getElementById('history-toggle-btn').addEventListener('click', () => {
         document.getElementById('history-modal').classList.remove('hidden', 'closing');
@@ -548,13 +548,13 @@ function initEventListeners() {
     document.getElementById('order-date').addEventListener('change', (e) => {
         const dateStr = e.target.value;
         if (!dateStr) return;
-        
+
         const date = new Date(dateStr + 'T12:00:00');
         const dayOfWeek = date.getDay();
-        
+
         const slots = state.availableSlots.filter(s => s.dayOfWeek === dayOfWeek);
         const timeSelect = document.getElementById('order-time');
-        
+
         timeSelect.innerHTML = `<option value="">Horário</option>` + slots.map(s => `<option value="${s.startTime}">${s.startTime}</option>`).join('');
     });
 
@@ -571,7 +571,7 @@ function initEventListeners() {
 
     ['user-name', 'user-address'].forEach(id => {
         const el = document.getElementById(id);
-        if(el) {
+        if (el) {
             el.addEventListener('input', (e) => {
                 state.userInfo[id.split('-')[1]] = e.target.value;
                 localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
@@ -586,7 +586,7 @@ function goToStep(step) {
     const modal = document.getElementById('checkout-modal');
     modal.classList.remove('hidden', 'closing');
     document.getElementById('checkout-step-title').innerText = ["Ver sacola", "Entrega & Agendamento", "Confirmar Pedido"][step - 1];
-    
+
     const isLast = step === 3;
     document.getElementById('next-step-btn').classList.toggle('hidden', isLast);
     document.getElementById('place-order-btn').classList.toggle('hidden', !isLast);
@@ -596,9 +596,9 @@ function goToStep(step) {
     if (step === 3) updateStep3Summary();
 }
 
-document.getElementById('checkout-back-btn').addEventListener('click', () => { 
-    if(state.currentStep > 1) goToStep(state.currentStep - 1); 
-    else closeWithAnimation('checkout-modal'); 
+document.getElementById('checkout-back-btn').addEventListener('click', () => {
+    if (state.currentStep > 1) goToStep(state.currentStep - 1);
+    else closeWithAnimation('checkout-modal');
 });
 
 function renderStep1() {
@@ -641,7 +641,7 @@ function updateCartQty(itemKey, delta) {
     if (item.quantity <= 0) {
         cart = cart.filter(i => i.itemKey !== itemKey);
     }
-    
+
     setActiveCart(cart);
     renderStep1();
     updateUI();
@@ -723,7 +723,7 @@ async function handlePlaceOrder() {
     const cart = getActiveCart();
     const btn = document.getElementById('place-order-btn');
     btn.disabled = true; btn.innerHTML = 'Processando Pagamento...';
-    
+
     const payload = {
         clientName: state.userInfo.name,
         clientPhone: state.userInfo.phone,
@@ -742,10 +742,10 @@ async function handlePlaceOrder() {
     };
 
     try {
-        const response = await fetch(`${API_BASE}/orders`, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify({ ...payload, slug: STORE_SLUG }) 
+        const response = await fetch(`${API_BASE}/orders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...payload, slug: STORE_SLUG })
         });
         const data = await response.json();
         if (data.paymentLink) {
@@ -771,8 +771,8 @@ async function fetchPreviousOrders() {
         const data = await res.json();
         state.previousOrders = Array.isArray(data) ? data : [];
         renderPreviousOrders();
-    } catch(e) { 
-        console.error(e); 
+    } catch (e) {
+        console.error(e);
         state.previousOrders = [];
         renderPreviousOrders();
     }
@@ -816,11 +816,11 @@ function renderPreviousOrders() {
 function reorderItem(orderId) {
     const order = state.previousOrders.find(o => o.id === orderId);
     if (!order) return;
-    
+
     // Tenta encontrar o produto original no menu para pegar o ID correto e imagem
     const baseName = order.product.split('(')[0].trim();
     const product = state.products.find(p => p.name.toLowerCase().includes(baseName.toLowerCase()));
-    
+
     if (product) {
         state.currentItem = product;
         state.currentQty = 1;

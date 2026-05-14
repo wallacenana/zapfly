@@ -276,6 +276,39 @@ app.get('/public/check-slug/:slug', async (req, res) => {
     }
 });
 
+// 笏€笏€笏€ CONFIGURAﾃﾃ髭S DO SITE (BRANDING) 笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€
+app.get('/settings', authenticate, async (req, res) => {
+    try {
+        const settings = await prisma.setting.findUnique({
+            where: { userId: req.user.id }
+        });
+        res.json(settings || {});
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/settings', authenticate, async (req, res) => {
+    try {
+        const data = req.body;
+        const settings = await prisma.setting.upsert({
+            where: { userId: req.user.id },
+            update: data,
+            create: { ...data, userId: req.user.id }
+        });
+        res.json(settings);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/marketing/upload', authenticate, uploadMarketing.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
+    // Usando o novo domﾃｭnio solicitado pelo usuﾃ｡rio
+    const fileUrl = `https://files.digizap.com.br/marketing/${req.file.filename}`;
+    res.json({ url: fileUrl });
+});
+
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // 笏笏笏 ROTAS 窶� MARKETING ASSETS (STORIES) 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
@@ -2209,7 +2242,7 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
 app.post('/upload/product', uploadProduct.single('image'), (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada' });
-        const imageUrl = `/assets/products/${req.file.filename}`;
+        const imageUrl = `https://files.digizap.com.br/products/${req.file.filename}`;
         res.json({ url: imageUrl });
     } catch (err) {
         res.status(500).json({ error: err.message });

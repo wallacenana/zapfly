@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <link rel="icon" type="image/png" href="https://files.blinkvertex.com/uploads/2026/05/6a036241d7ea3_1778606657.png">
+    <link rel="icon" type="image/png" href="https://files.digizap.com.br/uploads/2026/05/6a036241d7ea3_1778606657.png">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 
@@ -19,6 +19,17 @@
         <!-- Top Navigation (iFood Style) -->
         <header class="top-nav">
             <div class="container nav-wrapper">
+                <div class="store-info">
+                    <div class="store-logo">
+                        <div class="logo-placeholder"><i data-lucide="store"></i></div>
+                    </div>
+                    <div class="store-details">
+                        <h1 id="store-name">Carregando...</h1>
+                        <div class="store-status">
+                            <span class="status-badge" id="store-status-badge">...</span>
+                        </div>
+                    </div>
+                </div>
                 <div class="nav-actions">
                     <button id="history-toggle-btn" class="icon-btn"><i data-lucide="history"></i></button>
                 </div>
@@ -49,10 +60,7 @@
         <!-- Main Menu -->
         <main class="container main-menu">
             <div id="menu-sections">
-                <div class="loading-state">
-                    <div class="spinner"></div>
-                    <p>Carregando cardápio...</p>
-                </div>
+                <!-- Os produtos serão carregados aqui -->
             </div>
         </main>
 
@@ -203,7 +211,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=1.1"></script>
+    <script src="script.js?v=1.2"></script>
 </body>
 
 </html>
