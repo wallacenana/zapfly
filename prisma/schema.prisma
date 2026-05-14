@@ -28,6 +28,7 @@ model User {
   stockItems       StockItem[]
   calendarEvents   CalendarEvent[]
   seasonalCatalogs SeasonalCatalog[]
+  flows            Flow[]
 
   @@map("user")
 }
@@ -36,6 +37,7 @@ model Instance {
   id        String   @id @default(uuid())
   name      String
   status    String   @default("disconnected")
+  color     String?  @default("#3b82f6")
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
@@ -63,13 +65,15 @@ model Product {
   description     String?   @db.Text
   price           Float     @default(0)
   imageUrl        String?   @db.Text
-  image           String?   @db.Text // Algumas partes usam 'image' em vez de 'imageUrl'
+  image           String?   @db.Text
+  category        String?   // Campo original que estava sendo usado
   categoryName    String?
   categoryId      String?
-  category        Category? @relation(fields: [categoryId], references: [id])
-  type            String    @default("delivery") // delivery, encomenda, addon
-  variations      String?   @db.Text // JSON
-  comboItems      String?   @db.Text // JSON
+  categoryRel     Category? @relation(fields: [categoryId], references: [id])
+  type            String    @default("delivery")
+  variations      String?   @db.Text
+  comboItems      String?   @db.Text
+  prepTime        Int?      @default(0)
   trackStock      Boolean   @default(false)
   stock           Int       @default(0)
   capacityCost    Int       @default(1)
@@ -117,13 +121,14 @@ model Order {
   deliveryAddress String?  @db.Text
   paymentMethod   String?
   paymentStatus   String   @default("pending")
+  paymentLink     String?  @db.Text
   deliveryFee     Float    @default(0)
   totalValue      Float    @default(0)
   status          String   @default("pending")
   massa           String?
   recheio         String?
   topo            String?
-  addons          String?  @db.Text // JSON
+  addons          String?  @db.Text
   calendarEventId String?
   instanceId      String?  @default("global")
   reminderSent    Boolean  @default(false)
@@ -135,6 +140,20 @@ model Order {
   updatedAt       DateTime @default(now()) @updatedAt
 
   @@map("order")
+}
+
+model Flow {
+  id        String   @id @default(uuid())
+  name      String
+  trigger   String
+  content   String?  @db.Text
+  active    Boolean  @default(true)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("flow")
 }
 
 model Setting {
@@ -222,7 +241,7 @@ model SeasonalCatalog {
   preStartDays            Int      @default(15)
   postEndDays             Int      @default(2)
   description             String?  @db.Text
-  items                   String?  @db.Text // JSON
+  items                   String?  @db.Text
   maxOrders               Int      @default(0)
   onlySeasonalOnEventDay  Boolean  @default(false)
   active                  Boolean  @default(true)
