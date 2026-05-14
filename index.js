@@ -447,38 +447,7 @@ app.post('/auth/google/disconnect', authenticate, async (req, res) => {
     }
 });
 
-// ─── CATCH-ALL PARA SLUGS E HOME ──────────────────────────────────────────────
-app.get('/:slug', async (req, res) => {
-    try {
-        let { slug } = req.params;
-        if (!slug) return res.sendFile(path.join(__dirname, 'public', 'index.html'));
 
-        // Ignora arquivos e rotas reservadas
-        const reserved = ['api', 'orders', 'auth', 'menu-assets', 'assets', 'uploads', 'favicon.ico', 'robots.txt'];
-        if (reserved.includes(slug) || slug.includes('.')) {
-            return res.status(404).send('Not Found');
-        }
-
-        console.log(`[Multi-Tenant] Verificando slug: ${slug}`);
-        const user = await prisma.user.findUnique({ where: { slug: slug.toLowerCase() } });
-        
-        if (user) {
-            console.log(`[Multi-Tenant] Servindo cardápio para: ${user.name}`);
-            return res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
-        }
-        
-        // Se não for um slug válido, manda pra home
-        console.log(`[Multi-Tenant] Slug não encontrado, enviando para Home: ${slug}`);
-        res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    } catch (e) {
-        console.error('[Multi-Tenant Error]', e);
-        res.sendFile(path.join(__dirname, 'public', 'index.html'));
-    }
-});
-
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
 
 // ─── INICIA O SERVIDOR ────────────────────────────────────────────────────────
 process.on('unhandledRejection', (reason, promise) => {
@@ -2393,3 +2362,25 @@ app.delete('/flows/:id', async (req, res) => {
 });
 
 
+
+// --- CATCH-ALL PARA SLUGS E HOME (FINAL DA FILA) ---------------------------
+app.get('/:slug', async (req, res) => {
+    try {
+        let { slug } = req.params;
+        if (!slug) return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+
+        // Lista exaustiva de rotas do sistema para n�o confundir com slugs
+        const reserved = ['api', 'orders', 'auth', 'menu-assets', 'assets', 'uploads', 'favicon.ico', 'robots.txt', 'instances', 'config', 'flows', 'chats', 'messages', 'dashboard', 'settings', 'connections', 'login', 'register'];
+        if (reserved.includes(slug.toLowerCase()) || slug.includes('.')) {
+            return res.status(404).send('Not Found');
+        }
+
+        const user = await prisma.user.findUnique({ where: { slug: slug.toLowerCase() } });
+        if (user) {
+            return res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
+        }
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    } catch (e) {
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    }
+});
