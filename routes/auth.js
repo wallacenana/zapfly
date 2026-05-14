@@ -34,10 +34,10 @@ const getMailer = async (userId) => {
 
   try {
     const transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465, // SSL para 465, STARTTLS para outros
-      auth: { user, pass },
+      envHost,
+      envPort,
+      secure: envPort === 465, // SSL para 465, STARTTLS para outros
+      auth: { user: envUser, pass: envPass },
       timeout: 10000 // 10 segundos de timeout para não travar
     });
     return transporter;
