@@ -14,6 +14,7 @@ import Prompts from './pages/Prompts';
 import Estoque from './pages/Estoque';
 import Production from './pages/Production';
 import Menu from './pages/Menu';
+import SiteSettings from './pages/SiteSettings';
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
               <Route path="connections" element={<Connections />} />
               <Route path="production" element={<Production />} />
               <Route path="settings" element={<Settings />} />
+              <Route path="site" element={<SiteSettings />} />
             </Route>
           </Route>
 

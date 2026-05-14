@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, GitMerge, MessageSquare, Calendar, Settings, Smartphone, Bot, PackageOpen, BellRing, Grid2X2, LogOut } from 'lucide-react';
+import { LayoutDashboard, GitMerge, MessageSquare, Calendar, Settings, Smartphone, Bot, PackageOpen, BellRing, Grid2X2, LogOut, Monitor } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { api, socket } from '../api';
 import { useAuth } from '../contexts/AuthContext';
@@ -72,6 +72,7 @@ const Layout = () => {
     if (path.includes('/estoque')) return 'Estoque & Disponibilidade';
     if (path.includes('/connections')) return 'Conexões / Números';
     if (path.includes('/settings')) return 'Configurações';
+    if (path.includes('/site')) return 'Configurações do Site';
     if (path.includes('/prompts')) return 'Prompts e Inteligência';
     return 'ZAP Fly';
   };
@@ -151,6 +152,11 @@ const Layout = () => {
           <NavLink to="/settings" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
             <Settings size={18} />
             Ajustes do Sistema
+          </NavLink>
+
+          <NavLink to="/site" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
+            <Monitor size={18} />
+            Configurações do Site
           </NavLink>
         </nav>
 

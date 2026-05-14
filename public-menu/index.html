@@ -1,30 +1,24 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Linda Cake - Cardápio Digital</title>
+    <title>DigiZap - Cardápio Digital</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="icon" type="image/png" href="https://files.blinkvertex.com/uploads/2026/05/6a036241d7ea3_1778606657.png">
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
+
 <body>
     <div id="app">
         <!-- Top Navigation (iFood Style) -->
         <header class="top-nav">
             <div class="container nav-wrapper">
-                <div class="store-info">
-                    <div class="store-logo">
-                        <img src="https://files.blinkvertex.com/uploads/2026/05/6a0361dac1d9b_1778606554.png" alt="Linda Cake Logo">
-                    </div>
-                    <div class="store-details">
-                        <h1>Linda Cake</h1>
-                        <p class="store-status"><span class="status-dot"></span> Aberto agora</p>
-                    </div>
-                </div>
                 <div class="nav-actions">
                     <button id="history-toggle-btn" class="icon-btn"><i data-lucide="history"></i></button>
                 </div>
@@ -98,7 +92,8 @@
         <div id="history-modal" class="modal hidden">
             <div class="modal-overlay" onclick="closeWithAnimation('history-modal')"></div>
             <div class="modal-content history-modal-content">
-                <button class="chevron-close-btn" onclick="closeWithAnimation('history-modal')"><i data-lucide="chevron-down"></i></button>
+                <button class="chevron-close-btn" onclick="closeWithAnimation('history-modal')"><i
+                        data-lucide="chevron-down"></i></button>
                 <div class="history-modal-header">
                     <h3>Últimos pedidos</h3>
                     <p>Peça novamente em um clique</p>
@@ -115,7 +110,7 @@
                     <button class="back-btn" id="checkout-back-btn"><i data-lucide="arrow-left"></i></button>
                     <h2 id="checkout-step-title">Finalizar pedido</h2>
                 </div>
-                
+
                 <div class="modal-scroll-body">
                     <!-- Step 1: Items & Identity -->
                     <div id="step-1" class="checkout-step">
@@ -124,7 +119,8 @@
                             <section class="form-section">
                                 <h3>Seus dados</h3>
                                 <input type="text" id="user-name" placeholder="Nome completo" class="ifood-input">
-                                <input type="text" id="user-phone" placeholder="WhatsApp (DDD + Número)" class="ifood-input">
+                                <input type="text" id="user-phone" placeholder="WhatsApp (DDD + Número)"
+                                    class="ifood-input">
                             </section>
                         </div>
                     </div>
@@ -134,8 +130,10 @@
                         <div id="delivery-step-content">
                             <section class="form-section">
                                 <h3>Endereço de entrega</h3>
-                                <p style="font-size: 0.8rem; color: var(--text-gray); margin-bottom: 12px;">Selecione seu endereço no mapa para calcular o frete.</p>
-                                <input type="text" id="user-address" placeholder="Rua, número, bairro..." class="ifood-input">
+                                <p style="font-size: 0.8rem; color: var(--text-gray); margin-bottom: 12px;">Selecione
+                                    seu endereço no mapa para calcular o frete.</p>
+                                <input type="text" id="user-address" placeholder="Rua, número, bairro..."
+                                    class="ifood-input">
                                 <div id="map-container"></div>
                                 <div id="step2-delivery-fee" class="delivery-fee-badge hidden">
                                     <span>Taxa de Entrega</span>
@@ -161,7 +159,7 @@
                         <div class="order-summary-review">
                             <h3>Resumo do Pedido</h3>
                             <div id="review-items-list"></div>
-                            
+
                             <div class="order-summary" style="margin-top: 20px;">
                                 <div class="summary-line">
                                     <span>Produtos</span>
@@ -205,6 +203,7 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=1.1"></script>
 </body>
+
 </html>

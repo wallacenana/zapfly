@@ -238,6 +238,13 @@ app.get('/public/menu/:slug', async (req, res) => {
         res.json({
             businessName: settings?.businessName || user.name,
             businessAddress: settings?.businessAddress,
+            logoUrl: settings?.logoUrl,
+            faviconUrl: settings?.faviconUrl,
+            accentColor: settings?.accentColor || '#ff4d6d',
+            buttonColor: settings?.buttonColor || '#ff4d6d',
+            buttonTextColor: settings?.buttonTextColor || '#ffffff',
+            backgroundColor: settings?.backgroundColor || '#ffffff',
+            textColor: settings?.textColor || '#333333',
             products: user.products,
             userId: user.id
         });

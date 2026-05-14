@@ -1,13 +1,12 @@
 :root {
-    --pink: #ff4d94;
-    --brown: #4a2c2a;
-    --active-color: #ff4d94;
-    --bg-white: #ffffff;
-    --bg-gray: #f7f7f7;
-    --text-black: #3e3e3e;
-    --text-gray: #717171;
-    --border: #e8e8e8;
-    --shadow: 0 4px 12px rgba(0,0,0,0.05);
+    --primary-color: #ff4d6d;
+    --primary-hover: #ff758f;
+    --bg-color: #ffffff;
+    --text-main: #333333;
+    --text-gray: #666666;
+    --btn-bg: #ff4d6d;
+    --btn-text: #ffffff;
+    --shadow: 0 4px 12px rgba(0,0,0,0.08);
 }
 
 body.theme-order {
@@ -19,11 +18,6 @@ body.theme-order {
     padding: 0;
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
-}
-
-body {
-    background-color: var(--bg-white);
-    color: var(--text-black);
     font-family: 'Plus Jakarta Sans', sans-serif;
     line-height: 1.4;
 }

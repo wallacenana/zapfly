@@ -1,8 +1,14 @@
 // Configurações
-const API_BASE = window.location.origin;
+const API_BASE = 'https://api.digizap.com.br';
+const BASE_DOMAIN = 'digizap.com.br';
+
+// Detecta se estamos na HOME exatamente
+const isHome = (window.location.hostname === BASE_DOMAIN || window.location.hostname === 'www.' + BASE_DOMAIN) && 
+               (window.location.pathname === '/' || window.location.pathname === '');
+
 // Detecta o slug da URL (ex: domain.com/linda-cake -> linda-cake)
 const pathSegments = window.location.pathname.split('/').filter(p => p);
-const STORE_SLUG = pathSegments[0] || 'linda-cake';
+const STORE_SLUG = isHome ? '' : (pathSegments[0] || '');
 
 // Estado da Aplicação
 let state = {
@@ -65,42 +71,89 @@ function loadCart() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Se não tiver slug, é a HOME
+    if (!STORE_SLUG) {
+        document.body.innerHTML = `
+            <div style="display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif; background:#f0f0f0;">
+                <h1 style="color:#d32f2f;">essa é a desgraça da merda da home</h1>
+            </div>
+        `;
+        return;
+    }
+    
+    // Se tiver slug, carrega o cardápio
     loadCart();
     lucide.createIcons();
-    fetchPublicSettings();
-    fetchProducts();
-    fetchSlots();
-    initEventListeners();
-    updateUI();
-    if (state.userInfo.phone) fetchPreviousOrders();
+    
+    // Inicia o carregamento e aguarda
+    Promise.all([
+        fetchPublicSettings(),
+        fetchProducts()
+    ]).then(() => {
+        initEventListeners();
+        updateUI();
+        if (state.userInfo.phone) fetchPreviousOrders();
+    });
 });
 
 async function fetchPublicSettings() {
     try {
         const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
+        if (!response.ok) throw new Error('Loja não encontrada');
         const data = await response.json();
+        
         state.publicSettings = {
             ...state.publicSettings,
-            businessName: data.businessName,
-            businessAddress: data.businessAddress
+            ...data
         };
+
+        // Aplica cores dinâmicas
+        const root = document.documentElement;
+        root.style.setProperty('--primary-color', data.accentColor);
+        root.style.setProperty('--btn-bg', data.buttonColor);
+        root.style.setProperty('--btn-text', data.buttonTextColor);
+        root.style.setProperty('--bg-color', data.backgroundColor);
+        root.style.setProperty('--text-main', data.textColor);
+
+        // Favicon
+        if (data.faviconUrl) {
+            let fav = document.querySelector('link[rel="icon"]');
+            if (!fav) {
+                fav = document.createElement('link');
+                fav.rel = 'icon';
+                document.head.appendChild(fav);
+            }
+            fav.href = data.faviconUrl;
+        }
+
+        // Logo
+        const logoImg = document.getElementById('store-logo-img');
+        const placeholder = document.querySelector('.logo-placeholder');
+        if (data.logoUrl && logoImg) {
+            logoImg.src = data.logoUrl;
+            logoImg.style.display = 'block';
+            if (placeholder) placeholder.style.display = 'none';
+        }
+
         // Atualiza o título e nome na página
         document.title = `${data.businessName} - Cardápio Digital`;
-        const h1 = document.querySelector('.store-details h1');
-        if (h1) h1.innerText = data.businessName;
+        const nameEl = document.getElementById('store-name');
+        if (nameEl) nameEl.innerText = data.businessName;
 
-        // Se houver configurações extras de entrega no backend, poderíamos pegar aqui
-        // const settingsRes = await fetch(`${API_BASE}/orders/settings/public`);
-        // ...
-    } catch (err) { console.error('Erro ao carregar configurações:', err); }
-}
-
-async function fetchSlots() {
-    try {
-        const response = await fetch(`${API_BASE}/orders/available-slots`);
-        state.availableSlots = await response.json();
-        checkStoreStatus();
-    } catch (err) { console.error('Erro ao buscar slots:', err); }
+        const statusEl = document.getElementById('store-status-badge');
+        if (statusEl) {
+            statusEl.innerText = '● Aberto agora';
+            statusEl.className = 'status-badge open';
+        }
+    } catch (err) { 
+        console.error('Erro ao carregar configurações:', err);
+        document.body.innerHTML = `
+            <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
+                <h1>Loja não encontrada</h1>
+                <p>Verifique o link e tente novamente.</p>
+            </div>
+        `;
+    }
 }
 
 function checkStoreStatus() {
@@ -186,7 +239,7 @@ function updateLocation(location, address = null) {
     if (address) {
         document.getElementById('user-address').value = address;
         state.userInfo.address = address;
-        localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
+        localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
         calculateDeliveryFee(address);
     }
 }
@@ -245,6 +298,7 @@ async function fetchProducts() {
 function renderMenu() {
     renderPreviousOrders();
     const container = document.getElementById('menu-sections');
+    if (!container) return;
     const query = state.searchQuery.toLowerCase();
     
     const filtered = state.products.filter(p => {

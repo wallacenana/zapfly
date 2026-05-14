@@ -273,6 +273,13 @@ model Setting {
   smtpUser             String?
   smtpPass             String? @db.Text
   smtpFrom             String?
+  logoUrl              String? @db.Text
+  faviconUrl           String? @db.Text
+  accentColor          String? @default("#ff4d6d")
+  buttonColor          String? @default("#ff4d6d")
+  buttonTextColor      String? @default("#ffffff")
+  backgroundColor      String? @default("#ffffff")
+  textColor            String? @default("#333333")
 
   @@map("setting")
 }
