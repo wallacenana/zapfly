@@ -208,6 +208,59 @@ app.post('/mercadopago/webhook', async (req, res) => {
     }
 });
 
+// ─── PUBLIC MENU ROUTE ──────────────────────────────────────────────────────
+app.get('/public/menu/:slug', async (req, res) => {
+    try {
+        const { slug } = req.params;
+        const user = await prisma.user.findUnique({
+            where: { slug },
+            include: {
+                settings: true,
+                products: {
+                    where: { active: true }
+                }
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json({ error: 'Loja não encontrada' });
+        }
+
+        const settings = Array.isArray(user.settings) ? user.settings[0] : user.settings;
+
+        res.json({
+            businessName: settings?.businessName || user.name,
+            businessAddress: settings?.businessAddress,
+            products: user.products,
+            userId: user.id
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ─── SLUG AVAILABILITY CHECK ─────────────────────────────────────────────────
+app.get('/public/check-slug/:slug', async (req, res) => {
+    try {
+        const base = req.params.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        const existing = await prisma.user.findUnique({ where: { slug: base } });
+        if (!existing) {
+            return res.json({ available: true, slug: base });
+        }
+        // Tenta base-2, base-3, ...
+        let counter = 2;
+        while (counter <= 99) {
+            const candidate = `${base}-${counter}`;
+            const taken = await prisma.user.findUnique({ where: { slug: candidate } });
+            if (!taken) return res.json({ available: false, suggestion: candidate, slug: base });
+            counter++;
+        }
+        res.json({ available: false, slug: base });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 // ─── ROTAS — MARKETING ASSETS (STORIES) ──────────────────────────────────
@@ -385,11 +438,32 @@ app.post('/auth/google/disconnect', authenticate, async (req, res) => {
     }
 });
 
+// ─── INICIA O SERVIDOR ────────────────────────────────────────────────────────
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception thrown:', err);
+});
+
+const PORT = 3001;
+server.listen(PORT, async () => {
+    console.log(`Backend rodando em http://localhost:${PORT}`);
+    const instances = await prisma.instance.findMany();
+    for (const inst of instances) {
+        initInstance(inst.id);
+    }
+    // Inicia os cron jobs (GCal sync + relatório)
+    await setupCronJobs((instanceId) => sessions.get(instanceId));
+});
+
+module.exports = { getSocket: (id) => sessions.get(id) };
 
 
 
-
-
+// Controle de reconexão com backoff por instância
+const reconnectAttempts = {};
 
 async function initInstance(instanceId) {
     const sessionDir = path.join(__dirname, 'sessions', instanceId);
@@ -398,7 +472,16 @@ async function initInstance(instanceId) {
     }
 
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
-    const { version } = await fetchLatestBaileysVersion();
+
+    // Busca a versão mais recente do WhatsApp Web, com fallback para versão estável conhecida
+    let version;
+    try {
+        const result = await fetchLatestBaileysVersion();
+        version = result.version;
+    } catch (e) {
+        console.warn(`[Baileys] Falha ao buscar versão do WA Web. Usando fallback.`);
+        version = [2, 3000, 1015901307]; // versão estável de fallback
+    }
 
     const store = makeInMemoryStore({ logger: pino({ level: 'silent' }) });
     const storePath = path.join(sessionDir, 'store.json');
@@ -421,7 +504,12 @@ async function initInstance(instanceId) {
         printQRInTerminal: false,
         browser: ['DigiZap', 'Chrome', '1.0.0'],
         logger: pino({ level: 'silent' }),
-        syncFullHistory: true
+        syncFullHistory: false,            // true consome muita memória e pode causar desconexões
+        keepAliveIntervalMs: 30000,        // envia ping a cada 30s para manter a conexão viva
+        connectTimeoutMs: 60000,           // timeout de 60s para estabelecer conexão
+        defaultQueryTimeoutMs: 60000,      // timeout para queries ao servidor do WhatsApp
+        retryRequestDelayMs: 500,          // delay entre tentativas de retry de mensagens
+        maxMsgRetryCount: 5                // máximo de retentativas por mensagem
     });
 
     store.bind(sock.ev);
@@ -463,7 +551,7 @@ async function initInstance(instanceId) {
         const pushName = msg.pushName || 'Desconhecido';
 
         if (!msg.key.fromMe) {
-            console.log(`[Mensagem] Recebida de: ${jid.split('@')[0]}`);
+            console.log(`[Mensagem] ${pushName} (${jid.split('@')[0]})`);
         }
 
         // BLOQUEIO DE STATUS E GRUPOS (OPCIONAL)
@@ -1061,7 +1149,8 @@ async function initInstance(instanceId) {
                                                             error: `BLOQUEIO: Já existe o pedido #${recentOrder.id.slice(-5).toUpperCase()} em aberto. Use 'update_order' com este código para adicionar mais produtos ou atualizar o valor total. NÃO CRIE OUTRO PEDIDO.`
                                                         };
                                                     } else {
-                                                        const res = await axios.post('http://localhost:3001/orders', {
+                                                        const internalBase = `http://127.0.0.1:${process.env.PORT || 3001}`;
+                                                        const res = await axios.post(`${internalBase}/orders`, {
                                                             ...args,
                                                             deliveryFee: args.deliveryFee || lastDeliveryFee, // FALLBACK: Usa o último frete calculado
                                                             notes: finalNotes.trim(),
@@ -1111,7 +1200,8 @@ async function initInstance(instanceId) {
                                                         if (args.carrinho_itens_extras) updateData.carrinho_itens_extras = args.carrinho_itens_extras;
                                                         if (args.totalValue) updateData.totalValue = args.totalValue;
 
-                                                        const res = await axios.patch(`http://localhost:3001/orders/${targetOrder.id}`, updateData);
+                                                        const internalBase = `http://127.0.0.1:${process.env.PORT || 3001}`;
+                                                        const res = await axios.patch(`${internalBase}/orders/${targetOrder.id}`, updateData);
 
                                                         result = { success: true, message: "Pedido atualizado com sucesso." };
 
@@ -1481,16 +1571,30 @@ async function initInstance(instanceId) {
         const { connection, lastDisconnect, qr } = update;
         if (qr) io.emit('qr', { instanceId, qr });
         if (connection === 'open') {
-            // Conexão bem-sucedida
+            // Conexão bem-sucedida — reseta o contador de tentativas
+            delete reconnectAttempts[instanceId];
             await prisma.instance.update({ where: { id: instanceId }, data: { status: 'connected' } }).catch(() => { });
             io.emit('connection_update', { instanceId, status: 'connected' });
         }
         if (connection === 'close') {
-            const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+            const statusCode = lastDisconnect?.error?.output?.statusCode;
+            const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
             clearInterval(saveInterval);
             await prisma.instance.update({ where: { id: instanceId }, data: { status: 'disconnected' } }).catch(() => { });
             io.emit('connection_update', { instanceId, status: 'disconnected' });
-            if (shouldReconnect) initInstance(instanceId);
+
+            if (shouldReconnect) {
+                // Backoff exponencial: evita loop de reconexão rápida
+                const attempts = reconnectAttempts[instanceId] || 0;
+                const delay = Math.min(1000 * Math.pow(2, attempts), 60000); // max 60s
+                reconnectAttempts[instanceId] = attempts + 1;
+                console.log(`[Baileys] Instância ${instanceId} reconectando em ${delay / 1000}s (tentativa ${attempts + 1})...`);
+                setTimeout(() => initInstance(instanceId), delay);
+            } else {
+                // Deslogado — limpa contador de tentativas
+                delete reconnectAttempts[instanceId];
+                console.log(`[Baileys] Instância ${instanceId} deslogada. Não haverá reconexão automática.`);
+            }
         }
     });
 
@@ -1549,7 +1653,10 @@ app.post('/instances/:id/ai-test', async (req, res) => {
 app.get('/config/keys', authenticate, async (req, res) => {
     let config = await getSettings(req.user.id);
     if (!config) config = await prisma.setting.create({ data: { userId: req.user.id, activeModel: 'openai' } });
+    const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { slug: true } });
+
     res.json({
+        slug: user?.slug,
         openai: config.openaiKey,
         claude: config.claudeKey,
         activeModel: config.activeModel,
@@ -1576,7 +1683,7 @@ app.get('/config/keys', authenticate, async (req, res) => {
 
 app.post('/config/keys', authenticate, async (req, res) => {
     const {
-        openai, claude, activeModel, gcalSyncHour,
+        slug, openai, claude, activeModel, gcalSyncHour,
         businessName, businessAddress, businessLocation,
         dailyMaxOrders, dailyDeliveryItems, managerJid,
         deliveryJid, reportEnabled, reportHour,
@@ -1584,6 +1691,19 @@ app.post('/config/keys', authenticate, async (req, res) => {
         mercadopagoToken, mercadopagoPublicKey,
         pixReceiverName, pixReceiverKey
     } = req.body;
+
+    if (slug) {
+        const existing = await prisma.user.findFirst({
+            where: { slug, NOT: { id: req.user.id } }
+        });
+        if (existing) {
+            return res.status(400).json({ error: 'Este slug já está em uso.' });
+        }
+        await prisma.user.update({
+            where: { id: req.user.id },
+            data: { slug }
+        });
+    }
 
     const currentConfig = await getSettings(req.user.id);
 
@@ -2209,25 +2329,3 @@ app.delete('/flows/:id', async (req, res) => {
 });
 
 
-// ─── AGENTE DE ADMINISTRADOR (LILY EXECUTIVE) ──────────────────────────
-
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception thrown:', err);
-});
-
-const PORT = 3001;
-server.listen(PORT, async () => {
-    console.log(`Backend rodando em http://localhost:${PORT}`);
-    const instances = await prisma.instance.findMany();
-    for (const inst of instances) {
-        initInstance(inst.id);
-    }
-    // Inicia os cron jobs (GCal sync + relatório)
-    await setupCronJobs((instanceId) => sessions.get(instanceId));
-});
-
-module.exports = { getSocket: (id) => sessions.get(id) };

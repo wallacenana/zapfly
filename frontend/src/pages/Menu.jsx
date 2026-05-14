@@ -17,7 +17,11 @@ import {
   Calendar
 } from 'lucide-react';
 
+import { useParams } from 'react-router-dom';
+
 const Menu = () => {
+  const { slug } = useParams();
+  const [storeInfo, setStoreInfo] = useState({ name: 'Carregando...', products: [] });
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('delivery'); // 'delivery' or 'order'
@@ -38,19 +42,25 @@ const Menu = () => {
   });
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    fetchStoreData();
+  }, [slug]);
 
   useEffect(() => {
     localStorage.setItem('linda_cake_user', JSON.stringify(userInfo));
   }, [userInfo]);
 
-  const fetchProducts = async () => {
+  const fetchStoreData = async () => {
     try {
-      const res = await api.get('/orders/products');
-      setProducts(res.data);
+      // Se não tiver slug na URL (caso de teste /menu), tentamos um padrão ou erro
+      const targetSlug = slug || 'linda-cake'; 
+      const res = await api.get(`/public/menu/${targetSlug}`);
+      setStoreInfo({
+        name: res.data.businessName,
+        products: res.data.products
+      });
+      setProducts(res.data.products);
     } catch (err) {
-      console.error('Error fetching products:', err);
+      console.error('Error fetching store data:', err);
     } finally {
       setLoading(false);
     }
@@ -99,6 +109,7 @@ const Menu = () => {
     setLoading(true);
     try {
       const payload = {
+        slug,
         clientName: userInfo.name,
         clientPhone: userInfo.phone,
         product: cart[0].name + (cart[0].variation ? ` (${cart[0].variation.name})` : ''),
@@ -178,7 +189,7 @@ const Menu = () => {
             <div className="w-16 h-16 bg-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-pink-500/40">
               <Cake className="text-white" size={32} />
             </div>
-            <h1 className="text-4xl font-black text-white tracking-tight mb-1">LINDA CAKE</h1>
+            <h1 className="text-4xl font-black text-white tracking-tight mb-1">{storeInfo.name}</h1>
             <p className="text-pink-300 font-medium uppercase tracking-widest text-xs">Confeitaria Artesanal</p>
           </motion.div>
         </div>

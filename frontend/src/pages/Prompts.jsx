@@ -16,7 +16,7 @@ const Prompts = () => {
   const [activeInstance, setActiveInstance] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  
+
   const [formPrompt, setFormPrompt] = useState('');
   const [formKnowledge, setFormKnowledge] = useState([]);
   const [showCopySuccess, setShowCopySuccess] = useState(false);
@@ -125,12 +125,12 @@ const Prompts = () => {
       <div style={{ width: '280px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
         <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Conexões</h3>
         {instances.map(inst => (
-          <div 
+          <div
             key={inst.id}
             onClick={() => selectInstance(inst)}
-            style={{ 
-              padding: '15px', 
-              borderRadius: '12px', 
+            style={{
+              padding: '15px',
+              borderRadius: '12px',
               backgroundColor: activeInstance?.id === inst.id ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
               border: `1px solid ${activeInstance?.id === inst.id ? inst.color : 'var(--border-color)'}`,
               cursor: 'pointer',
@@ -155,38 +155,38 @@ const Prompts = () => {
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h2 style={{ fontSize: '22px', fontWeight: 800 }}>Inteligência de {activeInstance.name}</h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Configure como a IA deve se comportar e o que ela deve saber.</p>
+                <h2 style={{ fontSize: '22px', fontWeight: 800 }}>Identidade e Tonalidade</h2>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Defina quem é a IA e como ela deve falar. Horários, cardápios e funções técnicas são gerenciados automaticamente pelo sistema.</p>
               </div>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                 <div style={{ position: 'relative' }}>
-                    <select 
-                        onChange={(e) => handleDuplicate(e.target.value)}
-                        value=""
-                        style={{ 
-                            padding: '8px 15px', 
-                            borderRadius: '8px', 
-                            backgroundColor: 'var(--bg-tertiary)', 
-                            border: '1px solid var(--border-color)', 
-                            color: 'var(--text-secondary)',
-                            fontSize: '13px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        <option value="" disabled>Duplicar de outro número...</option>
-                        {instances.filter(i => i.id !== activeInstance.id).map(i => (
-                            <option key={i.id} value={i.id}>{i.name}</option>
-                        ))}
-                    </select>
-                    {showCopySuccess && (
-                        <div style={{ position: 'absolute', top: '-30px', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'var(--success)', color: '#fff', fontSize: '10px', padding: '2px 8px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
-                            Copiado!
-                        </div>
-                    )}
-                 </div>
-                 <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
-                    {saving ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Salvar Tudo</>}
-                 </button>
+                <div style={{ position: 'relative' }}>
+                  <select
+                    onChange={(e) => handleDuplicate(e.target.value)}
+                    value=""
+                    style={{
+                      padding: '8px 15px',
+                      borderRadius: '8px',
+                      backgroundColor: 'var(--bg-tertiary)',
+                      border: '1px solid var(--border-color)',
+                      color: 'var(--text-secondary)',
+                      fontSize: '13px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="" disabled>Duplicar de outro número...</option>
+                    {instances.filter(i => i.id !== activeInstance.id).map(i => (
+                      <option key={i.id} value={i.id}>{i.name}</option>
+                    ))}
+                  </select>
+                  {showCopySuccess && (
+                    <div style={{ position: 'absolute', top: '-30px', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'var(--success)', color: '#fff', fontSize: '10px', padding: '2px 8px', borderRadius: '4px', whiteSpace: 'nowrap' }}>
+                      Copiado!
+                    </div>
+                  )}
+                </div>
+                <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                  {saving ? <Loader2 className="animate-spin" size={18} /> : <><Save size={18} /> Salvar Tudo</>}
+                </button>
               </div>
             </div>
 
@@ -200,20 +200,20 @@ const Prompts = () => {
                   <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Teste perguntas e ensine a IA como ela deve responder.</p>
                 </div>
               </div>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Pergunta de Teste</label>
                   <div style={{ display: 'flex', gap: '10px' }}>
-                    <input 
+                    <input
                       style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: '#fff', outline: 'none' }}
                       placeholder="Ex: Qual o valor do frete para o centro?"
                       value={testQuestion}
                       onChange={(e) => setTestQuestion(e.target.value)}
                     />
-                    <button 
-                      className="btn btn-secondary" 
-                      onClick={handleSimulate} 
+                    <button
+                      className="btn btn-secondary"
+                      onClick={handleSimulate}
                       disabled={isSimulating}
                       style={{ width: '150px' }}
                     >
@@ -231,14 +231,14 @@ const Prompts = () => {
 
                     <div>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Sua Correção (Ensinar):</label>
-                      <textarea 
+                      <textarea
                         style={{ width: '100%', height: '80px', padding: '12px', borderRadius: '10px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: '#fff', outline: 'none', resize: 'none', fontSize: '13px' }}
                         placeholder="Como você prefere que ela responda?"
                         value={correctedResponse}
                         onChange={(e) => setCorrectedResponse(e.target.value)}
                       />
-                      <button 
-                        className="btn btn-primary" 
+                      <button
+                        className="btn btn-primary"
                         style={{ marginTop: '10px', width: '100%', backgroundColor: 'var(--success)', borderColor: 'var(--success)' }}
                         onClick={handleAddToKnowledge}
                       >
@@ -258,28 +258,31 @@ const Prompts = () => {
                     <Bot size={20} />
                   </div>
                   <div>
-                    <h3 style={{ fontSize: '16px', fontWeight: 700 }}>Personalidade do Agente</h3>
-                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Defina o papel, tom de voz e regras principais do robô.</p>
+                    <h3 style={{ fontSize: '16px', fontWeight: 700 }}>Quem é a IA e Tonalidade</h3>
+                    <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Defina o nome, a personalidade e o tom de voz (ex: formal, amigável, usa emojis).</p>
                   </div>
                 </div>
-                <textarea 
-                  style={{ 
-                    width: '100%', 
-                    height: '150px', 
-                    padding: '15px', 
-                    borderRadius: '12px', 
-                    backgroundColor: 'var(--bg-tertiary)', 
-                    border: '1px solid var(--border-color)', 
-                    color: '#fff', 
+                <textarea
+                  style={{
+                    width: '100%',
+                    height: '180px',
+                    padding: '15px',
+                    borderRadius: '12px',
+                    backgroundColor: 'var(--bg-tertiary)',
+                    border: '1px solid var(--border-color)',
+                    color: '#fff',
                     fontSize: '14px',
                     lineHeight: '1.6',
                     resize: 'none',
                     outline: 'none'
                   }}
-                  placeholder="Ex: Você é o atendente virtual da Confeitaria ZAP Fly. Seu nome é FlyBot. Seja educado, use emojis e ajude os clientes a escolherem bolos e doces..."
+                  placeholder="Ex: Você é a Lily, a alma da Linda Cake. Você é apaixonada por doces, fala de forma carinhosa e usa muitos emojis de coração e bolo. Sua missão é encantar o cliente."
                   value={formPrompt}
                   onChange={(e) => setFormPrompt(e.target.value)}
                 />
+                <div style={{ marginTop: '10px', padding: '12px', borderRadius: '8px', backgroundColor: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.1)', fontSize: '12px', color: 'var(--text-muted)' }}>
+                  💡 <b>Dica:</b> Não precisa escrever horários ou cardápios aqui. O sistema injeta essas informações automaticamente no "Contexto Operacional" para a IA.
+                </div>
               </section>
 
               {/* FAQ / Knowledge Base Section */}
@@ -294,13 +297,13 @@ const Prompts = () => {
                       <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Adicione perguntas frequentes para que a IA saiba responder com precisão.</p>
                     </div>
                   </div>
-                  <button 
+                  <button
                     onClick={() => setFormKnowledge([...formKnowledge, { q: '', a: '' }])}
-                    style={{ 
-                      padding: '8px 16px', 
-                      borderRadius: '8px', 
-                      backgroundColor: 'rgba(16, 185, 129, 0.1)', 
-                      color: '#10b981', 
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                      color: '#10b981',
                       border: '1px solid rgba(16, 185, 129, 0.2)',
                       fontSize: '13px',
                       fontWeight: 700,
@@ -317,16 +320,16 @@ const Prompts = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   {formKnowledge.map((item, idx) => (
                     <div key={idx} className="card" style={{ backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', padding: '20px', position: 'relative' }}>
-                       <button 
+                      <button
                         onClick={() => setFormKnowledge(formKnowledge.filter((_, i) => i !== idx))}
                         style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '5px' }}
                       >
                         <Trash2 size={16} />
                       </button>
-                      
+
                       <div style={{ marginBottom: '12px' }}>
                         <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Pergunta do Cliente</label>
-                        <input 
+                        <input
                           value={item.q}
                           onChange={(e) => {
                             const n = [...formKnowledge];
@@ -339,7 +342,7 @@ const Prompts = () => {
                       </div>
                       <div>
                         <label style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>O que a IA deve responder</label>
-                        <textarea 
+                        <textarea
                           value={item.a}
                           onChange={(e) => {
                             const n = [...formKnowledge];
@@ -365,8 +368,8 @@ const Prompts = () => {
           </>
         ) : (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
-             <Bot size={64} style={{ opacity: 0.1, marginBottom: '20px' }} />
-             <p>Selecione uma conexão para editar seus prompts.</p>
+            <Bot size={64} style={{ opacity: 0.1, marginBottom: '20px' }} />
+            <p>Selecione uma conexão para editar seus prompts.</p>
           </div>
         )}
       </div>

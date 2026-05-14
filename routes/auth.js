@@ -39,9 +39,9 @@ const getMailer = async (userId) => {
       port: portNum,
       secure: portNum === 465,       // true só para 465 (SSL direto)
       requireTLS: portNum === 587,   // true para 587 (STARTTLS)
-      auth: { 
-        user: envUser, 
-        pass: envPass 
+      auth: {
+        user: envUser,
+        pass: envPass
       },
       connectionTimeout: 10000,
       greetingTimeout: 10000,
@@ -57,9 +57,10 @@ const getMailer = async (userId) => {
 const sendOtpEmail = async (userId, toEmail, code, userName) => {
   try {
     const mailer = await getMailer(userId);
-    const settings = await prisma.setting.findUnique({ where: { userId } }).catch(() => null);
 
-    const fromEmail = settings?.smtpUser || process.env.SMTP_FROM || process.env.SMTP_USER;
+    // Agora usamos apenas o e-mail definido no BACKEND (.env)
+    const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
+    const settings = await prisma.setting.findUnique({ where: { userId } }).catch(() => null);
     const businessName = settings?.businessName || APP_NAME;
 
     if (!mailer) {
@@ -333,14 +334,16 @@ router.post('/test-email', async (req, res) => {
     if (!to) return res.status(400).json({ error: 'Destinatário não informado.' });
 
     const mailer = await getMailer(userId);
-    if (!mailer) return res.status(400).json({ error: 'SMTP não configurado. Salve as configurações primeiro.' });
+    if (!mailer) return res.status(400).json({ error: 'SMTP global não configurado no servidor (.env).' });
+
+    const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
     const settings = await prisma.setting.findUnique({ where: { userId } });
 
     await mailer.sendMail({
-      from: `"${settings?.businessName || APP_NAME}" <${settings.smtpUser}>`,
+      from: `"${settings?.businessName || APP_NAME}" <${fromEmail}>`,
       to,
       subject: '✅ Teste de Email - DigiZap',
-      html: `<div style="font-family:sans-serif;padding:30px;background:#09090b;color:#f4f4f5;border-radius:12px"><h2 style="color:#10b981">Funcionou! 🎉</h2><p>Seu servidor SMTP está configurado corretamente no DigiZap.</p></div>`,
+      html: `<div style="font-family:sans-serif;padding:30px;background:#09090b;color:#f4f4f5;border-radius:12px"><h2 style="color:#10b981">Funcionou! 🎉</h2><p>Seu servidor SMTP global está configurado corretamente.</p></div>`,
     });
     res.json({ message: 'Email de teste enviado com sucesso.' });
   } catch (err) {

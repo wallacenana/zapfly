@@ -43,6 +43,9 @@ function App() {
             </Route>
           </Route>
 
+          {/* Menu Digital Dinâmico (Sempre por último para não conflitar) */}
+          <Route path="/:slug" element={<Menu />} />
+
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
