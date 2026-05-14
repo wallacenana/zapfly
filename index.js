@@ -263,11 +263,9 @@ function getOAuth2Client(req) {
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     if (!clientId || !clientSecret) return null;
 
-    // Constrói a URL de redirecionamento baseada em quem chamou (localhost ou IP)
-    // Proteção contra req indefinido
-    const protocol = (req && req.protocol) ? req.protocol : 'http';
-    const host = (req && typeof req.get === 'function') ? req.get('host') : 'localhost:3001';
-    const redirectUri = `${protocol}://${host}/auth/google/callback`;
+    // Prefere usar a URL pública do .env para evitar mismatch de redirect_uri
+    const publicUrl = process.env.PUBLIC_URL || 'http://localhost:3001';
+    const redirectUri = `${publicUrl}/auth/google/callback`;
 
     return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }

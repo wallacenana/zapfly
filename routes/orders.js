@@ -28,7 +28,7 @@ async function getGoogleCalendar(userId) {
     const oauth2Client = new google.auth.OAuth2(
       clientId,
       clientSecret,
-      process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/auth/google/callback'
+      process.env.GOOGLE_REDIRECT_URI || `${process.env.PUBLIC_URL || 'http://localhost:3001'}/auth/google/callback`
     );
 
     oauth2Client.setCredentials({
