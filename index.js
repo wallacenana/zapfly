@@ -122,14 +122,19 @@ app.post('/settings', authenticate, async (req, res) => {
             backgroundColor, textColor
         };
 
+        console.log('[DEBUG] Tentando salvar configurações para o usuário:', req.user.id);
+        console.log('[DEBUG] Dados do payload:', JSON.stringify(data, null, 2));
+
         const settings = await prisma.setting.upsert({
             where: { userId: req.user.id },
             update: data,
             create: { ...data, userId: req.user.id }
         });
+        
+        console.log('[DEBUG] Configurações salvas com sucesso!');
         res.json(settings);
     } catch (err) {
-        console.error('[Settings Save Error]', err);
+        console.error('[Settings Save Error] Erro detalhado:', err);
         res.status(500).json({ error: err.message });
     }
 });
