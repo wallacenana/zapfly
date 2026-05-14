@@ -288,7 +288,10 @@ app.get('/public/menu/:slug', async (req, res) => {
             where: { slug },
             include: {
                 settings: true,
-                products: true
+                products: true,
+                categories: {
+                    orderBy: { order: 'asc' }
+                }
             }
         });
 
@@ -313,6 +316,7 @@ app.get('/public/menu/:slug', async (req, res) => {
             backgroundColor: settings?.backgroundColor || '#ffffff',
             textColor: settings?.textColor || '#333333',
             products: user.products,
+            categories: user.categories,
             userId: user.id
         });
     } catch (err) {

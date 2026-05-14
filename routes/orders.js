@@ -741,14 +741,56 @@ router.post('/products', authenticate, async (req, res) => {
 
 router.get('/categories', authenticate, async (req, res) => {
   const userId = req.user.id;
-  const categories = await prisma.category.findMany({ where: { userId }, orderBy: { name: 'asc' } });
+  const categories = await prisma.category.findMany({ 
+    where: { userId }, 
+    orderBy: { order: 'asc' } 
+  });
   res.json(categories);
 });
 
 router.post('/categories', authenticate, async (req, res) => {
   const userId = req.user.id;
-  const cat = await prisma.category.create({ data: { ...req.body, userId } });
+  const count = await prisma.category.count({ where: { userId } });
+  const cat = await prisma.category.create({ 
+    data: { ...req.body, userId, order: count + 1 } 
+  });
   res.json(cat);
+});
+
+router.post('/categories/reorder', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  const { items } = req.body; // Array de { id, order }
+
+  try {
+    await prisma.$transaction(
+      items.map(item => 
+        prisma.category.update({
+          where: { id: item.id, userId },
+          data: { order: item.order }
+        })
+      )
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.patch('/categories/:id', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+  const cat = await prisma.category.update({
+    where: { id, userId },
+    data: req.body
+  });
+  res.json(cat);
+});
+
+router.delete('/categories/:id', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+  await prisma.category.delete({ where: { id, userId } });
+  res.json({ success: true });
 });
 
 router.get('/history/:phone', authenticate, async (req, res) => {

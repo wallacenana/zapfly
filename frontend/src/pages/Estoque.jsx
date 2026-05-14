@@ -50,9 +50,9 @@ const Estoque = () => {
 
     // Save to backend
     try {
-      await Promise.all(updated.map(cat => 
-        api.patch(`/orders/categories/${cat.id}`, { order: cat.order })
-      ));
+      await api.post('/orders/categories/reorder', { 
+        items: updated.map(cat => ({ id: cat.id, order: cat.order })) 
+      });
       fetchCategories();
     } catch (err) { console.error(err); }
   };
