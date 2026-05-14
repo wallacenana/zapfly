@@ -58,6 +58,8 @@ model Instance {
   name      String
   status    String   @default("disconnected")
   color     String?  @default("#3b82f6")
+  botPrompt String?  @db.Text
+  knowledge String?  @db.Text
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   chats     Chat[]
