@@ -35,8 +35,22 @@ model User {
   calendarEvents    CalendarEvent[]
   seasonalCatalogs  SeasonalCatalog[]
   flows             Flow[]
+  availableSlots    AvailableSlot[]
 
   @@map("user")
+}
+
+model AvailableSlot {
+  id        String   @id @default(uuid())
+  dayOfWeek Int      @default(0)
+  startTime String
+  endTime   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("available_slot")
 }
 
 model Instance {
