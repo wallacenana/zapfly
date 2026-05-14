@@ -273,9 +273,8 @@ const SiteSettings = () => {
                         </div>
                     </div>
                 </div>
-
             </div>
-        </div>
+        </motion.div>
     );
 };
 
