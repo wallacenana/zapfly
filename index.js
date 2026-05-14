@@ -90,8 +90,8 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.json());
 app.use('/auth', require('./routes/auth'));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
+app.use('/menu-assets', express.static(path.join(__dirname, 'public-menu')));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'public-menu')));
 app.use('/orders', (req, res, next) => {
     req.sockGetter = (instId) => {
         if (instId) return sessions.get(instId);
@@ -116,7 +116,8 @@ app.get('/', (req, res) => {
             </script>
         `);
     }
-    res.send('Zapfly Backend is running!');
+    // Serve a landing page (Home)
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // ─── WEBHOOK MERCADO PAGO ───────────────────────────────────────────────
@@ -446,25 +447,32 @@ app.post('/auth/google/disconnect', authenticate, async (req, res) => {
 // ─── CATCH-ALL PARA SLUGS E HOME ──────────────────────────────────────────────
 app.get('/:slug', async (req, res) => {
     try {
-        const { slug } = req.params;
-        // Ignora rotas que não são slugs (ex: favicon, robots, ou rotas de API que falharam)
-        if (slug.includes('.') || slug === 'api' || slug === 'orders' || slug === 'auth') {
+        let { slug } = req.params;
+        if (!slug) return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+
+        // Ignora arquivos e rotas reservadas
+        const reserved = ['api', 'orders', 'auth', 'menu-assets', 'assets', 'uploads', 'favicon.ico', 'robots.txt'];
+        if (reserved.includes(slug) || slug.includes('.')) {
             return res.status(404).send('Not Found');
         }
 
-        const user = await prisma.user.findUnique({ where: { slug } });
+        console.log(`[Multi-Tenant] Verificando slug: ${slug}`);
+        const user = await prisma.user.findUnique({ where: { slug: slug.toLowerCase() } });
+        
         if (user) {
+            console.log(`[Multi-Tenant] Servindo cardápio para: ${user.name}`);
             return res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
         }
         
         // Se não for um slug válido, manda pra home
+        console.log(`[Multi-Tenant] Slug não encontrado, enviando para Home: ${slug}`);
         res.sendFile(path.join(__dirname, 'public', 'index.html'));
     } catch (e) {
+        console.error('[Multi-Tenant Error]', e);
         res.sendFile(path.join(__dirname, 'public', 'index.html'));
     }
 });
 
-// Rota raiz (Home)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

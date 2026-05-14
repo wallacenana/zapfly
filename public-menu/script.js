@@ -1,7 +1,7 @@
 // Configurações
 const API_BASE = window.location.origin;
 // Detecta o slug da URL (ex: domain.com/linda-cake -> linda-cake)
-const STORE_SLUG = window.location.pathname.split('/')[1] || 'linda-cake';
+const STORE_SLUG = window.location.pathname.split('/')[1];
 
 // Estado da Aplicação
 let state = {
