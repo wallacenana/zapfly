@@ -81,7 +81,7 @@ const Estoque = () => {
 
     try {
       await Promise.all(updated.map(p => 
-        api.patch(`/orders/products/${p.id}`, { order: p.displayOrder })
+        api.patch(`/orders/products/${p.id}`, { displayOrder: p.displayOrder })
       ));
     } catch (err) { console.error(err); }
   };
