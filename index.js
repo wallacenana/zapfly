@@ -393,8 +393,13 @@ app.delete('/marketing-assets/:id', authenticate, async (req, res) => {
             where: { id: req.params.id, userId: req.user.id }
         });
         if (asset) {
-            const fullPath = path.join(__dirname, asset.path);
-            if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
+            if (asset.url && asset.url.includes('/marketing/')) {
+                const filename = asset.url.split('/').pop();
+                const fullPath = path.join(__dirname, 'assets', 'marketing', filename);
+                if (fs.existsSync(fullPath)) {
+                    fs.unlinkSync(fullPath);
+                }
+            }
             await prisma.marketingAsset.delete({ where: { id: req.params.id } });
         }
         res.json({ success: true });
