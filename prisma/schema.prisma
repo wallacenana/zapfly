@@ -45,6 +45,7 @@ model AvailableSlot {
   dayOfWeek Int      @default(0)
   startTime String
   endTime   String
+  maxOrders Int      @default(10)
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
