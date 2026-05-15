@@ -80,9 +80,9 @@ const Estoque = () => {
     setProducts(newProducts);
 
     try {
-      await Promise.all(updated.map(p => 
-        api.patch(`/orders/products/${p.id}`, { displayOrder: p.displayOrder })
-      ));
+      await api.post('/orders/products/reorder', { 
+        items: updated.map(p => ({ id: p.id, displayOrder: p.displayOrder })) 
+      });
     } catch (err) { console.error(err); }
   };
 

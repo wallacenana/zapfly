@@ -729,7 +729,10 @@ router.post('/stock', authenticate, async (req, res) => {
 
 router.get('/products', authenticate, async (req, res) => {
   const userId = req.user.id;
-  const products = await prisma.product.findMany({ where: { userId }, orderBy: { name: 'asc' } });
+  const products = await prisma.product.findMany({ 
+    where: { userId }, 
+    orderBy: { displayOrder: 'asc' } 
+  });
   res.json(products);
 });
 
@@ -737,6 +740,25 @@ router.post('/products', authenticate, async (req, res) => {
   const userId = req.user.id;
   const product = await prisma.product.create({ data: { ...req.body, userId } });
   res.json(product);
+});
+
+router.post('/products/reorder', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  const { items } = req.body; // Array de { id, displayOrder }
+
+  try {
+    await prisma.$transaction(
+      items.map(item => 
+        prisma.product.update({
+          where: { id: item.id, userId }, // Garante que é do usuário
+          data: { displayOrder: item.displayOrder }
+        })
+      )
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.get('/categories', authenticate, async (req, res) => {

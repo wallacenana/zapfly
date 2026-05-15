@@ -43,6 +43,20 @@ function parseImages(imgField) {
     }
 }
 
+/**
+ * Seleciona a versão correta da imagem gerada pelo upload.php
+ * @param {string} url - URL original
+ * @param {'thumb'|'medium'|'full'} size - Tamanho desejado
+ */
+function getImg(url, size = 'full') {
+    if (!url) return url;
+    if (!url.includes('files.digizap.com.br')) return url; // Só funciona para o nosso servidor
+    
+    if (size === 'thumb') return url.replace('.webp', '_90.webp');
+    if (size === 'medium') return url.replace('.webp', '_400.webp');
+    return url;
+}
+
 const getActiveCart = () => state.activeTab === 'delivery' ? state.deliveryCart : state.orderCart;
 const setActiveCart = (newCart) => {
     if (state.activeTab === 'delivery') state.deliveryCart = newCart;
@@ -419,7 +433,6 @@ function renderMenu() {
     // Ordenar pela propriedade 'order' que já vem do banco de dados
     const sortedCategories = [];
     const orderedCats = [...(state.categories || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
-    console.log(orderedCats)
     orderedCats.forEach(c => {
         if (grouped[c.name]) sortedCategories.push(c.name);
     });
@@ -469,7 +482,7 @@ function renderFeaturedCard(product) {
     return `
         <div class="featured-card" onclick="openItemDetail('${product.id}')">
             <div class="featured-img-wrapper">
-                ${images.length > 0 ? `<img src="${images[0]}" loading="lazy" decoding="async">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
+                ${images.length > 0 ? `<img src="${getImg(images[0], 'medium')}" loading="lazy" decoding="async">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
             </div>
             <div class="featured-info">
                 <h3>${product.name}</h3>
@@ -520,7 +533,7 @@ function renderProductCard(product) {
                 <p>${product.description || ''}</p>
                 <div class="product-price">${priceText}</div>
             </div>
-            ${parseImages(product.image).length > 0 ? `<img src="${parseImages(product.image)[0]}" class="product-img" loading="lazy" decoding="async">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
+            ${parseImages(product.image).length > 0 ? `<img src="${getImg(parseImages(product.image)[0], 'thumb')}" class="product-img" loading="lazy" decoding="async">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
         </div>
     `;
 }
@@ -530,6 +543,23 @@ function openItemDetail(productId) {
     state.currentItem = item;
     state.currentQty = 1;
     state.currentVariation = null;
+
+    const modal = document.getElementById('item-modal');
+    const body = document.getElementById('item-detail-body');
+    
+    // Inicia com Skeleton
+    body.innerHTML = `
+        <button class="chevron-close-btn" onclick="closeWithAnimation('item-modal')"><i data-lucide="chevron-down"></i></button>
+        <div class="skeleton" style="width:100%; height:300px; border-radius:0;"></div>
+        <div style="padding:20px;">
+            <div class="skeleton" style="height:24px; width:70%; margin-bottom:10px;"></div>
+            <div class="skeleton" style="height:14px; width:90%; margin-bottom:5px;"></div>
+            <div class="skeleton" style="height:14px; width:80%; margin-bottom:20px;"></div>
+        </div>
+    `;
+    
+    modal.classList.remove('hidden', 'closing');
+    lucide.createIcons();
 
     // Tracking: ViewContent (Meta) & view_item (GA4)
     if (typeof fbq === 'function') {
@@ -548,37 +578,38 @@ function openItemDetail(productId) {
             items: [{ item_id: item.id, item_name: item.name, price: parseFloat(item.price) }]
         });
     }
-    state.currentCarouselIdx = 0;
-    const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
-    const images = parseImages(item.image);
-    const body = document.getElementById('item-detail-body');
-    body.innerHTML = `
-        <button class="chevron-close-btn" onclick="closeWithAnimation('item-modal')"><i data-lucide="chevron-down"></i></button>
-        ${images.length > 0 ? `
-            <div class="carousel-container">
-                <div class="carousel-track" style="transform: translateX(0%)">
-                    ${images.map(img => `<div class="carousel-slide"><img src="${img}"></div>`).join('')}
-                </div>
-                ${images.length > 1 ? `
-                    <button class="carousel-btn carousel-prev" onclick="moveCarousel(-1)"><i data-lucide="chevron-left"></i></button>
-                    <button class="carousel-btn carousel-next" onclick="moveCarousel(1)"><i data-lucide="chevron-right"></i></button>
-                    <div class="carousel-dots">
-                        ${images.map((_, i) => `<div class="carousel-dot ${i === 0 ? 'active' : ''}"></div>`).join('')}
+
+    setTimeout(() => {
+        state.currentCarouselIdx = 0;
+        const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
+        const images = parseImages(item.image);
+        
+        body.innerHTML = `
+            <button class="chevron-close-btn" onclick="closeWithAnimation('item-modal')"><i data-lucide="chevron-down"></i></button>
+            ${images.length > 0 ? `
+                <div class="carousel-container">
+                    <div class="carousel-track" style="transform: translateX(0%)">
+                        ${images.map(img => `<div class="carousel-slide"><img src="${getImg(img, 'medium')}"></div>`).join('')}
                     </div>
-                ` : ''}
+                    ${images.length > 1 ? `
+                        <button class="carousel-btn carousel-prev" onclick="moveCarousel(-1)"><i data-lucide="chevron-left"></i></button>
+                        <button class="carousel-btn carousel-prev" onclick="moveCarousel(1)"><i data-lucide="chevron-right"></i></button>
+                        <div class="carousel-dots">
+                            ${images.map((_, i) => `<div class="carousel-dot ${i === 0 ? 'active' : ''}"></div>`).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            ` : ''}
+            <div class="item-main-info">
+                <h2>${item.name}</h2>
+                <p>${item.description || ''}</p>
+                ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
             </div>
-        ` : ''}
-        <div class="item-main-info">
-            <h2>${item.name}</h2>
-            <p>${item.description || ''}</p>
-            ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
-        </div>
-        ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
-    `;
-    updateDetailFooter();
-    const modal = document.getElementById('item-modal');
-    modal.classList.remove('hidden', 'closing');
-    lucide.createIcons();
+            ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
+        `;
+        updateDetailFooter();
+        lucide.createIcons();
+    }, 50);
 }
 
 function moveCarousel(delta) {
