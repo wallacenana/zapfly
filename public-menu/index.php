@@ -7,17 +7,79 @@ $pass = 'Wa76855867.';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8", $user, $pass);
-
+    
     $uri = $_SERVER['REQUEST_URI'];
     $parts = explode('/', trim($uri, '/'));
     $slug = strtolower($parts[0]);
+    $page = isset($parts[1]) ? strtolower($parts[1]) : '';
+
+    // --- FUNÇÃO PARA RENDERIZAR O FOOTER ---
+    function renderFooter($isDark = true) {
+        $year = date('Y');
+        $color = $isDark ? '#888' : '#666';
+        ?>
+        <footer class="global-footer" style="padding: 40px 20px; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 50px; color: <?php echo $color; ?>; font-size: 0.9rem;">
+            <div class="container" style="max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 20px;">
+                <div class="footer-links" style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
+                    <a href="/termos" style="color: inherit; text-decoration: none;">Termos de Uso</a>
+                    <a href="/privacidade" style="color: inherit; text-decoration: none;">Privacidade</a>
+                    <a href="/contato" style="color: inherit; text-decoration: none;">Contato</a>
+                    <a href="/ajuda" style="color: inherit; text-decoration: none;">Ajuda</a>
+                </div>
+                <div class="footer-branding">
+                    <p>&copy; <?php echo $year; ?> DigiZap. Todos os direitos reservados.</p>
+                </div>
+                <div class="footer-badge" style="opacity: 0.7;">
+                    <a href="https://digizap.com.br" style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 8px;">
+                        Desenvolvido por <img src="https://digizap.com.br/logo.png" alt="DigiZap" style="height: 18px; filter: grayscale(1) brightness(2);">
+                    </a>
+                </div>
+            </div>
+        </footer>
+        <?php
+    }
+
+    // --- LÓGICA DE PÁGINAS LEGAIS ---
+    if ($slug === 'termos' || $slug === 'privacidade') {
+        ?>
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+            <meta charset="UTF-8">
+            <title><?php echo ($slug === 'termos' ? 'Termos de Uso' : 'Privacidade'); ?> | DigiZap</title>
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Outfit', sans-serif; background: #0f0f0f; color: white; line-height: 1.6; margin: 0; }
+                .content { max-width: 800px; margin: 60px auto; padding: 20px; }
+                h1 { color: #ff4d6d; }
+                .back-home { display: inline-block; margin-bottom: 20px; color: #ff4d6d; text-decoration: none; }
+            </style>
+        </head>
+        <body>
+            <div class="content">
+                <a href="/" class="back-home">&larr; Voltar para Home</a>
+                <?php if ($slug === 'termos'): ?>
+                    <h1>Termos de Uso</h1>
+                    <p>Ao usar o DigiZap, você concorda com nossos termos de serviço...</p>
+                    <p>1. O sistema é fornecido como SaaS...</p>
+                <?php else: ?>
+                    <h1>Política de Privacidade</h1>
+                    <p>Sua privacidade é importante para nós. Coletamos apenas os dados necessários para o processamento de pedidos...</p>
+                <?php endif; ?>
+            </div>
+            <?php renderFooter(); ?>
+        </body>
+        </html>
+        <?php
+        exit;
+    }
 
     if (empty($slug) || $slug === 'index.php' || $slug === 'home') {
         // --- HOME SAAS ---
         ?>
         <!DOCTYPE html>
         <html lang="pt-BR">
-
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,64 +87,25 @@ try {
             <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
             <script src="https://unpkg.com/lucide@latest"></script>
             <style>
-                :root {
-                    --primary: #ff4d6d;
-                    --dark: #0f0f0f;
-                }
-
-                body {
-                    font-family: 'Outfit', sans-serif;
-                    background: var(--dark);
-                    color: white;
-                    text-align: center;
-                    margin: 0;
-                }
-
-                .hero {
-                    height: 100vh;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                    align-items: center;
-                    padding: 2rem;
-                }
-
-                h1 {
-                    font-size: 4rem;
-                    margin-bottom: 1rem;
-                }
-
-                h1 span {
-                    color: var(--primary);
-                }
-
-                p {
-                    color: #888;
-                    font-size: 1.2rem;
-                    max-width: 600px;
-                    margin-bottom: 2rem;
-                }
-
-                .btn {
-                    background: var(--primary);
-                    color: white;
-                    padding: 1rem 2rem;
-                    border-radius: 50px;
-                    text-decoration: none;
-                    font-weight: 700;
-                }
+                :root { --primary: #ff4d6d; --dark: #0f0f0f; }
+                body { font-family: 'Outfit', sans-serif; background: var(--dark); color: white; text-align: center; margin: 0; }
+                .hero { height: 80vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; }
+                h1 { font-size: 4rem; margin-bottom: 1rem; }
+                h1 span { color: var(--primary); }
+                p { color: #888; font-size: 1.2rem; max-width: 600px; margin-bottom: 2rem; }
+                .btn { background: var(--primary); color: white; padding: 1rem 2rem; border-radius: 50px; text-decoration: none; font-weight: 700; }
             </style>
         </head>
-
         <body>
             <div class="hero">
                 <h1>O Cardápio <span>mais rápido</span> do Brasil.</h1>
                 <p>Aumente suas vendas no WhatsApp com automação e um cardápio digital que voa.</p>
                 <a href="/register" class="btn">Começar Agora Grátis</a>
             </div>
+            
+            <?php renderFooter(); ?>
             <script>lucide.createIcons();</script>
         </body>
-
         </html>
         <?php
         exit;
@@ -93,10 +116,7 @@ try {
     $stmt->execute([$slug]);
     $store = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$store) {
-        header("Location: /");
-        exit;
-    }
+    if (!$store) { header("Location: /"); exit; }
 
     $businessName = $store['businessName'] ?: $store['name'];
     $accentColor = $store['accentColor'] ?: '#ff4d6d';
@@ -112,38 +132,27 @@ try {
     ?>
     <!DOCTYPE html>
     <html lang="pt-BR">
-
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title><?php echo $businessName; ?> - Cardápio Digital</title>
+        <title>DigiZap - <?php echo $businessName; ?> | Cardápio Digital</title>
         <meta name="description" content="<?php echo $store['seoDescription']; ?>">
-        <meta property="og:title" content="<?php echo $businessName; ?> - Cardápio Digital">
+        <meta property="og:title" content="DigiZap - <?php echo $businessName; ?> | Cardápio Digital">
         <meta property="og:image" content="<?php echo $store['logoUrl']; ?>">
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-            rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="style.css?v=1.65">
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <style>
-            :root {
-                --accent:
-                    <?php echo $accentColor; ?>
-                ;
-            }
-        </style>
+        <style>:root { --accent: <?php echo $accentColor; ?>; }</style>
     </head>
-
     <body>
         <div id="app">
             <header class="top-nav">
                 <div class="container nav-wrapper">
                     <div class="store-info">
                         <div class="store-logo">
-                            <img id="store-logo-img" src="<?php echo $store['logoUrl']; ?>"
-                                alt="Logo - <?php echo $businessName; ?>"
-                                style="width: 100%; height: 100%; object-fit: contain;">
+                            <img id="store-logo-img" src="<?php echo $store['logoUrl']; ?>" alt="Logo - <?php echo $businessName; ?>" style="width: 100%; height: 100%; object-fit: contain;">
                         </div>
                         <div class="store-details">
                             <h1 id="store-name"><?php echo $businessName; ?></h1>
@@ -153,8 +162,7 @@ try {
                         </div>
                     </div>
                     <div class="nav-actions">
-                        <button id="history-toggle-btn" class="icon-btn" aria-label="Ver Histórico"><i
-                                data-lucide="history"></i></button>
+                        <button id="history-toggle-btn" class="icon-btn" aria-label="Ver Histórico"><i data-lucide="history"></i></button>
                     </div>
                 </div>
             </header>
@@ -179,30 +187,25 @@ try {
 
             <main class="container main-menu">
                 <div id="menu-sections">
-                    <?php foreach ($categories as $cat):
-                        $catProducts = array_filter($products, function ($p) use ($cat) {
-                            return $p['categoryId'] == $cat['id'];
-                        });
-                        if (empty($catProducts))
-                            continue;
-                        ?>
+                    <?php foreach ($categories as $cat): 
+                        $catProducts = array_filter($products, function($p) use ($cat) { return $p['categoryId'] == $cat['id']; });
+                        if (empty($catProducts)) continue;
+                    ?>
                         <section class="menu-section">
                             <h2 class="section-title"><?php echo $cat['name']; ?></h2>
                             <div class="products-grid">
                                 <?php foreach ($catProducts as $p): ?>
-                                    <div class="product-card"
-                                        onclick="openItemModal(<?php echo htmlspecialchars(json_encode($p)); ?>)">
+                                    <div class="product-card" onclick="openItemDetail('<?php echo $p['id']; ?>')">
                                         <div class="product-info">
                                             <h3><?php echo $p['name']; ?></h3>
                                             <p><?php echo $p['description']; ?></p>
-                                            <div class="product-price">R$ <?php echo number_format($p['price'], 2, ',', '.'); ?>
-                                            </div>
+                                            <div class="product-price">R$ <?php echo number_format($p['price'], 2, ',', '.'); ?></div>
                                         </div>
-                                        <?php if ($p['image']):
+                                        <?php if ($p['image']): 
                                             $img = json_decode($p['image'], true);
                                             $thumb = is_array($img) ? $img[0] : $p['image'];
                                             $thumbUrl = str_replace('.webp', '_90.webp', $thumb);
-                                            ?>
+                                        ?>
                                             <img src="<?php echo $thumbUrl; ?>" alt="<?php echo $p['name']; ?>" class="product-img">
                                         <?php endif; ?>
                                     </div>
@@ -212,6 +215,8 @@ try {
                     <?php endforeach; ?>
                 </div>
             </main>
+
+            <?php renderFooter(false); ?>
 
             <footer id="cart-footer" class="cart-footer hidden">
                 <div class="container">
@@ -251,25 +256,15 @@ try {
                         <button class="close-modal-btn"><i data-lucide="x"></i></button>
                     </div>
                     <div class="modal-scroll-body">
-                        <div class="checkout-step" id="step-1">
-                            <div id="checkout-items-list" class="checkout-items"></div>
-                        </div>
+                        <div class="checkout-step" id="step-1"><div id="checkout-items-list" class="checkout-items"></div></div>
                         <div class="checkout-step hidden" id="step-2">
-                            <div class="form-group"><label>Nome</label><input type="text" id="user-name"
-                                    class="ifood-input"></div>
-                            <div class="form-group"><label>WhatsApp</label><input type="tel" id="user-phone"
-                                    class="ifood-input"></div>
-                            <div class="form-group"><label>Endereço</label><textarea id="user-address"
-                                    class="ifood-input"></textarea></div>
-                            <div class="form-group"><label>Data</label><input type="date" id="order-date"
-                                    class="ifood-input"></div>
-                            <div class="form-group"><label>Horário</label><select id="order-time" class="ifood-input">
-                                    <option value="">Selecione uma data</option>
-                                </select></div>
+                            <div class="form-group"><label>Nome</label><input type="text" id="user-name" class="ifood-input"></div>
+                            <div class="form-group"><label>WhatsApp</label><input type="tel" id="user-phone" class="ifood-input"></div>
+                            <div class="form-group"><label>Endereço</label><textarea id="user-address" class="ifood-input"></textarea></div>
+                            <div class="form-group"><label>Data</label><input type="date" id="order-date" class="ifood-input"></div>
+                            <div class="form-group"><label>Horário</label><select id="order-time" class="ifood-input"><option value="">Selecione uma data</option></select></div>
                         </div>
-                        <div class="checkout-step hidden" id="step-3">
-                            <div id="order-summary-content"></div>
-                        </div>
+                        <div class="checkout-step hidden" id="step-3"><div id="order-summary-content"></div></div>
                     </div>
                     <div class="modal-footer-sticky">
                         <button id="next-step-btn" class="primary-btn">Próximo</button>
@@ -281,9 +276,7 @@ try {
             <div id="history-modal" class="modal hidden">
                 <div class="modal-overlay"></div>
                 <div class="modal-content">
-                    <div class="history-modal-header">
-                        <h3>Meus Pedidos</h3><button class="close-modal-btn"><i data-lucide="x"></i></button>
-                    </div>
+                    <div class="history-modal-header"><h3>Meus Pedidos</h3><button class="close-modal-btn"><i data-lucide="x"></i></button></div>
                     <div id="history-list" class="history-modal-list"></div>
                 </div>
             </div>
@@ -291,13 +284,11 @@ try {
 
         <script>
             const API_BASE = 'https://api.digizap.com.br';
+            const STORE_SLUG = '<?php echo $slug; ?>';
         </script>
         <script src="https://unpkg.com/lucide@latest"></script>
-        <script src="script.js?v=1.33"></script>
+        <script src="script.js?v=1.35"></script>
     </body>
-
     </html>
     <?php
-} catch (Exception $e) {
-    die("Erro no sistema: " . $e->getMessage());
-}
+} catch (Exception $e) { die("Erro no sistema: " . $e->getMessage()); }

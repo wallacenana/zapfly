@@ -121,6 +121,9 @@ async function fetchPublicSettings() {
             ...state.publicSettings,
             ...data
         };
+        
+        state.products = data.products || [];
+        state.availableSlots = data.availableSlots || [];
 
         // Favicon
         if (data.faviconUrl) {
@@ -662,11 +665,13 @@ function initEventListeners() {
     document.getElementById('qty-minus').addEventListener('click', () => { if (state.currentQty > 1) { state.currentQty--; updateDetailFooter(); } });
 
     const closeModal = () => {
-        if (!document.getElementById('item-modal').classList.contains('hidden')) closeWithAnimation('item-modal');
-        if (!document.getElementById('checkout-modal').classList.contains('hidden')) closeWithAnimation('checkout-modal');
+        document.querySelectorAll('.modal').forEach(m => {
+            if (!m.classList.contains('hidden')) closeWithAnimation(m.id);
+        });
     };
 
-    document.querySelector('.close-modal-btn').addEventListener('click', closeModal);
+    document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', closeModal));
+    document.querySelectorAll('.modal-overlay').forEach(ov => ov.addEventListener('click', closeModal));
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
     document.getElementById('history-toggle-btn').addEventListener('click', () => {
