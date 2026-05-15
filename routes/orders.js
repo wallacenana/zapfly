@@ -847,6 +847,28 @@ router.get('/history/:phone', authenticate, async (req, res) => {
     res.json(orders);
 });
 
+// Rota PÚBLICA para o cardápio digital — identifica a loja pelo slug, sem token
+router.get('/history/public/:slug/:phone', async (req, res) => {
+    try {
+        const slug = req.params.slug.toLowerCase();
+        const phone = req.params.phone.replace(/\D/g, '');
+        const jid = `${phone}@s.whatsapp.net`;
+
+        const store = await prisma.user.findFirst({ where: { slug } });
+        if (!store) return res.status(404).json({ error: 'Loja não encontrada' });
+
+        const orders = await prisma.order.findMany({
+            where: { userId: store.id, clientJid: jid },
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+            select: { id: true, product: true, variation: true, quantity: true, totalPrice: true, type: true, createdAt: true }
+        });
+        res.json(orders);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 router.post('/calendar-sync', authenticate, async (req, res) => {
   const userId = req.user.id;
   try {

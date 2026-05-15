@@ -376,7 +376,7 @@ async function fetchProducts() {
 function renderMenu() {
     if (!state.products || state.products.length === 0) {
         console.log('Mantendo menu do PHP (API retornou vazio)');
-        return; 
+        return;
     }
     const container = document.getElementById('menu-sections');
     if (!container) return;
@@ -596,7 +596,7 @@ function openItemDetail(productId) {
         const images = parseImages(item.image);
 
         body.innerHTML = `
-            <button class="chevron-close-btn" onclick="closeWithAnimation('item-modal')" aria-label="Fechar Detalhes"><i data-lucide="chevron-down"></i></button>
+            <button class="chevron-close-btn" onclick="closeWithAnimation('item-detail-modal')" aria-label="Fechar Detalhes"><i data-lucide="chevron-down"></i></button>
             ${images.length > 0 ? `
                 <div class="carousel-container">
                     <div class="carousel-track" style="transform: translateX(0%)">
@@ -655,7 +655,7 @@ function updateDetailFooter() {
     const basePrice = state.currentVariation ? state.currentVariation.price : (state.currentItem?.price || 0);
     const priceEl = document.getElementById('add-btn-price');
     if (priceEl) priceEl.innerText = `R$ ${(basePrice * state.currentQty).toFixed(2)}`;
-    
+
     const qtyEl = document.getElementById('detail-qty');
     if (qtyEl) qtyEl.innerText = state.currentQty;
 }
@@ -668,7 +668,7 @@ function initEventListeners() {
             btn.classList.add('active');
             state.activeTab = btn.dataset.tab;
             document.body.className = state.activeTab === 'order' ? 'theme-order' : '';
-            updateTheme(); 
+            updateTheme();
             renderMenu(); updateUI();
         });
     });
@@ -676,6 +676,7 @@ function initEventListeners() {
     document.getElementById('qty-plus')?.addEventListener('click', () => { state.currentQty++; updateDetailFooter(); });
     document.getElementById('qty-minus')?.addEventListener('click', () => { if (state.currentQty > 1) { state.currentQty--; updateDetailFooter(); } });
 
+    // Fecha qualquer modal aberta — usa o ID correto: item-detail-modal
     const closeModal = () => {
         document.querySelectorAll('.modal').forEach(m => {
             if (!m.classList.contains('hidden')) closeWithAnimation(m.id);
@@ -687,11 +688,8 @@ function initEventListeners() {
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
     document.getElementById('history-toggle-btn')?.addEventListener('click', () => {
-        const modal = document.getElementById('history-modal');
-        if (modal) {
-            modal.classList.remove('hidden', 'closing');
-            renderPreviousOrders();
-        }
+        document.getElementById('history-modal')?.classList.remove('hidden', 'closing');
+        renderPreviousOrders();
     });
 
     document.getElementById('add-to-cart-btn')?.addEventListener('click', addToCart);
@@ -702,34 +700,44 @@ function initEventListeners() {
     document.getElementById('order-date')?.addEventListener('change', (e) => {
         const dateStr = e.target.value;
         if (!dateStr) return;
+
         const date = new Date(dateStr + 'T12:00:00');
         const dayOfWeek = date.getDay();
+
         const slots = state.availableSlots.filter(s => s.dayOfWeek === dayOfWeek);
         const timeSelect = document.getElementById('order-time');
-        if (timeSelect) {
-            timeSelect.innerHTML = `<option value="">Horário</option>` + slots.map(s => `<option value="${s.startTime}">${s.startTime}</option>`).join('');
-        }
+
+        timeSelect.innerHTML = `<option value="">Horário</option>` + slots.map(s => `<option value="${s.startTime}">${s.startTime}</option>`).join('');
     });
 
-    const userName = document.getElementById('user-name');
-    if (userName) userName.value = state.userInfo.name || '';
-    
-    const userPhone = document.getElementById('user-phone');
-    if (userPhone) {
-        userPhone.value = state.userInfo.phone || '';
-        userPhone.addEventListener('input', (e) => {
-            e.target.value = maskPhone(e.target.value);
-            state.userInfo.phone = e.target.value;
-            localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
+    // Restaura e persiste Nome (id=customer-name)
+    const nameInput = document.getElementById('customer-name');
+    if (nameInput) {
+        nameInput.value = state.userInfo.name || '';
+        nameInput.addEventListener('input', (e) => {
+            state.userInfo.name = e.target.value;
+            localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
         });
     }
 
-    const userAddress = document.getElementById('user-address');
-    if (userAddress) {
-        userAddress.value = state.userInfo.address || '';
-        userAddress.addEventListener('input', (e) => {
+    // Restaura e persiste WhatsApp com máscara (id=customer-phone)
+    const phoneInput = document.getElementById('customer-phone');
+    if (phoneInput) {
+        phoneInput.value = state.userInfo.phone || '';
+        phoneInput.addEventListener('input', (e) => {
+            e.target.value = maskPhone(e.target.value);
+            state.userInfo.phone = e.target.value;
+            localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
+        });
+    }
+
+    // Restaura e persiste Endereço (id=customer-address)
+    const addressInput = document.getElementById('customer-address');
+    if (addressInput) {
+        addressInput.value = state.userInfo.address || '';
+        addressInput.addEventListener('input', (e) => {
             state.userInfo.address = e.target.value;
-            localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
+            localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
         });
     }
 }
@@ -738,19 +746,16 @@ function goToStep(step) {
     state.currentStep = step;
     document.querySelectorAll('.checkout-step').forEach((el, idx) => el.classList.toggle('hidden', idx + 1 !== step));
     const modal = document.getElementById('checkout-modal');
-    if (modal) {
-        modal.classList.remove('hidden', 'closing');
-        const titleEl = document.getElementById('checkout-step-title');
-        if (titleEl) titleEl.innerText = ["Ver sacola", "Entrega & Agendamento", "Confirmar Pedido"][step - 1];
+    modal.classList.remove('hidden', 'closing');
+    document.getElementById('checkout-step-title').innerText = ["Ver sacola", "Entrega & Agendamento", "Confirmar Pedido"][step - 1];
 
-        const isLast = step === 3;
-        document.getElementById('next-step-btn')?.classList.toggle('hidden', isLast);
-        document.getElementById('place-order-btn')?.classList.toggle('hidden', !isLast);
+    const isLast = step === 3;
+    document.getElementById('next-step-btn').classList.toggle('hidden', isLast);
+    document.getElementById('place-order-btn').classList.toggle('hidden', !isLast);
 
-        if (step === 1) renderStep1();
-        if (step === 2) renderStep2();
-        if (step === 3) updateStep3Summary();
-    }
+    if (step === 1) renderStep1();
+    if (step === 2) renderStep2();
+    if (step === 3) updateStep3Summary();
 }
 
 document.getElementById('checkout-back-btn')?.addEventListener('click', () => {
@@ -826,7 +831,11 @@ function renderStep2() {
 
 function handleNextStep() {
     if (state.currentStep === 1) {
-        if (!state.userInfo.name || !state.userInfo.phone || state.userInfo.phone.length < 14) return showAlert('Ops!', 'Preencha seu nome e um WhatsApp válido.');
+        const nameVal = document.getElementById('customer-name')?.value;
+        const phoneVal = document.getElementById('customer-phone')?.value;
+        if (!nameVal || !phoneVal || phoneVal.length < 14) return showAlert('Ops!', 'Preencha seu nome e um WhatsApp válido.');
+        state.userInfo.name = nameVal;
+        state.userInfo.phone = phoneVal;
         if (state.activeTab === 'delivery' && !state.isOpen) return showAlert('Loja Fechada', 'Estamos fechados para pronta entrega no momento. Por favor, utilize a aba de Encomendas para agendar seu pedido.');
         goToStep(2);
     } else if (state.currentStep === 2) {
@@ -884,18 +893,26 @@ function addToCart() {
         });
     }
 
-    closeWithAnimation('item-modal');
+    closeWithAnimation('item-detail-modal');
+    renderMenu();
     updateUI();
 }
 
 function updateUI() {
     const cart = getActiveCart();
     const footer = document.getElementById('cart-footer');
+    if (!footer) return; // Blindagem contra erro de null
+
     if (cart.length > 0) {
         footer.classList.remove('hidden');
-        document.getElementById('cart-qty-badge').innerText = cart.reduce((acc, i) => acc + i.quantity, 0);
-        document.getElementById('cart-total-footer').innerText = `R$ ${cart.reduce((acc, i) => acc + (i.price * i.quantity), 0).toFixed(2)}`;
-    } else footer.classList.add('hidden');
+        const badge = document.getElementById('cart-qty-badge');
+        if (badge) badge.innerText = cart.reduce((acc, i) => acc + i.quantity, 0);
+
+        const totalFooter = document.getElementById('cart-total-footer');
+        if (totalFooter) totalFooter.innerText = `R$ ${cart.reduce((acc, i) => acc + (i.price * i.quantity), 0).toFixed(2)}`;
+    } else {
+        footer.classList.add('hidden');
+    }
 }
 
 async function handlePlaceOrder() {
@@ -962,17 +979,18 @@ async function handlePlaceOrder() {
 async function fetchPreviousOrders() {
     if (!state.userInfo.phone) return;
     try {
-        const phone = state.userInfo.phone.replace(/\D/g, '');
-        const res = await fetch(`${API_BASE}/orders/history/${phone}`);
+        const phone = '55' + state.userInfo.phone.replace(/\D/g, '');
+        const res = await fetch(`${API_BASE}/orders/history/public/${STORE_SLUG}/${phone}`);
+        if (!res.ok) { state.previousOrders = []; renderPreviousOrders(); return; }
         const data = await res.json();
         state.previousOrders = Array.isArray(data) ? data : [];
         renderPreviousOrders();
     } catch (e) {
-        console.error(e);
         state.previousOrders = [];
         renderPreviousOrders();
     }
 }
+
 
 function renderPreviousOrders() {
     const list = document.getElementById('history-modal-list');
