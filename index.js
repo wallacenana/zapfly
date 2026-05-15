@@ -317,6 +317,10 @@ app.get('/public/menu/:slug', async (req, res) => {
             buttonTextColor: settings?.buttonTextColor || '#ffffff',
             backgroundColor: settings?.backgroundColor || '#ffffff',
             textColor: settings?.textColor || '#333333',
+            seoDescription: settings?.seoDescription || '',
+            pixelId: settings?.pixelId || '',
+            googleAnalyticsId: settings?.googleAnalyticsId || '',
+            microsoftClarityId: settings?.microsoftClarityId || '',
             products: user.products,
             categories: user.categories,
             userId: user.id

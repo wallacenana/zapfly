@@ -119,6 +119,70 @@ async function fetchPublicSettings() {
 
         updateTheme(); // Aplica o tema inicial
 
+        // SEO Injection Dinâmico (Lido pelo Google JS Engine)
+        const titleText = data.businessName ? `${data.businessName} | Cardápio Digital DigiZap` : 'Cardápio Digital DigiZap';
+        document.title = titleText;
+        const ogTitle = document.querySelector('meta[property="og:title"]');
+        if (ogTitle) ogTitle.setAttribute('content', titleText);
+
+        const descText = data.seoDescription || `Confira o cardápio digital de ${data.businessName || 'nossa loja'} e faça seu pedido online.`;
+        const metaDesc = document.querySelector('meta[name="description"]');
+        if (metaDesc) metaDesc.setAttribute('content', descText);
+        const ogDesc = document.querySelector('meta[property="og:description"]');
+        if (ogDesc) ogDesc.setAttribute('content', descText);
+
+        if (data.logoUrl) {
+            const ogImage = document.querySelector('meta[property="og:image"]');
+            if (ogImage) ogImage.setAttribute('content', data.logoUrl);
+        }
+
+        // Scripts de Tracking (Google Analytics, Clarity, Pixel)
+        if (data.googleAnalyticsId && !document.getElementById('ga-script')) {
+            const ga = document.createElement('script');
+            ga.id = 'ga-script';
+            ga.async = true;
+            ga.src = `https://www.googletagmanager.com/gtag/js?id=${data.googleAnalyticsId}`;
+            document.head.appendChild(ga);
+            
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            window.gtag = gtag;
+            gtag('js', new Date());
+            gtag('config', data.googleAnalyticsId);
+        }
+
+        if (data.microsoftClarityId && !document.getElementById('clarity-script')) {
+            const cl = document.createElement('script');
+            cl.id = 'clarity-script';
+            cl.type = 'text/javascript';
+            cl.innerHTML = `
+                (function(c,l,a,r,i,t,y){
+                    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+                    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+                    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+                })(window, document, "clarity", "script", "${data.microsoftClarityId}");
+            `;
+            document.head.appendChild(cl);
+        }
+
+        if (data.pixelId && !document.getElementById('fb-script')) {
+            const fb = document.createElement('script');
+            fb.id = 'fb-script';
+            fb.innerHTML = `
+                !function(f,b,e,v,n,t,s)
+                {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+                n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+                if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+                n.queue=[];t=b.createElement(e);t.async=!0;
+                t.src=v;s=b.getElementsByTagName(e)[0];
+                s.parentNode.insertBefore(t,s)}(window, document,'script',
+                'https://connect.facebook.net/en_US/fbevents.js');
+                fbq('init', '${data.pixelId}');
+                fbq('track', 'PageView');
+            `;
+            document.head.appendChild(fb);
+        }
+
         // Logo
         const logoImg = document.getElementById('store-logo-img');
         const placeholder = document.querySelector('.logo-placeholder');
@@ -437,6 +501,24 @@ function openItemDetail(productId) {
     state.currentItem = item;
     state.currentQty = 1;
     state.currentVariation = null;
+
+    // Tracking: ViewContent (Meta) & view_item (GA4)
+    if (typeof fbq === 'function') {
+        fbq('track', 'ViewContent', {
+            content_ids: [item.id],
+            content_name: item.name,
+            content_type: 'product',
+            value: parseFloat(item.price),
+            currency: 'BRL'
+        });
+    }
+    if (typeof gtag === 'function') {
+        gtag('event', 'view_item', {
+            currency: 'BRL',
+            value: parseFloat(item.price),
+            items: [{ item_id: item.id, item_name: item.name, price: parseFloat(item.price) }]
+        });
+    }
     state.currentCarouselIdx = 0;
     const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
     const images = parseImages(item.image);
@@ -699,6 +781,26 @@ function addToCart() {
     if (existing) existing.quantity += state.currentQty;
     else cart.push({ productId: item.id, itemKey, name: item.name, variation: variation ? variation.name : null, price: variation ? variation.price : item.price, quantity: state.currentQty });
     setActiveCart(cart);
+
+    // Tracking: AddToCart
+    const finalPrice = variation ? variation.price : item.price;
+    if (typeof fbq === 'function') {
+        fbq('track', 'AddToCart', {
+            content_ids: [item.id],
+            content_name: item.name,
+            content_type: 'product',
+            value: parseFloat(finalPrice) * state.currentQty,
+            currency: 'BRL'
+        });
+    }
+    if (typeof gtag === 'function') {
+        gtag('event', 'add_to_cart', {
+            currency: 'BRL',
+            value: parseFloat(finalPrice) * state.currentQty,
+            items: [{ item_id: item.id, item_name: item.name, price: parseFloat(finalPrice), quantity: state.currentQty }]
+        });
+    }
+
     closeWithAnimation('item-modal');
     updateUI();
 }
@@ -743,6 +845,23 @@ async function handlePlaceOrder() {
         });
         const data = await response.json();
         if (data.paymentLink) {
+            // Tracking: InitiateCheckout (Meta) & begin_checkout (GA4)
+            const totalValue = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0) + (state.activeTab === 'delivery' ? state.deliveryFee : 0);
+            if (typeof fbq === 'function') {
+                fbq('track', 'InitiateCheckout', {
+                    value: totalValue,
+                    currency: 'BRL',
+                    num_items: cart.reduce((acc, i) => acc + i.quantity, 0)
+                });
+            }
+            if (typeof gtag === 'function') {
+                gtag('event', 'begin_checkout', {
+                    currency: 'BRL',
+                    value: totalValue,
+                    items: cart.map(i => ({ item_id: i.productId, item_name: i.name, price: i.price, quantity: i.quantity }))
+                });
+            }
+
             setActiveCart([]);
             location.href = data.paymentLink;
         } else if (data.id) {
