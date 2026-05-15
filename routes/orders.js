@@ -861,7 +861,15 @@ router.get('/history/public/:slug/:phone', async (req, res) => {
             where: { userId: store.id, clientJid: jid },
             orderBy: { createdAt: 'desc' },
             take: 10,
-            select: { id: true, product: true, variation: true, quantity: true, totalPrice: true, type: true, createdAt: true }
+            select: {
+                id: true,
+                product: true,
+                variation: true,
+                quantity: true,
+                totalValue: true,
+                type: true,
+                createdAt: true
+            }
         });
         res.json(orders);
     } catch (err) {

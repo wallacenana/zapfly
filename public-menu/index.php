@@ -373,7 +373,7 @@ try {
         <?php include 'componentes/footer.php'; ?>
 
         <script>const API_BASE = 'https://api.digizap.com.br';</script>
-        <script src="/cardapio/script.js?v=2.8"></script>
+        <script src="/cardapio/script.js?v=2.9"></script>
         <script>lucide.createIcons();</script>
     </body>
 
