@@ -158,6 +158,23 @@ h3 {
     background: var(--primary-color);
 }
 
+.skeleton {
+    background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.06) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-pulse 1.5s infinite linear;
+}
+
+@keyframes skeleton-pulse {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.skeleton-card {
+    background: rgba(0,0,0,0.04);
+    border-radius: 16px;
+    border: 1px solid rgba(0,0,0,0.05);
+}
+
 /* Search Box */
 .search-container {
     padding-top: 16px;
@@ -469,8 +486,8 @@ body.theme-order .var-option.selected {
 /* Primary Button */
 .primary-btn {
     flex: 1;
-    background: var(--primary-color) !important;
-    color: #ffffff !important;
+    background: var(--btn);
+    color: var(--btn-text);
     border: none;
     padding: 14px;
     border-radius: 8px;

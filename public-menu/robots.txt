@@ -1,8 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /api/
-Disallow: /auth/
-Disallow: /admin/
-Disallow: /dashboard/
-
-Sitemap: https://digizap.com.br/sitemap.php

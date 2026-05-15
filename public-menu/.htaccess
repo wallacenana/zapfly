@@ -1,9 +1,0 @@
-RewriteEngine On
-RewriteBase /
-
-# 1. Se o arquivo existe, abre normal (CSS/JS)
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-
-# 2. Se não existe, manda pro PHP resolver
-RewriteRule ^(.*)$ index.php [L,QSA]

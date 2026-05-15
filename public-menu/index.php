@@ -1,5 +1,15 @@
 <?php
-// --- CONFIGURAÇÃO DO BANCO ---
+/**
+ * DigiZap - Cardápio All-in-One (Versão Blindada)
+ */
+
+if (php_sapi_name() === 'cli-server') {
+    $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    if (file_exists(__DIR__ . $path) && !is_dir(__DIR__ . $path)) {
+        return false;
+    }
+}
+
 $host = '192.185.211.125';
 $db = 'monte814_zapfly';
 $user = 'monte814_zapfly';
@@ -7,120 +17,35 @@ $pass = 'Wa76855867.';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8", $user, $pass);
-    
+
     $uri = $_SERVER['REQUEST_URI'];
-    $parts = explode('/', trim($uri, '/'));
-    $slug = strtolower($parts[0]);
-    $page = isset($parts[1]) ? strtolower($parts[1]) : '';
+    $path = parse_url($uri, PHP_URL_PATH);
+    $parts = explode('/', trim($path, '/'));
+    $slug = strtolower(end($parts));
 
-    // --- FUNÇÃO PARA RENDERIZAR O FOOTER ---
-    function renderFooter($isDark = true) {
-        $year = date('Y');
-        $color = $isDark ? '#888' : '#666';
-        ?>
-        <footer class="global-footer" style="padding: 40px 20px; border-top: 1px solid rgba(255,255,255,0.05); margin-top: 50px; color: <?php echo $color; ?>; font-size: 0.9rem;">
-            <div class="container" style="max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; align-items: center; gap: 20px;">
-                <div class="footer-links" style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
-                    <a href="/termos" style="color: inherit; text-decoration: none;">Termos de Uso</a>
-                    <a href="/privacidade" style="color: inherit; text-decoration: none;">Privacidade</a>
-                    <a href="/contato" style="color: inherit; text-decoration: none;">Contato</a>
-                    <a href="/ajuda" style="color: inherit; text-decoration: none;">Ajuda</a>
-                </div>
-                <div class="footer-branding">
-                    <p>&copy; <?php echo $year; ?> DigiZap. Todos os direitos reservados.</p>
-                </div>
-                <div class="footer-badge" style="opacity: 0.7;">
-                    <a href="https://digizap.com.br" style="color: inherit; text-decoration: none; display: flex; align-items: center; gap: 8px;">
-                        Desenvolvido por <img src="https://digizap.com.br/logo.png" alt="DigiZap" style="height: 18px; filter: grayscale(1) brightness(2);">
-                    </a>
-                </div>
-            </div>
-        </footer>
-        <?php
-    }
-
-    // --- LÓGICA DE PÁGINAS LEGAIS ---
-    if ($slug === 'termos' || $slug === 'privacidade') {
-        ?>
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-            <meta charset="UTF-8">
-            <title><?php echo ($slug === 'termos' ? 'Termos de Uso' : 'Privacidade'); ?> | DigiZap</title>
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600&display=swap" rel="stylesheet">
-            <style>
-                body { font-family: 'Outfit', sans-serif; background: #0f0f0f; color: white; line-height: 1.6; margin: 0; }
-                .content { max-width: 800px; margin: 60px auto; padding: 20px; }
-                h1 { color: #ff4d6d; }
-                .back-home { display: inline-block; margin-bottom: 20px; color: #ff4d6d; text-decoration: none; }
-            </style>
-        </head>
-        <body>
-            <div class="content">
-                <a href="/" class="back-home">&larr; Voltar para Home</a>
-                <?php if ($slug === 'termos'): ?>
-                    <h1>Termos de Uso</h1>
-                    <p>Ao usar o DigiZap, você concorda com nossos termos de serviço...</p>
-                    <p>1. O sistema é fornecido como SaaS...</p>
-                <?php else: ?>
-                    <h1>Política de Privacidade</h1>
-                    <p>Sua privacidade é importante para nós. Coletamos apenas os dados necessários para o processamento de pedidos...</p>
-                <?php endif; ?>
-            </div>
-            <?php renderFooter(); ?>
-        </body>
-        </html>
-        <?php
+    if (empty($slug) || $slug === 'cardapio' || $slug === 'index.php') {
+        header("Location: /");
         exit;
     }
 
-    if (empty($slug) || $slug === 'index.php' || $slug === 'home') {
-        // --- HOME SAAS ---
-        ?>
-        <!DOCTYPE html>
-        <html lang="pt-BR">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>DigiZap | Transforme seu WhatsApp em uma Máquina de Vendas</title>
-            <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-            <script src="https://unpkg.com/lucide@latest"></script>
-            <style>
-                :root { --primary: #ff4d6d; --dark: #0f0f0f; }
-                body { font-family: 'Outfit', sans-serif; background: var(--dark); color: white; text-align: center; margin: 0; }
-                .hero { height: 80vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem; }
-                h1 { font-size: 4rem; margin-bottom: 1rem; }
-                h1 span { color: var(--primary); }
-                p { color: #888; font-size: 1.2rem; max-width: 600px; margin-bottom: 2rem; }
-                .btn { background: var(--primary); color: white; padding: 1rem 2rem; border-radius: 50px; text-decoration: none; font-weight: 700; }
-            </style>
-        </head>
-        <body>
-            <div class="hero">
-                <h1>O Cardápio <span>mais rápido</span> do Brasil.</h1>
-                <p>Aumente suas vendas no WhatsApp com automação e um cardápio digital que voa.</p>
-                <a href="/register" class="btn">Começar Agora Grátis</a>
-            </div>
-            
-            <?php renderFooter(); ?>
-            <script>lucide.createIcons();</script>
-        </body>
-        </html>
-        <?php
-        exit;
-    }
-
-    // --- CARDÁPIO DO CLIENTE ---
-    $stmt = $pdo->prepare("SELECT u.*, s.businessName, s.logoUrl, s.seoDescription, s.accentColor FROM user u LEFT JOIN setting s ON u.id = s.userId WHERE u.slug = ?");
+    $stmt = $pdo->prepare("SELECT u.*, s.businessName, s.logoUrl, s.faviconUrl, s.accentColor, s.backgroundColor, s.textColor, s.buttonColor, s.buttonTextColor FROM user u LEFT JOIN setting s ON u.id = s.userId WHERE u.slug = ?");
     $stmt->execute([$slug]);
     $store = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    if (!$store) { header("Location: /"); exit; }
+    if (!$store) {
+        header("Location: /");
+        exit;
+    }
 
     $businessName = $store['businessName'] ?: $store['name'];
+    $faviconUrl = $store['faviconUrl'] ?: '/favicon.ico';
     $accentColor = $store['accentColor'] ?: '#ff4d6d';
+    $backgroundColor = $store['backgroundColor'] ?: '#0f0f0f';
+    $textColor = $store['textColor'] ?: '#ffffff';
+    $buttonColor = $store['buttonColor'] ?: $accentColor;
+    $buttonTextColor = $store['buttonTextColor'] ?: '#ffffff';
 
+    // Dados de Menu
     $stmt = $pdo->prepare("SELECT * FROM category WHERE userId = ? ORDER BY `order` ASC");
     $stmt->execute([$store['id']]);
     $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -132,65 +57,74 @@ try {
     ?>
     <!DOCTYPE html>
     <html lang="pt-BR">
+
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>DigiZap - <?php echo $businessName; ?> | Cardápio Digital</title>
-        <meta name="description" content="<?php echo $store['seoDescription']; ?>">
-        <meta property="og:title" content="DigiZap - <?php echo $businessName; ?> | Cardápio Digital">
-        <meta property="og:image" content="<?php echo $store['logoUrl']; ?>">
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-        <link rel="stylesheet" href="style.css?v=1.65">
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <style>:root { --accent: <?php echo $accentColor; ?>; }</style>
+        <title><?php echo $businessName; ?> | Cardápio Digital</title>
+        <link rel="icon" type="image/x-icon" href="<?php echo $faviconUrl; ?>">
+        <link
+            href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+            rel="stylesheet">
+        <link rel="stylesheet" href="/cardapio/style.css?v=1.70">
+        <script src="https://unpkg.com/lucide@latest"></script>
+        <style>
+            :root {
+                --primary-color:
+                    <?php echo $accentColor; ?>
+                ;
+                --bg-color:
+                    <?php echo $backgroundColor; ?>
+                ;
+                --text-main:
+                    <?php echo $textColor; ?>
+                ;
+                --btn:
+                    <?php echo $buttonColor; ?>
+                ;
+                --btn-text:
+                    <?php echo $buttonTextColor; ?>
+                ;
+                --accent:
+                    <?php echo $accentColor; ?>
+                ;
+            }
+
+            body {
+                background-color: var(--bg-color);
+                color: var(--text-main);
+            }
+        </style>
     </head>
+
     <body>
-        <div id="app">
-            <header class="top-nav">
-                <div class="container nav-wrapper">
-                    <div class="store-info">
-                        <div class="store-logo">
-                            <img id="store-logo-img" src="<?php echo $store['logoUrl']; ?>" alt="Logo - <?php echo $businessName; ?>" style="width: 100%; height: 100%; object-fit: contain;">
-                        </div>
-                        <div class="store-details">
-                            <h1 id="store-name"><?php echo $businessName; ?></h1>
-                            <div class="store-status">
-                                <span class="status-badge" id="store-status-badge">Carregando...</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="nav-actions">
-                        <button id="history-toggle-btn" class="icon-btn" aria-label="Ver Histórico"><i data-lucide="history"></i></button>
-                    </div>
-                </div>
-            </header>
 
-            <nav class="category-tabs">
-                <div class="container tabs-scroll">
-                    <button class="cat-tab active" data-tab="delivery">Entrega</button>
-                    <button class="cat-tab" data-tab="order">Encomendas</button>
-                </div>
-            </nav>
+        <?php include 'componentes/header.php'; ?>
 
-            <div class="container search-container">
-                <div class="search-box">
-                    <i data-lucide="search"></i>
-                    <input type="text" id="search-input" placeholder="Buscar no cardápio">
-                </div>
+        <nav class="category-tabs">
+            <div class="container tabs-scroll">
+                <button class="cat-tab active" data-tab="delivery">Entrega</button>
+                <button class="cat-tab" data-tab="order">Encomendas</button>
             </div>
+        </nav>
 
-            <div id="category-nav" class="container category-nav hidden">
-                <div id="category-nav-scroll" class="category-nav-scroll"></div>
+        <div class="container search-container">
+            <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="search-input" placeholder="Buscar no cardápio">
             </div>
+        </div>
 
-            <main class="container main-menu">
-                <div id="menu-sections">
-                    <?php foreach ($categories as $cat): 
-                        $catProducts = array_filter($products, function($p) use ($cat) { return $p['categoryId'] == $cat['id']; });
-                        if (empty($catProducts)) continue;
-                    ?>
+        <main class="container main-menu">
+            <div id="menu-sections">
+                <div id="skeleton-loader" class="hidden"></div> <!-- O JS vai controlar o skeleton -->
+                <div id="actual-menu-content">
+                    <?php foreach ($categories as $cat):
+                        $catProducts = array_filter($products, function ($p) use ($cat) {
+                            return $p['categoryId'] == $cat['id']; });
+                        if (empty($catProducts))
+                            continue;
+                        ?>
                         <section class="menu-section">
                             <h2 class="section-title"><?php echo $cat['name']; ?></h2>
                             <div class="products-grid">
@@ -199,14 +133,12 @@ try {
                                         <div class="product-info">
                                             <h3><?php echo $p['name']; ?></h3>
                                             <p><?php echo $p['description']; ?></p>
-                                            <div class="product-price">R$ <?php echo number_format($p['price'], 2, ',', '.'); ?></div>
+                                            <div class="product-price">R$ <?php echo number_format($p['price'], 2, ',', '.'); ?>
+                                            </div>
                                         </div>
-                                        <?php if ($p['image']): 
-                                            $img = json_decode($p['image'], true);
-                                            $thumb = is_array($img) ? $img[0] : $p['image'];
-                                            $thumbUrl = str_replace('.webp', '_90.webp', $thumb);
-                                        ?>
-                                            <img src="<?php echo $thumbUrl; ?>" alt="<?php echo $p['name']; ?>" class="product-img">
+                                        <?php if ($p['image']): ?>
+                                            <img src="<?php echo str_replace('.webp', '_90.webp', json_decode($p['image'], true)[0] ?? $p['image']); ?>"
+                                                class="product-img">
                                         <?php endif; ?>
                                     </div>
                                 <?php endforeach; ?>
@@ -214,81 +146,71 @@ try {
                         </section>
                     <?php endforeach; ?>
                 </div>
-            </main>
+            </div>
+        </main>
 
-            <?php renderFooter(false); ?>
-
-            <footer id="cart-footer" class="cart-footer hidden">
-                <div class="container">
-                    <button id="view-cart-btn" class="primary-btn cart-btn">
-                        <div class="cart-btn-content">
-                            <span id="cart-qty-badge">0</span>
-                            <strong>Ver sacola</strong>
-                        </div>
-                        <span id="cart-total-footer">R$ 0,00</span>
+        <!-- MODAL DETALHE DO ITEM -->
+        <div id="item-detail-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content item-detail-content">
+                <button class="close-modal-btn"><i data-lucide="x"></i></button>
+                <div id="item-detail-body"></div>
+                <div class="modal-footer-sticky">
+                    <div class="qty-selector">
+                        <button class="qty-btn" id="qty-minus"><i data-lucide="minus"></i></button>
+                        <span id="detail-qty">1</span>
+                        <button class="qty-btn" id="qty-plus"><i data-lucide="plus"></i></button>
+                    </div>
+                    <button id="add-to-cart-btn" class="primary-btn">
+                        Adicionar <span id="add-btn-price">R$ 0,00</span>
                     </button>
-                </div>
-            </footer>
-
-            <!-- Modais -->
-            <div id="item-modal" class="modal hidden">
-                <div class="modal-overlay"></div>
-                <div class="modal-content item-detail-content">
-                    <button class="close-modal-btn"><i data-lucide="x"></i></button>
-                    <div id="item-detail-body"></div>
-                    <div class="modal-footer-sticky">
-                        <div class="qty-selector">
-                            <button class="qty-btn" id="qty-minus"><i data-lucide="minus"></i></button>
-                            <span id="detail-qty">1</span>
-                            <button class="qty-btn" id="qty-plus"><i data-lucide="plus"></i></button>
-                        </div>
-                        <button id="add-to-cart-btn" class="primary-btn">Adicionar <span id="add-btn-price"></span></button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="checkout-modal" class="modal hidden">
-                <div class="modal-overlay"></div>
-                <div class="modal-content checkout-content">
-                    <div class="modal-header">
-                        <button id="checkout-back-btn" class="back-btn"><i data-lucide="chevron-left"></i></button>
-                        <h2 id="checkout-step-title">Finalizar Pedido</h2>
-                        <button class="close-modal-btn"><i data-lucide="x"></i></button>
-                    </div>
-                    <div class="modal-scroll-body">
-                        <div class="checkout-step" id="step-1"><div id="checkout-items-list" class="checkout-items"></div></div>
-                        <div class="checkout-step hidden" id="step-2">
-                            <div class="form-group"><label>Nome</label><input type="text" id="user-name" class="ifood-input"></div>
-                            <div class="form-group"><label>WhatsApp</label><input type="tel" id="user-phone" class="ifood-input"></div>
-                            <div class="form-group"><label>Endereço</label><textarea id="user-address" class="ifood-input"></textarea></div>
-                            <div class="form-group"><label>Data</label><input type="date" id="order-date" class="ifood-input"></div>
-                            <div class="form-group"><label>Horário</label><select id="order-time" class="ifood-input"><option value="">Selecione uma data</option></select></div>
-                        </div>
-                        <div class="checkout-step hidden" id="step-3"><div id="order-summary-content"></div></div>
-                    </div>
-                    <div class="modal-footer-sticky">
-                        <button id="next-step-btn" class="primary-btn">Próximo</button>
-                        <button id="place-order-btn" class="primary-btn hidden">Confirmar Pedido</button>
-                    </div>
-                </div>
-            </div>
-
-            <div id="history-modal" class="modal hidden">
-                <div class="modal-overlay"></div>
-                <div class="modal-content">
-                    <div class="history-modal-header"><h3>Meus Pedidos</h3><button class="close-modal-btn"><i data-lucide="x"></i></button></div>
-                    <div id="history-list" class="history-modal-list"></div>
                 </div>
             </div>
         </div>
 
+        <!-- MODAL CHECKOUT -->
+        <div id="checkout-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content checkout-content">
+                <div class="modal-header">
+                    <button class="back-btn" id="checkout-back-btn"><i data-lucide="chevron-left"></i></button>
+                    <h2 id="checkout-step-title">Ver sacola</h2>
+                </div>
+                <div class="modal-scroll-body">
+                    <div id="checkout-items-list"></div>
+                    <!-- Campos de dados serão injetados pelo JS conforme o passo -->
+                </div>
+                <div class="modal-footer-sticky">
+                    <button id="next-step-btn" class="primary-btn">Continuar</button>
+                    <button id="place-order-btn" class="primary-btn hidden">Finalizar Pedido</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTÃO FLUTUANTE CARRINHO -->
+        <footer id="cart-footer" class="cart-footer hidden">
+            <div class="container">
+                <button class="primary-btn cart-btn" id="view-cart-btn">
+                    <div class="cart-btn-content">
+                        <span id="cart-qty-badge">0</span>
+                        <span>Ver carrinho</span>
+                    </div>
+                    <span id="cart-total-footer">R$ 0,00</span>
+                </button>
+            </div>
+        </footer>
+
+        <?php include 'componentes/footer.php'; ?>
+
         <script>
             const API_BASE = 'https://api.digizap.com.br';
-            const STORE_SLUG = '<?php echo $slug; ?>';
         </script>
-        <script src="https://unpkg.com/lucide@latest"></script>
-        <script src="script.js?v=1.35"></script>
+        <script src="/cardapio/script.js?v=1.50"></script>
+        <script>lucide.createIcons();</script>
     </body>
+
     </html>
     <?php
-} catch (Exception $e) { die("Erro no sistema: " . $e->getMessage()); }
+} catch (Exception $e) {
+    die("Erro: " . $e->getMessage());
+}

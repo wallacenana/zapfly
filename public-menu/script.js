@@ -115,15 +115,22 @@ async function fetchPublicSettings() {
         const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
         if (!response.ok) throw new Error('Loja não encontrada');
         const data = await response.json();
-        console.log(data);
 
         state.publicSettings = {
             ...state.publicSettings,
             ...data
         };
-        
+
         state.products = data.products || [];
         state.availableSlots = data.availableSlots || [];
+
+        // Remove Skeletons e mostra o conteúdo real
+        const loader = document.getElementById('skeleton-loader');
+        if (loader) loader.remove();
+        const content = document.getElementById('actual-menu-content');
+        if (content) content.classList.remove('hidden');
+
+        checkStoreStatus();
 
         // Favicon
         if (data.faviconUrl) {
@@ -211,7 +218,6 @@ async function fetchPublicSettings() {
         }
 
         // Atualiza o título e nome na página
-        document.title = `${data.businessName} - Cardápio Digital`;
         const nameEl = document.getElementById('store-name');
         if (nameEl) nameEl.innerText = data.businessName;
 
@@ -368,7 +374,10 @@ async function fetchProducts() {
 }
 
 function renderMenu() {
-    renderPreviousOrders();
+    if (!state.products || state.products.length === 0) {
+        console.log('Mantendo menu do PHP (API retornou vazio)');
+        return; 
+    }
     const container = document.getElementById('menu-sections');
     if (!container) return;
 
@@ -546,12 +555,12 @@ function openItemDetail(productId) {
     state.currentQty = 1;
     state.currentVariation = null;
 
-    const modal = document.getElementById('item-modal');
+    const modal = document.getElementById('item-detail-modal');
     const body = document.getElementById('item-detail-body');
 
     // Inicia com Skeleton
     body.innerHTML = `
-        <button class="chevron-close-btn" onclick="closeWithAnimation('item-modal')"><i data-lucide="chevron-down"></i></button>
+        <button class="chevron-close-btn" onclick="closeWithAnimation('item-detail-modal')"><i data-lucide="chevron-down"></i></button>
         <div class="skeleton" style="width:100%; height:300px; border-radius:0;"></div>
         <div style="padding:20px;">
             <div class="skeleton" style="height:24px; width:70%; margin-bottom:10px;"></div>
@@ -560,7 +569,7 @@ function openItemDetail(productId) {
         </div>
     `;
 
-    modal.classList.remove('hidden', 'closing');
+    modal?.classList.remove('hidden', 'closing');
     lucide.createIcons();
 
     // Tracking: ViewContent (Meta) & view_item (GA4)
@@ -644,25 +653,28 @@ function selectVariation(name, price) {
 
 function updateDetailFooter() {
     const basePrice = state.currentVariation ? state.currentVariation.price : (state.currentItem?.price || 0);
-    document.getElementById('add-btn-price').innerText = `R$ ${(basePrice * state.currentQty).toFixed(2)}`;
-    document.getElementById('detail-qty').innerText = state.currentQty;
+    const priceEl = document.getElementById('add-btn-price');
+    if (priceEl) priceEl.innerText = `R$ ${(basePrice * state.currentQty).toFixed(2)}`;
+    
+    const qtyEl = document.getElementById('detail-qty');
+    if (qtyEl) qtyEl.innerText = state.currentQty;
 }
 
 function initEventListeners() {
-    document.getElementById('search-input').addEventListener('input', (e) => { state.searchQuery = e.target.value; renderMenu(); });
+    document.getElementById('search-input')?.addEventListener('input', (e) => { state.searchQuery = e.target.value; renderMenu(); });
     document.querySelectorAll('.cat-tab').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             state.activeTab = btn.dataset.tab;
             document.body.className = state.activeTab === 'order' ? 'theme-order' : '';
-            updateTheme(); // Muda as cores ao trocar de aba
+            updateTheme(); 
             renderMenu(); updateUI();
         });
     });
 
-    document.getElementById('qty-plus').addEventListener('click', () => { state.currentQty++; updateDetailFooter(); });
-    document.getElementById('qty-minus').addEventListener('click', () => { if (state.currentQty > 1) { state.currentQty--; updateDetailFooter(); } });
+    document.getElementById('qty-plus')?.addEventListener('click', () => { state.currentQty++; updateDetailFooter(); });
+    document.getElementById('qty-minus')?.addEventListener('click', () => { if (state.currentQty > 1) { state.currentQty--; updateDetailFooter(); } });
 
     const closeModal = () => {
         document.querySelectorAll('.modal').forEach(m => {
@@ -674,69 +686,74 @@ function initEventListeners() {
     document.querySelectorAll('.modal-overlay').forEach(ov => ov.addEventListener('click', closeModal));
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
-    document.getElementById('history-toggle-btn').addEventListener('click', () => {
-        document.getElementById('history-modal').classList.remove('hidden', 'closing');
-        renderPreviousOrders();
-    });
-
-    document.getElementById('add-to-cart-btn').addEventListener('click', addToCart);
-    document.getElementById('view-cart-btn').addEventListener('click', () => goToStep(1));
-    document.getElementById('next-step-btn').addEventListener('click', handleNextStep);
-    document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
-
-    // Listener para carregar horários disponíveis ao selecionar data
-    document.getElementById('order-date').addEventListener('change', (e) => {
-        const dateStr = e.target.value;
-        if (!dateStr) return;
-
-        const date = new Date(dateStr + 'T12:00:00');
-        const dayOfWeek = date.getDay();
-
-        const slots = state.availableSlots.filter(s => s.dayOfWeek === dayOfWeek);
-        const timeSelect = document.getElementById('order-time');
-
-        timeSelect.innerHTML = `<option value="">Horário</option>` + slots.map(s => `<option value="${s.startTime}">${s.startTime}</option>`).join('');
-    });
-
-    document.getElementById('user-name').value = state.userInfo.name || '';
-    document.getElementById('user-phone').value = state.userInfo.phone || '';
-    document.getElementById('user-address').value = state.userInfo.address || '';
-
-    const phoneInput = document.getElementById('user-phone');
-    phoneInput.addEventListener('input', (e) => {
-        e.target.value = maskPhone(e.target.value);
-        state.userInfo.phone = e.target.value;
-        localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
-    });
-
-    ['user-name', 'user-address'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('input', (e) => {
-                state.userInfo[id.split('-')[1]] = e.target.value;
-                localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
-            });
+    document.getElementById('history-toggle-btn')?.addEventListener('click', () => {
+        const modal = document.getElementById('history-modal');
+        if (modal) {
+            modal.classList.remove('hidden', 'closing');
+            renderPreviousOrders();
         }
     });
+
+    document.getElementById('add-to-cart-btn')?.addEventListener('click', addToCart);
+    document.getElementById('view-cart-btn')?.addEventListener('click', () => goToStep(1));
+    document.getElementById('next-step-btn')?.addEventListener('click', handleNextStep);
+    document.getElementById('place-order-btn')?.addEventListener('click', handlePlaceOrder);
+
+    document.getElementById('order-date')?.addEventListener('change', (e) => {
+        const dateStr = e.target.value;
+        if (!dateStr) return;
+        const date = new Date(dateStr + 'T12:00:00');
+        const dayOfWeek = date.getDay();
+        const slots = state.availableSlots.filter(s => s.dayOfWeek === dayOfWeek);
+        const timeSelect = document.getElementById('order-time');
+        if (timeSelect) {
+            timeSelect.innerHTML = `<option value="">Horário</option>` + slots.map(s => `<option value="${s.startTime}">${s.startTime}</option>`).join('');
+        }
+    });
+
+    const userName = document.getElementById('user-name');
+    if (userName) userName.value = state.userInfo.name || '';
+    
+    const userPhone = document.getElementById('user-phone');
+    if (userPhone) {
+        userPhone.value = state.userInfo.phone || '';
+        userPhone.addEventListener('input', (e) => {
+            e.target.value = maskPhone(e.target.value);
+            state.userInfo.phone = e.target.value;
+            localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
+        });
+    }
+
+    const userAddress = document.getElementById('user-address');
+    if (userAddress) {
+        userAddress.value = state.userInfo.address || '';
+        userAddress.addEventListener('input', (e) => {
+            state.userInfo.address = e.target.value;
+            localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
+        });
+    }
 }
 
 function goToStep(step) {
     state.currentStep = step;
     document.querySelectorAll('.checkout-step').forEach((el, idx) => el.classList.toggle('hidden', idx + 1 !== step));
     const modal = document.getElementById('checkout-modal');
-    modal.classList.remove('hidden', 'closing');
-    document.getElementById('checkout-step-title').innerText = ["Ver sacola", "Entrega & Agendamento", "Confirmar Pedido"][step - 1];
+    if (modal) {
+        modal.classList.remove('hidden', 'closing');
+        const titleEl = document.getElementById('checkout-step-title');
+        if (titleEl) titleEl.innerText = ["Ver sacola", "Entrega & Agendamento", "Confirmar Pedido"][step - 1];
 
-    const isLast = step === 3;
-    document.getElementById('next-step-btn').classList.toggle('hidden', isLast);
-    document.getElementById('place-order-btn').classList.toggle('hidden', !isLast);
+        const isLast = step === 3;
+        document.getElementById('next-step-btn')?.classList.toggle('hidden', isLast);
+        document.getElementById('place-order-btn')?.classList.toggle('hidden', !isLast);
 
-    if (step === 1) renderStep1();
-    if (step === 2) renderStep2();
-    if (step === 3) updateStep3Summary();
+        if (step === 1) renderStep1();
+        if (step === 2) renderStep2();
+        if (step === 3) updateStep3Summary();
+    }
 }
 
-document.getElementById('checkout-back-btn').addEventListener('click', () => {
+document.getElementById('checkout-back-btn')?.addEventListener('click', () => {
     if (state.currentStep > 1) goToStep(state.currentStep - 1);
     else closeWithAnimation('checkout-modal');
 });
