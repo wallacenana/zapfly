@@ -2526,10 +2526,7 @@ app.get('/:slug?', async (req, res) => {
                 }
             });
 
-            // Injeta o conteúdo no placeholder do menu
             html = html.replace('<div id="menu-sections">', `<div id="menu-sections">${menuHtml}`);
-
-            // Cache Control para Cloudflare
             res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=60');
 
             const title = settings.businessName ? `${settings.businessName} - Cardápio Digital` : 'Cardápio Digital';
@@ -2547,11 +2544,8 @@ app.get('/:slug?', async (req, res) => {
             `;
 
             let trackingTags = '';
-            // ... (mantém o resto da lógica de trackingTags)
-            
             if (settings.googleAnalyticsId) {
                 trackingTags += `
-                <!-- Google Analytics -->
                 <script async src="https://www.googletagmanager.com/gtag/js?id=${settings.googleAnalyticsId}"></script>
                 <script>
                   window.dataLayer = window.dataLayer || [];
@@ -2560,10 +2554,8 @@ app.get('/:slug?', async (req, res) => {
                   gtag('config', '${settings.googleAnalyticsId}');
                 </script>`;
             }
-
             if (settings.microsoftClarityId) {
                 trackingTags += `
-                <!-- Microsoft Clarity -->
                 <script type="text/javascript">
                     (function(c,l,a,r,i,t,y){
                         c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
@@ -2572,10 +2564,8 @@ app.get('/:slug?', async (req, res) => {
                     })(window, document, "clarity", "script", "${settings.microsoftClarityId}");
                 </script>`;
             }
-
             if (settings.pixelId) {
                 trackingTags += `
-                <!-- Meta Pixel Code -->
                 <script>
                 !function(f,b,e,v,n,t,s)
                 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -2596,9 +2586,9 @@ app.get('/:slug?', async (req, res) => {
             html = html.replace('<head>', `<head>\n${metaTags}\n${trackingTags}`);
             return res.send(html);
         }
-        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+        res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
     } catch (e) {
         console.error(e);
-        res.sendFile(path.join(__dirname, 'public', 'index.html'));
+        res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
     }
 });
