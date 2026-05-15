@@ -9,6 +9,31 @@
     <meta property="og:title" content="Cardápio Digital DigiZap">
     <meta property="og:description" content="Faça seu pedido online no nosso cardápio digital.">
     <meta property="og:image" content="https://files.digizap.com.br/uploads/2026/05/6a036241d7ea3_1778606657.png">
+    <style>
+        /* Skeleton Animation */
+        @keyframes skeleton-loading {
+            0% { background-color: rgba(255,255,255,0.05); }
+            50% { background-color: rgba(255,255,255,0.1); }
+            100% { background-color: rgba(255,255,255,0.05); }
+        }
+        .skeleton {
+            animation: skeleton-loading 1.5s infinite ease-in-out;
+            border-radius: 8px;
+        }
+        .skeleton-card {
+            display: flex;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 15px;
+            margin-bottom: 15px;
+        }
+        .skeleton-img { width: 90px; height: 90px; flex-shrink: 0; }
+        .skeleton-text { flex: 1; display: flex; flexDirection: column; gap: 8px; }
+        .skeleton-title { height: 18px; width: 60%; }
+        .skeleton-desc { height: 12px; width: 90%; }
+        .skeleton-price { height: 15px; width: 30%; margin-top: auto; }
+    </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
@@ -162,7 +187,7 @@
         const pathParts = window.location.pathname.split('/').filter(p => p);
         const API_BASE = 'https://api.digizap.com.br';
     </script>
-    <script src="script.js?v=1.13"></script>
+    <script src="script.js?v=1.18"></script>
     <script>lucide.createIcons();</script>
 </body>
 

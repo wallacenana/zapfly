@@ -132,7 +132,8 @@ const Settings = () => {
     const formData = new FormData();
     formData.append('name', uploadName);
     formData.append('file', fileInputRef.current.files[0]);
-    formData.append('secret', 'BlinkMediaSecret123!'); // Chave secreta do seu PHP
+    formData.append('secret', 'BlinkMediaSecret123!');
+    formData.append('size', '800'); // Tamanho para marketing assets 
 
     try {
       // 1. Sobe o arquivo para o bucket PHP

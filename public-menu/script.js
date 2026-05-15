@@ -118,7 +118,6 @@ async function fetchPublicSettings() {
         }
 
         updateTheme(); // Aplica o tema inicial
-        console.log(data)
         // SEO Injection Dinâmico (Lido pelo Google JS Engine)
         const titleText = data.businessName ? `${data.businessName} | Cardápio Digital DigiZap` : 'Cardápio Digital DigiZap';
         document.title = titleText;
@@ -339,8 +338,8 @@ async function fetchProducts() {
     try {
         const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
         const data = await response.json();
-        state.products = data.products;
-        state.categories = []; // Podemos buscar categorias se o endpoint retornar ou gerar do cardápio
+        state.products = data.products || [];
+        state.categories = data.categories || [];
         state.loading = false;
 
         // History Section
@@ -356,6 +355,27 @@ function renderMenu() {
     renderPreviousOrders();
     const container = document.getElementById('menu-sections');
     if (!container) return;
+
+    if (state.loading) {
+        container.innerHTML = `
+            <div class="menu-section">
+                <h2 class="section-title"><div class="skeleton" style="height:24px; width:150px;"></div></h2>
+                ${Array(4).fill().map(() => `
+                    <div class="skeleton-card">
+                        <div class="skeleton-text">
+                            <div class="skeleton skeleton-title"></div>
+                            <div class="skeleton skeleton-desc"></div>
+                            <div class="skeleton skeleton-desc" style="width:70%"></div>
+                            <div class="skeleton skeleton-price"></div>
+                        </div>
+                        <div class="skeleton skeleton-img"></div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        return;
+    }
+
     const query = state.searchQuery.toLowerCase();
 
     const filtered = state.products.filter(p => {
@@ -396,19 +416,14 @@ function renderMenu() {
         grouped[cat].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     });
 
-    // Usar a ordem que já vem pré-ordenada da API (Prisma faz orderBy: { order: 'asc' })
-    // Em vez de tentar re-ordenar pelo campo numérico (que pode estar zerado), 
-    // usamos a posição do array state.categories como fonte da verdade.
+    // Ordenar pela propriedade 'order' que já vem do banco de dados
     const sortedCategories = [];
-
-    // 1. Adiciona na ordem exata que a API devolveu
-    if (state.categories && state.categories.length > 0) {
-        state.categories.forEach(c => {
-            if (grouped[c.name]) sortedCategories.push(c.name);
-        });
-    }
-
-    // 2. Adiciona categorias que estejam no grouped mas não no state.categories (ex: legado 'Geral')
+    const orderedCats = [...(state.categories || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
+    console.log(orderedCats)
+    orderedCats.forEach(c => {
+        if (grouped[c.name]) sortedCategories.push(c.name);
+    });
+    // Adiciona categorias legadas ('Geral') que não existem em state.categories
     Object.keys(grouped).forEach(catName => {
         if (!sortedCategories.includes(catName)) sortedCategories.push(catName);
     });

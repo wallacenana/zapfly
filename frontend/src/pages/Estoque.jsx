@@ -188,8 +188,9 @@ const Estoque = () => {
       const formData = new FormData();
       formData.append('file', compressedFile);
       formData.append('secret', 'BlinkMediaSecret123!');
+      formData.append('size', '500'); // Tamanho ideal para produtos (carrossel + listagem)
       
-      const res = await axios.post('https://files.blinkvertex.com/upload.php', formData);
+      const res = await axios.post('https://files.digizap.com.br/upload.php', formData);
       Swal.close();
       return res.data.url;
     } catch (err) {

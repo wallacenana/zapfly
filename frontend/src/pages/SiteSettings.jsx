@@ -78,7 +78,9 @@ const SiteSettings = () => {
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('secret', 'BlinkMediaSecret123!'); // Chave exigida pelo seu PHP
+        formData.append('secret', 'BlinkMediaSecret123!'); 
+        // Envia 200px para a logo para ter nitidez em telas Retina, mas ser muito leve
+        formData.append('size', type === 'logo' ? '200' : '64'); 
 
         const tId = toast.loading(`Enviando ${type === 'logo' ? 'Logo' : 'Ícone'}...`);
         try {
