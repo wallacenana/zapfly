@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DigiZap | Transforme seu WhatsApp em uma Máquina de Vendas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #ff4d6d;
+            --primary-dark: #c9184a;
+            --dark: #121212;
+            --gray: #1e1e1e;
+            --text: #ffffff;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            background-color: var(--dark); 
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .gradient-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 10% 20%, rgba(255, 77, 109, 0.15) 0%, rgba(0,0,0,0) 50%),
+                        radial-gradient(circle at 90% 80%, rgba(255, 77, 109, 0.1) 0%, rgba(0,0,0,0) 50%);
+            z-index: -1;
+        }
+
+        header {
+            padding: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-login {
+            padding: 0.8rem 1.5rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: 0.3s;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-login:hover { background: rgba(255,255,255,0.1); }
+
+        .hero {
+            max-width: 1200px;
+            margin: 5rem auto;
+            padding: 0 2rem;
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: clamp(2.5rem, 8vw, 4.5rem);
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+        }
+
+        .hero h1 span {
+            background: linear-gradient(90deg, #ff4d6d, #ff8fa3);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            color: #aaa;
+            max-width: 700px;
+            margin: 0 auto 2.5rem;
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            padding: 1rem 2.5rem;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1.1rem;
+            transition: 0.3s;
+            box-shadow: 0 10px 30px rgba(255, 77, 109, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            background: var(--primary-dark);
+            box-shadow: 0 15px 40px rgba(255, 77, 109, 0.5);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 5rem auto;
+            padding: 0 2rem;
+        }
+
+        .feature-card {
+            background: var(--gray);
+            padding: 2.5rem;
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--primary);
+        }
+
+        .feature-card i {
+            color: var(--primary);
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card p {
+            color: #888;
+        }
+
+        footer {
+            padding: 4rem 2rem;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="gradient-bg"></div>
+
+    <header>
+        <div class="logo">
+            <i data-lucide="zap"></i> DigiZap
+        </div>
+        <a href="/login" class="btn-login">Acessar Painel</a>
+    </header>
+
+    <section class="hero">
+        <h1>Venda mais pelo <span>WhatsApp</span> de forma automática.</h1>
+        <p>Cardápio Digital, Automação de Pedidos e Gestão de Estoque em uma única plataforma. Otimize sua operação e fature mais hoje mesmo.</p>
+        <div class="cta-group">
+            <a href="/register" class="btn-primary">Criar meu Cardápio Grátis</a>
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="feature-card">
+            <i data-lucide="layout"></i>
+            <h3>Cardápio Digital Premium</h3>
+            <p>Design moderno e rápido para seus clientes pedirem em segundos, sem precisar baixar aplicativo.</p>
+        </div>
+        <div class="feature-card">
+            <i data-lucide="bot"></i>
+            <h3>Automação Inteligente</h3>
+            <p>Nossa IA atende seus clientes no WhatsApp, tira dúvidas e fecha pedidos sozinha.</p>
+        </div>
+        <div class="feature-card">
+            <i data-lucide="bar-chart-3"></i>
+            <h3>Gestão Completa</h3>
+            <p>Controle de estoque, relatórios de vendas e gestão de clientes em um painel intuitivo.</p>
+        </div>
+    </section>
+
+    <footer>
+        &copy; 2026 DigiZap Technology. Todos os direitos reservados.
+    </footer>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

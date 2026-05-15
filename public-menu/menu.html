@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cardápio Digital DigiZap</title>
+    <meta name="description" content="Faça seu pedido online no nosso cardápio digital.">
+    <meta property="og:title" content="Cardápio Digital DigiZap">
+    <meta property="og:description" content="Faça seu pedido online no nosso cardápio digital.">
+    <meta property="og:image" content="https://files.digizap.com.br/uploads/2026/05/6a036241d7ea3_1778606657.png">
+    <style>
+        /* Skeleton Animation */
+        @keyframes skeleton-loading {
+            0% {
+                background-color: rgba(255, 255, 255, 0.05);
+            }
+
+            50% {
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+
+            100% {
+                background-color: rgba(255, 255, 255, 0.05);
+            }
+        }
+
+        .skeleton {
+            animation: skeleton-loading 1.5s infinite ease-in-out;
+            border-radius: 8px;
+        }
+
+        .skeleton-card {
+            display: flex;
+            gap: 15px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 15px;
+            margin-bottom: 15px;
+        }
+
+        .skeleton-img {
+            width: 90px;
+            height: 90px;
+            flex-shrink: 0;
+        }
+
+        .skeleton-text {
+            flex: 1;
+            display: flex;
+            flexDirection: column;
+            gap: 8px;
+        }
+
+        .skeleton-title {
+            height: 18px;
+            width: 60%;
+        }
+
+        .skeleton-desc {
+            height: 12px;
+            width: 90%;
+        }
+
+        .skeleton-price {
+            height: 15px;
+            width: 30%;
+            margin-top: auto;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=1.5">
+    <link rel="icon" type="image/png" href="https://files.digizap.com.br/uploads/2026/05/6a036241d7ea3_1778606657.png">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body>
+    <div id="app">
+        <header class="top-nav">
+            <div class="container nav-wrapper">
+                <div class="store-info">
+                    <div class="store-logo">
+                        <img id="store-logo-img" alt="Logo da Loja" style="display: none; width: 100%; height: 100%; object-fit: contain;">
+                        <div class="logo-placeholder"><i data-lucide="store"></i></div>
+                    </div>
+                    <div class="store-details">
+                        <h1 id="store-name">Carregando...</h1>
+                        <div class="store-status">
+                            <span class="status-badge" id="store-status-badge">...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="nav-actions">
+                    <button id="history-toggle-btn" class="icon-btn" aria-label="Ver Histórico de Pedidos"><i data-lucide="history"></i></button>
+                </div>
+            </div>
+        </header>
+
+        <nav class="category-tabs">
+            <div class="container tabs-scroll">
+                <button class="cat-tab active" data-tab="delivery">Entrega</button>
+                <button class="cat-tab" data-tab="order">Encomendas</button>
+            </div>
+        </nav>
+
+        <div class="container search-container">
+            <div class="search-box">
+                <i data-lucide="search"></i>
+                <input type="text" id="search-input" placeholder="Buscar no cardápio">
+            </div>
+        </div>
+
+        <div id="category-nav" class="container category-nav hidden">
+            <div id="category-nav-scroll" class="category-nav-scroll"></div>
+        </div>
+
+        <main class="container main-menu">
+            <div id="menu-sections"></div>
+        </main>
+
+        <footer id="cart-footer" class="cart-footer hidden">
+            <div class="container">
+                <button id="view-cart-btn" class="primary-btn cart-btn">
+                    <div class="cart-btn-content">
+                        <span id="cart-qty-badge">0</span>
+                        <strong>Ver sacola</strong>
+                    </div>
+                    <span id="cart-total-footer">R$ 0,00</span>
+                </button>
+            </div>
+        </footer>
+
+        <!-- Modais -->
+        <div id="item-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content item-detail-content">
+                <button class="close-modal-btn"><i data-lucide="x"></i></button>
+                <div id="item-detail-body"></div>
+                <div class="modal-footer-sticky">
+                    <div class="qty-selector">
+                        <button class="qty-btn" id="qty-minus"><i data-lucide="minus"></i></button>
+                        <span id="detail-qty">1</span>
+                        <button class="qty-btn" id="qty-plus"><i data-lucide="plus"></i></button>
+                    </div>
+                    <button id="add-to-cart-btn" class="primary-btn">Adicionar <span id="add-btn-price"></span></button>
+                </div>
+            </div>
+        </div>
+
+        <div id="checkout-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content checkout-content">
+                <div class="modal-header">
+                    <button id="checkout-back-btn" class="back-btn"><i data-lucide="chevron-left"></i></button>
+                    <h2 id="checkout-step-title">Finalizar Pedido</h2>
+                    <button class="close-modal-btn"><i data-lucide="x"></i></button>
+                </div>
+
+                <div class="modal-scroll-body">
+                    <!-- Step 1: Cart -->
+                    <div class="checkout-step" id="step-1">
+                        <div id="checkout-items-list" class="checkout-items"></div>
+                    </div>
+
+                    <!-- Step 2: Details -->
+                    <div class="checkout-step hidden" id="step-2">
+                        <div class="form-group">
+                            <label>Nome Completo</label>
+                            <input type="text" id="user-name" class="ifood-input" placeholder="Seu nome">
+                        </div>
+                        <div class="form-group">
+                            <label>WhatsApp</label>
+                            <input type="tel" id="user-phone" class="ifood-input" placeholder="(00) 00000-0000">
+                        </div>
+                        <div class="form-group">
+                            <label>Endereço de Entrega</label>
+                            <textarea id="user-address" class="ifood-input"
+                                placeholder="Rua, número, bairro..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Data</label>
+                            <input type="date" id="order-date" class="ifood-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Horário</label>
+                            <select id="order-time" class="ifood-input">
+                                <option value="">Selecione uma data primeiro</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Summary -->
+                    <div class="checkout-step hidden" id="step-3">
+                        <div id="order-summary-content"></div>
+                    </div>
+                </div>
+
+                <div class="modal-footer-sticky">
+                    <button id="next-step-btn" class="primary-btn">Próximo</button>
+                    <button id="place-order-btn" class="primary-btn hidden">Confirmar Pedido</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="history-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="history-modal-header">
+                    <h3>Meus Pedidos</h3>
+                    <button class="close-modal-btn"><i data-lucide="x"></i></button>
+                </div>
+                <div id="history-list" class="history-modal-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const pathParts = window.location.pathname.split('/').filter(p => p);
+        const API_BASE = 'https://api.digizap.com.br';
+    </script>
+    <script src="script.js?v=1.19"></script>
+    <script>lucide.createIcons();</script>
+</body>
+
+</html>

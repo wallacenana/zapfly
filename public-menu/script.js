@@ -84,17 +84,7 @@ function loadCart() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Se não tiver slug, é a HOME
-    if (!STORE_SLUG) {
-        document.body.innerHTML = `
-            <div style="display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif; background:#f0f0f0;">
-                <h1 style="color:#d32f2f;">essa é a desgraça da merda da home</h1>
-            </div>
-        `;
-        return;
-    }
-
-    // Se tiver slug, carrega o cardápio
+    // Carrega o cardápio (o servidor já garantiu que temos um slug válido aqui)
     loadCart();
     lucide.createIcons();
 
@@ -482,7 +472,7 @@ function renderFeaturedCard(product) {
     return `
         <div class="featured-card" onclick="openItemDetail('${product.id}')">
             <div class="featured-img-wrapper">
-                ${images.length > 0 ? `<img src="${getImg(images[0], 'medium')}" loading="lazy" decoding="async">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
+                ${images.length > 0 ? `<img src="${getImg(images[0], 'medium')}" alt="${product.name}" loading="lazy" decoding="async">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
             </div>
             <div class="featured-info">
                 <h3>${product.name}</h3>
@@ -533,7 +523,7 @@ function renderProductCard(product) {
                 <p>${product.description || ''}</p>
                 <div class="product-price">${priceText}</div>
             </div>
-            ${parseImages(product.image).length > 0 ? `<img src="${getImg(parseImages(product.image)[0], 'thumb')}" class="product-img" loading="lazy" decoding="async">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
+            ${parseImages(product.image).length > 0 ? `<img src="${getImg(parseImages(product.image)[0], 'thumb')}" alt="${product.name}" class="product-img" loading="lazy" decoding="async">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
         </div>
     `;
 }
@@ -585,15 +575,15 @@ function openItemDetail(productId) {
         const images = parseImages(item.image);
         
         body.innerHTML = `
-            <button class="chevron-close-btn" onclick="closeWithAnimation('item-modal')"><i data-lucide="chevron-down"></i></button>
+            <button class="chevron-close-btn" onclick="closeWithAnimation('item-modal')" aria-label="Fechar Detalhes"><i data-lucide="chevron-down"></i></button>
             ${images.length > 0 ? `
                 <div class="carousel-container">
                     <div class="carousel-track" style="transform: translateX(0%)">
-                        ${images.map(img => `<div class="carousel-slide"><img src="${getImg(img, 'medium')}"></div>`).join('')}
+                        ${images.map(img => `<div class="carousel-slide"><img src="${getImg(img, 'medium')}" alt="${item.name}"></div>`).join('')}
                     </div>
                     ${images.length > 1 ? `
-                        <button class="carousel-btn carousel-prev" onclick="moveCarousel(-1)"><i data-lucide="chevron-left"></i></button>
-                        <button class="carousel-btn carousel-prev" onclick="moveCarousel(1)"><i data-lucide="chevron-right"></i></button>
+                        <button class="carousel-btn carousel-prev" onclick="moveCarousel(-1)" aria-label="Imagem Anterior"><i data-lucide="chevron-left"></i></button>
+                        <button class="carousel-btn carousel-next" onclick="moveCarousel(1)" aria-label="Próxima Imagem"><i data-lucide="chevron-right"></i></button>
                         <div class="carousel-dots">
                             ${images.map((_, i) => `<div class="carousel-dot ${i === 0 ? 'active' : ''}"></div>`).join('')}
                         </div>

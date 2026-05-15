@@ -96,6 +96,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/auth', require('./routes/auth'));
 
+// --- SEO: Robots na Raiz ---
+app.get('/robots.txt', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public-menu', 'robots.txt'));
+});
+
+
 // 笏€笏€笏€ CONFIGURAﾃﾃ髭S DO SITE (BRANDING) 笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€
 app.get('/settings', authenticate, async (req, res) => {
     try {
@@ -2463,10 +2469,14 @@ app.delete('/flows/:id', async (req, res) => {
 
 
 // --- CATCH-ALL PARA SLUGS E HOME (FINAL DA FILA) ---------------------------
-app.get('/:slug', async (req, res) => {
+app.get('/:slug?', async (req, res) => {
     try {
-        let { slug } = req.params;
-        if (!slug) return res.sendFile(path.join(__dirname, 'public', 'index.html'));
+        let slug = req.params.slug;
+        
+        // Se não tem slug ou é expressamente 'home', serve a PV (Página de Vendas)
+        if (!slug || slug === '' || slug.toLowerCase() === 'home') {
+            return res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
+        }
 
         // Lista exaustiva de rotas do sistema para não confundir com slugs
         const reserved = ['api', 'orders', 'auth', 'menu-assets', 'assets', 'uploads', 'favicon.ico', 'robots.txt', 'instances', 'config', 'flows', 'chats', 'messages', 'dashboard', 'settings', 'connections', 'login', 'register'];
@@ -2476,17 +2486,50 @@ app.get('/:slug', async (req, res) => {
 
         const user = await prisma.user.findUnique({ 
             where: { slug: slug.toLowerCase() },
-            include: { setting: true }
+            include: { 
+                settings: true,
+                categories: { orderBy: { order: 'asc' } },
+                products: { where: { active: true }, orderBy: { displayOrder: 'asc' } }
+            }
         });
         
         if (user) {
-            const htmlPath = path.join(__dirname, 'public-menu', 'index.html');
+            const htmlPath = path.join(__dirname, 'public-menu', 'menu.html');
             let html = fs.readFileSync(htmlPath, 'utf8');
-            const settings = user.setting || {};
+            const settings = user.settings || {};
+
+            // --- SSR: Renderização do Conteúdo no Servidor ---
+            let menuHtml = '';
+            const categories = user.categories || [];
+            const products = user.products || [];
+
+            categories.forEach(cat => {
+                const catProducts = products.filter(p => p.categoryId === cat.id || p.category === cat.name);
+                if (catProducts.length > 0) {
+                    menuHtml += `<section class="menu-section">
+                        <h2 class="section-title">${cat.name}</h2>
+                        <div class="products-grid">`;
+                    
+                    catProducts.forEach(p => {
+                        const price = parseFloat(p.price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                        menuHtml += `
+                            <div class="product-card">
+                                <div class="product-info">
+                                    <h3>${p.name}</h3>
+                                    <p>${p.description || ''}</p>
+                                    <div class="product-price">${price}</div>
+                                </div>
+                            </div>`;
+                    });
+                    
+                    menuHtml += `</div></section>`;
+                }
+            });
+
+            // Injeta o conteúdo no placeholder do menu
+            html = html.replace('<div id="menu-sections">', `<div id="menu-sections">${menuHtml}`);
 
             // Cache Control para Cloudflare
-            // s-maxage=120: Cloudflare guarda no Edge por 2 min
-            // stale-while-revalidate=60: Entrega a versão em cache mas recarrega no fundo
             res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=60');
 
             const title = settings.businessName ? `${settings.businessName} - Cardápio Digital` : 'Cardápio Digital';
@@ -2504,6 +2547,7 @@ app.get('/:slug', async (req, res) => {
             `;
 
             let trackingTags = '';
+            // ... (mantém o resto da lógica de trackingTags)
             
             if (settings.googleAnalyticsId) {
                 trackingTags += `
