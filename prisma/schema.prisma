@@ -339,3 +339,17 @@ model MarketingAsset {
 
   @@map("marketing_asset")
 }
+
+model AvailableSlot {
+  id        String   @id @default(uuid())
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  maxOrders Int      @default(10)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("available_slot")
+}

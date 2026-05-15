@@ -9,6 +9,17 @@ const isHome = (window.location.hostname === BASE_DOMAIN || window.location.host
 const pathSegments = window.location.pathname.split('/').filter(p => p);
 const STORE_SLUG = isHome ? '' : (pathSegments[0] || '');
 
+// Função auxiliar para alertas bonitos
+const showAlert = (title, text, icon = 'warning') => {
+    Swal.fire({
+        title: title,
+        text: text,
+        icon: icon,
+        confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#ff4d6d',
+        confirmButtonText: 'Entendi'
+    });
+};
+
 // Estado da Aplicação
 let state = {
     products: [],
@@ -53,7 +64,7 @@ function getImg(url, size = 'full') {
     if (!url.includes('files.digizap.com.br')) return url; // Só funciona para o nosso servidor
     
     if (size === 'thumb') return url.replace('.webp', '_90.webp');
-    if (size === 'medium') return url.replace('.webp', '_400.webp');
+    if (size === 'medium') return url.replace('.webp', '_550.webp');
     return url;
 }
 
@@ -202,8 +213,7 @@ async function fetchPublicSettings() {
 
         const statusEl = document.getElementById('store-status-badge');
         if (statusEl) {
-            statusEl.innerText = '● Aberto agora';
-            statusEl.className = 'status-badge open';
+            checkStoreStatus();
         }
     } catch (err) {
         console.error('Erro ao carregar configurações:', err);
@@ -230,12 +240,10 @@ function checkStoreStatus() {
         return time >= start && time <= end;
     });
 
-    const statusEl = document.querySelector('.store-status');
+    const statusEl = document.getElementById('store-status-badge');
     if (statusEl) {
-        statusEl.innerHTML = state.isOpen
-            ? `<span class="status-dot online"></span> Aberto agora`
-            : `<span class="status-dot offline"></span> Fechado para entrega (Apenas agendamento)`;
-        statusEl.classList.toggle('closed', !state.isOpen);
+        statusEl.innerText = state.isOpen ? '● Aberto agora' : '● Fechado (Apenas encomendas)';
+        statusEl.className = state.isOpen ? 'status-badge open' : 'status-badge closed';
     }
 }
 
@@ -795,12 +803,12 @@ function renderStep2() {
 
 function handleNextStep() {
     if (state.currentStep === 1) {
-        if (!state.userInfo.name || !state.userInfo.phone || state.userInfo.phone.length < 14) return alert('Preencha seu nome e um WhatsApp válido.');
-        if (state.activeTab === 'delivery' && !state.isOpen) return alert('Estamos fechados para pronta entrega no momento. Por favor, utilize a aba de Encomendas para agendar seu pedido.');
+        if (!state.userInfo.name || !state.userInfo.phone || state.userInfo.phone.length < 14) return showAlert('Ops!', 'Preencha seu nome e um WhatsApp válido.');
+        if (state.activeTab === 'delivery' && !state.isOpen) return showAlert('Loja Fechada', 'Estamos fechados para pronta entrega no momento. Por favor, utilize a aba de Encomendas para agendar seu pedido.');
         goToStep(2);
     } else if (state.currentStep === 2) {
-        if (state.activeTab === 'delivery' && !state.userInfo.address) return alert('Selecione seu endereço.');
-        if (state.activeTab === 'order' && (!document.getElementById('order-date').value || !document.getElementById('order-time').value)) return alert('Escolha data e hora.');
+        if (state.activeTab === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
+        if (state.activeTab === 'order' && (!document.getElementById('order-date').value || !document.getElementById('order-time').value)) return showAlert('Horário Ausente', 'Escolha uma data e um horário para sua encomenda.');
         goToStep(3);
     }
 }
@@ -821,10 +829,12 @@ function updateStep3Summary() {
 
 function addToCart() {
     const item = state.currentItem;
-    if (state.activeTab === 'delivery' && !state.isOpen) return alert('Estamos fechados para pronta entrega no momento. Por favor, utilize a aba de Encomendas para agendar seu pedido.');
+    if (state.activeTab === 'delivery' && !state.isOpen) {
+        return showAlert('Loja Fechada', 'Estamos fechados para pronta entrega no momento. Utilize a aba de Encomendas para agendar!');
+    }
     const variation = state.currentVariation;
     const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
-    if (variations.length > 0 && !variation) return alert('Por favor, selecione uma opção.');
+    if (variations.length > 0 && !variation) return showAlert('Quase lá...', 'Por favor, selecione uma opção para continuar.');
     const itemKey = variation ? `${item.id}-${variation.name}` : item.id;
     let cart = getActiveCart();
     const existing = cart.find(c => c.itemKey === itemKey);
@@ -920,7 +930,7 @@ async function handlePlaceOrder() {
             throw new Error(data.error);
         }
     } catch (err) {
-        alert('Erro: ' + err.message);
+        showAlert('Erro no Pedido', err.message, 'error');
         btn.disabled = false;
         btn.innerHTML = 'Fazer pedido';
     }
@@ -992,7 +1002,7 @@ function reorderItem(orderId) {
         closeWithAnimation('history-modal');
         goToStep(1);
     } else {
-        alert('Este produto não está mais disponível no cardápio.');
+        showAlert('Produto Indisponível', 'Este produto não está mais disponível no cardápio no momento.', 'error');
     }
 }
 

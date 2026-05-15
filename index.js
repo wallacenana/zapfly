@@ -116,9 +116,9 @@ app.get('/settings', authenticate, async (req, res) => {
 
 app.post('/settings', authenticate, async (req, res) => {
     try {
-        const { 
-            businessName, logoUrl, faviconUrl, 
-            accentColor, buttonColor, 
+        const {
+            businessName, logoUrl, faviconUrl,
+            accentColor, buttonColor,
             accentColorOrders, buttonColorOrders,
             buttonTextColor, backgroundColor, textColor,
             seoDescription, pixelId, googleAnalyticsId, microsoftClarityId
@@ -153,7 +153,7 @@ app.post('/settings', authenticate, async (req, res) => {
                 data: { ...data, userId: req.user.id }
             });
         }
-        
+
         console.log('[DEBUG] Configurações salvas com sucesso!');
         res.json(settings);
     } catch (err) {
@@ -377,7 +377,7 @@ app.get('/marketing-assets', authenticate, async (req, res) => {
 app.post('/marketing-assets', authenticate, uploadMarketing.single('file'), async (req, res) => {
     try {
         const { name, url } = req.body;
-        
+
         // Se o frontend já mandou a URL do bucket PHP, usamos ela. 
         // Caso contrário, usamos o domínio de arquivos correto.
         const finalUrl = url || (req.file ? `https://files.digizap.com.br/marketing/${req.file.filename}` : null);
@@ -1880,21 +1880,24 @@ app.get('/config/slots', authenticate, async (req, res) => {
 
 app.post('/config/slots', authenticate, async (req, res) => {
     try {
-        const { slots } = req.body; // Array de { dayOfWeek, startTime, endTime }
+        const { slots } = req.body; 
 
-        // Limpa slots atuais e recria
+        if (!Array.isArray(slots)) return res.status(400).json({ error: 'Slots deve ser um array.' });
+        const validSlots = slots.filter(s => s.startTime && s.endTime).map(s => ({
+            userId: req.user.id,
+            dayOfWeek: parseInt(s.dayOfWeek),
+            startTime: s.startTime,
+            endTime: s.endTime,
+            maxOrders: 10
+        }));
         await prisma.availableSlot.deleteMany({ where: { userId: req.user.id } });
-        const created = await prisma.availableSlot.createMany({
-            data: slots.map(s => ({
-                userId: req.user.id,
-                dayOfWeek: parseInt(s.dayOfWeek),
-                startTime: s.startTime,
-                endTime: s.endTime,
-                maxOrders: 10
-            }))
-        });
-        res.json(created);
+        if (validSlots.length > 0) {
+            const created = await prisma.availableSlot.createMany({ data: validSlots });
+            return res.json(created);
+        }
+        res.json({ count: 0 });
     } catch (err) {
+        console.error('[Slots Error]:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -2472,7 +2475,7 @@ app.delete('/flows/:id', async (req, res) => {
 app.get('/:slug?', async (req, res) => {
     try {
         let slug = req.params.slug;
-        
+
         // Se não tem slug ou é expressamente 'home', serve a PV (Página de Vendas)
         if (!slug || slug === '' || slug.toLowerCase() === 'home') {
             return res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
@@ -2484,15 +2487,15 @@ app.get('/:slug?', async (req, res) => {
             return res.status(404).send('Not Found');
         }
 
-        const user = await prisma.user.findUnique({ 
+        const user = await prisma.user.findUnique({
             where: { slug: slug.toLowerCase() },
-            include: { 
+            include: {
                 settings: true,
                 categories: { orderBy: { order: 'asc' } },
                 products: { where: { active: true }, orderBy: { displayOrder: 'asc' } }
             }
         });
-        
+
         if (user) {
             const htmlPath = path.join(__dirname, 'public-menu', 'menu.html');
             let html = fs.readFileSync(htmlPath, 'utf8');
@@ -2509,7 +2512,7 @@ app.get('/:slug?', async (req, res) => {
                     menuHtml += `<section class="menu-section">
                         <h2 class="section-title">${cat.name}</h2>
                         <div class="products-grid">`;
-                    
+
                     catProducts.forEach(p => {
                         const price = parseFloat(p.price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
                         menuHtml += `
@@ -2521,7 +2524,7 @@ app.get('/:slug?', async (req, res) => {
                                 </div>
                             </div>`;
                     });
-                    
+
                     menuHtml += `</div></section>`;
                 }
             });
@@ -2532,7 +2535,7 @@ app.get('/:slug?', async (req, res) => {
             const title = settings.businessName ? `${settings.businessName} - Cardápio Digital` : 'Cardápio Digital';
             const description = settings.seoDescription || `Confira o cardápio digital de ${settings.businessName || 'nossa loja'} e faça seu pedido online.`;
             const image = settings.logoUrl || 'https://digizap.com.br/default-logo.png';
-            
+
             const metaTags = `
                 <title>${title}</title>
                 <meta name="description" content="${description}">

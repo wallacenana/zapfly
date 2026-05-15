@@ -1,16 +1,9 @@
 RewriteEngine On
 RewriteBase /
 
-# Se for uma chamada de API, não redireciona para o index.html
-RewriteCond %{REQUEST_URI} ^/public/ [OR]
-RewriteCond %{REQUEST_URI} ^/api/ [OR]
-RewriteCond %{REQUEST_URI} ^/auth/ [OR]
-RewriteCond %{REQUEST_URI} ^/orders/
-RewriteRule ^ - [L]
-
-# Se o arquivo existir, serve ele diretamente
+# 1. Se o arquivo existe, abre normal (CSS/JS)
 RewriteCond %{REQUEST_FILENAME} !-f
-# Se a pasta existir, serve ela diretamente
 RewriteCond %{REQUEST_FILENAME} !-d
-# Caso contrário, manda tudo para o index.html (SPA Routing)
-RewriteRule ^(.*)$ index.html [L,QSA]
+
+# 2. Se não existe, manda pro PHP resolver
+RewriteRule ^(.*)$ index.php [L,QSA]

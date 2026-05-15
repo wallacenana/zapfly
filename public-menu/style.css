@@ -984,7 +984,7 @@ body.theme-order .delivery-fee-badge {
     padding-top: 10px;
     padding-bottom: 10px;
     position: sticky;
-    top: 56px;
+    top: 53px;
     /* Ajuste se o header tiver outra altura */
     z-index: 90;
     border-bottom: 1px solid var(--border-color);
