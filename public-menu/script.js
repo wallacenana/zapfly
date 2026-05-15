@@ -62,7 +62,7 @@ function parseImages(imgField) {
 function getImg(url, size = 'full') {
     if (!url) return url;
     if (!url.includes('files.digizap.com.br')) return url; // Só funciona para o nosso servidor
-    
+
     if (size === 'thumb') return url.replace('.webp', '_90.webp');
     if (size === 'medium') return url.replace('.webp', '_550.webp');
     return url;
@@ -115,6 +115,7 @@ async function fetchPublicSettings() {
         const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
         if (!response.ok) throw new Error('Loja não encontrada');
         const data = await response.json();
+        console.log(data);
 
         state.publicSettings = {
             ...state.publicSettings,
@@ -544,7 +545,7 @@ function openItemDetail(productId) {
 
     const modal = document.getElementById('item-modal');
     const body = document.getElementById('item-detail-body');
-    
+
     // Inicia com Skeleton
     body.innerHTML = `
         <button class="chevron-close-btn" onclick="closeWithAnimation('item-modal')"><i data-lucide="chevron-down"></i></button>
@@ -555,7 +556,7 @@ function openItemDetail(productId) {
             <div class="skeleton" style="height:14px; width:80%; margin-bottom:20px;"></div>
         </div>
     `;
-    
+
     modal.classList.remove('hidden', 'closing');
     lucide.createIcons();
 
@@ -581,7 +582,7 @@ function openItemDetail(productId) {
         state.currentCarouselIdx = 0;
         const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
         const images = parseImages(item.image);
-        
+
         body.innerHTML = `
             <button class="chevron-close-btn" onclick="closeWithAnimation('item-modal')" aria-label="Fechar Detalhes"><i data-lucide="chevron-down"></i></button>
             ${images.length > 0 ? `

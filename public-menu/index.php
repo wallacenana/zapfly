@@ -181,7 +181,8 @@ try {
                 <div id="menu-sections">
                     <?php foreach ($categories as $cat):
                         $catProducts = array_filter($products, function ($p) use ($cat) {
-                            return $p['categoryId'] == $cat['id']; });
+                            return $p['categoryId'] == $cat['id'];
+                        });
                         if (empty($catProducts))
                             continue;
                         ?>
@@ -292,7 +293,7 @@ try {
             const API_BASE = 'https://api.digizap.com.br';
         </script>
         <script src="https://unpkg.com/lucide@latest"></script>
-        <script src="script.js?v=1.32"></script>
+        <script src="script.js?v=1.33"></script>
     </body>
 
     </html>

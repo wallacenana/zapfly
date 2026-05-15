@@ -299,7 +299,8 @@ app.get('/public/menu/:slug', async (req, res) => {
                 products: true,
                 categories: {
                     orderBy: { order: 'asc' }
-                }
+                },
+                availableSlots: true
             }
         });
 
@@ -329,6 +330,7 @@ app.get('/public/menu/:slug', async (req, res) => {
             microsoftClarityId: settings?.microsoftClarityId || '',
             products: user.products,
             categories: user.categories,
+            availableSlots: user.availableSlots,
             userId: user.id
         });
     } catch (err) {
