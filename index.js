@@ -114,14 +114,16 @@ app.post('/settings', authenticate, async (req, res) => {
             businessName, logoUrl, faviconUrl, 
             accentColor, buttonColor, 
             accentColorOrders, buttonColorOrders,
-            buttonTextColor, backgroundColor, textColor 
+            buttonTextColor, backgroundColor, textColor,
+            seoDescription, pixelId, googleAnalyticsId, microsoftClarityId
         } = req.body;
 
         const data = {
             businessName, logoUrl, faviconUrl,
             accentColor, buttonColor,
             accentColorOrders, buttonColorOrders,
-            buttonTextColor, backgroundColor, textColor
+            buttonTextColor, backgroundColor, textColor,
+            seoDescription, pixelId, googleAnalyticsId, microsoftClarityId
         };
 
         console.log('[DEBUG] Tentando salvar configurações para o usuário:', req.user.id);
@@ -2462,18 +2464,93 @@ app.get('/:slug', async (req, res) => {
         let { slug } = req.params;
         if (!slug) return res.sendFile(path.join(__dirname, 'public', 'index.html'));
 
-        // Lista exaustiva de rotas do sistema para n縊 confundir com slugs
+        // Lista exaustiva de rotas do sistema para não confundir com slugs
         const reserved = ['api', 'orders', 'auth', 'menu-assets', 'assets', 'uploads', 'favicon.ico', 'robots.txt', 'instances', 'config', 'flows', 'chats', 'messages', 'dashboard', 'settings', 'connections', 'login', 'register'];
         if (reserved.includes(slug.toLowerCase()) || slug.includes('.')) {
             return res.status(404).send('Not Found');
         }
 
-        const user = await prisma.user.findUnique({ where: { slug: slug.toLowerCase() } });
+        const user = await prisma.user.findUnique({ 
+            where: { slug: slug.toLowerCase() },
+            include: { setting: true }
+        });
+        
         if (user) {
-            return res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
+            const htmlPath = path.join(__dirname, 'public-menu', 'index.html');
+            let html = fs.readFileSync(htmlPath, 'utf8');
+            const settings = user.setting || {};
+
+            // Cache Control para Cloudflare
+            // s-maxage=120: Cloudflare guarda no Edge por 2 min
+            // stale-while-revalidate=60: Entrega a versão em cache mas recarrega no fundo
+            res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=60');
+
+            const title = settings.businessName ? `${settings.businessName} - Cardápio Digital` : 'Cardápio Digital';
+            const description = settings.seoDescription || `Confira o cardápio digital de ${settings.businessName || 'nossa loja'} e faça seu pedido online.`;
+            const image = settings.logoUrl || 'https://digizap.com.br/default-logo.png';
+            
+            const metaTags = `
+                <title>${title}</title>
+                <meta name="description" content="${description}">
+                <meta property="og:title" content="${title}">
+                <meta property="og:description" content="${description}">
+                <meta property="og:image" content="${image}">
+                <meta property="og:type" content="website">
+                <meta name="twitter:card" content="summary_large_image">
+            `;
+
+            let trackingTags = '';
+            
+            if (settings.googleAnalyticsId) {
+                trackingTags += `
+                <!-- Google Analytics -->
+                <script async src="https://www.googletagmanager.com/gtag/js?id=${settings.googleAnalyticsId}"></script>
+                <script>
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${settings.googleAnalyticsId}');
+                </script>`;
+            }
+
+            if (settings.microsoftClarityId) {
+                trackingTags += `
+                <!-- Microsoft Clarity -->
+                <script type="text/javascript">
+                    (function(c,l,a,r,i,t,y){
+                        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+                        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+                        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+                    })(window, document, "clarity", "script", "${settings.microsoftClarityId}");
+                </script>`;
+            }
+
+            if (settings.pixelId) {
+                trackingTags += `
+                <!-- Meta Pixel Code -->
+                <script>
+                !function(f,b,e,v,n,t,s)
+                {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+                n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+                if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+                n.queue=[];t=b.createElement(e);t.async=!0;
+                t.src=v;s=b.getElementsByTagName(e)[0];
+                s.parentNode.insertBefore(t,s)}(window, document,'script',
+                'https://connect.facebook.net/en_US/fbevents.js');
+                fbq('init', '${settings.pixelId}');
+                fbq('track', 'PageView');
+                </script>
+                <noscript><img height="1" width="1" style="display:none"
+                src="https://www.facebook.com/tr?id=${settings.pixelId}&ev=PageView&noscript=1"
+                /></noscript>`;
+            }
+
+            html = html.replace('<head>', `<head>\n${metaTags}\n${trackingTags}`);
+            return res.send(html);
         }
         res.sendFile(path.join(__dirname, 'public', 'index.html'));
     } catch (e) {
+        console.error(e);
         res.sendFile(path.join(__dirname, 'public', 'index.html'));
     }
 });

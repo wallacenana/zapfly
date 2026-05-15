@@ -274,6 +274,10 @@ model Setting {
   buttonTextColor      String? @default("#ffffff")
   backgroundColor      String? @default("#ffffff")
   textColor            String? @default("#333333")
+  seoDescription       String? @db.Text
+  pixelId              String?
+  googleAnalyticsId    String?
+  microsoftClarityId   String?
 
   @@map("setting")
 }

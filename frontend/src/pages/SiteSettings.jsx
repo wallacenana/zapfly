@@ -18,7 +18,11 @@ const SiteSettings = () => {
         buttonColorOrders: '#4a2c2a',
         buttonTextColor: '#ffffff',
         backgroundColor: '#ffffff',
-        textColor: '#333333'
+        textColor: '#333333',
+        seoDescription: '',
+        pixelId: '',
+        googleAnalyticsId: '',
+        microsoftClarityId: ''
     });
 
     useEffect(() => {
@@ -52,7 +56,11 @@ const SiteSettings = () => {
                 buttonColorOrders: settings.buttonColorOrders,
                 buttonTextColor: settings.buttonTextColor,
                 backgroundColor: settings.backgroundColor,
-                textColor: settings.textColor
+                textColor: settings.textColor,
+                seoDescription: settings.seoDescription,
+                pixelId: settings.pixelId,
+                googleAnalyticsId: settings.googleAnalyticsId,
+                microsoftClarityId: settings.microsoftClarityId
             };
             await api.post('/settings', payload);
             toast.success('Identidade visual salva com sucesso!');
@@ -227,6 +235,58 @@ const SiteSettings = () => {
                                             </div>
                                         </div>
                                     ))}
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Sessão de Tracking e SEO */}
+                    <section className="card" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)', marginTop: '25px' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <Globe size={18} color="var(--accent-primary)" />
+                            SEO e Rastreamento
+                        </h3>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            <div>
+                                <label style={labelStyle}>Descrição do Cardápio (Google e WhatsApp)</label>
+                                <textarea 
+                                    style={{ ...inputStyle, minHeight: '80px', resize: 'none' }} 
+                                    value={settings.seoDescription || ''} 
+                                    onChange={e => setSettings({...settings, seoDescription: e.target.value})}
+                                    placeholder="Ex: Peça online as melhores pizzas da cidade. Entrega rápida!"
+                                />
+                                <p style={hintStyle}>Aparece na busca do Google e na prévia de links do WhatsApp.</p>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
+                                <div>
+                                    <label style={labelStyle}>Pixel do Meta (Facebook)</label>
+                                    <input 
+                                        type="text" 
+                                        style={inputStyle} 
+                                        value={settings.pixelId || ''} 
+                                        onChange={e => setSettings({...settings, pixelId: e.target.value})}
+                                        placeholder="Ex: 1234567890"
+                                    />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Google Analytics 4</label>
+                                    <input 
+                                        type="text" 
+                                        style={inputStyle} 
+                                        value={settings.googleAnalyticsId || ''} 
+                                        onChange={e => setSettings({...settings, googleAnalyticsId: e.target.value})}
+                                        placeholder="Ex: G-XXXXX"
+                                    />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Microsoft Clarity</label>
+                                    <input 
+                                        type="text" 
+                                        style={inputStyle} 
+                                        value={settings.microsoftClarityId || ''} 
+                                        onChange={e => setSettings({...settings, microsoftClarityId: e.target.value})}
+                                        placeholder="Ex: abcdefghij"
+                                    />
                                 </div>
                             </div>
                         </div>
