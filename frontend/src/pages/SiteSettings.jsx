@@ -376,7 +376,8 @@ const SiteSettings = () => {
 
 // Styles
 const labelStyle = { display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.05em' };
-const hintStyle = { fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px', textAlign: 'center' };
+const inputStyle = { width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none', boxSizing: 'border-box' };
+const hintStyle = { fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px' };
 const uploadBox = { position: 'relative', height: '120px', backgroundColor: 'var(--bg-tertiary)', border: '2px dashed var(--border-color)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', transition: 'all 0.2s' };
 const fileInput = { position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' };
 const colorRow = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border-color)' };

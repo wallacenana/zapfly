@@ -118,7 +118,7 @@ async function fetchPublicSettings() {
         }
 
         updateTheme(); // Aplica o tema inicial
-
+        console.log(data)
         // SEO Injection Dinâmico (Lido pelo Google JS Engine)
         const titleText = data.businessName ? `${data.businessName} | Cardápio Digital DigiZap` : 'Cardápio Digital DigiZap';
         document.title = titleText;
@@ -143,9 +143,9 @@ async function fetchPublicSettings() {
             ga.async = true;
             ga.src = `https://www.googletagmanager.com/gtag/js?id=${data.googleAnalyticsId}`;
             document.head.appendChild(ga);
-            
+
             window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
+            function gtag() { dataLayer.push(arguments); }
             window.gtag = gtag;
             gtag('js', new Date());
             gtag('config', data.googleAnalyticsId);
@@ -379,7 +379,13 @@ function renderMenu() {
     const nonFeatured = query ? filtered : filtered.filter(p => !p.featured);
 
     const grouped = nonFeatured.reduce((acc, p) => {
-        const cat = p.category || 'Geral';
+        let cat = 'Geral';
+        if (p.categoryId && state.categories && state.categories.length > 0) {
+            const foundCat = state.categories.find(c => c.id === p.categoryId);
+            if (foundCat) cat = foundCat.name;
+        } else if (p.category) {
+            cat = p.category; // fallback para produtos antigos
+        }
         if (!acc[cat]) acc[cat] = [];
         acc[cat].push(p);
         return acc;
@@ -390,13 +396,21 @@ function renderMenu() {
         grouped[cat].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     });
 
-    // Ordenar grupos com base na ordem das categorias
-    const sortedCategories = Object.keys(grouped).sort((a, b) => {
-        const catA = state.categories?.find(c => c.name === a);
-        const catB = state.categories?.find(c => c.name === b);
-        const orderA = catA ? catA.order : 999;
-        const orderB = catB ? catB.order : 999;
-        return orderA - orderB;
+    // Usar a ordem que já vem pré-ordenada da API (Prisma faz orderBy: { order: 'asc' })
+    // Em vez de tentar re-ordenar pelo campo numérico (que pode estar zerado), 
+    // usamos a posição do array state.categories como fonte da verdade.
+    const sortedCategories = [];
+
+    // 1. Adiciona na ordem exata que a API devolveu
+    if (state.categories && state.categories.length > 0) {
+        state.categories.forEach(c => {
+            if (grouped[c.name]) sortedCategories.push(c.name);
+        });
+    }
+
+    // 2. Adiciona categorias que estejam no grouped mas não no state.categories (ex: legado 'Geral')
+    Object.keys(grouped).forEach(catName => {
+        if (!sortedCategories.includes(catName)) sortedCategories.push(catName);
     });
 
     let html = '';
@@ -440,7 +454,7 @@ function renderFeaturedCard(product) {
     return `
         <div class="featured-card" onclick="openItemDetail('${product.id}')">
             <div class="featured-img-wrapper">
-                ${images.length > 0 ? `<img src="${images[0]}">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
+                ${images.length > 0 ? `<img src="${images[0]}" loading="lazy" decoding="async">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
             </div>
             <div class="featured-info">
                 <h3>${product.name}</h3>
@@ -491,7 +505,7 @@ function renderProductCard(product) {
                 <p>${product.description || ''}</p>
                 <div class="product-price">${priceText}</div>
             </div>
-            ${parseImages(product.image).length > 0 ? `<img src="${parseImages(product.image)[0]}" class="product-img">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
+            ${parseImages(product.image).length > 0 ? `<img src="${parseImages(product.image)[0]}" class="product-img" loading="lazy" decoding="async">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
         </div>
     `;
 }
