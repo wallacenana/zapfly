@@ -283,8 +283,7 @@ try {
                         <div id="delivery-step-content">
                             <div class="form-group">
                                 <label class="field-label">Endereço de Entrega</label>
-                                <textarea id="user-address" class="ifood-input"
-                                    placeholder="Rua, número, bairro..."></textarea>
+                                <input type="text" id="user-address" class="ifood-input" placeholder="Rua, número, bairro...">
                             </div>
                             <div id="delivery-map"
                                 style="height:200px; width:100%; border-radius:12px; background:#e8e8e8; margin-bottom:14px; overflow:hidden;">
@@ -618,13 +617,22 @@ try {
             }
 
             window.initMapsAutocomplete = () => {
+                const mapEl = document.getElementById('delivery-map');
                 const input = document.getElementById('user-address');
+                
+                if (!mapEl || !input) {
+                    console.log('[Maps] Elementos não encontrados. Aguardando Step 2...');
+                    return;
+                }
+                
+                if (state.googleMap) return; // Já inicializado
+
                 const autocomplete = new google.maps.places.Autocomplete(input);
                 autocomplete.setComponentRestrictions({ country: 'br' });
                 state.geocoder = new google.maps.Geocoder();
 
                 const mapCenter = { lat: -2.5307, lng: -44.3068 };
-                state.googleMap = new google.maps.Map(document.getElementById('map-container'), {
+                state.googleMap = new google.maps.Map(mapEl, {
                     zoom: 16,
                     center: mapCenter,
                     disableDefaultUI: false,
@@ -639,7 +647,9 @@ try {
                     animation: google.maps.Animation.DROP
                 });
 
-                if (state.userInfo.address) geocodeAddress(state.userInfo.address);
+                if (state.userInfo.address) {
+                    geocodeAddress(state.userInfo.address);
+                }
 
                 autocomplete.addListener('place_changed', () => {
                     const place = autocomplete.getPlace();
@@ -1206,15 +1216,22 @@ try {
                 if (deliveryContent) deliveryContent.classList.toggle('hidden', !isDelivery);
                 if (orderContent) orderContent.classList.toggle('hidden', isDelivery);
 
-                if (isDelivery && state.googleMap) {
-                    setTimeout(() => {
-                        google.maps.event.trigger(state.googleMap, 'resize');
-                        if (state.mapMarker) {
-                            state.googleMap.panTo(state.mapMarker.getPosition());
-                        } else if (state.userInfo.address) {
-                            geocodeAddress(state.userInfo.address);
-                        }
-                    }, 300);
+                if (isDelivery) {
+                    // Se o Google Maps carregou mas o mapa ainda não foi criado, cria agora
+                    if (window.google && !state.googleMap) {
+                        initMapsAutocomplete();
+                    }
+
+                    if (state.googleMap) {
+                        setTimeout(() => {
+                            google.maps.event.trigger(state.googleMap, 'resize');
+                            if (state.mapMarker) {
+                                state.googleMap.panTo(state.mapMarker.getPosition());
+                            } else if (state.userInfo.address) {
+                                geocodeAddress(state.userInfo.address);
+                            }
+                        }, 300);
+                    }
                 }
             }
 
