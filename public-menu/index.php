@@ -206,8 +206,8 @@ try {
                 <div class="store-info">
                     <div class="store-logo"><img src="<?php echo $logoUrl; ?>" alt="Logo"></div>
                     <div class="store-details">
-                        <h1><?php echo $businessName; ?></h1>
-                        <div class="store-status"><span class="status-dot"></span> Aberto agora</div>
+                        <h1 id="store-name"><?php echo $businessName; ?></h1>
+                        <div id="store-status-badge" class="status-badge open">● Aberto agora</div>
                     </div>
                 </div>
                 <button class="icon-btn" id="history-toggle-btn"><i data-lucide="history"></i></button>
@@ -623,6 +623,8 @@ try {
                     const statusEl = document.getElementById('store-status-badge');
                     if (statusEl) {
                         checkStoreStatus();
+                        // Atualiza a cada 1 minuto
+                        setInterval(checkStoreStatus, 60000);
                     }
                 } catch (err) {
                     console.error('Erro ao carregar configurações:', err);
