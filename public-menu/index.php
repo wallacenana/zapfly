@@ -337,7 +337,27 @@ try {
 
                     <!-- Step 3: Summary -->
                     <div class="checkout-step hidden" id="step-3">
-                        <div id="order-summary-content"></div>
+                        <div id="order-summary-content">
+                            <div class="summary-section">
+                                <h3 class="field-label" style="font-size: 1.1rem; margin-bottom: 12px;">Resumo dos Itens</h3>
+                                <div id="review-items-list" style="margin-bottom: 20px;"></div>
+                            </div>
+                            
+                            <div class="summary-section" style="background: #f9f9f9; padding: 15px; border-radius: 12px;">
+                                <div class="summary-row" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                    <span>Subtotal</span>
+                                    <span id="summary-subtotal">R$ 0,00</span>
+                                </div>
+                                <div id="delivery-fee-line" class="summary-row hidden" style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #166534;">
+                                    <span>Taxa de entrega</span>
+                                    <span id="summary-fee">R$ 0,00</span>
+                                </div>
+                                <div class="summary-total-row" style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.2rem; border-top: 1px dashed #ddd; padding-top: 12px; margin-top: 12px;">
+                                    <span>Total</span>
+                                    <span id="summary-total">R$ 0,00</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -646,51 +666,62 @@ try {
             }
 
             window.initMapsAutocomplete = () => {
+                console.log('[Maps] Iniciando Autocomplete...');
                 const mapEl = document.getElementById('delivery-map');
                 const input = document.getElementById('user-address');
-
+                
                 if (!mapEl || !input) {
-                    console.log('[Maps] Elementos não encontrados. Aguardando Step 2...');
+                    console.log('[Maps] Elementos não encontrados ainda.');
+                    return;
+                }
+                
+                if (state.googleMap) {
+                    console.log('[Maps] Mapa já existe, ignorando reinicialização.');
                     return;
                 }
 
-                if (state.googleMap) return; // Já inicializado
+                try {
+                    const autocomplete = new google.maps.places.Autocomplete(input);
+                    autocomplete.setComponentRestrictions({ country: 'br' });
+                    state.geocoder = new google.maps.Geocoder();
 
-                const autocomplete = new google.maps.places.Autocomplete(input);
-                autocomplete.setComponentRestrictions({ country: 'br' });
-                state.geocoder = new google.maps.Geocoder();
+                    console.log('[Maps] Criando objeto Map...');
+                    const mapCenter = { lat: -2.5307, lng: -44.3068 };
+                    state.googleMap = new google.maps.Map(mapEl, {
+                        zoom: 16,
+                        center: mapCenter,
+                        disableDefaultUI: false,
+                        mapTypeControl: false,
+                        streetViewControl: false
+                    });
 
-                const mapCenter = { lat: -2.5307, lng: -44.3068 };
-                state.googleMap = new google.maps.Map(mapEl, {
-                    zoom: 16,
-                    center: mapCenter,
-                    disableDefaultUI: false,
-                    mapTypeControl: false,
-                    streetViewControl: false
-                });
+                    state.mapMarker = new google.maps.Marker({
+                        map: state.googleMap,
+                        position: mapCenter,
+                        draggable: true,
+                        animation: google.maps.Animation.DROP
+                    });
 
-                state.mapMarker = new google.maps.Marker({
-                    map: state.googleMap,
-                    position: mapCenter,
-                    draggable: true,
-                    animation: google.maps.Animation.DROP
-                });
+                    if (state.userInfo.address) {
+                        geocodeAddress(state.userInfo.address);
+                    }
 
-                if (state.userInfo.address) {
-                    geocodeAddress(state.userInfo.address);
+                    autocomplete.addListener('place_changed', () => {
+                        const place = autocomplete.getPlace();
+                        console.log('[Maps] Place selecionado:', place.formatted_address);
+                        if (!place.geometry) return;
+                        updateLocation(place.geometry.location, place.formatted_address);
+                    });
+
+                    state.mapMarker.addListener('dragend', () => reverseGeocode(state.mapMarker.getPosition()));
+                    state.googleMap.addListener('click', (e) => {
+                        updateLocation(e.latLng);
+                        reverseGeocode(e.latLng);
+                    });
+                    console.log('[Maps] Autocomplete pronto!');
+                } catch (e) {
+                    console.error('[Maps Error] Erro na inicialização:', e);
                 }
-
-                autocomplete.addListener('place_changed', () => {
-                    const place = autocomplete.getPlace();
-                    if (!place.geometry) return;
-                    updateLocation(place.geometry.location, place.formatted_address);
-                });
-
-                state.mapMarker.addListener('dragend', () => reverseGeocode(state.mapMarker.getPosition()));
-                state.googleMap.addListener('click', (e) => {
-                    updateLocation(e.latLng);
-                    reverseGeocode(e.latLng);
-                });
             };
 
             function geocodeAddress(address) {
@@ -1289,12 +1320,20 @@ try {
                 const fee = state.activeTab === 'delivery' ? state.deliveryFee : 0;
                 const total = subtotal + fee;
 
-                document.getElementById('summary-subtotal').innerText = `R$ ${subtotal.toFixed(2)}`;
-                document.getElementById('summary-fee').innerText = `R$ ${fee.toFixed(2)}`;
-                document.getElementById('summary-total').innerText = `R$ ${total.toFixed(2)}`;
-                document.getElementById('delivery-fee-line').classList.toggle('hidden', state.activeTab !== 'delivery');
+                const subEl = document.getElementById('summary-subtotal');
+                const feeEl = document.getElementById('summary-fee');
+                const totalEl = document.getElementById('summary-total');
+                const lineEl = document.getElementById('delivery-fee-line');
+                const listEl = document.getElementById('review-items-list');
 
-                document.getElementById('review-items-list').innerHTML = cart.map(item => `<p style="font-size: 0.9rem; margin-bottom: 4px;">${item.quantity}x ${item.name} ${item.variation ? `(${item.variation})` : ''}</p>`).join('');
+                if (subEl) subEl.innerText = `R$ ${subtotal.toFixed(2)}`;
+                if (feeEl) feeEl.innerText = `R$ ${fee.toFixed(2)}`;
+                if (totalEl) totalEl.innerText = `R$ ${total.toFixed(2)}`;
+                if (lineEl) lineEl.classList.toggle('hidden', state.activeTab !== 'delivery');
+
+                if (listEl) {
+                    listEl.innerHTML = cart.map(item => `<p style="font-size: 0.9rem; margin-bottom: 4px;">${item.quantity}x ${item.name} ${item.variation ? `(${item.variation})` : ''}</p>`).join('');
+                }
             }
 
             function addToCart() {
