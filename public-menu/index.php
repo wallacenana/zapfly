@@ -178,13 +178,24 @@ try {
                 box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
                 font-family: inherit;
             }
+
             .pac-item {
                 padding: 10px 12px;
                 cursor: pointer;
             }
-            .pac-item:hover { background: #f9f9f9; }
-            .pac-item-query { font-size: 14px; color: #333; }
-            .pac-icon { display: none; }
+
+            .pac-item:hover {
+                background: #f9f9f9;
+            }
+
+            .pac-item-query {
+                font-size: 14px;
+                color: #333;
+            }
+
+            .pac-icon {
+                display: none;
+            }
         </style>
     </head>
 
@@ -300,7 +311,8 @@ try {
                         <div id="delivery-step-content">
                             <div class="form-group">
                                 <label class="field-label">Endereço de Entrega</label>
-                                <input type="text" id="user-address" class="ifood-input" placeholder="Rua, número, bairro...">
+                                <input type="text" id="user-address" class="ifood-input"
+                                    placeholder="Rua, número, bairro...">
                             </div>
                             <div id="delivery-map"
                                 style="height:200px; width:100%; border-radius:12px; background:#e8e8e8; margin-bottom:14px; overflow:hidden;">
@@ -636,12 +648,12 @@ try {
             window.initMapsAutocomplete = () => {
                 const mapEl = document.getElementById('delivery-map');
                 const input = document.getElementById('user-address');
-                
+
                 if (!mapEl || !input) {
                     console.log('[Maps] Elementos não encontrados. Aguardando Step 2...');
                     return;
                 }
-                
+
                 if (state.googleMap) return; // Já inicializado
 
                 const autocomplete = new google.maps.places.Autocomplete(input);
@@ -1007,7 +1019,7 @@ try {
                 ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
             </div>
             ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
-                        `;
+                            `;
                     updateDetailFooter();
                     lucide.createIcons();
                 }, 50);
@@ -1184,24 +1196,24 @@ try {
                 }
                 document.getElementById('next-step-btn').disabled = false;
                 list.innerHTML = cart.map(item => `
-                        <div class="checkout-item">
-                            <div class="item-name-qty">
-                                <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 16px;">
-                                <div class="cart-qty-control">
-                                    <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
-                                        ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
-                                    </button>
-                                    <span class="qty-val-mini">${item.quantity}</span>
-                                    <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
-                                        <i data-lucide="plus"></i>
-                                    </button>
+                            <div class="checkout-item">
+                                <div class="item-name-qty">
+                                    <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
                                 </div>
-                                <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                                <div style="display: flex; align-items: center; gap: 16px;">
+                                    <div class="cart-qty-control">
+                                        <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
+                                            ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
+                                        </button>
+                                        <span class="qty-val-mini">${item.quantity}</span>
+                                        <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
+                                            <i data-lucide="plus"></i>
+                                        </button>
+                                    </div>
+                                    <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                                </div>
                             </div>
-                        </div>
-                    `).join('');
+                        `).join('');
                 lucide.createIcons();
             }
 
@@ -1438,17 +1450,17 @@ try {
                 });
 
                 list.innerHTML = uniqueItems.slice(0, 6).map(o => `
-                        <div class="history-card" onclick="reorderItem('${o.id}')">
-                            <div class="history-card-info">
-                                <strong>${o.product}</strong>
-                                ${o.variation ? `<p>${o.variation}</p>` : ''}
+                            <div class="history-card" onclick="reorderItem('${o.id}')">
+                                <div class="history-card-info">
+                                    <strong>${o.product}</strong>
+                                    ${o.variation ? `<p>${o.variation}</p>` : ''}
+                                </div>
+                                <div class="history-card-action">
+                                    <span>Pedir de novo</span>
+                                    <i data-lucide="chevron-right"></i>
+                                </div>
                             </div>
-                            <div class="history-card-action">
-                                <span>Pedir de novo</span>
-                                <i data-lucide="chevron-right"></i>
-                            </div>
-                        </div>
-                    `).join('');
+                        `).join('');
                 lucide.createIcons();
             }
 
