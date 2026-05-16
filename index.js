@@ -331,7 +331,9 @@ app.get('/public/menu/:slug', async (req, res) => {
             products: user.products,
             categories: user.categories,
             availableSlots: user.availableSlots,
-            userId: user.id
+            userId: user.id,
+            googleApiKey: settings?.googleApiKey || '',
+            deliveryRules: JSON.parse(settings?.deliveryRules || '[]')
         });
     } catch (err) {
         console.error('[Public Menu Error]', err);

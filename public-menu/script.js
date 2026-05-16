@@ -661,43 +661,41 @@ function updateDetailFooter() {
 }
 
 function initEventListeners() {
-    document.getElementById('search-input')?.addEventListener('input', (e) => { state.searchQuery = e.target.value; renderMenu(); });
+    document.getElementById('search-input').addEventListener('input', (e) => { state.searchQuery = e.target.value; renderMenu(); });
     document.querySelectorAll('.cat-tab').forEach(btn => {
         btn.addEventListener('click', () => {
             document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             state.activeTab = btn.dataset.tab;
             document.body.className = state.activeTab === 'order' ? 'theme-order' : '';
-            updateTheme();
+            updateTheme(); // Muda as cores ao trocar de aba
             renderMenu(); updateUI();
         });
     });
 
-    document.getElementById('qty-plus')?.addEventListener('click', () => { state.currentQty++; updateDetailFooter(); });
-    document.getElementById('qty-minus')?.addEventListener('click', () => { if (state.currentQty > 1) { state.currentQty--; updateDetailFooter(); } });
+    document.getElementById('qty-plus').addEventListener('click', () => { state.currentQty++; updateDetailFooter(); });
+    document.getElementById('qty-minus').addEventListener('click', () => { if (state.currentQty > 1) { state.currentQty--; updateDetailFooter(); } });
 
-    // Fecha qualquer modal aberta — usa o ID correto: item-detail-modal
     const closeModal = () => {
-        document.querySelectorAll('.modal').forEach(m => {
-            if (!m.classList.contains('hidden')) closeWithAnimation(m.id);
-        });
+        if (!document.getElementById('item-modal').classList.contains('hidden')) closeWithAnimation('item-modal');
+        if (!document.getElementById('checkout-modal').classList.contains('hidden')) closeWithAnimation('checkout-modal');
     };
 
-    document.querySelectorAll('.close-modal-btn').forEach(btn => btn.addEventListener('click', closeModal));
-    document.querySelectorAll('.modal-overlay').forEach(ov => ov.addEventListener('click', closeModal));
+    document.querySelector('.close-modal-btn').addEventListener('click', closeModal);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
-    document.getElementById('history-toggle-btn')?.addEventListener('click', () => {
-        document.getElementById('history-modal')?.classList.remove('hidden', 'closing');
+    document.getElementById('history-toggle-btn').addEventListener('click', () => {
+        document.getElementById('history-modal').classList.remove('hidden', 'closing');
         renderPreviousOrders();
     });
 
-    document.getElementById('add-to-cart-btn')?.addEventListener('click', addToCart);
-    document.getElementById('view-cart-btn')?.addEventListener('click', () => goToStep(1));
-    document.getElementById('next-step-btn')?.addEventListener('click', handleNextStep);
-    document.getElementById('place-order-btn')?.addEventListener('click', handlePlaceOrder);
+    document.getElementById('add-to-cart-btn').addEventListener('click', addToCart);
+    document.getElementById('view-cart-btn').addEventListener('click', () => goToStep(1));
+    document.getElementById('next-step-btn').addEventListener('click', handleNextStep);
+    document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
 
-    document.getElementById('order-date')?.addEventListener('change', (e) => {
+    // Listener para carregar horários disponíveis ao selecionar data
+    document.getElementById('order-date').addEventListener('change', (e) => {
         const dateStr = e.target.value;
         if (!dateStr) return;
 
@@ -710,36 +708,26 @@ function initEventListeners() {
         timeSelect.innerHTML = `<option value="">Horário</option>` + slots.map(s => `<option value="${s.startTime}">${s.startTime}</option>`).join('');
     });
 
-    // Restaura e persiste Nome (id=customer-name)
-    const nameInput = document.getElementById('customer-name');
-    if (nameInput) {
-        nameInput.value = state.userInfo.name || '';
-        nameInput.addEventListener('input', (e) => {
-            state.userInfo.name = e.target.value;
-            localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
-        });
-    }
+    document.getElementById('user-name').value = state.userInfo.name || '';
+    document.getElementById('user-phone').value = state.userInfo.phone || '';
+    document.getElementById('user-address').value = state.userInfo.address || '';
 
-    // Restaura e persiste WhatsApp com máscara (id=customer-phone)
-    const phoneInput = document.getElementById('customer-phone');
-    if (phoneInput) {
-        phoneInput.value = state.userInfo.phone || '';
-        phoneInput.addEventListener('input', (e) => {
-            e.target.value = maskPhone(e.target.value);
-            state.userInfo.phone = e.target.value;
-            localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
-        });
-    }
+    const phoneInput = document.getElementById('user-phone');
+    phoneInput.addEventListener('input', (e) => {
+        e.target.value = maskPhone(e.target.value);
+        state.userInfo.phone = e.target.value;
+        localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
+    });
 
-    // Restaura e persiste Endereço (id=customer-address)
-    const addressInput = document.getElementById('customer-address');
-    if (addressInput) {
-        addressInput.value = state.userInfo.address || '';
-        addressInput.addEventListener('input', (e) => {
-            state.userInfo.address = e.target.value;
-            localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
-        });
-    }
+    ['user-name', 'user-address'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', (e) => {
+                state.userInfo[id.split('-')[1]] = e.target.value;
+                localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
+            });
+        }
+    });
 }
 
 function goToStep(step) {
@@ -979,18 +967,17 @@ async function handlePlaceOrder() {
 async function fetchPreviousOrders() {
     if (!state.userInfo.phone) return;
     try {
-        const phone = '55' + state.userInfo.phone.replace(/\D/g, '');
-        const res = await fetch(`${API_BASE}/orders/history/public/${STORE_SLUG}/${phone}`);
-        if (!res.ok) { state.previousOrders = []; renderPreviousOrders(); return; }
+        const phone = state.userInfo.phone.replace(/\D/g, '');
+        const res = await fetch(`${API_BASE}/orders/history/${phone}`);
         const data = await res.json();
         state.previousOrders = Array.isArray(data) ? data : [];
         renderPreviousOrders();
     } catch (e) {
+        console.error(e);
         state.previousOrders = [];
         renderPreviousOrders();
     }
 }
-
 
 function renderPreviousOrders() {
     const list = document.getElementById('history-modal-list');

@@ -72,7 +72,7 @@ router.get('/settings/public', async (req, res) => {
   try {
     const { slug } = req.query;
     if (!slug) return res.status(400).json({ error: 'Slug é obrigatório para menu público.' });
-    
+
     const user = await prisma.user.findUnique({ where: { slug } });
     if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
 
@@ -92,11 +92,11 @@ router.post('/calculate-fee', async (req, res) => {
   try {
     const { address, slug } = req.body;
     if (!address) return res.status(400).json({ error: 'Endereço é obrigatório' });
-    
+
     let userId = req.user?.id;
     if (!userId && slug) {
-       const user = await prisma.user.findUnique({ where: { slug } });
-       userId = user?.id;
+      const user = await prisma.user.findUnique({ where: { slug } });
+      userId = user?.id;
     }
     if (!userId) return res.status(400).json({ error: 'User ID ou Slug não identificado.' });
 
@@ -110,11 +110,11 @@ router.post('/calculate-fee', async (req, res) => {
 
 // Sincroniza eventos do Google Calendar para o banco local
 async function syncCalendarEvents(userId) {
-    if (!userId) return { fetched: 0, pushed: 0 };
-    
-    const syncKey = `syncing_${userId}`;
-    if (global[syncKey]) return { fetched: 0, pushed: 0 };
-    global[syncKey] = true;
+  if (!userId) return { fetched: 0, pushed: 0 };
+
+  const syncKey = `syncing_${userId}`;
+  if (global[syncKey]) return { fetched: 0, pushed: 0 };
+  global[syncKey] = true;
 
   try {
     const gcal = await getGoogleCalendar(userId);
@@ -537,7 +537,7 @@ async function setupCronJobs(sockGetter) {
             await sock.sendMessage(order.clientJid, { text: msg });
             await prisma.order.update({ where: { id: order.id }, data: { reminderSent: true } });
           }
-        } catch (err) {}
+        } catch (err) { }
       }
     }
   });
@@ -549,7 +549,7 @@ async function setupCronJobs(sockGetter) {
       where: { reportEnabled: true, reportHour: currentHour }
     });
     for (const s of settingsToReport) {
-      sendDailyReport(s.userId, sockGetter).catch(() => {});
+      sendDailyReport(s.userId, sockGetter).catch(() => { });
     }
   });
 }
@@ -635,12 +635,12 @@ router.post('/', async (req, res) => {
 
     let userId = req.user?.id;
     if (!userId && instanceId) {
-       const inst = await prisma.instance.findUnique({ where: { id: instanceId } });
-       userId = inst?.userId;
+      const inst = await prisma.instance.findUnique({ where: { id: instanceId } });
+      userId = inst?.userId;
     }
     if (!userId && slug) {
-       const user = await prisma.user.findUnique({ where: { slug } });
-       userId = user?.id;
+      const user = await prisma.user.findUnique({ where: { slug } });
+      userId = user?.id;
     }
 
     if (!userId) return res.status(400).json({ error: 'User ID não identificado.' });
@@ -648,21 +648,21 @@ router.post('/', async (req, res) => {
     const settings = await getSettings(userId);
 
     if (!clientJid && clientPhone) {
-        let cleanPhone = clientPhone.replace(/\D/g, "");
-        if (cleanPhone.length >= 10) {
-            if (!cleanPhone.startsWith("55")) cleanPhone = "55" + cleanPhone;
-            clientJid = `${cleanPhone}@s.whatsapp.net`;
-            try {
-              const sockGetter = req.app.get('getSock');
-              if (sockGetter) {
-                const sock = sockGetter(instanceId || 'global');
-                if (sock && sock.onWhatsApp) {
-                  const result = await sock.onWhatsApp(clientJid);
-                  if (result && result.length > 0 && result[0].exists) clientJid = result[0].jid;
-                }
-              }
-            } catch (err) {}
-        }
+      let cleanPhone = clientPhone.replace(/\D/g, "");
+      if (cleanPhone.length >= 10) {
+        if (!cleanPhone.startsWith("55")) cleanPhone = "55" + cleanPhone;
+        clientJid = `${cleanPhone}@s.whatsapp.net`;
+        try {
+          const sockGetter = req.app.get('getSock');
+          if (sockGetter) {
+            const sock = sockGetter(instanceId || 'global');
+            if (sock && sock.onWhatsApp) {
+              const result = await sock.onWhatsApp(clientJid);
+              if (result && result.length > 0 && result[0].exists) clientJid = result[0].jid;
+            }
+          }
+        } catch (err) { }
+      }
     }
 
     const qtyNum = parseFloat(quantity) || 1;
@@ -729,9 +729,9 @@ router.post('/stock', authenticate, async (req, res) => {
 
 router.get('/products', authenticate, async (req, res) => {
   const userId = req.user.id;
-  const products = await prisma.product.findMany({ 
-    where: { userId }, 
-    orderBy: { displayOrder: 'asc' } 
+  const products = await prisma.product.findMany({
+    where: { userId },
+    orderBy: { displayOrder: 'asc' }
   });
   res.json(products);
 });
@@ -748,7 +748,7 @@ router.post('/products/reorder', authenticate, async (req, res) => {
 
   try {
     await prisma.$transaction(
-      items.map(item => 
+      items.map(item =>
         prisma.product.update({
           where: { id: item.id, userId }, // Garante que é do usuário
           data: { displayOrder: item.displayOrder }
@@ -763,9 +763,9 @@ router.post('/products/reorder', authenticate, async (req, res) => {
 
 router.get('/categories', authenticate, async (req, res) => {
   const userId = req.user.id;
-  const categories = await prisma.category.findMany({ 
-    where: { userId }, 
-    orderBy: { order: 'asc' } 
+  const categories = await prisma.category.findMany({
+    where: { userId },
+    orderBy: { order: 'asc' }
   });
   res.json(categories);
 });
@@ -773,8 +773,8 @@ router.get('/categories', authenticate, async (req, res) => {
 router.post('/categories', authenticate, async (req, res) => {
   const userId = req.user.id;
   const count = await prisma.category.count({ where: { userId } });
-  const cat = await prisma.category.create({ 
-    data: { ...req.body, userId, order: count + 1 } 
+  const cat = await prisma.category.create({
+    data: { ...req.body, userId, order: count + 1 }
   });
   res.json(cat);
 });
@@ -792,7 +792,7 @@ router.post('/categories/reorder', authenticate, async (req, res) => {
     const validItems = items.filter(item => userCategoryIds.includes(item.id));
 
     await prisma.$transaction(
-      validItems.map(item => 
+      validItems.map(item =>
         prisma.category.update({
           where: { id: item.id },
           data: { order: item.order }
@@ -811,7 +811,7 @@ router.patch('/categories/:id', authenticate, async (req, res) => {
   try {
     const existing = await prisma.category.findUnique({ where: { id } });
     if (!existing || existing.userId !== userId) return res.status(403).json({ error: "Não autorizado" });
-    
+
     const updateData = { ...req.body };
     delete updateData.id;
     delete updateData.userId;
@@ -841,40 +841,40 @@ router.delete('/categories/:id', authenticate, async (req, res) => {
 });
 
 router.get('/history/:phone', authenticate, async (req, res) => {
-    const userId = req.user.id;
-    const jid = `${req.params.phone.replace(/\D/g, "")}@s.whatsapp.net`;
-    const orders = await prisma.order.findMany({ where: { userId, clientJid: jid }, orderBy: { createdAt: 'desc' }, take: 10 });
-    res.json(orders);
+  const userId = req.user.id;
+  const jid = `${req.params.phone.replace(/\D/g, "")}@s.whatsapp.net`;
+  const orders = await prisma.order.findMany({ where: { userId, clientJid: jid }, orderBy: { createdAt: 'desc' }, take: 10 });
+  res.json(orders);
 });
 
 // Rota PÚBLICA para o cardápio digital — identifica a loja pelo slug, sem token
 router.get('/history/public/:slug/:phone', async (req, res) => {
-    try {
-        const slug = req.params.slug.toLowerCase();
-        const phone = req.params.phone.replace(/\D/g, '');
-        const jid = `${phone}@s.whatsapp.net`;
+  try {
+    const slug = req.params.slug.toLowerCase();
+    const phone = req.params.phone.replace(/\D/g, '');
+    const jid = `${phone}@s.whatsapp.net`;
 
-        const store = await prisma.user.findFirst({ where: { slug } });
-        if (!store) return res.status(404).json({ error: 'Loja não encontrada' });
+    const store = await prisma.user.findFirst({ where: { slug } });
+    if (!store) return res.status(404).json({ error: 'Loja não encontrada' });
 
-        const orders = await prisma.order.findMany({
-            where: { userId: store.id, clientJid: jid },
-            orderBy: { createdAt: 'desc' },
-            take: 10,
-            select: {
-                id: true,
-                product: true,
-                variation: true,
-                quantity: true,
-                totalValue: true,
-                type: true,
-                createdAt: true
-            }
-        });
-        res.json(orders);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    const orders = await prisma.order.findMany({
+      where: { userId: store.id, clientJid: jid },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+      select: {
+        id: true,
+        product: true,
+        variation: true,
+        quantity: true,
+        totalValue: true,
+        type: true,
+        createdAt: true
+      }
+    });
+    res.json(orders);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 router.post('/calendar-sync', authenticate, async (req, res) => {
@@ -946,7 +946,7 @@ router.patch('/products/:id', authenticate, async (req, res) => {
   try {
     const existing = await prisma.product.findUnique({ where: { id } });
     if (!existing || existing.userId !== userId) return res.status(403).json({ error: "Não autorizado" });
-    
+
     // Filtra dados invalidos
     const updateData = { ...req.body };
     delete updateData.id;
