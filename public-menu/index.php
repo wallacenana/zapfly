@@ -168,6 +168,23 @@ try {
                 margin-top: 12px;
                 color: var(--text-main);
             }
+
+            /* Google Autocomplete Fix */
+            .pac-container {
+                z-index: 1100 !important;
+                border-radius: 8px;
+                border: none;
+                margin-top: 2px;
+                box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+                font-family: inherit;
+            }
+            .pac-item {
+                padding: 10px 12px;
+                cursor: pointer;
+            }
+            .pac-item:hover { background: #f9f9f9; }
+            .pac-item-query { font-size: 14px; color: #333; }
+            .pac-icon { display: none; }
         </style>
     </head>
 
@@ -714,7 +731,10 @@ try {
                             display.innerHTML = `⚠️ ${data.error}`;
                             display.style.background = '#fef2f2';
                             display.style.color = '#991b1b';
+                            display.style.border = '1px solid #fee2e2';
                         }
+                    } else {
+                        if (display) display.style.display = 'none';
                     }
                 } catch (err) { console.error('Erro ao calcular frete:', err); }
             }
