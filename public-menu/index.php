@@ -196,6 +196,46 @@ try {
             .pac-icon {
                 display: none;
             }
+            /* SKELETON LOADER PREMIUM */
+            .skeleton {
+                background: linear-gradient(90deg, #f0f0f0 25%, #f7f7f7 50%, #f0f0f0 75%);
+                background-size: 200% 100%;
+                animation: shimmer 1.5s infinite linear;
+                border-radius: 8px;
+            }
+
+            @keyframes shimmer {
+                0% { background-position: 200% 0; }
+                100% { background-position: -200% 0; }
+            }
+
+            .skeleton-card {
+                display: flex;
+                justify-content: space-between;
+                padding: 16px;
+                background: #fff;
+                border-radius: 16px;
+                margin-bottom: 12px;
+                border: 1px solid #f0f0f0;
+            }
+
+            .skeleton-text-group { flex: 1; padding-right: 16px; }
+            .skeleton-title { height: 18px; width: 60%; margin-bottom: 8px; }
+            .skeleton-desc { height: 12px; width: 90%; margin-bottom: 6px; }
+            .skeleton-price { height: 16px; width: 30%; margin-top: 12px; }
+            .skeleton-img-box { width: 80px; height: 80px; border-radius: 12px; }
+
+            .status-badge {
+                padding: 4px 10px;
+                border-radius: 20px;
+                font-size: 0.75rem;
+                font-weight: 700;
+                display: inline-flex;
+                align-items: center;
+                gap: 5px;
+            }
+            .status-badge.open { background: #f0fdf4; color: #166534; }
+            .status-badge.closed { background: #fef2f2; color: #991b1b; }
         </style>
     </head>
 
@@ -818,21 +858,38 @@ try {
 
                 if (state.loading) {
                     container.innerHTML = `
-            <div class="menu-section">
-                <h2 class="section-title"><div class="skeleton" style="height:24px; width:150px;"></div></h2>
-                ${Array(4).fill().map(() => `
-                    <div class="skeleton-card">
-                        <div class="skeleton-text">
-                            <div class="skeleton skeleton-title"></div>
-                            <div class="skeleton skeleton-desc"></div>
-                            <div class="skeleton skeleton-desc" style="width:70%"></div>
-                            <div class="skeleton skeleton-price"></div>
+                        <div class="menu-section">
+                            <div class="skeleton" style="height:24px; width:160px; margin-bottom:20px;"></div>
+                            <div class="products-grid">
+                                ${Array(4).fill().map(() => `
+                                    <div class="skeleton-card">
+                                        <div class="skeleton-text-group">
+                                            <div class="skeleton skeleton-title"></div>
+                                            <div class="skeleton skeleton-desc"></div>
+                                            <div class="skeleton skeleton-desc" style="width:70%"></div>
+                                            <div class="skeleton skeleton-price"></div>
+                                        </div>
+                                        <div class="skeleton skeleton-img-box"></div>
+                                    </div>
+                                `).join('')}
+                            </div>
                         </div>
-                        <div class="skeleton skeleton-img"></div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+                        <div class="menu-section">
+                            <div class="skeleton" style="height:24px; width:120px; margin-bottom:20px;"></div>
+                            <div class="products-grid">
+                                ${Array(2).fill().map(() => `
+                                    <div class="skeleton-card">
+                                        <div class="skeleton-text-group">
+                                            <div class="skeleton skeleton-title"></div>
+                                            <div class="skeleton skeleton-desc"></div>
+                                            <div class="skeleton skeleton-price"></div>
+                                        </div>
+                                        <div class="skeleton skeleton-img-box"></div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
                     return;
                 }
 
@@ -1548,6 +1605,11 @@ try {
                 root.style.setProperty('--text-gray', `${data.textColor || '#333333'}99`);
             }
 
+            // Inicialização
+            fetchPublicSettings();
+            fetchProducts();
+            renderMenu(); // Mostra o skeleton imediatamente
+            updateUI();
         </script>
         <script>lucide.createIcons();</script>
     </body>
