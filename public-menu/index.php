@@ -66,7 +66,7 @@ try {
         <link
             href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
             rel="stylesheet">
-        <link rel="stylesheet" href="/cardapio/style.css?v=2.1">
+        <link rel="stylesheet" href="/cardapio/style.css?v=2.4">
         <script src="https://unpkg.com/lucide@latest"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -196,46 +196,7 @@ try {
             .pac-icon {
                 display: none;
             }
-            /* SKELETON LOADER PREMIUM */
-            .skeleton {
-                background: linear-gradient(90deg, #f0f0f0 25%, #f7f7f7 50%, #f0f0f0 75%);
-                background-size: 200% 100%;
-                animation: shimmer 1.5s infinite linear;
-                border-radius: 8px;
-            }
 
-            @keyframes shimmer {
-                0% { background-position: 200% 0; }
-                100% { background-position: -200% 0; }
-            }
-
-            .skeleton-card {
-                display: flex;
-                justify-content: space-between;
-                padding: 16px;
-                background: #fff;
-                border-radius: 16px;
-                margin-bottom: 12px;
-                border: 1px solid #f0f0f0;
-            }
-
-            .skeleton-text-group { flex: 1; padding-right: 16px; }
-            .skeleton-title { height: 18px; width: 60%; margin-bottom: 8px; }
-            .skeleton-desc { height: 12px; width: 90%; margin-bottom: 6px; }
-            .skeleton-price { height: 16px; width: 30%; margin-top: 12px; }
-            .skeleton-img-box { width: 80px; height: 80px; border-radius: 12px; }
-
-            .status-badge {
-                padding: 4px 10px;
-                border-radius: 20px;
-                font-size: 0.75rem;
-                font-weight: 700;
-                display: inline-flex;
-                align-items: center;
-                gap: 5px;
-            }
-            .status-badge.open { background: #f0fdf4; color: #166534; }
-            .status-badge.closed { background: #fef2f2; color: #991b1b; }
         </style>
     </head>
 
@@ -379,20 +340,24 @@ try {
                     <div class="checkout-step hidden" id="step-3">
                         <div id="order-summary-content">
                             <div class="summary-section">
-                                <h3 class="field-label" style="font-size: 1.1rem; margin-bottom: 12px;">Resumo dos Itens</h3>
+                                <h3 class="field-label" style="font-size: 1.1rem; margin-bottom: 12px;">Resumo dos Itens
+                                </h3>
                                 <div id="review-items-list" style="margin-bottom: 20px;"></div>
                             </div>
-                            
+
                             <div class="summary-section" style="background: #f9f9f9; padding: 15px; border-radius: 12px;">
-                                <div class="summary-row" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <div class="summary-row"
+                                    style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                                     <span>Subtotal</span>
                                     <span id="summary-subtotal">R$ 0,00</span>
                                 </div>
-                                <div id="delivery-fee-line" class="summary-row hidden" style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #166534;">
+                                <div id="delivery-fee-line" class="summary-row hidden"
+                                    style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #166534;">
                                     <span>Taxa de entrega</span>
                                     <span id="summary-fee">R$ 0,00</span>
                                 </div>
-                                <div class="summary-total-row" style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.2rem; border-top: 1px dashed #ddd; padding-top: 12px; margin-top: 12px;">
+                                <div class="summary-total-row"
+                                    style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.2rem; border-top: 1px dashed #ddd; padding-top: 12px; margin-top: 12px;">
                                     <span>Total</span>
                                     <span id="summary-total">R$ 0,00</span>
                                 </div>
@@ -711,12 +676,12 @@ try {
                 console.log('[Maps] Iniciando Autocomplete...');
                 const mapEl = document.getElementById('delivery-map');
                 const input = document.getElementById('user-address');
-                
+
                 if (!mapEl || !input) {
                     console.log('[Maps] Elementos não encontrados ainda.');
                     return;
                 }
-                
+
                 if (state.googleMap) {
                     console.log('[Maps] Mapa já existe, ignorando reinicialização.');
                     return;
@@ -859,32 +824,32 @@ try {
                 if (state.loading) {
                     container.innerHTML = `
                         <div class="menu-section">
-                            <div class="skeleton" style="height:24px; width:160px; margin-bottom:20px;"></div>
+                            <h2 class="section-title"><div class="skeleton" style="height: 24px; width: 140px; border-radius: 4px;"></div></h2>
                             <div class="products-grid">
                                 ${Array(4).fill().map(() => `
-                                    <div class="skeleton-card">
-                                        <div class="skeleton-text-group">
-                                            <div class="skeleton skeleton-title"></div>
-                                            <div class="skeleton skeleton-desc"></div>
-                                            <div class="skeleton skeleton-desc" style="width:70%"></div>
-                                            <div class="skeleton skeleton-price"></div>
+                                    <div class="product-card" style="pointer-events: none; opacity: 0.8;">
+                                        <div class="product-info">
+                                            <div class="skeleton" style="height: 18px; width: 70%; margin-bottom: 8px; border-radius: 4px;"></div>
+                                            <div class="skeleton" style="height: 12px; width: 100%; margin-bottom: 4px; border-radius: 4px;"></div>
+                                            <div class="skeleton" style="height: 12px; width: 80%; border-radius: 4px; margin-bottom: 12px;"></div>
+                                            <div class="skeleton" style="height: 16px; width: 40%; border-radius: 4px;"></div>
                                         </div>
-                                        <div class="skeleton skeleton-img-box"></div>
+                                        <div class="skeleton product-img" style="border-radius: 8px;"></div>
                                     </div>
                                 `).join('')}
                             </div>
                         </div>
                         <div class="menu-section">
-                            <div class="skeleton" style="height:24px; width:120px; margin-bottom:20px;"></div>
+                            <h2 class="section-title"><div class="skeleton" style="height: 24px; width: 180px; border-radius: 4px;"></div></h2>
                             <div class="products-grid">
                                 ${Array(2).fill().map(() => `
-                                    <div class="skeleton-card">
-                                        <div class="skeleton-text-group">
-                                            <div class="skeleton skeleton-title"></div>
-                                            <div class="skeleton skeleton-desc"></div>
-                                            <div class="skeleton skeleton-price"></div>
+                                    <div class="product-card" style="pointer-events: none; opacity: 0.8;">
+                                        <div class="product-info">
+                                            <div class="skeleton" style="height: 18px; width: 60%; margin-bottom: 8px; border-radius: 4px;"></div>
+                                            <div class="skeleton" style="height: 12px; width: 90%; margin-bottom: 4px; border-radius: 4px;"></div>
+                                            <div class="skeleton" style="height: 16px; width: 35%; border-radius: 4px; margin-top: 12px;"></div>
                                         </div>
-                                        <div class="skeleton skeleton-img-box"></div>
+                                        <div class="skeleton product-img" style="border-radius: 8px;"></div>
                                     </div>
                                 `).join('')}
                             </div>
@@ -1109,7 +1074,7 @@ try {
                 ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
             </div>
             ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
-                            `;
+                                            `;
                     updateDetailFooter();
                     lucide.createIcons();
                 }, 50);
@@ -1286,24 +1251,24 @@ try {
                 }
                 document.getElementById('next-step-btn').disabled = false;
                 list.innerHTML = cart.map(item => `
-                            <div class="checkout-item">
-                                <div class="item-name-qty">
-                                    <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
-                                </div>
-                                <div style="display: flex; align-items: center; gap: 16px;">
-                                    <div class="cart-qty-control">
-                                        <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
-                                            ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
-                                        </button>
-                                        <span class="qty-val-mini">${item.quantity}</span>
-                                        <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
-                                            <i data-lucide="plus"></i>
-                                        </button>
-                                    </div>
-                                    <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
-                                </div>
-                            </div>
-                        `).join('');
+                                            <div class="checkout-item">
+                                                <div class="item-name-qty">
+                                                    <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
+                                                </div>
+                                                <div style="display: flex; align-items: center; gap: 16px;">
+                                                    <div class="cart-qty-control">
+                                                        <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
+                                                            ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
+                                                        </button>
+                                                        <span class="qty-val-mini">${item.quantity}</span>
+                                                        <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
+                                                            <i data-lucide="plus"></i>
+                                                        </button>
+                                                    </div>
+                                                    <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                                                </div>
+                                            </div>
+                                        `).join('');
                 lucide.createIcons();
             }
 
@@ -1548,17 +1513,17 @@ try {
                 });
 
                 list.innerHTML = uniqueItems.slice(0, 6).map(o => `
-                            <div class="history-card" onclick="reorderItem('${o.id}')">
-                                <div class="history-card-info">
-                                    <strong>${o.product}</strong>
-                                    ${o.variation ? `<p>${o.variation}</p>` : ''}
-                                </div>
-                                <div class="history-card-action">
-                                    <span>Pedir de novo</span>
-                                    <i data-lucide="chevron-right"></i>
-                                </div>
-                            </div>
-                        `).join('');
+                                            <div class="history-card" onclick="reorderItem('${o.id}')">
+                                                <div class="history-card-info">
+                                                    <strong>${o.product}</strong>
+                                                    ${o.variation ? `<p>${o.variation}</p>` : ''}
+                                                </div>
+                                                <div class="history-card-action">
+                                                    <span>Pedir de novo</span>
+                                                    <i data-lucide="chevron-right"></i>
+                                                </div>
+                                            </div>
+                                        `).join('');
                 lucide.createIcons();
             }
 
