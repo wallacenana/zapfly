@@ -144,7 +144,7 @@ const SiteSettings = () => {
                                     ) : (
                                         <Upload color="var(--text-muted)" size={28} />
                                     )}
-                                    <input type="file" onChange={(e) => handleUpload('logo', e)} style={fileInput} />
+                                    <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp" onChange={(e) => handleUpload('logo', e)} style={fileInput} />
                                 </div>
                                 <p style={hintStyle}>PNG transparente recomendado</p>
                             </div>
@@ -158,7 +158,7 @@ const SiteSettings = () => {
                                     ) : (
                                         <Globe color="var(--text-muted)" size={28} />
                                     )}
-                                    <input type="file" onChange={(e) => handleUpload('favicon', e)} style={fileInput} />
+                                    <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp" onChange={(e) => handleUpload('favicon', e)} style={fileInput} />
                                 </div>
                                 <p style={hintStyle}>Formato quadrado (32x32px)</p>
                             </div>
