@@ -1506,6 +1506,8 @@ try {
                 const btn = document.getElementById('place-order-btn');
                 btn.disabled = true; btn.innerHTML = 'Processando Pagamento...';
 
+                const totalValue = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0) + (state.activeTab === 'delivery' ? state.deliveryFee : 0);
+
                 const payload = {
                     clientName: state.userInfo.name,
                     clientPhone: state.userInfo.phone,
@@ -1516,6 +1518,7 @@ try {
                     scheduledDate: state.activeTab === 'order' ? document.getElementById('order-date').value : null,
                     scheduledTime: state.activeTab === 'order' ? document.getElementById('order-time').value : null,
                     deliveryFee: state.activeTab === 'delivery' ? state.deliveryFee : 0,
+                    totalValue: totalValue,
                     carrinho_itens_extras: cart.slice(1).map(item => ({
                         name: item.name + (item.variation ? ` (${item.variation})` : ''),
                         price: item.price,

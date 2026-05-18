@@ -356,6 +356,67 @@ async function deleteCalendarEvent(userId, calendarEventId) {
 }
 
 
+// Helper para calcular o total do pedido com inteligência (storefront + IA)
+async function calculateOrderTotal(data, userId) {
+  let computedTotalValue = parseFloat(data.totalValue);
+  if (!isNaN(computedTotalValue)) return computedTotalValue;
+
+  computedTotalValue = 0;
+  let mainProductPrice = 0;
+  
+  const productId = data.productId;
+  const product = data.product;
+  const variation = data.variation;
+  const quantity = data.quantity;
+  const deliveryFee = data.deliveryFee;
+  const carrinho_itens_extras = data.carrinho_itens_extras;
+
+  if (productId) {
+    const p = await prisma.product.findUnique({ where: { id: productId } });
+    if (p) {
+      mainProductPrice = p.price;
+      if (variation && p.variations) {
+        try {
+          const vars = typeof p.variations === 'string' ? JSON.parse(p.variations) : p.variations;
+          const vObj = vars.find(v => v.name === variation);
+          if (vObj && vObj.price !== undefined) mainProductPrice = vObj.price;
+        } catch (e) {}
+      }
+    }
+  } else if (product) {
+    const p = await prisma.product.findFirst({ where: { userId, name: { contains: product, mode: 'insensitive' } } });
+    if (p) {
+      mainProductPrice = p.price;
+      if (variation && p.variations) {
+        try {
+          const vars = typeof p.variations === 'string' ? JSON.parse(p.variations) : p.variations;
+          const vObj = vars.find(v => v.name === variation);
+          if (vObj && vObj.price !== undefined) mainProductPrice = vObj.price;
+        } catch (e) {}
+      }
+    }
+  }
+
+  const mainQty = parseFloat(quantity) || 1;
+  computedTotalValue += (mainProductPrice * mainQty);
+
+  if (carrinho_itens_extras && Array.isArray(carrinho_itens_extras)) {
+    for (const item of carrinho_itens_extras) {
+      if (typeof item === 'object' && item !== null) {
+        let itemPrice = parseFloat(item.price) || 0;
+        let itemQty = parseFloat(item.quantity) || 1;
+        computedTotalValue += (itemPrice * itemQty);
+      } else if (typeof item === 'string') {
+        const extraP = await prisma.product.findFirst({ where: { userId, name: { contains: item, mode: 'insensitive' } } });
+        if (extraP) computedTotalValue += extraP.price;
+      }
+    }
+  }
+
+  computedTotalValue += (parseFloat(deliveryFee) || 0);
+  return computedTotalValue;
+}
+
 // ─── MERCADO PAGO ───────────────────────────────────────────────────────────
 
 async function createPaymentLink(order, settings) {
@@ -631,7 +692,7 @@ router.get('/', authenticate, async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    let { instanceId, slug, productId, product, variation, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, clientPhone, type, deliveryAddress, paymentMethod, deliveryFee, massa, recheio, topo, addons, carrinho_itens_extras } = req.body;
+    let { instanceId, slug, productId, product, variation, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, clientPhone, type, deliveryAddress, paymentMethod, deliveryFee, totalValue, massa, recheio, topo, addons, carrinho_itens_extras } = req.body;
 
     let userId = req.user?.id;
     if (!userId && instanceId) {
@@ -675,6 +736,8 @@ router.post('/', async (req, res) => {
       create: { jid: finalClientJid, userId, name: clientName || 'Cliente Balcão', address: deliveryAddress }
     });
 
+    const computedTotal = await calculateOrderTotal(req.body, userId);
+
     const orderData = {
       userId,
       productId: productId || null,
@@ -690,13 +753,25 @@ router.post('/', async (req, res) => {
       deliveryAddress: deliveryAddress || null,
       paymentMethod: paymentMethod || 'A definir',
       deliveryFee: parseFloat(deliveryFee) || 0,
-      totalValue: 0, // Recalcular se necessário
+      totalValue: computedTotal,
       status: isManual ? 'accepted' : 'pending',
       paymentStatus: isManual ? 'confirmed' : 'pending',
       instanceId: instanceId || 'global'
     };
 
-    const order = await prisma.order.create({ data: orderData });
+    let order = await prisma.order.create({ data: orderData });
+
+    // NOVO: Gerar link de pagamento se não for manual e nem pagamento em dinheiro
+    if (!isManual && paymentMethod !== 'Dinheiro' && order.totalValue > 0) {
+      const paymentLink = await createPaymentLink(order, settings);
+      if (paymentLink) {
+        order = await prisma.order.update({
+          where: { id: order.id },
+          data: { paymentLink, status: 'waiting_payment' }
+        });
+      }
+    }
+
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1032,10 +1107,35 @@ router.patch('/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
-    const order = await prisma.order.update({
+    // 1. Atualizar o pedido principal com o payload recebido
+    let order = await prisma.order.update({
       where: { id, userId },
       data: req.body
     });
+
+    // 2. Recalcular o valor total do pedido após o update (se necessário)
+    const computedTotal = await calculateOrderTotal(order, userId);
+    
+    // Atualiza com o valor final recalculado
+    order = await prisma.order.update({
+      where: { id, userId },
+      data: { totalValue: computedTotal }
+    });
+
+    // 3. Buscar as configurações do usuário
+    const settings = await getSettings(userId);
+
+    // 4. Regenerar link de pagamento se não for em dinheiro e o valor for maior que 0
+    if (order.paymentMethod !== 'Dinheiro' && order.totalValue > 0) {
+      const paymentLink = await createPaymentLink(order, settings);
+      if (paymentLink) {
+        order = await prisma.order.update({
+          where: { id, userId },
+          data: { paymentLink, status: 'waiting_payment' }
+        });
+      }
+    }
+
     res.json(order);
   } catch (err) {
     res.status(500).json({ error: err.message });

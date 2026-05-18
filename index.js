@@ -1323,7 +1323,12 @@ async function initInstance(instanceId) {
                                                         if (args.totalValue) updateData.totalValue = args.totalValue;
 
                                                         const internalBase = `http://127.0.0.1:${process.env.PORT || 3001}`;
-                                                        const res = await axios.patch(`${internalBase}/orders/${targetOrder.id}`, updateData);
+                                                        const res = await axios.patch(`${internalBase}/orders/${targetOrder.id}`, updateData, {
+                                                            headers: {
+                                                                'x-internal-token': process.env.INTERNAL_TOKEN || 'zapfly-internal-bypass-key',
+                                                                'x-user-id': settings.userId
+                                                            }
+                                                        });
 
                                                         result = { success: true, message: "Pedido atualizado com sucesso." };
 
