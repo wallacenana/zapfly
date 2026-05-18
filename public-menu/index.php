@@ -577,17 +577,14 @@ try {
                 lucide.createIcons();
 
                 // Inicia o carregamento e aguarda
-                Promise.all([
-                    fetchPublicSettings(),
-                    fetchProducts()
-                ]).then(() => {
+                fetchMenuData().then(() => {
                     initEventListeners();
                     updateUI();
                     if (state.userInfo.phone) fetchPreviousOrders();
                 });
             });
 
-            async function fetchPublicSettings() {
+            async function fetchMenuData() {
                 try {
                     const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
                     if (!response.ok) throw new Error('Loja não encontrada');
@@ -599,13 +596,9 @@ try {
                     };
 
                     state.products = data.products || [];
+                    state.categories = data.categories || [];
                     state.availableSlots = data.availableSlots || [];
-
-                    // Remove Skeletons e mostra o conteúdo real
-                    const loader = document.getElementById('skeleton-loader');
-                    if (loader) loader.remove();
-                    const content = document.getElementById('actual-menu-content');
-                    if (content) content.classList.remove('hidden');
+                    state.loading = false;
 
                     checkStoreStatus();
 
@@ -708,6 +701,14 @@ try {
                         // Atualiza a cada 1 minuto
                         setInterval(checkStoreStatus, 60000);
                     }
+
+                    // History Section
+                    const historyContainer = document.getElementById('history-section');
+                    if (historyContainer) historyContainer.classList.remove('hidden');
+
+                    // Main Menu
+                    renderMenu();
+
                 } catch (err) {
                     console.error('Erro ao carregar configurações:', err);
                     document.body.innerHTML = `
@@ -866,24 +867,7 @@ try {
                 v = v.replace(/^(\d{2})(\d)/g, "($1) $2");
                 v = v.replace(/(\d)(\d{4})$/, "$1-$2");
                 return v;
-            }
 
-            async function fetchProducts() {
-                try {
-                    const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
-                    const data = await response.json();
-                    state.products = data.products || [];
-                    state.categories = data.categories || [];
-                    state.loading = false;
-
-                    // History Section
-                    const historyContainer = document.getElementById('history-section');
-                    if (historyContainer) historyContainer.classList.remove('hidden');
-
-                    // Main Menu
-                    renderMenu();
-                } catch (err) { console.error('Erro ao buscar produtos:', err); }
-            }
 
             function renderMenu() {
                 const skeletonContainer = document.getElementById('skeleton-loader');
@@ -1659,11 +1643,7 @@ try {
                 root.style.setProperty('--text-gray', `${data.textColor || '#333333'}99`);
             }
 
-            // Inicialização
-            fetchPublicSettings();
-            fetchProducts();
-            renderMenu(); // Mostra o skeleton imediatamente
-            updateUI();
+            // Eventos globais já injetados. Skeleton é exibido por HTML estático/PHP.
         </script>
         <script>lucide.createIcons();</script>
     </body>
