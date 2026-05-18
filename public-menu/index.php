@@ -72,8 +72,6 @@ try {
         <link rel="stylesheet" href="/cardapio/style.css?v=2.4">
         <script src="https://unpkg.com/lucide@latest"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
         <style>
             :root {
@@ -1161,7 +1159,7 @@ try {
                 ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
             </div>
             ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
-                                                `;
+                                                    `;
                     updateDetailFooter();
                     lucide.createIcons();
                 }, 50);
@@ -1209,7 +1207,8 @@ try {
                 ids.forEach(id => {
                     const m = document.getElementById(id);
                     if (m && !m.classList.contains('hidden')) {
-                        if (modalId && modalId !== id) return;
+                        // Ignora se o modalId fornecido for um Event (passado via addEventListener)
+                        if (typeof modalId === 'string' && modalId !== id) return;
                         closeWithAnimation(id);
                     }
                 });
@@ -1341,24 +1340,24 @@ try {
                 }
                 document.getElementById('next-step-btn').disabled = false;
                 list.innerHTML = cart.map(item => `
-                                                <div class="checkout-item">
-                                                    <div class="item-name-qty">
-                                                        <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
-                                                    </div>
-                                                    <div style="display: flex; align-items: center; gap: 16px;">
-                                                        <div class="cart-qty-control">
-                                                            <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
-                                                                ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
-                                                            </button>
-                                                            <span class="qty-val-mini">${item.quantity}</span>
-                                                            <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
-                                                                <i data-lucide="plus"></i>
-                                                            </button>
+                                                    <div class="checkout-item">
+                                                        <div class="item-name-qty">
+                                                            <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
                                                         </div>
-                                                        <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                                                        <div style="display: flex; align-items: center; gap: 16px;">
+                                                            <div class="cart-qty-control">
+                                                                <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
+                                                                    ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
+                                                                </button>
+                                                                <span class="qty-val-mini">${item.quantity}</span>
+                                                                <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
+                                                                    <i data-lucide="plus"></i>
+                                                                </button>
+                                                            </div>
+                                                            <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            `).join('');
+                                                `).join('');
                 lucide.createIcons();
             }
 
@@ -1603,17 +1602,17 @@ try {
                 });
 
                 list.innerHTML = uniqueItems.slice(0, 6).map(o => `
-                                                <div class="history-card" onclick="reorderItem('${o.id}')">
-                                                    <div class="history-card-info">
-                                                        <strong>${o.product}</strong>
-                                                        ${o.variation ? `<p>${o.variation}</p>` : ''}
+                                                    <div class="history-card" onclick="reorderItem('${o.id}')">
+                                                        <div class="history-card-info">
+                                                            <strong>${o.product}</strong>
+                                                            ${o.variation ? `<p>${o.variation}</p>` : ''}
+                                                        </div>
+                                                        <div class="history-card-action">
+                                                            <span>Pedir de novo</span>
+                                                            <i data-lucide="chevron-right"></i>
+                                                        </div>
                                                     </div>
-                                                    <div class="history-card-action">
-                                                        <span>Pedir de novo</span>
-                                                        <i data-lucide="chevron-right"></i>
-                                                    </div>
-                                                </div>
-                                            `).join('');
+                                                `).join('');
                 lucide.createIcons();
             }
 
