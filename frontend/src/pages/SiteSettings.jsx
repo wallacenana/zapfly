@@ -83,8 +83,8 @@ const SiteSettings = () => {
                     const canvas = document.createElement('canvas');
                     let width = img.width;
                     let height = img.height;
-                    
-                    const MAX_SIZE = 600; 
+
+                    const MAX_SIZE = 600;
                     if (width > height) {
                         if (width > MAX_SIZE) {
                             height *= MAX_SIZE / width;
@@ -96,12 +96,12 @@ const SiteSettings = () => {
                             height = MAX_SIZE;
                         }
                     }
-                    
+
                     canvas.width = width;
                     canvas.height = height;
                     const ctx = canvas.getContext('2d');
                     ctx.drawImage(img, 0, 0, width, height);
-                    
+
                     canvas.toBlob((blob) => {
                         const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
                             type: 'image/webp',
@@ -119,10 +119,10 @@ const SiteSettings = () => {
         if (!file) return;
 
         const tId = toast.loading(`Otimizando e enviando ${type === 'logo' ? 'Logo' : 'Ícone'}...`);
-        
+
         try {
             const compressedFile = await compressImage(file);
-            
+
             const formData = new FormData();
             formData.append('file', compressedFile);
             formData.append('secret', 'BlinkMediaSecret123!');
