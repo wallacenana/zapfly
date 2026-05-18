@@ -1889,7 +1889,7 @@ app.get('/config/slots', authenticate, async (req, res) => {
 
 app.post('/config/slots', authenticate, async (req, res) => {
     try {
-        const { slots } = req.body; 
+        const { slots } = req.body;
 
         if (!Array.isArray(slots)) return res.status(400).json({ error: 'Slots deve ser um array.' });
         const validSlots = slots.filter(s => s.startTime && s.endTime).map(s => ({

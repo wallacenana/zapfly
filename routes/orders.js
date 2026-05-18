@@ -363,7 +363,7 @@ async function calculateOrderTotal(data, userId) {
 
   computedTotalValue = 0;
   let mainProductPrice = 0;
-  
+
   const productId = data.productId;
   const product = data.product;
   const variation = data.variation;
@@ -380,7 +380,7 @@ async function calculateOrderTotal(data, userId) {
           const vars = typeof p.variations === 'string' ? JSON.parse(p.variations) : p.variations;
           const vObj = vars.find(v => v.name === variation);
           if (vObj && vObj.price !== undefined) mainProductPrice = vObj.price;
-        } catch (e) {}
+        } catch (e) { }
       }
     }
   } else if (product) {
@@ -392,7 +392,7 @@ async function calculateOrderTotal(data, userId) {
           const vars = typeof p.variations === 'string' ? JSON.parse(p.variations) : p.variations;
           const vObj = vars.find(v => v.name === variation);
           if (vObj && vObj.price !== undefined) mainProductPrice = vObj.price;
-        } catch (e) {}
+        } catch (e) { }
       }
     }
   }
@@ -1115,7 +1115,7 @@ router.patch('/:id', authenticate, async (req, res) => {
 
     // 2. Recalcular o valor total do pedido após o update (se necessário)
     const computedTotal = await calculateOrderTotal(order, userId);
-    
+
     // Atualiza com o valor final recalculado
     order = await prisma.order.update({
       where: { id, userId },
