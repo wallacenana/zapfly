@@ -742,7 +742,7 @@ try {
             }
 
             function loadGoogleMaps(apiKey) {
-                if (window.google) return;
+                if (window.google || document.querySelector('script[src*="maps.googleapis.com"]')) return;
                 const script = document.createElement('script');
                 script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMapsAutocomplete`;
                 script.async = true;
@@ -1655,9 +1655,7 @@ try {
                 root.style.setProperty('--text-gray', `${data.textColor || '#333333'}99`);
             }
 
-            // Inicialização
-            fetchPublicSettings();
-            fetchProducts();
+            // Inicialização imediata de elementos visuais síncronos
             renderMenu(); // Mostra o skeleton imediatamente
             updateUI();
         </script>
