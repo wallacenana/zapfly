@@ -708,7 +708,6 @@ try {
 
                     // Main Menu
                     renderMenu();
-
                 } catch (err) {
                     console.error('Erro ao carregar configurações:', err);
                     document.body.innerHTML = `
@@ -867,6 +866,8 @@ try {
                 v = v.replace(/^(\d{2})(\d)/g, "($1) $2");
                 v = v.replace(/(\d)(\d{4})$/, "$1-$2");
                 return v;
+            }
+
 
 
             function renderMenu() {
@@ -1191,7 +1192,6 @@ try {
                 ids.forEach(id => {
                     const m = document.getElementById(id);
                     if (m && !m.classList.contains('hidden')) {
-                        // Ignora se o modalId fornecido for um Event (passado via addEventListener)
                         if (typeof modalId === 'string' && modalId !== id) return;
                         closeWithAnimation(id);
                     }
@@ -1229,6 +1229,13 @@ try {
                 });
 
                 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+                
+                // Fechar modal ao clicar fora (no fundo)
+                document.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('modal')) {
+                        closeModal();
+                    }
+                });
 
                 document.getElementById('history-toggle-btn').addEventListener('click', () => {
                     openModal('history-modal');
@@ -1643,7 +1650,7 @@ try {
                 root.style.setProperty('--text-gray', `${data.textColor || '#333333'}99`);
             }
 
-            // Eventos globais já injetados. Skeleton é exibido por HTML estático/PHP.
+            // Inicialização engatilhada no DOMContentLoaded
         </script>
         <script>lucide.createIcons();</script>
     </body>
