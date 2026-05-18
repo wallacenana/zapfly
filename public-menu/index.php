@@ -28,7 +28,7 @@ try {
         exit;
     }
 
-    $stmt = $pdo->prepare("SELECT u.*, s.businessName, s.logoUrl, s.faviconUrl, s.accentColor, s.backgroundColor, s.textColor, s.buttonColor, s.buttonTextColor FROM user u LEFT JOIN setting s ON u.id = s.userId WHERE u.slug = ?");
+    $stmt = $pdo->prepare("SELECT u.*, s.businessName, s.logoUrl, s.faviconUrl, s.accentColor, s.backgroundColor, s.textColor, s.buttonColor, s.buttonTextColor, s.seoDescription FROM user u LEFT JOIN setting s ON u.id = s.userId WHERE u.slug = ?");
     $stmt->execute([$slug]);
     $store = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -61,6 +61,9 @@ try {
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <?php if (!empty($store['seoDescription'])): ?>
+            <meta name="description" content="<?php echo htmlspecialchars($store['seoDescription']); ?>">
+        <?php endif; ?>
         <title><?php echo $businessName; ?> | Cardápio Digital</title>
         <link rel="icon" type="image/x-icon" href="<?php echo $faviconUrl; ?>">
         <link
@@ -591,7 +594,7 @@ try {
                     const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
                     if (!response.ok) throw new Error('Loja não encontrada');
                     const data = await response.json();
-                    console.log(data)
+
                     state.publicSettings = {
                         ...state.publicSettings,
                         ...data
@@ -749,26 +752,29 @@ try {
             }
 
             window.initMapsAutocomplete = () => {
-                console.log('[Maps] Iniciando Autocomplete...');
-                const mapEl = document.getElementById('delivery-map');
                 const input = document.getElementById('user-address');
-
-                if (!mapEl || !input) {
-                    console.log('[Maps] Elementos não encontrados ainda.');
-                    return;
-                }
-
-                if (state.googleMap) {
-                    console.log('[Maps] Mapa já existe, ignorando reinicialização.');
-                    return;
-                }
+                if (!input) return;
 
                 try {
                     const autocomplete = new google.maps.places.Autocomplete(input);
                     autocomplete.setComponentRestrictions({ country: 'br' });
                     state.geocoder = new google.maps.Geocoder();
 
-                    console.log('[Maps] Criando objeto Map...');
+                    autocomplete.addListener('place_changed', () => {
+                        const place = autocomplete.getPlace();
+                        if (!place.geometry) return;
+                        updateLocation(place.geometry.location, place.formatted_address);
+                    });
+                } catch (e) {
+                    console.error('Autocomplete init error:', e);
+                }
+            };
+
+            function initDeliveryMap() {
+                const mapEl = document.getElementById('delivery-map');
+                if (!mapEl || state.googleMap || !window.google) return;
+
+                try {
                     const mapCenter = { lat: -2.5307, lng: -44.3068 };
                     state.googleMap = new google.maps.Map(mapEl, {
                         zoom: 16,
@@ -789,23 +795,15 @@ try {
                         geocodeAddress(state.userInfo.address);
                     }
 
-                    autocomplete.addListener('place_changed', () => {
-                        const place = autocomplete.getPlace();
-                        console.log('[Maps] Place selecionado:', place.formatted_address);
-                        if (!place.geometry) return;
-                        updateLocation(place.geometry.location, place.formatted_address);
-                    });
-
                     state.mapMarker.addListener('dragend', () => reverseGeocode(state.mapMarker.getPosition()));
                     state.googleMap.addListener('click', (e) => {
                         updateLocation(e.latLng);
                         reverseGeocode(e.latLng);
                     });
-                    console.log('[Maps] Autocomplete pronto!');
                 } catch (e) {
-                    console.error('[Maps Error] Erro na inicialização:', e);
+                    console.error('Delivery map init error:', e);
                 }
-            };
+            }
 
             function geocodeAddress(address) {
                 if (!state.geocoder) return;
@@ -935,7 +933,7 @@ try {
                 }
 
                 if (!state.products || state.products.length === 0) {
-                    console.log('Mantendo menu do PHP (API retornou vazio)');
+
                     if (skeletonContainer) skeletonContainer.classList.add('hidden');
                     if (actualContainer) actualContainer.classList.remove('hidden');
                     return;
@@ -1322,7 +1320,10 @@ try {
 
                 if (step === 1) renderStep1();
                 if (step === 2) renderStep2();
-                if (step === 3) updateStep3Summary();
+                if (step === 3) {
+                    updateStep3Summary();
+                    initDeliveryMap();
+                }
             }
 
             document.getElementById('checkout-back-btn')?.addEventListener('click', () => {
