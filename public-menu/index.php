@@ -934,11 +934,10 @@ try {
                     return;
                 }
 
-                if (skeletonContainer) skeletonContainer.classList.add('hidden');
-                if (actualContainer) actualContainer.classList.remove('hidden');
-
                 if (!state.products || state.products.length === 0) {
                     console.log('Mantendo menu do PHP (API retornou vazio)');
+                    if (skeletonContainer) skeletonContainer.classList.add('hidden');
+                    if (actualContainer) actualContainer.classList.remove('hidden');
                     return;
                 }
 
@@ -1026,6 +1025,10 @@ try {
                 actualContainer.innerHTML = html;
                 renderCategoryNav(sortedCategories);
                 lucide.createIcons();
+
+                // Troca a visibilidade SOMENTE APÓS o DOM estar completamente pronto
+                if (skeletonContainer) skeletonContainer.classList.add('hidden');
+                if (actualContainer) actualContainer.classList.remove('hidden');
             }
 
             function renderFeaturedCard(product) {
