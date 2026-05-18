@@ -78,9 +78,9 @@ const SiteSettings = () => {
 
         const formData = new FormData();
         formData.append('file', file);
-        formData.append('secret', 'BlinkMediaSecret123!'); 
+        formData.append('secret', 'BlinkMediaSecret123!');
         // Envia 200px para a logo para ter nitidez em telas Retina, mas ser muito leve
-        formData.append('size', type === 'logo' ? '200' : '64'); 
+        formData.append('size', type === 'logo' ? '200' : '64');
 
         const tId = toast.loading(`Enviando ${type === 'logo' ? 'Logo' : 'Ícone'}...`);
         try {
@@ -88,7 +88,7 @@ const SiteSettings = () => {
             const res = await axios.post('https://files.digizap.com.br/upload.php', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            
+
             if (res.data.success) {
                 setSettings(prev => ({ ...prev, [type === 'logo' ? 'logoUrl' : 'faviconUrl']: res.data.url }));
                 toast.success(`${type === 'logo' ? 'Logo' : 'Ícone'} atualizado!`, { id: tId });
@@ -109,7 +109,7 @@ const SiteSettings = () => {
     );
 
     return (
-        <motion.div 
+        <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             style={{ maxWidth: '1100px', margin: '0 auto', padding: '30px' }}
@@ -123,10 +123,10 @@ const SiteSettings = () => {
             </header>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '30px' }}>
-                
+
                 {/* CONFIGURAÇÕES */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-                    
+
                     {/* Sessão de Imagens */}
                     <section className="card" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -251,10 +251,10 @@ const SiteSettings = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div>
                                 <label style={labelStyle}>Descrição do Cardápio (Google e WhatsApp)</label>
-                                <textarea 
-                                    style={{ ...inputStyle, minHeight: '80px', resize: 'none' }} 
-                                    value={settings.seoDescription || ''} 
-                                    onChange={e => setSettings({...settings, seoDescription: e.target.value})}
+                                <textarea
+                                    style={{ ...inputStyle, minHeight: '80px', resize: 'none' }}
+                                    value={settings.seoDescription || ''}
+                                    onChange={e => setSettings({ ...settings, seoDescription: e.target.value })}
                                     placeholder="Ex: Peça online as melhores pizzas da cidade. Entrega rápida!"
                                 />
                                 <p style={hintStyle}>Aparece na busca do Google e na prévia de links do WhatsApp.</p>
@@ -262,31 +262,31 @@ const SiteSettings = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
                                 <div>
                                     <label style={labelStyle}>Pixel do Meta (Facebook)</label>
-                                    <input 
-                                        type="text" 
-                                        style={inputStyle} 
-                                        value={settings.pixelId || ''} 
-                                        onChange={e => setSettings({...settings, pixelId: e.target.value})}
+                                    <input
+                                        type="text"
+                                        style={inputStyle}
+                                        value={settings.pixelId || ''}
+                                        onChange={e => setSettings({ ...settings, pixelId: e.target.value })}
                                         placeholder="Ex: 1234567890"
                                     />
                                 </div>
                                 <div>
                                     <label style={labelStyle}>Google Analytics 4</label>
-                                    <input 
-                                        type="text" 
-                                        style={inputStyle} 
-                                        value={settings.googleAnalyticsId || ''} 
-                                        onChange={e => setSettings({...settings, googleAnalyticsId: e.target.value})}
+                                    <input
+                                        type="text"
+                                        style={inputStyle}
+                                        value={settings.googleAnalyticsId || ''}
+                                        onChange={e => setSettings({ ...settings, googleAnalyticsId: e.target.value })}
                                         placeholder="Ex: G-XXXXX"
                                     />
                                 </div>
                                 <div>
                                     <label style={labelStyle}>Microsoft Clarity</label>
-                                    <input 
-                                        type="text" 
-                                        style={inputStyle} 
-                                        value={settings.microsoftClarityId || ''} 
-                                        onChange={e => setSettings({...settings, microsoftClarityId: e.target.value})}
+                                    <input
+                                        type="text"
+                                        style={inputStyle}
+                                        value={settings.microsoftClarityId || ''}
+                                        onChange={e => setSettings({ ...settings, microsoftClarityId: e.target.value })}
                                         placeholder="Ex: abcdefghij"
                                     />
                                 </div>
@@ -294,7 +294,7 @@ const SiteSettings = () => {
                         </div>
                     </section>
 
-                    <button 
+                    <button
                         onClick={handleSave}
                         disabled={saving}
                         className="btn btn-primary"
@@ -317,7 +317,7 @@ const SiteSettings = () => {
                     {/* Smartphone Mockup */}
                     <div style={phoneFrame}>
                         <div style={phoneNotch}></div>
-                        
+
                         <div style={{ ...phoneScreen, backgroundColor: settings.backgroundColor }}>
                             {/* Header */}
                             <div style={{ padding: '40px 20px 20px', textAlign: 'center' }}>
@@ -351,14 +351,14 @@ const SiteSettings = () => {
                             </div>
 
                             {/* Finalizar Button */}
-                            <div style={{ 
-                                position: 'absolute', 
-                                bottom: '20px', 
-                                left: '15px', 
-                                right: '15px', 
-                                padding: '15px', 
-                                borderRadius: '12px', 
-                                backgroundColor: settings.buttonColor, 
+                            <div style={{
+                                position: 'absolute',
+                                bottom: '20px',
+                                left: '15px',
+                                right: '15px',
+                                padding: '15px',
+                                borderRadius: '12px',
+                                backgroundColor: settings.buttonColor,
                                 color: settings.buttonTextColor,
                                 textAlign: 'center',
                                 fontWeight: 900,
