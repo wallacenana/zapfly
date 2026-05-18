@@ -345,7 +345,8 @@ try {
         <div id="item-detail-modal" class="modal hidden">
             <div class="modal-overlay"></div>
             <div class="modal-content item-detail-content">
-                <button class="close-modal-btn"><i data-lucide="x"></i></button>
+                <button class="close-modal-btn" onclick="closeWithAnimation('item-detail-modal')"><i
+                        data-lucide="x"></i></button>
                 <div id="item-detail-body"></div>
                 <div class="modal-footer-sticky">
                     <div class="qty-selector">
@@ -577,14 +578,17 @@ try {
                 lucide.createIcons();
 
                 // Inicia o carregamento e aguarda
-                fetchMenuData().then(() => {
+                Promise.all([
+                    fetchPublicSettings(),
+                    fetchProducts()
+                ]).then(() => {
                     initEventListeners();
                     updateUI();
                     if (state.userInfo.phone) fetchPreviousOrders();
                 });
             });
 
-            async function fetchMenuData() {
+            async function fetchPublicSettings() {
                 try {
                     const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
                     if (!response.ok) throw new Error('Loja não encontrada');
@@ -596,9 +600,13 @@ try {
                     };
 
                     state.products = data.products || [];
-                    state.categories = data.categories || [];
                     state.availableSlots = data.availableSlots || [];
-                    state.loading = false;
+
+                    // Remove Skeletons e mostra o conteúdo real
+                    const loader = document.getElementById('skeleton-loader');
+                    if (loader) loader.remove();
+                    const content = document.getElementById('actual-menu-content');
+                    if (content) content.classList.remove('hidden');
 
                     checkStoreStatus();
 
@@ -701,13 +709,6 @@ try {
                         // Atualiza a cada 1 minuto
                         setInterval(checkStoreStatus, 60000);
                     }
-
-                    // History Section
-                    const historyContainer = document.getElementById('history-section');
-                    if (historyContainer) historyContainer.classList.remove('hidden');
-
-                    // Main Menu
-                    renderMenu();
                 } catch (err) {
                     console.error('Erro ao carregar configurações:', err);
                     document.body.innerHTML = `
@@ -868,7 +869,22 @@ try {
                 return v;
             }
 
+            async function fetchProducts() {
+                try {
+                    const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
+                    const data = await response.json();
+                    state.products = data.products || [];
+                    state.categories = data.categories || [];
+                    state.loading = false;
 
+                    // History Section
+                    const historyContainer = document.getElementById('history-section');
+                    if (historyContainer) historyContainer.classList.remove('hidden');
+
+                    // Main Menu
+                    renderMenu();
+                } catch (err) { console.error('Erro ao buscar produtos:', err); }
+            }
 
             function renderMenu() {
                 const skeletonContainer = document.getElementById('skeleton-loader');
@@ -1144,7 +1160,7 @@ try {
                 ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
             </div>
             ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
-                                                    `;
+                                                                                `;
                     updateDetailFooter();
                     lucide.createIcons();
                 }, 50);
@@ -1165,11 +1181,7 @@ try {
 
             function closeWithAnimation(modalId) {
                 const modal = document.getElementById(modalId);
-                modal.classList.add('closing');
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                    modal.classList.remove('closing');
-                }, 400);
+                modal.classList.add('hidden');
             }
 
             function selectVariation(name, price) {
@@ -1192,7 +1204,7 @@ try {
                 ids.forEach(id => {
                     const m = document.getElementById(id);
                     if (m && !m.classList.contains('hidden')) {
-                        if (typeof modalId === 'string' && modalId !== id) return;
+                        if (modalId && modalId !== id) return;
                         closeWithAnimation(id);
                     }
                 });
@@ -1225,17 +1237,10 @@ try {
                 document.getElementById('qty-minus').addEventListener('click', () => { if (state.currentQty > 1) { state.currentQty--; updateDetailFooter(); } });
 
                 document.querySelectorAll('.close-modal-btn').forEach(btn => {
-                    btn.addEventListener('click', closeModal);
+                    btn.addEventListener('click', () => { closeModal(); });
                 });
 
                 document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
-                
-                // Fechar modal ao clicar fora (no fundo)
-                document.addEventListener('click', (e) => {
-                    if (e.target.classList.contains('modal')) {
-                        closeModal();
-                    }
-                });
 
                 document.getElementById('history-toggle-btn').addEventListener('click', () => {
                     openModal('history-modal');
@@ -1312,7 +1317,6 @@ try {
                 if (step === 2) renderStep2();
                 if (step === 3) {
                     updateStep3Summary();
-                    initDeliveryMap();
                 }
             }
 
@@ -1331,24 +1335,24 @@ try {
                 }
                 document.getElementById('next-step-btn').disabled = false;
                 list.innerHTML = cart.map(item => `
-                                                    <div class="checkout-item">
-                                                        <div class="item-name-qty">
-                                                            <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
-                                                        </div>
-                                                        <div style="display: flex; align-items: center; gap: 16px;">
-                                                            <div class="cart-qty-control">
-                                                                <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
-                                                                    ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
-                                                                </button>
-                                                                <span class="qty-val-mini">${item.quantity}</span>
-                                                                <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
-                                                                    <i data-lucide="plus"></i>
-                                                                </button>
-                                                            </div>
-                                                            <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
-                                                        </div>
-                                                    </div>
-                                                `).join('');
+                                                                                <div class="checkout-item">
+                                                                                    <div class="item-name-qty">
+                                                                                        <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
+                                                                                    </div>
+                                                                                    <div style="display: flex; align-items: center; gap: 16px;">
+                                                                                        <div class="cart-qty-control">
+                                                                                            <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
+                                                                                                ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
+                                                                                            </button>
+                                                                                            <span class="qty-val-mini">${item.quantity}</span>
+                                                                                            <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
+                                                                                                <i data-lucide="plus"></i>
+                                                                                            </button>
+                                                                                        </div>
+                                                                                        <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            `).join('');
                 lucide.createIcons();
             }
 
@@ -1387,6 +1391,7 @@ try {
                     // Se o Google Maps carregou mas o mapa ainda não foi criado, cria agora
                     if (window.google && !state.googleMap) {
                         initMapsAutocomplete();
+                        initDeliveryMap();
                     }
 
                     if (state.googleMap) {
@@ -1593,17 +1598,17 @@ try {
                 });
 
                 list.innerHTML = uniqueItems.slice(0, 6).map(o => `
-                                                    <div class="history-card" onclick="reorderItem('${o.id}')">
-                                                        <div class="history-card-info">
-                                                            <strong>${o.product}</strong>
-                                                            ${o.variation ? `<p>${o.variation}</p>` : ''}
-                                                        </div>
-                                                        <div class="history-card-action">
-                                                            <span>Pedir de novo</span>
-                                                            <i data-lucide="chevron-right"></i>
-                                                        </div>
-                                                    </div>
-                                                `).join('');
+                                                                                <div class="history-card" onclick="reorderItem('${o.id}')">
+                                                                                    <div class="history-card-info">
+                                                                                        <strong>${o.product}</strong>
+                                                                                        ${o.variation ? `<p>${o.variation}</p>` : ''}
+                                                                                    </div>
+                                                                                    <div class="history-card-action">
+                                                                                        <span>Pedir de novo</span>
+                                                                                        <i data-lucide="chevron-right"></i>
+                                                                                    </div>
+                                                                                </div>
+                                                                            `).join('');
                 lucide.createIcons();
             }
 
@@ -1650,7 +1655,11 @@ try {
                 root.style.setProperty('--text-gray', `${data.textColor || '#333333'}99`);
             }
 
-            // Inicialização engatilhada no DOMContentLoaded
+            // Inicialização
+            fetchPublicSettings();
+            fetchProducts();
+            renderMenu(); // Mostra o skeleton imediatamente
+            updateUI();
         </script>
         <script>lucide.createIcons();</script>
     </body>
