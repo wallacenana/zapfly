@@ -72,18 +72,63 @@ const SiteSettings = () => {
         }
     };
 
+    const compressImage = (file) => {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    const MAX_SIZE = 600; 
+                    if (width > height) {
+                        if (width > MAX_SIZE) {
+                            height *= MAX_SIZE / width;
+                            width = MAX_SIZE;
+                        }
+                    } else {
+                        if (height > MAX_SIZE) {
+                            width *= MAX_SIZE / height;
+                            height = MAX_SIZE;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    canvas.toBlob((blob) => {
+                        const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
+                            type: 'image/webp',
+                            lastModified: Date.now(),
+                        });
+                        resolve(compressedFile);
+                    }, 'image/webp', 0.8);
+                };
+            };
+        });
+    };
+
     const handleUpload = async (type, e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('secret', 'BlinkMediaSecret123!');
-        // Envia 200px para a logo para ter nitidez em telas Retina, mas ser muito leve
-        formData.append('size', type === 'logo' ? '200' : '64');
-
-        const tId = toast.loading(`Enviando ${type === 'logo' ? 'Logo' : 'Ícone'}...`);
+        const tId = toast.loading(`Otimizando e enviando ${type === 'logo' ? 'Logo' : 'Ícone'}...`);
+        
         try {
+            const compressedFile = await compressImage(file);
+            
+            const formData = new FormData();
+            formData.append('file', compressedFile);
+            formData.append('secret', 'BlinkMediaSecret123!');
+            // Envia 200px para a logo para ter nitidez em telas Retina, mas ser muito leve
+            formData.append('size', type === 'logo' ? '200' : '64');
+
             // Upload direto para o servidor de arquivos PHP
             const res = await axios.post('https://files.digizap.com.br/upload.php', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
