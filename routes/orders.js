@@ -757,7 +757,7 @@ router.post('/', async (req, res) => {
       scheduledTime: scheduledTime || fallbackTime,
       clientName: clientName || 'Cliente',
       clientJid: finalClientJid,
-      clientPhone: clientPhone || null,
+      clientPhone: clientPhone || (finalClientJid && finalClientJid.includes('@') ? finalClientJid.split('@')[0] : null),
       type: type || 'order',
       deliveryAddress: deliveryAddress || null,
       paymentMethod: paymentMethod || 'A definir',

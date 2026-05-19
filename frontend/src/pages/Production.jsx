@@ -244,7 +244,6 @@ const Production = () => {
   const openDetails = (order) => {
     const orderIdShort = (order.id || '').slice(-4).toUpperCase();
     const formattedDate = (order.scheduledDate || '').split('-').reverse().join('/');
-    const statusLabel = order.status === 'pending' ? 'Pendente' : 'Em Produção';
     const quantity = parseFloat(order.quantity) || 1;
     const freightValue = order.deliveryFee || 0;
     // Pega o preço real do produto ou calcula dinamicamente subtraindo a taxa de entrega
@@ -420,7 +419,7 @@ const Production = () => {
       },
       didOpen: () => {
         const chatBtn = document.getElementById('btn-go-to-chat');
-        if (chatBtn) chatBtn.onclick = () => { Swal.close(); navigate(`/chat/${order.clientJid.split('@')[0]}`); };
+        if (chatBtn) chatBtn.onclick = () => { Swal.close(); navigate(`/chat/${(order.clientPhone || order.clientJid || '').split('@')[0]}`); };
 
         const actionBtn = document.getElementById('btn-action-next');
         if (actionBtn) {
