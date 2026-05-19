@@ -2481,7 +2481,7 @@ app.delete('/flows/:id', async (req, res) => {
 
 
 // --- CATCH-ALL PARA SLUGS E HOME (FINAL DA FILA) ---------------------------
-app.get('/:slug?', async (req, res) => {
+app.get(['/', '/:slug'], async (req, res) => {
     try {
         let slug = req.params.slug;
 
