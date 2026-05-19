@@ -742,26 +742,46 @@ async function initInstance(instanceId) {
 
             try {
                 const isGroup = jid.endsWith('@g.us');
-                const chat = await prisma.chat.upsert({
-                    where: { jid_instanceId: { jid, instanceId } },
-                    update: {
-                        lastMsg: text,
-                        lastMsgTime: new Date(msg.messageTimestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                        unreadCount: { increment: msg.key.fromMe ? 0 : 1 },
-                        updatedAt: new Date(),
-                        isGroup: isGroup,
-                        ...((!isGroup && msg.pushName) ? { name: msg.pushName } : {})
-                    },
-                    create: {
-                        instanceId,
-                        jid,
-                        name: (!isGroup && msg.pushName) ? msg.pushName : null,
-                        lastMsg: text,
-                        lastMsgTime: new Date(msg.messageTimestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                        unreadCount: msg.key.fromMe ? 0 : 1,
-                        isGroup: isGroup
+                let chat;
+                try {
+                    chat = await prisma.chat.upsert({
+                        where: { jid_instanceId: { jid, instanceId } },
+                        update: {
+                            lastMsg: text,
+                            lastMsgTime: new Date(msg.messageTimestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            unreadCount: { increment: msg.key.fromMe ? 0 : 1 },
+                            updatedAt: new Date(),
+                            isGroup: isGroup,
+                            ...((!isGroup && msg.pushName) ? { name: msg.pushName } : {})
+                        },
+                        create: {
+                            instanceId,
+                            jid,
+                            name: (!isGroup && msg.pushName) ? msg.pushName : null,
+                            lastMsg: text,
+                            lastMsgTime: new Date(msg.messageTimestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            unreadCount: msg.key.fromMe ? 0 : 1,
+                            isGroup: isGroup
+                        }
+                    });
+                } catch (upsertErr) {
+                    if (upsertErr.code === 'P2002') {
+                        // Fallback em caso de concorrência simultânea
+                        chat = await prisma.chat.update({
+                            where: { jid_instanceId: { jid, instanceId } },
+                            data: {
+                                lastMsg: text,
+                                lastMsgTime: new Date(msg.messageTimestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                unreadCount: { increment: msg.key.fromMe ? 0 : 1 },
+                                updatedAt: new Date(),
+                                isGroup: isGroup,
+                                ...((!isGroup && msg.pushName) ? { name: msg.pushName } : {})
+                            }
+                        }).catch(() => null);
+                    } else {
+                        throw upsertErr;
                     }
-                });
+                }
 
                 const data = {
                     msgId: msg.key.id,
