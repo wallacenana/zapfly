@@ -46,16 +46,6 @@ const Chat = () => {
   const [contacts, setContacts] = useState([]);
   const [activeContact, setActiveContact] = useState(null);
 
-  // Auto-selecionar contato se vier via URL (Kanban link)
-  useEffect(() => {
-    if (urlJid && contacts.length > 0 && !activeContact) {
-      const decodedJid = decodeURIComponent(urlJid);
-      const contact = contacts.find(c => c.jid === decodedJid || c.jid.split('@')[0] === decodedJid);
-      if (contact) {
-        setActiveContact(contact);
-      }
-    }
-  }, [urlJid, contacts, activeContact]);
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [showContactInfo, setShowContactInfo] = useState(false);
@@ -69,6 +59,28 @@ const Chat = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [customerDetails, setCustomerDetails] = useState(null);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, type, data }
+
+  // Auto-selecionar contato se vier via URL (Kanban link)
+  useEffect(() => {
+    if (urlJid && !activeContact && !loadingChats) {
+      const decodedJid = decodeURIComponent(urlJid);
+      const contact = contacts.find(c => c.jid === decodedJid || c.jid.split('@')[0] === decodedJid);
+      if (contact) {
+        setActiveContact(contact);
+      } else {
+        // Cria um contato virtual temporário para iniciar a conversa caso não esteja na lista de chats recentes do WhatsApp
+        const targetJid = decodedJid.includes('@') ? decodedJid : `${decodedJid}@s.whatsapp.net`;
+        const virtualContact = {
+          id: `virtual-${targetJid}`,
+          jid: targetJid,
+          name: decodedJid.split('@')[0],
+          unreadCount: 0,
+          lastMessage: ''
+        };
+        setActiveContact(virtualContact);
+      }
+    }
+  }, [urlJid, contacts, activeContact, loadingChats]);
 
   // Audio Recording State
   const [isRecording, setIsRecording] = useState(false);

@@ -279,8 +279,14 @@ function OrderCard({ order, onUpdate }) {
     const formattedDate = (order.scheduledDate || '').split('-').reverse().join('/');
     const quantity = parseFloat(order.quantity) || 1;
     const freightValue = order.deliveryFee || 0;
-    // Pega o preço real do produto ou calcula dinamicamente subtraindo a taxa de entrega
-    const unitPrice = order.totalValue > 0 ? ((order.totalValue - freightValue) / quantity) : (order.productRelation?.price || 0);
+    // Pega o preço real do produto ou calcula dinamicamente subtraindo a taxa de entrega, com fallback seguro
+    let unitPrice = order.productRelation?.price || 0;
+    if (order.totalValue > 0) {
+      const computedUnit = (order.totalValue - freightValue) / quantity;
+      if (computedUnit > 0) {
+        unitPrice = computedUnit;
+      }
+    }
     const itemsSubtotal = unitPrice * quantity;
 
     let notesHtml = '';
