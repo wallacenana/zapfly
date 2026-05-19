@@ -798,11 +798,23 @@ async function initInstance(instanceId) {
                     status: msg.key.fromMe ? 'sent' : 'received'
                 };
 
-                const messageRecord = await prisma.message.upsert({
-                    where: { msgId: msg.key.id },
-                    update: data,
-                    create: data
-                });
+                let messageRecord;
+                try {
+                    messageRecord = await prisma.message.upsert({
+                        where: { msgId: msg.key.id },
+                        update: data,
+                        create: data
+                    });
+                } catch (upsertErr) {
+                    if (upsertErr.code === 'P2002') {
+                        messageRecord = await prisma.message.update({
+                            where: { msgId: msg.key.id },
+                            data: data
+                        }).catch(() => null);
+                    } else {
+                        throw upsertErr;
+                    }
+                }
 
                 // 笏笏笏 COMANDOS DE ADMINISTRADOR (MANAGER) 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
                 const settings = await getSettings();
