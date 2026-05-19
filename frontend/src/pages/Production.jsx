@@ -294,7 +294,7 @@ const Production = () => {
 
     const handlePrint = (order) => {
       const saved = JSON.parse(localStorage.getItem('print_settings') || '{"showId":true,"prod":true,"massa":true,"notes":true,"value":true,"addr":true,"client":true}');
-      
+
       Swal.fire({
         title: 'Opções de Impressão',
         background: '#111827',
@@ -335,7 +335,7 @@ const Production = () => {
         if (result.isConfirmed) {
           const opts = result.value;
           const idShort = order.id.slice(-4).toUpperCase();
-          
+
           let content = `
             <div style="font-family: 'Inter', Arial, sans-serif; width: 100%; max-width: 280px; margin: 0 auto; color: #000; line-height: 1.4;">
               <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px;">
@@ -346,7 +346,7 @@ const Production = () => {
 
           if (opts.client) content += `<p style="font-size: 18px; margin: 8px 0;"><b>👤 CLIENTE:</b> ${order.clientName}</p>`;
           if (opts.prod) content += `<p style="font-size: 20px; margin: 10px 0; border-bottom: 1px solid #eee; padding-bottom: 5px;"><b>📦 ITEM:</b> ${order.product} <br/><span style="font-size: 16px;">(${order.variation || 'Padrão'})</span></p>`;
-          
+
           if (opts.massa) {
             content += `
               <div style="margin: 10px 0; padding: 10px; border: 1px solid #000; border-radius: 5px; font-size: 16px;">
