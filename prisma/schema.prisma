@@ -78,6 +78,7 @@ model Chat {
   name       String?
   isGroup    Boolean  @default(false)
   lastMsg    String?  @db.Text
+  lastMsgTime String?
   aiEnabled  Boolean  @default(true)
   instanceId String
   instance   Instance @relation(fields: [instanceId], references: [id])
