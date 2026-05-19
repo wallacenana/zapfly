@@ -738,6 +738,14 @@ router.post('/', async (req, res) => {
 
     const computedTotal = await calculateOrderTotal(req.body, userId);
 
+    let fallbackTime = '00:00';
+    try {
+      fallbackTime = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
+    } catch (e) {
+      const now = new Date();
+      fallbackTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    }
+
     const orderData = {
       userId,
       productId: productId || null,
@@ -746,9 +754,10 @@ router.post('/', async (req, res) => {
       quantity: qtyNum.toString(),
       notes: notes || '',
       scheduledDate: scheduledDate || new Date().toISOString().split('T')[0],
-      scheduledTime: scheduledTime || '00:00',
+      scheduledTime: scheduledTime || fallbackTime,
       clientName: clientName || 'Cliente',
       clientJid: finalClientJid,
+      clientPhone: clientPhone || null,
       type: type || 'order',
       deliveryAddress: deliveryAddress || null,
       paymentMethod: paymentMethod || 'A definir',

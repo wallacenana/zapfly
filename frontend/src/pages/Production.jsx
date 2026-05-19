@@ -143,6 +143,10 @@ const Production = () => {
       title: 'Editar Pedido',
       background: '#111827',
       color: '#fff',
+      willOpen: () => {
+        const container = Swal.getContainer();
+        if (container) container.style.zIndex = '3000';
+      },
       html: `
         <div style="text-align: left; font-family: 'Inter', sans-serif;">
            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 15px;">
@@ -242,11 +246,9 @@ const Production = () => {
     const formattedDate = (order.scheduledDate || '').split('-').reverse().join('/');
     const statusLabel = order.status === 'pending' ? 'Pendente' : 'Em Produção';
     const quantity = parseFloat(order.quantity) || 1;
-    // Pega o preço real do produto (ou da variação se tivéssemos salvo, mas vamos no preço base por enquanto)
-    const priceFromDb = order.productRelation?.price || (order.totalValue / quantity);
-    const unitPrice = priceFromDb;
-
     const freightValue = order.deliveryFee || 0;
+    // Pega o preço real do produto ou calcula dinamicamente subtraindo a taxa de entrega
+    const unitPrice = order.totalValue > 0 ? ((order.totalValue - freightValue) / quantity) : (order.productRelation?.price || 0);
 
     const itemsSubtotal = unitPrice * quantity;
     const finalTotal = order.totalValue || (itemsSubtotal + freightValue);
@@ -297,6 +299,10 @@ const Production = () => {
         title: 'Opções de Impressão',
         background: '#111827',
         color: '#fff',
+        willOpen: () => {
+          const container = Swal.getContainer();
+          if (container) container.style.zIndex = '3000';
+        },
         html: `
           <div style="text-align: left; padding: 10px;">
             <div style="margin-bottom: 10px;"><label><input type="checkbox" id="p-id" ${saved.showId ? 'checked' : ''}> ID do Pedido (#XXXX)</label></div>
@@ -408,6 +414,10 @@ const Production = () => {
       width: '550px',
       showCloseButton: true,
       showConfirmButton: false,
+      willOpen: () => {
+        const container = Swal.getContainer();
+        if (container) container.style.zIndex = '3000';
+      },
       didOpen: () => {
         const chatBtn = document.getElementById('btn-go-to-chat');
         if (chatBtn) chatBtn.onclick = () => { Swal.close(); navigate(`/chat/${encodeURIComponent(order.clientJid)}`); };
@@ -516,7 +526,7 @@ const Production = () => {
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
               <div>
                 <div style="font-weight: 800; font-size: 15px; color: #fff;">${order.clientName}</div>
-                <div style="font-size: 12px; color: #6b7280;">${order.clientJid?.split('@')[0]}</div>
+                <div style="font-size: 12px; color: #6b7280;">${order.clientPhone || order.clientJid?.split('@')[0]}</div>
               </div>
               <button id="btn-go-to-chat" style="background: #3b82f6; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px;">
                 <span>💬</span> Ver Conversa

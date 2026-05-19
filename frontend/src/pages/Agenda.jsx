@@ -278,10 +278,10 @@ function OrderCard({ order, onUpdate }) {
     const orderIdShort = (order.id || '').slice(-4).toUpperCase();
     const formattedDate = (order.scheduledDate || '').split('-').reverse().join('/');
     const quantity = parseFloat(order.quantity) || 1;
-    // Pega o preço real do produto (ou da variação se tivéssemos salvo, mas vamos no preço base por enquanto)
-    const unitPrice = order.totalValue > 0 ? (order.totalValue - (order.deliveryFee || 0)) / quantity : 0;
-    const itemsSubtotal = unitPrice * quantity;
     const freightValue = order.deliveryFee || 0;
+    // Pega o preço real do produto ou calcula dinamicamente subtraindo a taxa de entrega
+    const unitPrice = order.totalValue > 0 ? ((order.totalValue - freightValue) / quantity) : (order.productRelation?.price || 0);
+    const itemsSubtotal = unitPrice * quantity;
 
     let notesHtml = '';
     // Limpa a tag de frete da exibição visual das notas para não ficar repetitivo
@@ -307,6 +307,10 @@ function OrderCard({ order, onUpdate }) {
         title: 'Editar Pedido',
         background: '#111827',
         color: '#fff',
+        willOpen: () => {
+          const container = Swal.getContainer();
+          if (container) container.style.zIndex = '3000';
+        },
         html: `
           <div style="text-align: left; font-family: 'Inter', sans-serif;">
             <div style="margin-bottom: 15px;">
@@ -401,6 +405,10 @@ function OrderCard({ order, onUpdate }) {
         title: 'Opções de Impressão',
         background: '#111827',
         color: '#fff',
+        willOpen: () => {
+          const container = Swal.getContainer();
+          if (container) container.style.zIndex = '3000';
+        },
         html: `
           <div style="text-align: left; padding: 10px;">
             <div style="margin-bottom: 10px;"><label><input type="checkbox" id="p-id" ${saved.showId ? 'checked' : ''}> ID do Pedido (#XXXX)</label></div>
@@ -512,6 +520,10 @@ function OrderCard({ order, onUpdate }) {
       width: '500px',
       showCloseButton: true,
       showConfirmButton: false,
+      willOpen: () => {
+        const container = Swal.getContainer();
+        if (container) container.style.zIndex = '3000';
+      },
       didOpen: () => {
         const editBtn = document.getElementById('btn-edit-agenda');
         if (editBtn) editBtn.onclick = () => {
@@ -585,6 +597,7 @@ function OrderCard({ order, onUpdate }) {
 
           <div style="padding: 15px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dotted rgba(255,255,255,0.1);">
             <div style="font-weight: 800; font-size: 14px; color: #fff; margin-bottom: 5px;">${order.clientName || 'Cliente'}</div>
+            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">${order.clientPhone || order.clientJid?.split('@')[0]}</div>
             ${addressHtml}
             ${notesHtml}
           </div>

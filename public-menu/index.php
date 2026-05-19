@@ -1511,7 +1511,9 @@ try {
                 const payload = {
                     clientName: state.userInfo.name,
                     clientPhone: state.userInfo.phone,
+                    productId: cart[0].productId,
                     product: cart[0].name + (cart[0].variation ? ` (${cart[0].variation})` : ''),
+                    variation: cart[0].variation,
                     quantity: cart[0].quantity,
                     type: state.activeTab,
                     deliveryAddress: state.activeTab === 'delivery' ? state.userInfo.address : null,
@@ -1520,6 +1522,7 @@ try {
                     deliveryFee: state.activeTab === 'delivery' ? state.deliveryFee : 0,
                     totalValue: totalValue,
                     carrinho_itens_extras: cart.slice(1).map(item => ({
+                        productId: item.productId,
                         name: item.name + (item.variation ? ` (${item.variation})` : ''),
                         price: item.price,
                         quantity: item.quantity

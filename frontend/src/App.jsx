@@ -51,6 +51,7 @@ function AppRoutes() {
         <Route path="agenda" element={<Agenda />} />
         <Route path="connections" element={<Connections />} />
         <Route path="chat" element={<Chat />} />
+        <Route path="chat/:jid" element={<Chat />} />
         <Route path="flows" element={<Flows />} />
         <Route path="flows/:id" element={<FlowEditor />} />
         <Route path="flows/edit/:id" element={<FlowEditor />} />
