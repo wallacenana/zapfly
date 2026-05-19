@@ -50,7 +50,7 @@ const Chat = () => {
   useEffect(() => {
     if (urlJid && contacts.length > 0 && !activeContact) {
       const decodedJid = decodeURIComponent(urlJid);
-      const contact = contacts.find(c => c.jid === decodedJid);
+      const contact = contacts.find(c => c.jid === decodedJid || c.jid.split('@')[0] === decodedJid);
       if (contact) {
         setActiveContact(contact);
       }
