@@ -658,7 +658,7 @@ async function initInstance(instanceId) {
             try {
                 if (update.name || update.verifiedName) {
                     await prisma.chat.update({
-                        where: { instanceId_jid: { instanceId, jid: update.id } },
+                        where: { jid_instanceId: { jid: update.id, instanceId } },
                         data: { name: update.name || update.verifiedName }
                     });
                 }
@@ -743,7 +743,7 @@ async function initInstance(instanceId) {
             try {
                 const isGroup = jid.endsWith('@g.us');
                 const chat = await prisma.chat.upsert({
-                    where: { instanceId_jid: { instanceId, jid } },
+                    where: { jid_instanceId: { jid, instanceId } },
                     update: {
                         lastMsg: text,
                         lastMsgTime: new Date(msg.messageTimestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -832,7 +832,7 @@ async function initInstance(instanceId) {
 
                         // Re-buscamos o chat para garantir que pegamos o status de aiEnabled atualizado
                         const currentChat = await prisma.chat.findUnique({
-                            where: { instanceId_jid: { instanceId, jid } }
+                            where: { jid_instanceId: { jid, instanceId } }
                         });
 
                         // Agrupa todos os textos e imagens do buffer LOGO NO INﾃ垢IO
@@ -1153,7 +1153,7 @@ async function initInstance(instanceId) {
                                             const analysisContent = match[1];
                                             console.log(`[AI Memory] Salvando anﾃ｡lise tﾃｩcnica no banco...`);
                                             await prisma.chat.update({
-                                                where: { instanceId_jid: { instanceId, jid } },
+                                                where: { jid_instanceId: { jid, instanceId } },
                                                 data: { lastPixAnalysis: analysisContent }
                                             }).catch(e => console.error("Erro ao salvar memﾃｳria AI:", e));
 
@@ -2071,7 +2071,7 @@ app.patch('/instances/:id/chats/:jid', authenticate, async (req, res) => {
     if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o encontrada' });
 
     const chat = await prisma.chat.update({
-        where: { instanceId_jid: { instanceId: id, jid } },
+        where: { jid_instanceId: { jid, instanceId: id } },
         data: { aiEnabled }
     });
     res.json(chat);
@@ -2291,7 +2291,7 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
 
         // Update Chat
         await prisma.chat.upsert({
-            where: { instanceId_jid: { instanceId: id, jid: finalJid } },
+            where: { jid_instanceId: { jid: finalJid, instanceId: id } },
             update: {
                 lastMsg: text,
                 lastMsgTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -2362,7 +2362,7 @@ app.post('/instances/:id/send-audio', uploadAudio.single('audio'), async (req, r
 
         // Update Chat
         await prisma.chat.upsert({
-            where: { instanceId_jid: { instanceId: id, jid: finalJid } },
+            where: { jid_instanceId: { jid: finalJid, instanceId: id } },
             update: {
                 lastMsg: '�痔 ﾃ「dio',
                 lastMsgTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
