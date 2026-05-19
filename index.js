@@ -2232,8 +2232,11 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
 
         let { jid, text } = req.body;
         const sock = sessions.get(id);
+        if (!sock) return res.status(404).json({ error: 'Sessão do WhatsApp não inicializada' });
+        if (!sock.user) return res.status(400).json({ error: 'WhatsApp desconectado ou aguardando leitura do QR Code' });
+
         if (!jid || typeof jid !== 'string' || !text) {
-            return res.status(400).json({ error: 'JID (string) e texto sﾃ｣o obrigatﾃｳrios' });
+            return res.status(400).json({ error: 'JID (string) e texto são obrigatórios' });
         }
 
         // Clean and fix JID
@@ -2331,8 +2334,9 @@ app.post('/instances/:id/send-audio', uploadAudio.single('audio'), async (req, r
         const { jid } = req.body;
         const sock = sessions.get(id);
 
-        if (!sock) return res.status(404).json({ error: 'Sessﾃ｣o nﾃ｣o encontrada' });
-        if (!jid || !req.file) return res.status(400).json({ error: 'JID e arquivo de ﾃ｡udio sﾃ｣o obrigatﾃｳrios' });
+        if (!sock) return res.status(404).json({ error: 'Sessão não encontrada' });
+        if (!sock.user) return res.status(400).json({ error: 'WhatsApp desconectado ou aguardando leitura do QR Code' });
+        if (!jid || !req.file) return res.status(400).json({ error: 'JID e arquivo de áudio são obrigatórios' });
 
         let finalJid = jid.trim();
         if (!finalJid.includes('@')) {
