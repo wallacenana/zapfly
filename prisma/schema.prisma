@@ -73,45 +73,55 @@ model Instance {
 }
 
 model Chat {
-  id         String   @id @default(uuid())
-  jid        String
-  name       String?
-  isGroup    Boolean  @default(false)
-  lastMsg    String?  @db.Text
-  lastMsgTime String?
-  aiEnabled  Boolean  @default(true)
-  instanceId String
-  instance   Instance @relation(fields: [instanceId], references: [id])
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt
+  id              String   @id @default(uuid())
+  jid             String
+  name            String?
+  isGroup         Boolean  @default(false)
+  lastMsg         String?  @db.Text
+  lastMsgTime     String?
+  unreadCount     Int      @default(0)
+  lastPixAnalysis String?  @db.Text
+  adminJid        String?
+  aiEnabled       Boolean  @default(true)
+  instanceId      String
+  instance        Instance @relation(fields: [instanceId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
 
   @@unique([jid, instanceId], name: "jid_instanceId")
   @@map("chat")
 }
 
 model Message {
-  id         String   @id @default(uuid())
-  jid        String
-  fromMe     Boolean  @default(false)
-  body       String?  @db.Text
-  type       String   @default("text")
-  timestamp  Int
-  instanceId String
-  instance   Instance @relation(fields: [instanceId], references: [id])
-  createdAt  DateTime @default(now())
+  id                String   @id @default(uuid())
+  msgId             String   @unique
+  jid               String
+  fromMe            Boolean  @default(false)
+  text              String?  @db.Text
+  timestamp         DateTime
+  instanceId        String
+  instance          Instance @relation(fields: [instanceId], references: [id])
+  status            String   @default("sent")
+  participant       String?
+  senderName        String?
+  quotedText        String?  @db.Text
+  quotedParticipant String?
+  createdAt         DateTime @default(now())
 
   @@map("message")
 }
 
 model FlowState {
-  id         String   @id @default(uuid())
-  jid        String
-  instanceId String
-  instance   Instance @relation(fields: [instanceId], references: [id])
-  step       String?
-  data       Json?
-  resumeAt   DateTime?
-  updatedAt  DateTime @default(now()) @updatedAt
+  id            String    @id @default(uuid())
+  jid           String
+  instanceId    String
+  instance      Instance  @relation(fields: [instanceId], references: [id])
+  flowId        String?
+  currentNodeId String?
+  step          String?
+  data          Json?
+  resumeAt      DateTime?
+  updatedAt     DateTime  @default(now()) @updatedAt
 
   @@unique([instanceId, jid], name: "instanceId_jid")
   @@map("flow_state")
