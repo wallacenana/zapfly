@@ -921,7 +921,7 @@ async function initInstance(instanceId) {
                         const userId = instanceData?.userId;
 
                         let flowHandled = false;
-                        if (!msg.key.fromMe) {
+                        if (!msg.key.fromMe && currentChat?.aiEnabled) {
                             flowHandled = await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages, userId);
                         }
                         if (flowHandled) return;
