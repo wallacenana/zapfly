@@ -1,4 +1,5 @@
 <?php
+
 /**
  * DigiZap - Cardápio All-in-One (Versão Checkout 2.0)
  */
@@ -10,15 +11,10 @@ if (php_sapi_name() === 'cli-server') {
     }
 }
 
-// Carrega as credenciais de um arquivo não rastreado pelo git
-if (file_exists(__DIR__ . '/config.php')) {
-    require_once __DIR__ . '/config.php';
-} else {
-    $host = getenv('DB_HOST') ?: 'localhost';
-    $db = getenv('DB_NAME') ?: 'zapfly';
-    $user = getenv('DB_USER') ?: 'root';
-    $pass = getenv('DB_PASS') ?: '';
-}
+$host = '192.185.211.125';
+$db = 'monte814_zapfly';
+$user = 'monte814_zapfly';
+$pass = 'Wa76855867.';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8", $user, $pass);
@@ -59,7 +55,7 @@ try {
     $stmt->execute([$store['id']]);
     $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    ?>
+?>
     <!DOCTYPE html>
     <html lang="pt-BR">
 
@@ -81,23 +77,17 @@ try {
         <style>
             :root {
                 --primary-color:
-                    <?php echo $accentColor; ?>
-                ;
+                    <?php echo $accentColor; ?>;
                 --bg-color:
-                    <?php echo $backgroundColor; ?>
-                ;
+                    <?php echo $backgroundColor; ?>;
                 --text-main:
-                    <?php echo $textColor; ?>
-                ;
+                    <?php echo $textColor; ?>;
                 --btn:
-                    <?php echo $buttonColor; ?>
-                ;
+                    <?php echo $buttonColor; ?>;
                 --btn-text:
-                    <?php echo $buttonTextColor; ?>
-                ;
+                    <?php echo $buttonTextColor; ?>;
                 --accent:
-                    <?php echo $accentColor; ?>
-                ;
+                    <?php echo $accentColor; ?>;
             }
 
             body {
@@ -321,7 +311,7 @@ try {
                         });
                         if (empty($catProducts))
                             continue;
-                        ?>
+                    ?>
                         <section class="menu-section">
                             <h2 class="section-title"><?php echo $cat['name']; ?></h2>
                             <div class="products-grid">
@@ -479,7 +469,9 @@ try {
 
         <?php include 'componentes/footer.php'; ?>
 
-        <script>const API_BASE = 'https://api.digizap.com.br';</script>
+        <script>
+            const API_BASE = 'https://api.digizap.com.br';
+        </script>
         <script>
             // Configurações
             const BASE_DOMAIN = 'digizap.com.br';
@@ -515,7 +507,11 @@ try {
                 currentQty: 1,
                 currentVariation: null,
                 userInfo: JSON.parse(localStorage.getItem('zapfly_user') || '{"name":"","phone":"","address":""}'),
-                publicSettings: { googleApiKey: '', deliveryRules: [], businessName: 'Carregando...' },
+                publicSettings: {
+                    googleApiKey: '',
+                    deliveryRules: [],
+                    businessName: 'Carregando...'
+                },
                 currentStep: 1,
                 deliveryFee: 0,
                 googleMap: null,
@@ -560,8 +556,14 @@ try {
 
             function saveCart() {
                 const carts = {
-                    delivery: { items: state.deliveryCart, expires: Date.now() + (24 * 60 * 60 * 1000) },
-                    order: { items: state.orderCart, expires: Date.now() + (7 * 24 * 60 * 60 * 1000) }
+                    delivery: {
+                        items: state.deliveryCart,
+                        expires: Date.now() + (24 * 60 * 60 * 1000)
+                    },
+                    order: {
+                        items: state.orderCart,
+                        expires: Date.now() + (7 * 24 * 60 * 60 * 1000)
+                    }
                 };
                 localStorage.setItem('linda_cake_carts', JSON.stringify(carts));
             }
@@ -574,7 +576,9 @@ try {
                     const now = Date.now();
                     if (carts.delivery && carts.delivery.expires > now) state.deliveryCart = carts.delivery.items;
                     if (carts.order && carts.order.expires > now) state.orderCart = carts.order.items;
-                } catch (e) { console.error("Erro ao carregar carrinho", e); }
+                } catch (e) {
+                    console.error("Erro ao carregar carrinho", e);
+                }
             }
 
             document.addEventListener('DOMContentLoaded', () => {
@@ -657,7 +661,10 @@ try {
                         document.head.appendChild(ga);
 
                         window.dataLayer = window.dataLayer || [];
-                        function gtag() { dataLayer.push(arguments); }
+
+                        function gtag() {
+                            dataLayer.push(arguments);
+                        }
                         window.gtag = gtag;
                         gtag('js', new Date());
                         gtag('config', data.googleAnalyticsId);
@@ -761,7 +768,9 @@ try {
 
                 try {
                     const autocomplete = new google.maps.places.Autocomplete(input);
-                    autocomplete.setComponentRestrictions({ country: 'br' });
+                    autocomplete.setComponentRestrictions({
+                        country: 'br'
+                    });
                     state.geocoder = new google.maps.Geocoder();
 
                     autocomplete.addListener('place_changed', () => {
@@ -779,7 +788,10 @@ try {
                 if (!mapEl || state.googleMap || !window.google) return;
 
                 try {
-                    const mapCenter = { lat: -2.5307, lng: -44.3068 };
+                    const mapCenter = {
+                        lat: -2.5307,
+                        lng: -44.3068
+                    };
                     state.googleMap = new google.maps.Map(mapEl, {
                         zoom: 16,
                         center: mapCenter,
@@ -811,7 +823,9 @@ try {
 
             function geocodeAddress(address) {
                 if (!state.geocoder) return;
-                state.geocoder.geocode({ address: address }, (results, status) => {
+                state.geocoder.geocode({
+                    address: address
+                }, (results, status) => {
                     if (status === 'OK' && results[0]) updateLocation(results[0].geometry.location, results[0].formatted_address);
                 });
             }
@@ -829,7 +843,9 @@ try {
             }
 
             function reverseGeocode(latLng) {
-                state.geocoder.geocode({ location: latLng }, (results, status) => {
+                state.geocoder.geocode({
+                    location: latLng
+                }, (results, status) => {
                     if (status === 'OK' && results[0]) updateLocation(latLng, results[0].formatted_address);
                 });
             }
@@ -838,8 +854,13 @@ try {
                 try {
                     const response = await fetch(`${API_BASE}/orders/calculate-fee`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ address, slug: STORE_SLUG })
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            address,
+                            slug: STORE_SLUG
+                        })
                     });
                     const data = await response.json();
                     const display = document.getElementById('delivery-fee-display');
@@ -864,7 +885,9 @@ try {
                     } else {
                         if (display) display.style.display = 'none';
                     }
-                } catch (err) { console.error('Erro ao calcular frete:', err); }
+                } catch (err) {
+                    console.error('Erro ao calcular frete:', err);
+                }
             }
 
             function maskPhone(v) {
@@ -888,7 +911,9 @@ try {
 
                     // Main Menu
                     renderMenu();
-                } catch (err) { console.error('Erro ao buscar produtos:', err); }
+                } catch (err) {
+                    console.error('Erro ao buscar produtos:', err);
+                }
             }
 
             function renderMenu() {
@@ -1134,7 +1159,11 @@ try {
                     gtag('event', 'view_item', {
                         currency: 'BRL',
                         value: parseFloat(item.price),
-                        items: [{ item_id: item.id, item_name: item.name, price: parseFloat(item.price) }]
+                        items: [{
+                            item_id: item.id,
+                            item_name: item.name,
+                            price: parseFloat(item.price)
+                        }]
                     });
                 }
 
@@ -1165,7 +1194,7 @@ try {
                 ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
             </div>
             ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
-                                                                                        `;
+                                                                                    `;
                     updateDetailFooter();
                     lucide.createIcons();
                 }, 50);
@@ -1190,7 +1219,10 @@ try {
             }
 
             function selectVariation(name, price) {
-                state.currentVariation = { name, price };
+                state.currentVariation = {
+                    name,
+                    price
+                };
                 document.querySelectorAll('.var-option').forEach(el => el.classList.toggle('selected', el.querySelector('.var-label').innerText === name));
                 updateDetailFooter();
             }
@@ -1226,7 +1258,10 @@ try {
             }
 
             function initEventListeners() {
-                document.getElementById('search-input').addEventListener('input', (e) => { state.searchQuery = e.target.value; renderMenu(); });
+                document.getElementById('search-input').addEventListener('input', (e) => {
+                    state.searchQuery = e.target.value;
+                    renderMenu();
+                });
                 document.querySelectorAll('.cat-tab').forEach(btn => {
                     btn.addEventListener('click', () => {
                         document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
@@ -1234,18 +1269,31 @@ try {
                         state.activeTab = btn.dataset.tab;
                         document.body.className = state.activeTab === 'order' ? 'theme-order' : '';
                         updateTheme(); // Muda as cores ao trocar de aba
-                        renderMenu(); updateUI();
+                        renderMenu();
+                        updateUI();
                     });
                 });
 
-                document.getElementById('qty-plus').addEventListener('click', () => { state.currentQty++; updateDetailFooter(); });
-                document.getElementById('qty-minus').addEventListener('click', () => { if (state.currentQty > 1) { state.currentQty--; updateDetailFooter(); } });
-
-                document.querySelectorAll('.close-modal-btn').forEach(btn => {
-                    btn.addEventListener('click', () => { closeModal(); });
+                document.getElementById('qty-plus').addEventListener('click', () => {
+                    state.currentQty++;
+                    updateDetailFooter();
+                });
+                document.getElementById('qty-minus').addEventListener('click', () => {
+                    if (state.currentQty > 1) {
+                        state.currentQty--;
+                        updateDetailFooter();
+                    }
                 });
 
-                document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+                document.querySelectorAll('.close-modal-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        closeModal();
+                    });
+                });
+
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'Escape') closeModal();
+                });
 
                 document.getElementById('history-toggle-btn').addEventListener('click', () => {
                     openModal('history-modal');
@@ -1340,24 +1388,24 @@ try {
                 }
                 document.getElementById('next-step-btn').disabled = false;
                 list.innerHTML = cart.map(item => `
-                                                                                        <div class="checkout-item">
-                                                                                            <div class="item-name-qty">
-                                                                                                <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
-                                                                                            </div>
-                                                                                            <div style="display: flex; align-items: center; gap: 16px;">
-                                                                                                <div class="cart-qty-control">
-                                                                                                    <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
-                                                                                                        ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
-                                                                                                    </button>
-                                                                                                    <span class="qty-val-mini">${item.quantity}</span>
-                                                                                                    <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
-                                                                                                        <i data-lucide="plus"></i>
-                                                                                                    </button>
-                                                                                                </div>
-                                                                                                <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
-                                                                                            </div>
+                                                                                    <div class="checkout-item">
+                                                                                        <div class="item-name-qty">
+                                                                                            <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
                                                                                         </div>
-                                                                                    `).join('');
+                                                                                        <div style="display: flex; align-items: center; gap: 16px;">
+                                                                                            <div class="cart-qty-control">
+                                                                                                <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
+                                                                                                    ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
+                                                                                                </button>
+                                                                                                <span class="qty-val-mini">${item.quantity}</span>
+                                                                                                <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
+                                                                                                    <i data-lucide="plus"></i>
+                                                                                                </button>
+                                                                                            </div>
+                                                                                            <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                `).join('');
                 lucide.createIcons();
             }
 
@@ -1462,7 +1510,14 @@ try {
                 let cart = getActiveCart();
                 const existing = cart.find(c => c.itemKey === itemKey);
                 if (existing) existing.quantity += state.currentQty;
-                else cart.push({ productId: item.id, itemKey, name: item.name, variation: variation ? variation.name : null, price: variation ? variation.price : item.price, quantity: state.currentQty });
+                else cart.push({
+                    productId: item.id,
+                    itemKey,
+                    name: item.name,
+                    variation: variation ? variation.name : null,
+                    price: variation ? variation.price : item.price,
+                    quantity: state.currentQty
+                });
                 setActiveCart(cart);
 
                 // Tracking: AddToCart
@@ -1480,7 +1535,12 @@ try {
                     gtag('event', 'add_to_cart', {
                         currency: 'BRL',
                         value: parseFloat(finalPrice) * state.currentQty,
-                        items: [{ item_id: item.id, item_name: item.name, price: parseFloat(finalPrice), quantity: state.currentQty }]
+                        items: [{
+                            item_id: item.id,
+                            item_name: item.name,
+                            price: parseFloat(finalPrice),
+                            quantity: state.currentQty
+                        }]
                     });
                 }
 
@@ -1509,7 +1569,8 @@ try {
             async function handlePlaceOrder() {
                 const cart = getActiveCart();
                 const btn = document.getElementById('place-order-btn');
-                btn.disabled = true; btn.innerHTML = 'Processando Pagamento...';
+                btn.disabled = true;
+                btn.innerHTML = 'Processando Pagamento...';
 
                 const totalValue = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0) + (state.activeTab === 'delivery' ? state.deliveryFee : 0);
 
@@ -1537,8 +1598,13 @@ try {
                 try {
                     const response = await fetch(`${API_BASE}/orders`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ ...payload, slug: STORE_SLUG })
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            ...payload,
+                            slug: STORE_SLUG
+                        })
                     });
                     const data = await response.json();
                     if (data.paymentLink) {
@@ -1555,7 +1621,12 @@ try {
                             gtag('event', 'begin_checkout', {
                                 currency: 'BRL',
                                 value: totalValue,
-                                items: cart.map(i => ({ item_id: i.productId, item_name: i.name, price: i.price, quantity: i.quantity }))
+                                items: cart.map(i => ({
+                                    item_id: i.productId,
+                                    item_name: i.name,
+                                    price: i.price,
+                                    quantity: i.quantity
+                                }))
                             });
                         }
 
@@ -1577,7 +1648,7 @@ try {
                 if (!state.userInfo.phone) return;
                 try {
                     const phone = state.userInfo.phone.replace(/\D/g, '');
-                    const res = await fetch(`${API_BASE}/orders/history/${phone}`);
+                    const res = await fetch(`${API_BASE}/orders/history/public/${STORE_SLUG}/${phone}`);
                     const data = await res.json();
                     state.previousOrders = Array.isArray(data) ? data : [];
                     renderPreviousOrders();
@@ -1609,17 +1680,17 @@ try {
                 });
 
                 list.innerHTML = uniqueItems.slice(0, 6).map(o => `
-                                                                                        <div class="history-card" onclick="reorderItem('${o.id}')">
-                                                                                            <div class="history-card-info">
-                                                                                                <strong>${o.product}</strong>
-                                                                                                ${o.variation ? `<p>${o.variation}</p>` : ''}
-                                                                                            </div>
-                                                                                            <div class="history-card-action">
-                                                                                                <span>Pedir de novo</span>
-                                                                                                <i data-lucide="chevron-right"></i>
-                                                                                            </div>
+                                                                                    <div class="history-card" onclick="reorderItem('${o.id}')">
+                                                                                        <div class="history-card-info">
+                                                                                            <strong>${o.product}</strong>
+                                                                                            ${o.variation ? `<p>${o.variation}</p>` : ''}
                                                                                         </div>
-                                                                                    `).join('');
+                                                                                        <div class="history-card-action">
+                                                                                            <span>Pedir de novo</span>
+                                                                                            <i data-lucide="chevron-right"></i>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                `).join('');
                 lucide.createIcons();
             }
 
@@ -1634,7 +1705,10 @@ try {
                 if (product) {
                     state.currentItem = product;
                     state.currentQty = 1;
-                    state.currentVariation = order.variation ? { name: order.variation, price: order.totalPrice / order.quantity } : null;
+                    state.currentVariation = order.variation ? {
+                        name: order.variation,
+                        price: order.totalPrice / order.quantity
+                    } : null;
                     addToCart();
                     closeWithAnimation('history-modal');
                     goToStep(1);
@@ -1670,11 +1744,13 @@ try {
             renderMenu(); // Mostra o skeleton imediatamente
             updateUI();
         </script>
-        <script>lucide.createIcons();</script>
+        <script>
+            lucide.createIcons();
+        </script>
     </body>
 
     </html>
-    <?php
+<?php
 } catch (Exception $e) {
     die("Erro: " . $e->getMessage());
 }
