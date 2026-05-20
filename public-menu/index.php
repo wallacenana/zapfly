@@ -382,7 +382,14 @@ try {
 
                     <!-- Step 2: Details -->
                     <div class="checkout-step hidden" id="step-2">
-                        <div id="delivery-step-content">
+                        <!-- Toggle Delivery/Pickup -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                            <button type="button" class="ifood-btn type-tab active" style="flex: 1; padding: 10px;" onclick="setDeliveryType('delivery')">Entrega</button>
+                            <button type="button" class="ifood-btn type-tab" style="flex: 1; background: var(--bg-gray); color: var(--text-main); padding: 10px;" onclick="setDeliveryType('pickup')">Retirada na Loja</button>
+                        </div>
+
+                        <!-- Address Section -->
+                        <div id="delivery-address-section">
                             <div class="form-group">
                                 <label class="field-label">Endereço de Entrega</label>
                                 <input type="text" id="user-address" class="ifood-input"
@@ -395,7 +402,10 @@ try {
                                 style="margin-bottom:15px; font-weight:600; text-align:center; padding:10px; border-radius:10px; background:#f9f9f9; display:none;">
                             </div>
                         </div>
+
+                        <!-- Scheduled Order (Date/Time) -->
                         <div id="order-step-content" class="hidden">
+                            <div style="border-top: 1px solid #eee; margin: 15px 0;"></div>
                             <div class="form-group">
                                 <label class="field-label">Data da Encomenda</label>
                                 <input type="date" id="order-date" class="ifood-input">
@@ -518,20 +528,8 @@ try {
                 mapMarker: null,
                 geocoder: null,
                 isOpen: false,
+                deliveryType: 'delivery',
                 availableSlots: [],
-                currentCarouselIdx: 0,
-                previousOrders: []
-            };
-
-            function parseImages(imgField) {
-                if (!imgField) return [];
-                try {
-                    const parsed = JSON.parse(imgField);
-                    return Array.isArray(parsed) ? parsed : [imgField];
-                } catch (e) {
-                    return [imgField];
-                }
-            }
 
             /**
              * Seleciona a versão correta da imagem gerada pelo upload.php
@@ -1424,39 +1422,52 @@ try {
                 updateUI();
             }
 
-            function removeFromCart(itemKey) {
-                let cart = getActiveCart();
-                cart = cart.filter(i => i.itemKey !== itemKey);
-                setActiveCart(cart);
-                renderStep1();
-                updateUI();
+                if (step === 2) {
+                    const isDelivery = state.activeTab === 'delivery';
+                    const orderContent = document.getElementById('order-step-content');
+                    
+                    if (orderContent) orderContent.classList.toggle('hidden', isDelivery);
+
+                    // Sempre carrega o mapa se deliveryType = delivery
+                    if (state.deliveryType === 'delivery') {
+                        if (window.google && !state.googleMap) {
+                            initMapsAutocomplete();
+                            initDeliveryMap();
+                        }
+                        if (state.googleMap) {
+                            setTimeout(() => {
+                                google.maps.event.trigger(state.googleMap, 'resize');
+                                if (state.mapMarker) {
+                                    state.googleMap.panTo(state.mapMarker.getPosition());
+                                } else if (state.userInfo.address) {
+                                    geocodeAddress(state.userInfo.address);
+                                }
+                            }, 300);
+                        }
+                    }
+                }
+                if (step === 3) updateStep3Summary();
             }
 
-            function renderStep2() {
-                const isDelivery = state.activeTab === 'delivery';
-                const deliveryContent = document.getElementById('delivery-step-content');
-                const orderContent = document.getElementById('order-step-content');
+            function setDeliveryType(type) {
+                state.deliveryType = type;
+                const btns = document.querySelectorAll('.type-tab');
+                btns[0].classList.toggle('active', type === 'delivery');
+                btns[0].style.background = type === 'delivery' ? 'var(--primary-color)' : 'var(--bg-gray)';
+                btns[0].style.color = type === 'delivery' ? '#fff' : 'var(--text-main)';
+                
+                btns[1].classList.toggle('active', type === 'pickup');
+                btns[1].style.background = type === 'pickup' ? 'var(--primary-color)' : 'var(--bg-gray)';
+                btns[1].style.color = type === 'pickup' ? '#fff' : 'var(--text-main)';
 
-                if (deliveryContent) deliveryContent.classList.toggle('hidden', !isDelivery);
-                if (orderContent) orderContent.classList.toggle('hidden', isDelivery);
+                const addressSection = document.getElementById('delivery-address-section');
+                if (addressSection) addressSection.classList.toggle('hidden', type === 'pickup');
 
-                if (isDelivery) {
-                    // Se o Google Maps carregou mas o mapa ainda não foi criado, cria agora
-                    if (window.google && !state.googleMap) {
-                        initMapsAutocomplete();
-                        initDeliveryMap();
-                    }
-
-                    if (state.googleMap) {
-                        setTimeout(() => {
-                            google.maps.event.trigger(state.googleMap, 'resize');
-                            if (state.mapMarker) {
-                                state.googleMap.panTo(state.mapMarker.getPosition());
-                            } else if (state.userInfo.address) {
-                                geocodeAddress(state.userInfo.address);
-                            }
-                        }, 300);
-                    }
+                if (type === 'pickup') {
+                    state.deliveryFee = 0;
+                    updateStep3Summary();
+                } else {
+                    if (state.userInfo.address) calculateDeliveryFee(state.userInfo.address);
                 }
             }
 
@@ -1470,7 +1481,7 @@ try {
                     if (state.activeTab === 'delivery' && !state.isOpen) return showAlert('Loja Fechada', 'Estamos fechados para pronta entrega no momento. Por favor, utilize a aba de Encomendas para agendar seu pedido.');
                     goToStep(2);
                 } else if (state.currentStep === 2) {
-                    if (state.activeTab === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
+                    if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
                     if (state.activeTab === 'order' && (!document.getElementById('order-date').value || !document.getElementById('order-time').value)) return showAlert('Horário Ausente', 'Escolha uma data e um horário para sua encomenda.');
                     goToStep(3);
                 }
@@ -1479,7 +1490,7 @@ try {
             function updateStep3Summary() {
                 const cart = getActiveCart();
                 const subtotal = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
-                const fee = state.activeTab === 'delivery' ? state.deliveryFee : 0;
+                const fee = state.deliveryType === 'delivery' ? state.deliveryFee : 0;
                 const total = subtotal + fee;
 
                 const subEl = document.getElementById('summary-subtotal');
@@ -1491,7 +1502,7 @@ try {
                 if (subEl) subEl.innerText = `R$ ${subtotal.toFixed(2)}`;
                 if (feeEl) feeEl.innerText = `R$ ${fee.toFixed(2)}`;
                 if (totalEl) totalEl.innerText = `R$ ${total.toFixed(2)}`;
-                if (lineEl) lineEl.classList.toggle('hidden', state.activeTab !== 'delivery');
+                if (lineEl) lineEl.classList.toggle('hidden', state.deliveryType !== 'delivery');
 
                 if (listEl) {
                     listEl.innerHTML = cart.map(item => `<p style="font-size: 0.9rem; margin-bottom: 4px;">${item.quantity}x ${item.name} ${item.variation ? `(${item.variation})` : ''}</p>`).join('');
@@ -1572,7 +1583,7 @@ try {
                 btn.disabled = true;
                 btn.innerHTML = 'Processando Pagamento...';
 
-                const totalValue = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0) + (state.activeTab === 'delivery' ? state.deliveryFee : 0);
+                const totalValue = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0) + (state.deliveryType === 'delivery' ? state.deliveryFee : 0);
 
                 const payload = {
                     clientName: state.userInfo.name,
@@ -1582,10 +1593,10 @@ try {
                     variation: cart[0].variation,
                     quantity: cart[0].quantity,
                     type: state.activeTab,
-                    deliveryAddress: state.activeTab === 'delivery' ? state.userInfo.address : null,
+                    deliveryAddress: state.deliveryType === 'delivery' ? state.userInfo.address : 'Retirada na Loja',
                     scheduledDate: state.activeTab === 'order' ? document.getElementById('order-date').value : null,
                     scheduledTime: state.activeTab === 'order' ? document.getElementById('order-time').value : null,
-                    deliveryFee: state.activeTab === 'delivery' ? state.deliveryFee : 0,
+                    deliveryFee: state.deliveryType === 'delivery' ? state.deliveryFee : 0,
                     totalValue: totalValue,
                     carrinho_itens_extras: cart.slice(1).map(item => ({
                         productId: item.productId,
