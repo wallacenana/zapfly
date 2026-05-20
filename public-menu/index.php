@@ -10,10 +10,15 @@ if (php_sapi_name() === 'cli-server') {
     }
 }
 
-$host = '192.185.211.125';
-$db = 'monte814_zapfly';
-$user = 'monte814_zapfly';
-$pass = 'Wa76855867.';
+// Carrega as credenciais de um arquivo não rastreado pelo git
+if (file_exists(__DIR__ . '/config.php')) {
+    require_once __DIR__ . '/config.php';
+} else {
+    $host = getenv('DB_HOST') ?: 'localhost';
+    $db = getenv('DB_NAME') ?: 'zapfly';
+    $user = getenv('DB_USER') ?: 'root';
+    $pass = getenv('DB_PASS') ?: '';
+}
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8", $user, $pass);
