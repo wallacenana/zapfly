@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Search,
   Send,
@@ -39,8 +39,37 @@ const Toast = Swal.mixin({
 
 // const socket = io('http://localhost:3001'); // Removido, agora vem do ../api
 
+const getFrontendCanonicalJid = (jid) => {
+  if (!jid || typeof jid !== 'string') return jid;
+  if (!jid.endsWith('@s.whatsapp.net')) return jid;
+  const phone = jid.split('@')[0];
+  if (!phone.startsWith('55')) return jid;
+  if (phone.length === 13 && phone[4] === '9') {
+    return '55' + phone.substring(2, 4) + phone.substring(5) + '@s.whatsapp.net';
+  }
+  return jid;
+};
+
+const areJidsSame = (jid1, jid2) => {
+  if (!jid1 || !jid2) return false;
+  if (jid1 === jid2) return true;
+  
+  if (jid1.endsWith('@s.whatsapp.net') && jid2.endsWith('@s.whatsapp.net')) {
+    const p1 = jid1.split('@')[0];
+    const p2 = jid2.split('@')[0];
+    if (p1.startsWith('55') && p2.startsWith('55')) {
+      const norm1 = (p1.length === 13 && p1[4] === '9') ? '55' + p1.substring(2, 4) + p1.substring(5) : p1;
+      const norm2 = (p2.length === 13 && p2[4] === '9') ? '55' + p2.substring(2, 4) + p2.substring(5) : p2;
+      return norm1 === norm2;
+    }
+  }
+  return false;
+};
+
 const Chat = () => {
   const { jid: urlJid } = useParams();
+  const navigate = useNavigate();
+  const lastAutoSelectedJid = useRef(null);
   const [instances, setInstances] = useState([]);
   const [activeInstance, setActiveInstance] = useState(null);
   const [contacts, setContacts] = useState([]);
@@ -60,27 +89,60 @@ const Chat = () => {
   const [customerDetails, setCustomerDetails] = useState(null);
   const [contextMenu, setContextMenu] = useState(null); // { x, y, type, data }
 
+  const displayedContacts = React.useMemo(() => {
+    let list = [...contacts];
+    if (activeContact && activeContact.id?.startsWith('virtual-')) {
+      const alreadyInList = list.some(c => areJidsSame(c.jid, activeContact.jid));
+      if (!alreadyInList) {
+        list = [activeContact, ...list];
+      }
+    }
+    return list;
+  }, [contacts, activeContact]);
+
   // Auto-selecionar contato se vier via URL (Kanban link)
   useEffect(() => {
-    if (urlJid && !activeContact && !loadingChats) {
+    if (urlJid && !loadingChats) {
       const decodedJid = decodeURIComponent(urlJid);
-      const contact = contacts.find(c => c.jid === decodedJid || c.jid.split('@')[0] === decodedJid);
-      if (contact) {
-        setActiveContact(contact);
+      let targetJid;
+      if (decodedJid.endsWith('@g.us')) {
+        targetJid = decodedJid;
+      } else if (decodedJid.endsWith('@lid')) {
+        const phonePart = decodedJid.split('@')[0].replace(/\D/g, '');
+        targetJid = `${phonePart}@lid`;
       } else {
+        const phonePart = decodedJid.split('@')[0].replace(/\D/g, '');
+        targetJid = `${phonePart}@s.whatsapp.net`;
+      }
+
+      const canonicalTargetJid = getFrontendCanonicalJid(targetJid);
+
+      // If we already selected this canonical JID and the active contact is NOT virtual (or we already tried promoting it), return early
+      const isCurrentlyActiveJidSame = activeContact && areJidsSame(activeContact.jid, canonicalTargetJid);
+      const isCurrentlyActiveReal = activeContact && !activeContact.id?.startsWith('virtual-');
+      
+      if (lastAutoSelectedJid.current === canonicalTargetJid && (isCurrentlyActiveReal || contacts.length === 0)) {
+        return;
+      }
+
+      const contact = contacts.find(c => areJidsSame(c.jid, canonicalTargetJid));
+      if (contact) {
+        lastAutoSelectedJid.current = canonicalTargetJid;
+        setActiveContact(contact);
+      } else if (lastAutoSelectedJid.current !== canonicalTargetJid) {
         // Cria um contato virtual temporário para iniciar a conversa caso não esteja na lista de chats recentes do WhatsApp
-        const targetJid = decodedJid.includes('@') ? decodedJid : `${decodedJid}@s.whatsapp.net`;
         const virtualContact = {
-          id: `virtual-${targetJid}`,
-          jid: targetJid,
-          name: decodedJid.split('@')[0],
+          id: `virtual-${canonicalTargetJid}`,
+          jid: canonicalTargetJid,
+          name: canonicalTargetJid.split('@')[0],
           unreadCount: 0,
           lastMessage: ''
         };
+        lastAutoSelectedJid.current = canonicalTargetJid;
         setActiveContact(virtualContact);
       }
     }
-  }, [urlJid, contacts, activeContact, loadingChats]);
+  }, [urlJid, contacts, loadingChats, activeContact]);
 
   // Audio Recording State
   const [isRecording, setIsRecording] = useState(false);
@@ -117,7 +179,7 @@ const Chat = () => {
         fetchChats(activeInstance.id, true);
 
         // 2. Update message window if it's the current chat
-        if (activeContact && activeContact.jid === msgJid) {
+        if (activeContact && areJidsSame(activeContact.jid, msgJid)) {
           // Marcar como lido imediatamente se o chat está aberto
           api.post(`/instances/${activeInstance.id}/chats/read`, {
             jid: msgJid,
@@ -157,10 +219,10 @@ const Chat = () => {
     socket.on('chat_update', (data) => {
       if (activeInstance && data.instanceId === activeInstance.id) {
         setContacts(prev => prev.map(c =>
-          c.jid === data.jid ? { ...c, ...data } : c
+          areJidsSame(c.jid, data.jid) ? { ...c, ...data } : c
         ));
 
-        if (activeContact && activeContact.jid === data.jid) {
+        if (activeContact && areJidsSame(activeContact.jid, data.jid)) {
           setActiveContact(prev => ({ ...prev, ...data }));
         }
       }
@@ -288,7 +350,7 @@ const Chat = () => {
         }).catch(err => console.error("Erro ao marcar como lido:", err));
 
         // Zera o contador visual localmente
-        setContacts(prev => prev.map(c => c.jid === jid ? { ...c, unread: 0 } : c));
+        setContacts(prev => prev.map(c => areJidsSame(c.jid, jid) ? { ...c, unread: 0 } : c));
       }
     } catch (err) {
       console.error(err);
@@ -434,7 +496,7 @@ const Chat = () => {
       });
       setActiveContact({ ...activeContact, aiEnabled: newState });
       // Update contacts list to reflect state
-      setContacts(prev => prev.map(c => c.id === activeContact.id ? { ...c, aiEnabled: newState } : c));
+      setContacts(prev => prev.map(c => (c.id === activeContact.id || areJidsSame(c.jid, activeContact.jid)) ? { ...c, aiEnabled: newState } : c));
     } catch (err) {
       console.error(err);
     }
@@ -528,7 +590,7 @@ const Chat = () => {
   const markAsUnread = async (contact) => {
     try {
       await api.patch(`/instances/${activeInstance.id}/chats/${contact.jid}/unread`);
-      setContacts(prev => prev.map(c => c.id === contact.id ? { ...c, unread: 1 } : c));
+      setContacts(prev => prev.map(c => (c.id === contact.id || areJidsSame(c.jid, contact.jid)) ? { ...c, unread: 1 } : c));
       Toast.fire({ icon: 'success', title: 'Marcado como não lido' });
     } catch (err) {
       console.error(err);
@@ -691,11 +753,11 @@ const Chat = () => {
               <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
                 <div className="animate-spin" style={{ width: '20px', height: '20px', border: '2px solid var(--accent-primary)', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
               </div>
-            ) : (contacts?.length === 0 || !contacts) ? (
+            ) : (displayedContacts?.length === 0 || !displayedContacts) ? (
               <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '14px' }}>
                 Nenhuma conversa encontrada nesta instância.
               </div>
-            ) : contacts
+            ) : displayedContacts
               .filter(c => {
                 if (filterType === 'private') return !c.isGroup;
                 if (filterType === 'groups') return c.isGroup;
@@ -704,15 +766,19 @@ const Chat = () => {
               .map(contact => (
                 <div
                   key={contact.id}
-                  onClick={() => setActiveContact(contact)}
+                  onClick={() => {
+                    lastAutoSelectedJid.current = contact.jid;
+                    setActiveContact(contact);
+                    navigate(`/chat/${encodeURIComponent(contact.jid)}`);
+                  }}
                   onContextMenu={(e) => handleChatContextMenu(e, contact)}
                   style={{
                     padding: '15px 20px',
                     display: 'flex',
                     gap: '15px',
                     cursor: 'pointer',
-                    backgroundColor: activeContact?.id === contact.id ? 'var(--bg-tertiary)' : 'transparent',
-                    borderLeft: activeContact?.id === contact.id ? `4px solid ${activeInstance?.color || 'var(--accent-primary)'}` : '4px solid transparent',
+                    backgroundColor: areJidsSame(activeContact?.jid, contact.jid) ? 'var(--bg-tertiary)' : 'transparent',
+                    borderLeft: areJidsSame(activeContact?.jid, contact.jid) ? `4px solid ${activeInstance?.color || 'var(--accent-primary)'}` : '4px solid transparent',
                     transition: 'all 0.1s'
                   }}
                   className="contact-item"
@@ -782,7 +848,7 @@ const Chat = () => {
               </div>
             )}
 
-            {!hasMoreChats && contacts.length > 0 && (
+            {!hasMoreChats && displayedContacts.length > 0 && (
               <div style={{ textAlign: 'center', padding: '12px', fontSize: '11px', color: 'var(--text-muted)' }}>
                 Todas as conversas carregadas
               </div>
@@ -925,10 +991,13 @@ const Chat = () => {
                               const privateJid = msg.participant.includes(':') ? msg.participant.split(':')[0] + '@s.whatsapp.net' : msg.participant;
                               const existing = contacts.find(c => c.jid === privateJid);
                               if (existing) {
+                                lastAutoSelectedJid.current = existing.jid;
                                 setActiveContact(existing);
+                                navigate(`/chat/${encodeURIComponent(existing.jid)}`);
                               } else {
                                 Toast.fire({ icon: 'info', title: 'Iniciando conversa privada...' });
-                                // We'd need a way to create a temporary contact or wait for a message
+                                lastAutoSelectedJid.current = privateJid;
+                                navigate(`/chat/${encodeURIComponent(privateJid)}`);
                               }
                             }}
                             style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', cursor: 'pointer' }}

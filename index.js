@@ -23,6 +23,31 @@ const { MercadoPagoConfig, Payment: MercadoPagoPayment } = require('mercadopago'
 const { authenticate } = require('./middleware/auth');
 
 
+// Dynamic JID canonicalization helper for Brazilian phone numbers
+async function getCanonicalJid(jid, instanceId) {
+    if (!jid || typeof jid !== 'string') return jid;
+    if (!jid.endsWith('@s.whatsapp.net')) return jid;
+
+    const phone = jid.split('@')[0];
+    if (!phone.startsWith('55')) return jid;
+
+    let alternativePhone;
+    if (phone.length === 13 && phone[4] === '9') {
+        alternativePhone = '55' + phone.substring(2, 4) + phone.substring(5);
+    } else if (phone.length === 12) {
+        alternativePhone = '55' + phone.substring(2, 4) + '9' + phone.substring(4);
+    }
+
+    if (alternativePhone) {
+        const alternativeJid = `${alternativePhone}@s.whatsapp.net`;
+        const exists = await prisma.chat.findUnique({
+            where: { jid_instanceId: { jid: alternativeJid, instanceId } }
+        });
+        if (exists) return alternativeJid;
+    }
+    return jid;
+}
+
 // Configuraﾃｧﾃ｣o do Multer para Marketing Assets
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'assets/marketing'),
@@ -640,7 +665,8 @@ async function initInstance(instanceId) {
     sock.ev.on('contacts.upsert', async (contacts) => {
         for (const contact of contacts) {
             try {
-                const jid = contact.id;
+                let jid = contact.id;
+                jid = await getCanonicalJid(jid, instanceId);
                 const isGroup = jid.endsWith('@g.us');
                 const name = contact.name || contact.verifiedName || contact.notify || (isGroup ? 'Grupo' : jid.split('@')[0]);
 
@@ -657,8 +683,9 @@ async function initInstance(instanceId) {
         for (const update of updates) {
             try {
                 if (update.name || update.verifiedName) {
+                    const jid = await getCanonicalJid(update.id, instanceId);
                     await prisma.chat.update({
-                        where: { jid_instanceId: { jid: update.id, instanceId } },
+                        where: { jid_instanceId: { jid, instanceId } },
                         data: { name: update.name || update.verifiedName }
                     });
                 }
@@ -669,7 +696,7 @@ async function initInstance(instanceId) {
     sock.ev.on('messages.upsert', async (m) => {
         const msg = m.messages[0];
         if (!msg.message) return;
-        const jid = msg.key.remoteJid;
+        let jid = msg.key.remoteJid;
         const pushName = msg.pushName || 'Desconhecido';
 
         if (!msg.key.fromMe) {
@@ -678,6 +705,8 @@ async function initInstance(instanceId) {
 
         // BLOQUEIO DE STATUS E GRUPOS (OPCIONAL)
         if (jid === 'status@broadcast' || jid.includes('@g.us')) return;
+
+        jid = await getCanonicalJid(jid, instanceId);
 
         // 笏笏笏 INTERCEPTA MENSAGEM APAGADA ("Apagar para Todos") 笏笏笏
         if (msg.message?.protocolMessage?.type === 0 || msg.message?.protocolMessage?.type === 'REVOKE') {
@@ -2095,7 +2124,8 @@ app.get('/instances/:id/chats', authenticate, async (req, res) => {
 });
 
 app.patch('/instances/:id/chats/:jid', authenticate, async (req, res) => {
-    const { id, jid } = req.params;
+    let { id, jid } = req.params;
+    jid = await getCanonicalJid(jid, id);
     const { aiEnabled } = req.body;
 
     // Verifica propriedade
@@ -2110,7 +2140,8 @@ app.patch('/instances/:id/chats/:jid', authenticate, async (req, res) => {
 });
 
 app.get('/instances/:id/messages/:jid', authenticate, async (req, res) => {
-    const { id, jid } = req.params;
+    let { id, jid } = req.params;
+    jid = await getCanonicalJid(jid, id);
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
@@ -2143,7 +2174,8 @@ app.get('/instances/:id/messages/:jid', authenticate, async (req, res) => {
 
 app.get('/instances/:id/profile-pic/:jid', authenticate, async (req, res) => {
     try {
-        const { id, jid } = req.params;
+        let { id, jid } = req.params;
+        jid = await getCanonicalJid(jid, id);
 
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
@@ -2165,7 +2197,8 @@ app.get('/instances/:id/profile-pic/:jid', authenticate, async (req, res) => {
 // Apagar mensagem
 app.post('/instances/:id/messages/delete', authenticate, async (req, res) => {
     const { id } = req.params;
-    const { jid, msgId, fromMe, forEveryone } = req.body;
+    let { jid, msgId, fromMe, forEveryone } = req.body;
+    jid = await getCanonicalJid(jid, id);
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
@@ -2191,7 +2224,8 @@ app.post('/instances/:id/messages/delete', authenticate, async (req, res) => {
 // Marcar conversa como lida (Visto)
 app.post('/instances/:id/chats/read', authenticate, async (req, res) => {
     const { id } = req.params;
-    const { jid, msgId } = req.body;
+    let { jid, msgId } = req.body;
+    jid = await getCanonicalJid(jid, id);
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
@@ -2216,7 +2250,8 @@ app.post('/instances/:id/chats/read', authenticate, async (req, res) => {
 
 // Marcar como nﾃ｣o lido (Manual)
 app.patch('/instances/:id/chats/:jid/unread', authenticate, async (req, res) => {
-    const { id, jid } = req.params;
+    let { id, jid } = req.params;
+    jid = await getCanonicalJid(jid, id);
     try {
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
@@ -2234,7 +2269,8 @@ app.patch('/instances/:id/chats/:jid/unread', authenticate, async (req, res) => 
 
 // Apagar conversa inteira
 app.delete('/instances/:id/chats/:jid', authenticate, async (req, res) => {
-    const { id, jid } = req.params;
+    let { id, jid } = req.params;
+    jid = await getCanonicalJid(jid, id);
     try {
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
@@ -2276,6 +2312,29 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
         if (!finalJid.includes('@')) {
             finalJid = finalJid.includes(':') ? finalJid.split(':')[0] + '@s.whatsapp.net' : finalJid + '@s.whatsapp.net';
         }
+        if (finalJid.endsWith('@s.whatsapp.net')) {
+            const phonePart = finalJid.split('@')[0].replace(/\D/g, '');
+            finalJid = `${phonePart}@s.whatsapp.net`;
+        } else if (finalJid.endsWith('@lid')) {
+            const phonePart = finalJid.split('@')[0].replace(/\D/g, '');
+            finalJid = `${phonePart}@lid`;
+        }
+
+        // Verify and resolve JID against WhatsApp's servers to handle the 9th digit and correct JID types
+        if (finalJid.endsWith('@s.whatsapp.net') || finalJid.endsWith('@lid')) {
+            try {
+                if (sock.onWhatsApp) {
+                    const result = await sock.onWhatsApp(finalJid);
+                    if (result && result.length > 0 && result[0].exists) {
+                        finalJid = result[0].jid;
+                    }
+                }
+            } catch (err) {
+                console.warn(`Erro ao verificar JID no WhatsApp:`, err.message);
+            }
+        }
+
+        finalJid = await getCanonicalJid(finalJid, id);
 
         let result;
         let attempts = 0;
@@ -2374,6 +2433,29 @@ app.post('/instances/:id/send-audio', uploadAudio.single('audio'), async (req, r
         if (!finalJid.includes('@')) {
             finalJid = finalJid.includes(':') ? finalJid.split(':')[0] + '@s.whatsapp.net' : finalJid + '@s.whatsapp.net';
         }
+        if (finalJid.endsWith('@s.whatsapp.net')) {
+            const phonePart = finalJid.split('@')[0].replace(/\D/g, '');
+            finalJid = `${phonePart}@s.whatsapp.net`;
+        } else if (finalJid.endsWith('@lid')) {
+            const phonePart = finalJid.split('@')[0].replace(/\D/g, '');
+            finalJid = `${phonePart}@lid`;
+        }
+
+        // Verify and resolve JID against WhatsApp's servers to handle the 9th digit and correct JID types
+        if (finalJid.endsWith('@s.whatsapp.net') || finalJid.endsWith('@lid')) {
+            try {
+                if (sock.onWhatsApp) {
+                    const result = await sock.onWhatsApp(finalJid);
+                    if (result && result.length > 0 && result[0].exists) {
+                        finalJid = result[0].jid;
+                    }
+                }
+            } catch (err) {
+                console.warn(`Erro ao verificar JID no WhatsApp:`, err.message);
+            }
+        }
+
+        finalJid = await getCanonicalJid(finalJid, id);
 
         const audioPath = req.file.path;
 

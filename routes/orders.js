@@ -726,6 +726,17 @@ router.post('/', async (req, res) => {
       }
     }
 
+    if (clientJid && clientJid.endsWith('@s.whatsapp.net')) {
+      const phonePart = clientJid.split('@')[0].replace(/\D/g, '');
+      clientJid = `${phonePart}@s.whatsapp.net`;
+    } else if (clientJid && !clientJid.includes('@') && clientJid.trim() !== "") {
+      let cleanPhone = clientJid.replace(/\D/g, "");
+      if (cleanPhone.length >= 10) {
+        if (!cleanPhone.startsWith("55")) cleanPhone = "55" + cleanPhone;
+        clientJid = `${cleanPhone}@s.whatsapp.net`;
+      }
+    }
+
     const qtyNum = parseFloat(quantity) || 1;
     const finalClientJid = (clientJid && clientJid.trim() !== "") ? clientJid.trim() : 'manual_LOJA';
     const isManual = finalClientJid === 'manual_LOJA';

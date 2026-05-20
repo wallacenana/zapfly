@@ -425,7 +425,7 @@ const Production = () => {
       },
       didOpen: () => {
         const chatBtn = document.getElementById('btn-go-to-chat');
-        if (chatBtn) chatBtn.onclick = () => { Swal.close(); navigate(`/chat/${(order.clientPhone || order.clientJid || '').split('@')[0]}`); };
+        if (chatBtn) chatBtn.onclick = () => { Swal.close(); navigate(`/chat/${encodeURIComponent(order.clientJid || order.clientPhone || '')}`); };
 
         const actionBtn = document.getElementById('btn-action-next');
         if (actionBtn) {
