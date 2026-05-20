@@ -968,7 +968,7 @@ async function fetchPreviousOrders() {
     if (!state.userInfo.phone) return;
     try {
         const phone = state.userInfo.phone.replace(/\D/g, '');
-        const res = await fetch(`${API_BASE}/orders/history/${phone}`);
+        const res = await fetch(`${API_BASE}/orders/history/public/${STORE_SLUG}/${phone}`);
         const data = await res.json();
         state.previousOrders = Array.isArray(data) ? data : [];
         renderPreviousOrders();
