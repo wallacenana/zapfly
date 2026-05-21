@@ -70,7 +70,7 @@ try {
         <link
             href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
             rel="stylesheet">
-        <link rel="stylesheet" href="/cardapio/style.css?v=2.4">
+        <link rel="stylesheet" href="/cardapio/style.css?v=2.5">
         <script src="https://unpkg.com/lucide@latest"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
@@ -539,6 +539,16 @@ try {
                 previousOrders: []
             };
 
+            function parseImages(imgField) {
+                if (!imgField) return [];
+                try {
+                    const parsed = JSON.parse(imgField);
+                    return Array.isArray(parsed) ? parsed : [imgField];
+                } catch (e) {
+                    return [imgField];
+                }
+            }
+
             /**
              * Seleciona a versão correta da imagem gerada pelo upload.php
              * @param {string} url - URL original
@@ -879,7 +889,7 @@ try {
                             display.style.background = '#f0fdf4';
                             display.style.color = '#166534';
                         }
-                        updateStep3Summary();
+                        updateStep4Summary();
                     } else if (data.error) {
                         state.deliveryFee = 0;
                         state.allowCash = false;
@@ -1529,7 +1539,7 @@ try {
 
                 if (type === 'pickup') {
                     state.deliveryFee = 0;
-                    updateStep3Summary();
+                    updateStep4Summary();
                 } else {
                     if (state.userInfo.address) calculateDeliveryFee(state.userInfo.address);
                 }
