@@ -419,28 +419,30 @@ try {
                         </div>
                     </div>
 
-                    <!-- Step 3: Summary -->
+                    <!-- Step 3: Payment Method -->
                     <div class="checkout-step hidden" id="step-3">
+                        <h3 style="font-size:1rem; font-weight:700; margin-bottom:18px; color:var(--text-main);">Forma de Pagamento</h3>
+                        <div id="payment-options" style="display:flex; flex-direction:column; gap:12px;"></div>
+                    </div>
+
+                    <!-- Step 4: Summary -->
+                    <div class="checkout-step hidden" id="step-4">
                         <div id="order-summary-content">
                             <div class="summary-section">
-                                <h3 class="field-label" style="font-size: 1.1rem; margin-bottom: 12px;">Resumo dos Itens
-                                </h3>
+                                <h3 class="field-label" style="font-size: 1.1rem; margin-bottom: 12px;">Resumo dos Itens</h3>
                                 <div id="review-items-list" style="margin-bottom: 20px;"></div>
                             </div>
-
+                            <div id="payment-method-summary" style="margin-bottom:12px; padding:10px 14px; border-radius:10px; background:#f0fdf4; color:#166534; font-weight:600;"></div>
                             <div class="summary-section" style="background: #f9f9f9; padding: 15px; border-radius: 12px;">
-                                <div class="summary-row"
-                                    style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <div class="summary-row" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                                     <span>Subtotal</span>
                                     <span id="summary-subtotal">R$ 0,00</span>
                                 </div>
-                                <div id="delivery-fee-line" class="summary-row hidden"
-                                    style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #166534;">
+                                <div id="delivery-fee-line" class="summary-row hidden" style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #166534;">
                                     <span>Taxa de entrega</span>
                                     <span id="summary-fee">R$ 0,00</span>
                                 </div>
-                                <div class="summary-total-row"
-                                    style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.2rem; border-top: 1px dashed #ddd; padding-top: 12px; margin-top: 12px;">
+                                <div class="summary-total-row" style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.2rem; border-top: 1px dashed #ddd; padding-top: 12px; margin-top: 12px;">
                                     <span>Total</span>
                                     <span id="summary-total">R$ 0,00</span>
                                 </div>
@@ -451,7 +453,7 @@ try {
 
                 <div class="modal-footer-sticky">
                     <button id="next-step-btn" class="primary-btn">Próximo</button>
-                    <button id="place-order-btn" class="primary-btn hidden">Confirmar Pedido</button>
+                    <button id="place-order-btn" class="primary-btn hidden">Confirmar e Pagar</button>
                 </div>
             </div>
         </div>
@@ -529,7 +531,13 @@ try {
                 geocoder: null,
                 isOpen: false,
                 deliveryType: 'delivery',
+                paymentMethod: 'mercadopago',
+                allowCash: true,
+                withinDeliveryRadius: false,
                 availableSlots: [],
+                currentCarouselIdx: 0,
+                previousOrders: []
+            };
 
             /**
              * Seleciona a versão correta da imagem gerada pelo upload.php
@@ -864,6 +872,7 @@ try {
                     const display = document.getElementById('delivery-fee-display');
                     if (data.fee !== undefined) {
                         state.deliveryFee = data.fee;
+                        state.allowCash = data.allowCash !== false;
                         if (display) {
                             display.style.display = 'block';
                             display.innerHTML = `Taxa de entrega: <strong style="color:var(--primary-color)">R$ ${data.fee.toFixed(2)}</strong>`;
@@ -873,6 +882,7 @@ try {
                         updateStep3Summary();
                     } else if (data.error) {
                         state.deliveryFee = 0;
+                        state.allowCash = false;
                         if (display) {
                             display.style.display = 'block';
                             display.innerHTML = `⚠️ ${data.error}`;
@@ -1348,6 +1358,7 @@ try {
                 document.getElementById('step-1')?.classList.add('hidden');
                 document.getElementById('step-2')?.classList.add('hidden');
                 document.getElementById('step-3')?.classList.add('hidden');
+                document.getElementById('step-4')?.classList.add('hidden');
 
                 // Mostra apenas o atual
                 document.getElementById(`step-${step}`)?.classList.remove('hidden');
@@ -1356,18 +1367,20 @@ try {
 
                 let title = "Ver sacola";
                 if (step === 2) title = state.activeTab === 'delivery' ? "Entrega" : "Encomenda";
-                if (step === 3) title = "Confirmar Pedido";
+                if (step === 3) title = "Forma de Pagamento";
+                if (step === 4) title = "Confirmar Pedido";
 
                 document.getElementById('checkout-step-title').innerText = title;
 
-                const isLast = step === 3;
+                const isLast = step === 4;
                 document.getElementById('next-step-btn').classList.toggle('hidden', isLast);
                 document.getElementById('place-order-btn').classList.toggle('hidden', !isLast);
 
                 if (step === 1) renderStep1();
                 if (step === 2) renderStep2();
-                if (step === 3) {
-                    updateStep3Summary();
+                if (step === 3) renderStep3();
+                if (step === 4) {
+                    updateStep4Summary();
                 }
             }
 
@@ -1422,9 +1435,62 @@ try {
                 updateUI();
             }
 
-                if (step === 2) {
-                    const isDelivery = state.activeTab === 'delivery';
-                    const orderContent = document.getElementById('order-step-content');
+            function selectPaymentMethod(method) {
+                state.paymentMethod = method;
+                document.querySelectorAll('.payment-card').forEach(el => {
+                    el.classList.toggle('selected', el.dataset.method === method);
+                });
+            }
+
+            function renderStep3() {
+                const opts = document.getElementById('payment-options');
+                if(!opts) return;
+                
+                const isCashAllowed = (state.deliveryType === 'pickup') || state.allowCash;
+                
+                let html = `
+                    <div class="payment-card ${state.paymentMethod === 'mercadopago' ? 'selected' : ''}" data-method="mercadopago" onclick="selectPaymentMethod('mercadopago')">
+                        <div class="payment-icon" style="background:#e0f2fe; color:#0284c7;"><i data-lucide="credit-card"></i></div>
+                        <div class="payment-info">
+                            <h4>Pix ou Crédito</h4>
+                            <p>Pagamento online 100% seguro via Mercado Pago.</p>
+                        </div>
+                    </div>
+                `;
+                
+                if (isCashAllowed) {
+                    html += `
+                        <div class="payment-card ${state.paymentMethod === 'dinheiro' ? 'selected' : ''}" data-method="dinheiro" onclick="selectPaymentMethod('dinheiro')">
+                            <div class="payment-icon" style="background:#fef3c7; color:#d97706;"><i data-lucide="banknote"></i></div>
+                            <div class="payment-info">
+                                <h4>Dinheiro</h4>
+                                <p>Pagamento na entrega ou retirada.</p>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    html += `
+                        <div class="payment-card disabled">
+                            <div class="payment-icon" style="background:#f3f4f6; color:#9ca3af;"><i data-lucide="banknote"></i></div>
+                            <div class="payment-info">
+                                <h4 style="color:#9ca3af;">Dinheiro</h4>
+                                <p style="color:#ef4444; font-weight:600;">⚠️ Não disponível para este endereço de entrega.</p>
+                            </div>
+                        </div>
+                    `;
+                    if (state.paymentMethod === 'dinheiro') {
+                        state.paymentMethod = 'mercadopago'; // fallback
+                    }
+                }
+                opts.innerHTML = html;
+                lucide.createIcons();
+            }
+
+            function renderStep2() {
+                const isDelivery = state.activeTab === 'delivery';
+                const deliveryContent = document.getElementById('delivery-step-content');
+                const orderContent = document.getElementById('order-step-content');
+                if (deliveryContent) deliveryContent.classList.toggle('hidden', !isDelivery);
                     
                     if (orderContent) orderContent.classList.toggle('hidden', isDelivery);
 
@@ -1446,8 +1512,6 @@ try {
                         }
                     }
                 }
-                if (step === 3) updateStep3Summary();
-            }
 
             function setDeliveryType(type) {
                 state.deliveryType = type;
@@ -1483,11 +1547,17 @@ try {
                 } else if (state.currentStep === 2) {
                     if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
                     if (state.activeTab === 'order' && (!document.getElementById('order-date').value || !document.getElementById('order-time').value)) return showAlert('Horário Ausente', 'Escolha uma data e um horário para sua encomenda.');
+                    if (state.deliveryFee === 0 && state.deliveryType === 'delivery' && state.userInfo.address) {
+                        return showAlert('Taxa Indisponível', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereço está no raio de entrega.');
+                    }
                     goToStep(3);
+                } else if (state.currentStep === 3) {
+                    if (!state.paymentMethod) return showAlert('Atenção', 'Selecione uma forma de pagamento.');
+                    goToStep(4);
                 }
             }
 
-            function updateStep3Summary() {
+            function updateStep4Summary() {
                 const cart = getActiveCart();
                 const subtotal = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
                 const fee = state.deliveryType === 'delivery' ? state.deliveryFee : 0;
@@ -1498,6 +1568,20 @@ try {
                 const totalEl = document.getElementById('summary-total');
                 const lineEl = document.getElementById('delivery-fee-line');
                 const listEl = document.getElementById('review-items-list');
+                const paymentSummaryEl = document.getElementById('payment-method-summary');
+
+                if (paymentSummaryEl) {
+                    if (state.paymentMethod === 'dinheiro') {
+                        paymentSummaryEl.innerHTML = '<i data-lucide="banknote" style="vertical-align: middle; margin-right: 5px;"></i> Pagamento em Dinheiro';
+                        paymentSummaryEl.style.background = '#fef3c7';
+                        paymentSummaryEl.style.color = '#d97706';
+                    } else {
+                        paymentSummaryEl.innerHTML = '<i data-lucide="credit-card" style="vertical-align: middle; margin-right: 5px;"></i> Pix ou Crédito (Online)';
+                        paymentSummaryEl.style.background = '#f0fdf4';
+                        paymentSummaryEl.style.color = '#166534';
+                    }
+                    lucide.createIcons();
+                }
 
                 if (subEl) subEl.innerText = `R$ ${subtotal.toFixed(2)}`;
                 if (feeEl) feeEl.innerText = `R$ ${fee.toFixed(2)}`;
@@ -1597,6 +1681,7 @@ try {
                     scheduledDate: state.activeTab === 'order' ? document.getElementById('order-date').value : null,
                     scheduledTime: state.activeTab === 'order' ? document.getElementById('order-time').value : null,
                     deliveryFee: state.deliveryType === 'delivery' ? state.deliveryFee : 0,
+                    paymentMethod: state.paymentMethod,
                     totalValue: totalValue,
                     carrinho_itens_extras: cart.slice(1).map(item => ({
                         productId: item.productId,
@@ -1644,7 +1729,22 @@ try {
                         setActiveCart([]);
                         location.href = data.paymentLink;
                     } else if (data.id) {
-                        alert('Pedido registrado, mas houve um problema ao gerar o link de pagamento. Por favor, entre em contato.');
+                        if (state.paymentMethod === 'dinheiro') {
+                            Swal.fire({
+                                title: 'Pedido Recebido!',
+                                text: 'Seu pedido foi registrado e está aguardando confirmação.',
+                                icon: 'success',
+                                confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#ff4d6d',
+                                confirmButtonText: 'Ver meus pedidos'
+                            }).then(() => {
+                                setActiveCart([]);
+                                openModal('history-modal');
+                                fetchPreviousOrders();
+                                location.reload();
+                            });
+                        } else {
+                            alert('Pedido registrado, mas houve um problema ao gerar o link de pagamento. Por favor, entre em contato.');
+                        }
                     } else {
                         throw new Error(data.error);
                     }

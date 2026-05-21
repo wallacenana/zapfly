@@ -34,11 +34,12 @@ let state = {
     userInfo: JSON.parse(localStorage.getItem('zapfly_user') || '{"name":"","phone":"","address":""}'),
     publicSettings: { googleApiKey: '', deliveryRules: [], businessName: 'Carregando...' },
     currentStep: 1,
-    deliveryFee: 0,
-    googleMap: null,
-    mapMarker: null,
     geocoder: null,
     isOpen: false,
+    deliveryType: 'delivery',
+    paymentMethod: 'mercadopago',
+    allowCash: true,
+    withinDeliveryRadius: false,
     availableSlots: [],
     currentCarouselIdx: 0,
     previousOrders: []
@@ -132,6 +133,10 @@ async function fetchPublicSettings() {
 
         checkStoreStatus();
 
+        if (data.googleApiKey) {
+            loadGoogleMaps(data.googleApiKey);
+        }
+
         // Favicon
         if (data.faviconUrl) {
             let fav = document.querySelector('link[rel="icon"]');
@@ -224,6 +229,8 @@ async function fetchPublicSettings() {
         const statusEl = document.getElementById('store-status-badge');
         if (statusEl) {
             checkStoreStatus();
+            // Atualiza a cada 1 minuto
+            setInterval(checkStoreStatus, 60000);
         }
     } catch (err) {
         console.error('Erro ao carregar configurações:', err);
@@ -258,7 +265,7 @@ function checkStoreStatus() {
 }
 
 function loadGoogleMaps(apiKey) {
-    if (window.google) return;
+    if (window.google || document.querySelector('script[src*="maps.googleapis.com"]')) return;
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMapsAutocomplete`;
     script.async = true;
@@ -268,40 +275,57 @@ function loadGoogleMaps(apiKey) {
 
 window.initMapsAutocomplete = () => {
     const input = document.getElementById('user-address');
-    const autocomplete = new google.maps.places.Autocomplete(input);
-    autocomplete.setComponentRestrictions({ country: 'br' });
-    state.geocoder = new google.maps.Geocoder();
+    if (!input) return;
 
-    const mapCenter = { lat: -2.5307, lng: -44.3068 };
-    state.googleMap = new google.maps.Map(document.getElementById('map-container'), {
-        zoom: 16,
-        center: mapCenter,
-        disableDefaultUI: false,
-        mapTypeControl: false,
-        streetViewControl: false
-    });
+    try {
+        const autocomplete = new google.maps.places.Autocomplete(input);
+        autocomplete.setComponentRestrictions({ country: 'br' });
+        state.geocoder = new google.maps.Geocoder();
 
-    state.mapMarker = new google.maps.Marker({
-        map: state.googleMap,
-        position: mapCenter,
-        draggable: true,
-        animation: google.maps.Animation.DROP
-    });
-
-    if (state.userInfo.address) geocodeAddress(state.userInfo.address);
-
-    autocomplete.addListener('place_changed', () => {
-        const place = autocomplete.getPlace();
-        if (!place.geometry) return;
-        updateLocation(place.geometry.location, place.formatted_address);
-    });
-
-    state.mapMarker.addListener('dragend', () => reverseGeocode(state.mapMarker.getPosition()));
-    state.googleMap.addListener('click', (e) => {
-        updateLocation(e.latLng);
-        reverseGeocode(e.latLng);
-    });
+        autocomplete.addListener('place_changed', () => {
+            const place = autocomplete.getPlace();
+            if (!place.geometry) return;
+            updateLocation(place.geometry.location, place.formatted_address);
+        });
+    } catch (e) {
+        console.error('Autocomplete init error:', e);
+    }
 };
+
+function initDeliveryMap() {
+    const mapEl = document.getElementById('delivery-map');
+    if (!mapEl || state.googleMap || !window.google) return;
+
+    try {
+        const mapCenter = { lat: -2.5307, lng: -44.3068 };
+        state.googleMap = new google.maps.Map(mapEl, {
+            zoom: 16,
+            center: mapCenter,
+            disableDefaultUI: false,
+            mapTypeControl: false,
+            streetViewControl: false
+        });
+
+        state.mapMarker = new google.maps.Marker({
+            map: state.googleMap,
+            position: mapCenter,
+            draggable: true,
+            animation: google.maps.Animation.DROP
+        });
+
+        if (state.userInfo.address) {
+            geocodeAddress(state.userInfo.address);
+        }
+
+        state.mapMarker.addListener('dragend', () => reverseGeocode(state.mapMarker.getPosition()));
+        state.googleMap.addListener('click', (e) => {
+            updateLocation(e.latLng);
+            reverseGeocode(e.latLng);
+        });
+    } catch (e) {
+        console.error('Delivery map init error:', e);
+    }
+}
 
 function geocodeAddress(address) {
     if (!state.geocoder) return;
@@ -333,18 +357,32 @@ async function calculateDeliveryFee(address) {
         const response = await fetch(`${API_BASE}/orders/calculate-fee`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ address })
+            body: JSON.stringify({ address, slug: STORE_SLUG })
         });
         const data = await response.json();
+        const display = document.getElementById('delivery-fee-display');
         if (data.fee !== undefined) {
             state.deliveryFee = data.fee;
-            const badge = document.getElementById('step2-delivery-fee');
-            const value = document.getElementById('step2-fee-value');
-            if (badge && value) {
-                badge.classList.remove('hidden');
-                value.innerText = `R$ ${data.fee.toFixed(2)}`;
+            state.allowCash = data.allowCash !== false;
+            if (display) {
+                display.style.display = 'block';
+                display.innerHTML = `Taxa de entrega: <strong style="color:var(--primary-color)">R$ ${data.fee.toFixed(2)}</strong>`;
+                display.style.background = '#f0fdf4';
+                display.style.color = '#166534';
             }
-            updateStep3Summary();
+            updateStep4Summary();
+        } else if (data.error) {
+            state.deliveryFee = 0;
+            state.allowCash = false;
+            if (display) {
+                display.style.display = 'block';
+                display.innerHTML = `⚠️ ${data.error}`;
+                display.style.background = '#fef2f2';
+                display.style.color = '#991b1b';
+                display.style.border = '1px solid #fee2e2';
+            }
+        } else {
+            if (display) display.style.display = 'none';
         }
     } catch (err) { console.error('Erro ao calcular frete:', err); }
 }
@@ -374,32 +412,58 @@ async function fetchProducts() {
 }
 
 function renderMenu() {
-    if (!state.products || state.products.length === 0) {
-        console.log('Mantendo menu do PHP (API retornou vazio)');
-        return;
-    }
-    const container = document.getElementById('menu-sections');
-    if (!container) return;
+    const skeletonContainer = document.getElementById('skeleton-loader');
+    const actualContainer = document.getElementById('actual-menu-content');
 
     if (state.loading) {
-        container.innerHTML = `
-            <div class="menu-section">
-                <h2 class="section-title"><div class="skeleton" style="height:24px; width:150px;"></div></h2>
-                ${Array(4).fill().map(() => `
-                    <div class="skeleton-card">
-                        <div class="skeleton-text">
-                            <div class="skeleton skeleton-title"></div>
-                            <div class="skeleton skeleton-desc"></div>
-                            <div class="skeleton skeleton-desc" style="width:70%"></div>
-                            <div class="skeleton skeleton-price"></div>
-                        </div>
-                        <div class="skeleton skeleton-img"></div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
+        if (skeletonContainer) {
+            skeletonContainer.innerHTML = `
+                            <div class="menu-section">
+                                <div class="skeleton" style="height:24px; width:160px; margin-bottom:20px;"></div>
+                                <div class="products-grid">
+                                    ${Array(4).fill().map(() => `
+                                        <div class="skeleton-card">
+                                            <div class="skeleton-text-group">
+                                                <div class="skeleton skeleton-title"></div>
+                                                <div class="skeleton skeleton-desc"></div>
+                                                <div class="skeleton skeleton-desc" style="width:70%"></div>
+                                                <div class="skeleton skeleton-price"></div>
+                                            </div>
+                                            <div class="skeleton skeleton-img-box"></div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                            <div class="menu-section">
+                                <div class="skeleton" style="height:24px; width:120px; margin-bottom:20px;"></div>
+                                <div class="products-grid">
+                                    ${Array(2).fill().map(() => `
+                                        <div class="skeleton-card">
+                                            <div class="skeleton-text-group">
+                                                <div class="skeleton skeleton-title"></div>
+                                                <div class="skeleton skeleton-desc"></div>
+                                                <div class="skeleton skeleton-price"></div>
+                                            </div>
+                                            <div class="skeleton skeleton-img-box"></div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+            skeletonContainer.classList.remove('hidden');
+        }
+        if (actualContainer) actualContainer.classList.add('hidden');
         return;
     }
+
+    if (!state.products || state.products.length === 0) {
+
+        if (skeletonContainer) skeletonContainer.classList.add('hidden');
+        if (actualContainer) actualContainer.classList.remove('hidden');
+        return;
+    }
+
+    if (!actualContainer) return;
 
     const query = state.searchQuery.toLowerCase();
 
@@ -480,9 +544,13 @@ function renderMenu() {
         `;
     }).join('');
 
-    container.innerHTML = html;
+    actualContainer.innerHTML = html;
     renderCategoryNav(sortedCategories);
     lucide.createIcons();
+
+    // Troca a visibilidade SOMENTE APÓS o DOM estar completamente pronto
+    if (skeletonContainer) skeletonContainer.classList.add('hidden');
+    if (actualContainer) actualContainer.classList.remove('hidden');
 }
 
 function renderFeaturedCard(product) {
@@ -569,7 +637,7 @@ function openItemDetail(productId) {
         </div>
     `;
 
-    modal?.classList.remove('hidden', 'closing');
+    openModal('item-detail-modal');
     lucide.createIcons();
 
     // Tracking: ViewContent (Meta) & view_item (GA4)
@@ -617,7 +685,7 @@ function openItemDetail(productId) {
                 ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
             </div>
             ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
-        `;
+                                                                                    `;
         updateDetailFooter();
         lucide.createIcons();
     }, 50);
@@ -638,11 +706,7 @@ function moveCarousel(delta) {
 
 function closeWithAnimation(modalId) {
     const modal = document.getElementById(modalId);
-    modal.classList.add('closing');
-    setTimeout(() => {
-        modal.classList.add('hidden');
-        modal.classList.remove('closing');
-    }, 400);
+    modal.classList.add('hidden');
 }
 
 function selectVariation(name, price) {
@@ -658,6 +722,27 @@ function updateDetailFooter() {
 
     const qtyEl = document.getElementById('detail-qty');
     if (qtyEl) qtyEl.innerText = state.currentQty;
+}
+
+function closeModal(modalId = null) {
+    const ids = ['item-detail-modal', 'checkout-modal', 'history-modal'];
+    ids.forEach(id => {
+        const m = document.getElementById(id);
+        if (m && !m.classList.contains('hidden')) {
+            if (modalId && modalId !== id) return;
+            closeWithAnimation(id);
+        }
+    });
+}
+
+function openModal(id) {
+    const ids = ['item-detail-modal', 'checkout-modal', 'history-modal'];
+    ids.forEach(modalId => {
+        const m = document.getElementById(modalId);
+        if (m) m.classList.add('hidden', 'closing');
+    });
+    const target = document.getElementById(id);
+    if (target) target.classList.remove('hidden', 'closing');
 }
 
 function initEventListeners() {
@@ -676,16 +761,14 @@ function initEventListeners() {
     document.getElementById('qty-plus').addEventListener('click', () => { state.currentQty++; updateDetailFooter(); });
     document.getElementById('qty-minus').addEventListener('click', () => { if (state.currentQty > 1) { state.currentQty--; updateDetailFooter(); } });
 
-    const closeModal = () => {
-        if (!document.getElementById('item-modal').classList.contains('hidden')) closeWithAnimation('item-modal');
-        if (!document.getElementById('checkout-modal').classList.contains('hidden')) closeWithAnimation('checkout-modal');
-    };
+    document.querySelectorAll('.close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', () => { closeModal(); });
+    });
 
-    document.querySelector('.close-modal-btn').addEventListener('click', closeModal);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
 
     document.getElementById('history-toggle-btn').addEventListener('click', () => {
-        document.getElementById('history-modal').classList.remove('hidden', 'closing');
+        openModal('history-modal');
         renderPreviousOrders();
     });
 
@@ -713,18 +796,20 @@ function initEventListeners() {
     document.getElementById('user-address').value = state.userInfo.address || '';
 
     const phoneInput = document.getElementById('user-phone');
-    phoneInput.addEventListener('input', (e) => {
-        e.target.value = maskPhone(e.target.value);
-        state.userInfo.phone = e.target.value;
-        localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
-    });
+    if (phoneInput) {
+        phoneInput.addEventListener('input', (e) => {
+            e.target.value = maskPhone(e.target.value);
+            state.userInfo.phone = e.target.value;
+            localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
+        });
+    }
 
     ['user-name', 'user-address'].forEach(id => {
         const el = document.getElementById(id);
         if (el) {
             el.addEventListener('input', (e) => {
                 state.userInfo[id.split('-')[1]] = e.target.value;
-                localStorage.setItem('linda_cake_user', JSON.stringify(state.userInfo));
+                localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
             });
         }
     });
@@ -732,18 +817,35 @@ function initEventListeners() {
 
 function goToStep(step) {
     state.currentStep = step;
-    document.querySelectorAll('.checkout-step').forEach((el, idx) => el.classList.toggle('hidden', idx + 1 !== step));
-    const modal = document.getElementById('checkout-modal');
-    modal.classList.remove('hidden', 'closing');
-    document.getElementById('checkout-step-title').innerText = ["Ver sacola", "Entrega & Agendamento", "Confirmar Pedido"][step - 1];
 
-    const isLast = step === 3;
+    // Esconde todos os passos explicitamente por ID para não ter erro
+    document.getElementById('step-1')?.classList.add('hidden');
+    document.getElementById('step-2')?.classList.add('hidden');
+    document.getElementById('step-3')?.classList.add('hidden');
+    document.getElementById('step-4')?.classList.add('hidden');
+
+    // Mostra apenas o atual
+    document.getElementById(`step-${step}`)?.classList.remove('hidden');
+
+    openModal('checkout-modal');
+
+    let title = "Ver sacola";
+    if (step === 2) title = state.activeTab === 'delivery' ? "Entrega" : "Encomenda";
+    if (step === 3) title = "Forma de Pagamento";
+    if (step === 4) title = "Confirmar Pedido";
+
+    document.getElementById('checkout-step-title').innerText = title;
+
+    const isLast = step === 4;
     document.getElementById('next-step-btn').classList.toggle('hidden', isLast);
     document.getElementById('place-order-btn').classList.toggle('hidden', !isLast);
 
     if (step === 1) renderStep1();
     if (step === 2) renderStep2();
-    if (step === 3) updateStep3Summary();
+    if (step === 3) renderStep3();
+    if (step === 4) {
+        updateStep4Summary();
+    }
 }
 
 document.getElementById('checkout-back-btn')?.addEventListener('click', () => {
@@ -761,24 +863,24 @@ function renderStep1() {
     }
     document.getElementById('next-step-btn').disabled = false;
     list.innerHTML = cart.map(item => `
-        <div class="checkout-item">
-            <div class="item-name-qty">
-                <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
-            </div>
-            <div style="display: flex; align-items: center; gap: 16px;">
-                <div class="cart-qty-control">
-                    <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
-                        ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
-                    </button>
-                    <span class="qty-val-mini">${item.quantity}</span>
-                    <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
-                        <i data-lucide="plus"></i>
-                    </button>
-                </div>
-                <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
-            </div>
-        </div>
-    `).join('');
+                                                                                    <div class="checkout-item">
+                                                                                        <div class="item-name-qty">
+                                                                                            <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
+                                                                                        </div>
+                                                                                        <div style="display: flex; align-items: center; gap: 16px;">
+                                                                                            <div class="cart-qty-control">
+                                                                                                <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
+                                                                                                    ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
+                                                                                                </button>
+                                                                                                <span class="qty-val-mini">${item.quantity}</span>
+                                                                                                <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
+                                                                                                    <i data-lucide="plus"></i>
+                                                                                                </button>
+                                                                                            </div>
+                                                                                            <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                `).join('');
     lucide.createIcons();
 }
 
@@ -807,20 +909,87 @@ function removeFromCart(itemKey) {
 
 function renderStep2() {
     const isDelivery = state.activeTab === 'delivery';
-    document.getElementById('delivery-step-content').classList.toggle('hidden', !isDelivery);
-    document.getElementById('order-step-content').classList.toggle('hidden', isDelivery);
-    if (isDelivery && state.googleMap) {
-        setTimeout(() => {
-            google.maps.event.trigger(state.googleMap, 'resize');
-            if (state.mapMarker) state.googleMap.panTo(state.mapMarker.getPosition());
-        }, 100);
+    const deliveryContent = document.getElementById('delivery-step-content');
+    const orderContent = document.getElementById('order-step-content');
+
+    if (deliveryContent) deliveryContent.classList.toggle('hidden', !isDelivery);
+    if (orderContent) orderContent.classList.toggle('hidden', isDelivery);
+
+    if (isDelivery) {
+        // Se o Google Maps carregou mas o mapa ainda não foi criado, cria agora
+        if (window.google && !state.googleMap) {
+            initMapsAutocomplete();
+            initDeliveryMap();
+        }
+
+        if (state.googleMap) {
+            setTimeout(() => {
+                google.maps.event.trigger(state.googleMap, 'resize');
+                if (state.mapMarker) {
+                    state.googleMap.panTo(state.mapMarker.getPosition());
+                } else if (state.userInfo.address) {
+                    geocodeAddress(state.userInfo.address);
+                }
+            }, 300);
+        }
     }
+}
+
+function selectPaymentMethod(method) {
+    state.paymentMethod = method;
+    document.querySelectorAll('.payment-card').forEach(el => {
+        el.classList.toggle('selected', el.dataset.method === method);
+    });
+}
+
+function renderStep3() {
+    const opts = document.getElementById('payment-options');
+    if(!opts) return;
+    
+    const isCashAllowed = (state.activeTab !== 'delivery') || state.allowCash;
+    
+    let html = `
+        <div class="payment-card ${state.paymentMethod === 'mercadopago' ? 'selected' : ''}" data-method="mercadopago" onclick="selectPaymentMethod('mercadopago')">
+            <div class="payment-icon" style="background:#e0f2fe; color:#0284c7;"><i data-lucide="credit-card"></i></div>
+            <div class="payment-info">
+                <h4>Pix ou Crédito</h4>
+                <p>Pagamento online 100% seguro via Mercado Pago.</p>
+            </div>
+        </div>
+    `;
+    
+    if (isCashAllowed) {
+        html += `
+            <div class="payment-card ${state.paymentMethod === 'dinheiro' ? 'selected' : ''}" data-method="dinheiro" onclick="selectPaymentMethod('dinheiro')">
+                <div class="payment-icon" style="background:#fef3c7; color:#d97706;"><i data-lucide="banknote"></i></div>
+                <div class="payment-info">
+                    <h4>Dinheiro</h4>
+                    <p>Pagamento na entrega ou retirada.</p>
+                </div>
+            </div>
+        `;
+    } else {
+        html += `
+            <div class="payment-card disabled">
+                <div class="payment-icon" style="background:#f3f4f6; color:#9ca3af;"><i data-lucide="banknote"></i></div>
+                <div class="payment-info">
+                    <h4 style="color:#9ca3af;">Dinheiro</h4>
+                    <p style="color:#ef4444; font-weight:600;">⚠️ Não disponível para este endereço de entrega.</p>
+                </div>
+            </div>
+        `;
+        if (state.paymentMethod === 'dinheiro') {
+            state.paymentMethod = 'mercadopago'; // fallback
+        }
+    }
+    opts.innerHTML = html;
+    lucide.createIcons();
 }
 
 function handleNextStep() {
     if (state.currentStep === 1) {
-        const nameVal = document.getElementById('customer-name')?.value;
-        const phoneVal = document.getElementById('customer-phone')?.value;
+        const nameVal = document.getElementById('user-name')?.value;
+        const phoneVal = document.getElementById('user-phone')?.value;
         if (!nameVal || !phoneVal || phoneVal.length < 14) return showAlert('Ops!', 'Preencha seu nome e um WhatsApp válido.');
         state.userInfo.name = nameVal;
         state.userInfo.phone = phoneVal;
@@ -829,22 +998,50 @@ function handleNextStep() {
     } else if (state.currentStep === 2) {
         if (state.activeTab === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
         if (state.activeTab === 'order' && (!document.getElementById('order-date').value || !document.getElementById('order-time').value)) return showAlert('Horário Ausente', 'Escolha uma data e um horário para sua encomenda.');
+        if (state.deliveryFee === 0 && state.activeTab === 'delivery' && state.userInfo.address) {
+            return showAlert('Taxa Indisponível', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereço está no raio de entrega.');
+        }
         goToStep(3);
+    } else if (state.currentStep === 3) {
+        if (!state.paymentMethod) return showAlert('Atenção', 'Selecione uma forma de pagamento.');
+        goToStep(4);
     }
 }
 
-function updateStep3Summary() {
+function updateStep4Summary() {
     const cart = getActiveCart();
     const subtotal = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0);
     const fee = state.activeTab === 'delivery' ? state.deliveryFee : 0;
     const total = subtotal + fee;
 
-    document.getElementById('summary-subtotal').innerText = `R$ ${subtotal.toFixed(2)}`;
-    document.getElementById('summary-fee').innerText = `R$ ${fee.toFixed(2)}`;
-    document.getElementById('summary-total').innerText = `R$ ${total.toFixed(2)}`;
-    document.getElementById('delivery-fee-line').classList.toggle('hidden', state.activeTab !== 'delivery');
+    const subEl = document.getElementById('summary-subtotal');
+    const feeEl = document.getElementById('summary-fee');
+    const totalEl = document.getElementById('summary-total');
+    const lineEl = document.getElementById('delivery-fee-line');
+    const listEl = document.getElementById('review-items-list');
+    const paymentSummaryEl = document.getElementById('payment-method-summary');
 
-    document.getElementById('review-items-list').innerHTML = cart.map(item => `<p style="font-size: 0.9rem; margin-bottom: 4px;">${item.quantity}x ${item.name} ${item.variation ? `(${item.variation})` : ''}</p>`).join('');
+    if (paymentSummaryEl) {
+        if (state.paymentMethod === 'dinheiro') {
+            paymentSummaryEl.innerHTML = '<i data-lucide="banknote" style="vertical-align: middle; margin-right: 5px;"></i> Pagamento em Dinheiro';
+            paymentSummaryEl.style.background = '#fef3c7';
+            paymentSummaryEl.style.color = '#d97706';
+        } else {
+            paymentSummaryEl.innerHTML = '<i data-lucide="credit-card" style="vertical-align: middle; margin-right: 5px;"></i> Pix ou Crédito (Online)';
+            paymentSummaryEl.style.background = '#f0fdf4';
+            paymentSummaryEl.style.color = '#166534';
+        }
+        lucide.createIcons();
+    }
+
+    if (subEl) subEl.innerText = `R$ ${subtotal.toFixed(2)}`;
+    if (feeEl) feeEl.innerText = `R$ ${fee.toFixed(2)}`;
+    if (totalEl) totalEl.innerText = `R$ ${total.toFixed(2)}`;
+    if (lineEl) lineEl.classList.toggle('hidden', state.activeTab !== 'delivery');
+
+    if (listEl) {
+        listEl.innerHTML = cart.map(item => `<p style="font-size: 0.9rem; margin-bottom: 4px;">${item.quantity}x ${item.name} ${item.variation ? `(${item.variation})` : ''}</p>`).join('');
+    }
 }
 
 function addToCart() {
@@ -908,17 +1105,24 @@ async function handlePlaceOrder() {
     const btn = document.getElementById('place-order-btn');
     btn.disabled = true; btn.innerHTML = 'Processando Pagamento...';
 
+    const totalValue = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0) + (state.activeTab === 'delivery' ? state.deliveryFee : 0);
+
     const payload = {
         clientName: state.userInfo.name,
         clientPhone: state.userInfo.phone,
+        productId: cart[0].productId,
         product: cart[0].name + (cart[0].variation ? ` (${cart[0].variation})` : ''),
+        variation: cart[0].variation,
         quantity: cart[0].quantity,
         type: state.activeTab,
         deliveryAddress: state.activeTab === 'delivery' ? state.userInfo.address : null,
         scheduledDate: state.activeTab === 'order' ? document.getElementById('order-date').value : null,
         scheduledTime: state.activeTab === 'order' ? document.getElementById('order-time').value : null,
         deliveryFee: state.activeTab === 'delivery' ? state.deliveryFee : 0,
+        paymentMethod: state.paymentMethod,
+        totalValue: totalValue,
         carrinho_itens_extras: cart.slice(1).map(item => ({
+            productId: item.productId,
             name: item.name + (item.variation ? ` (${item.variation})` : ''),
             price: item.price,
             quantity: item.quantity
@@ -953,7 +1157,22 @@ async function handlePlaceOrder() {
             setActiveCart([]);
             location.href = data.paymentLink;
         } else if (data.id) {
-            alert('Pedido registrado, mas houve um problema ao gerar o link de pagamento. Por favor, entre em contato.');
+            if (state.paymentMethod === 'dinheiro') {
+                Swal.fire({
+                    title: 'Pedido Recebido!',
+                    text: 'Seu pedido foi registrado e está aguardando confirmação.',
+                    icon: 'success',
+                    confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#ff4d6d',
+                    confirmButtonText: 'Ver meus pedidos'
+                }).then(() => {
+                    setActiveCart([]);
+                    openModal('history-modal');
+                    fetchPreviousOrders();
+                    location.reload();
+                });
+            } else {
+                alert('Pedido registrado, mas houve um problema ao gerar o link de pagamento. Por favor, entre em contato.');
+            }
         } else {
             throw new Error(data.error);
         }
@@ -968,7 +1187,7 @@ async function fetchPreviousOrders() {
     if (!state.userInfo.phone) return;
     try {
         const phone = state.userInfo.phone.replace(/\D/g, '');
-        const res = await fetch(`${API_BASE}/orders/history/public/${STORE_SLUG}/${phone}`);
+        const res = await fetch(`${API_BASE}/orders/history/${phone}`);
         const data = await res.json();
         state.previousOrders = Array.isArray(data) ? data : [];
         renderPreviousOrders();
@@ -1000,17 +1219,17 @@ function renderPreviousOrders() {
     });
 
     list.innerHTML = uniqueItems.slice(0, 6).map(o => `
-        <div class="history-card" onclick="reorderItem('${o.id}')">
-            <div class="history-card-info">
-                <strong>${o.product}</strong>
-                ${o.variation ? `<p>${o.variation}</p>` : ''}
-            </div>
-            <div class="history-card-action">
-                <span>Pedir de novo</span>
-                <i data-lucide="chevron-right"></i>
-            </div>
-        </div>
-    `).join('');
+                                                                                    <div class="history-card" onclick="reorderItem('${o.id}')">
+                                                                                        <div class="history-card-info">
+                                                                                            <strong>${o.product}</strong>
+                                                                                            ${o.variation ? `<p>${o.variation}</p>` : ''}
+                                                                                        </div>
+                                                                                        <div class="history-card-action">
+                                                                                            <span>Pedir de novo</span>
+                                                                                            <i data-lucide="chevron-right"></i>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                `).join('');
     lucide.createIcons();
 }
 
@@ -1056,3 +1275,7 @@ function updateTheme() {
     root.style.setProperty('--text-black', data.textColor || '#333333');
     root.style.setProperty('--text-gray', `${data.textColor || '#333333'}99`);
 }
+
+// Inicialização imediata de elementos visuais síncronos
+renderMenu(); // Mostra o skeleton imediatamente
+updateUI();

@@ -197,7 +197,7 @@ const Settings = () => {
   const [slugStatus, setSlugStatus] = useState({ available: null, suggestion: '' });
   const [checkingSlug, setCheckingSlug] = useState(false);
 
-  const addDeliveryRule = () => setSettings(s => ({ ...s, deliveryRules: [...s.deliveryRules, { maxKm: 5, fee: 10 }] }));
+  const addDeliveryRule = () => setSettings(s => ({ ...s, deliveryRules: [...s.deliveryRules, { maxKm: 5, fee: 10, allowCash: true }] }));
   const updateRule = (idx, field, val) => {
     const rules = [...settings.deliveryRules];
     rules[idx][field] = parseFloat(val);
@@ -395,12 +395,31 @@ const Settings = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {settings.deliveryRules.length === 0 && <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>Nenhuma regra configurada. O frete será manual.</p>}
                   {settings.deliveryRules.map((rule, idx) => (
-                    <div key={idx} style={ruleRow}>
+                    <div key={idx} style={{ ...ruleRow, gridTemplateColumns: 'auto 70px auto auto 90px auto auto', gap: '10px' }}>
                       <span>Até</span>
                       <input {...inp} style={smallInp} type="number" value={rule.maxKm} onChange={e => updateRule(idx, 'maxKm', e.target.value)} />
                       <span>KM</span>
-                      <span style={{ marginLeft: '15px' }}>Taxa: R$</span>
+                      <span style={{ marginLeft: '5px' }}>Taxa: R$</span>
                       <input {...inp} style={smallInp} type="number" value={rule.fee} onChange={e => updateRule(idx, 'fee', e.target.value)} />
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '10px' }}>
+                        <input
+                          type="checkbox"
+                          checked={rule.allowCash !== false}
+                          onChange={e => {
+                            const rules = [...settings.deliveryRules];
+                            rules[idx].allowCash = e.target.checked;
+                            setSettings(s => ({ ...s, deliveryRules: rules }));
+                          }}
+                          style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }} onClick={() => {
+                          const rules = [...settings.deliveryRules];
+                          rules[idx].allowCash = rules[idx].allowCash === false ? true : false;
+                          setSettings(s => ({ ...s, deliveryRules: rules }));
+                        }}>Aceitar Dinheiro</span>
+                      </div>
+
                       <button onClick={() => setSettings(s => ({ ...s, deliveryRules: s.deliveryRules.filter((_, i) => i !== idx) }))} style={delBtn}>
                         <Trash2 size={18} />
                       </button>
