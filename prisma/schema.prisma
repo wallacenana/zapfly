@@ -266,6 +266,7 @@ model Setting {
   deliveryJid          String?
   dailyMaxOrders       Int     @default(10)
   maxDeliveryKm        Float   @default(15.0)
+  deliveryMode         String  @default("hibrido")
   dailyDeliveryItems   String? @db.Text
   reportEnabled        Boolean @default(false)
   reportHour           Int     @default(7)

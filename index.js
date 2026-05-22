@@ -48,7 +48,7 @@ async function getCanonicalJid(jid, instanceId) {
     return jid;
 }
 
-// Configuraﾃｧﾃ｣o do Multer para Marketing Assets
+// Configuraﾃｧão do Multer para Marketing Assets
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'assets/marketing'),
     filename: (req, file, cb) => {
@@ -58,7 +58,7 @@ const storage = multer.diskStorage({
 });
 const uploadMarketing = multer({ storage });
 
-// Configuraﾃｧﾃ｣o do Multer para ﾃ「dios Temporﾃ｡rios
+// Configuraﾃｧão do Multer para ﾃ「dios Temporários
 const audioStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         const dir = 'assets/temp';
@@ -113,7 +113,7 @@ const aiMessageBuffer = {};
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// Assets estﾃ｡ticos (PRIORIDADE)
+// Assets estáticos (PRIORIDADE)
 app.use('/menu-assets', express.static(path.join(__dirname, 'public-menu')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -127,7 +127,7 @@ app.get('/robots.txt', (req, res) => {
 });
 
 
-// 笏€笏€笏€ CONFIGURAﾃﾃ髭S DO SITE (BRANDING) 笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€笏€
+//  CONFIGURAﾃﾃ髭S DO SITE (BRANDING) 
 app.get('/settings', authenticate, async (req, res) => {
     try {
         const settings = await prisma.setting.findUnique({
@@ -221,7 +221,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 笏笏笏 WEBHOOK MERCADO PAGO 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+//  WEBHOOK MERCADO PAGO 
 const processingPayments = new Set();
 
 app.post('/mercadopago/webhook', async (req, res) => {
@@ -231,7 +231,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
 
         if ((type === 'payment' || req.query.topic === 'payment') && paymentId) {
 
-            // TRAVA DE MEMﾃ迭IA: Evita processar o mesmo ID se ele jﾃ｡ estiver em curso
+            // TRAVA DE MEMÓIA: Evita processar o mesmo ID se ele já estiver em curso
             if (processingPayments.has(paymentId)) {
                 return res.sendStatus(200);
             }
@@ -243,7 +243,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                 const settings = await getSettings(userId);
 
                 if (!settings?.mercadopagoToken) {
-                    console.warn(`[MercadoPago Webhook] Token nﾃ｣o encontrado para o usuﾃ｡rio: ${userId}`);
+                    console.warn(`[MercadoPago Webhook] Token não encontrado para o usuário: ${userId}`);
                     processingPayments.delete(paymentId);
                     return res.sendStatus(200);
                 }
@@ -257,7 +257,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                 if (p.status === 'approved' && orderId) {
                     const order = await prisma.order.findUnique({ where: { id: orderId } });
 
-                    // Trava de seguranﾃｧa no DB: Se jﾃ｡ foi confirmado, ignora
+                    // Trava de seguranﾃｧa no DB: Se já foi confirmado, ignora
                     if (order && order.paymentStatus !== 'confirmed') {
 
                         const updatedOrder = await prisma.order.update({
@@ -272,7 +272,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                         io.emit('order_confirmed', updatedOrder);
                         io.emit('new_order_pending', { orderId: updatedOrder.id });
 
-                        // Sincroniza com Google Agenda agora que estﾃ｡ confirmado
+                        // Sincroniza com Google Agenda agora que está confirmado
                         await updateCalendarEvent(updatedOrder).catch(e => console.error('[GCal Sync Error]', e.message));
 
                         if (settings?.managerJid) {
@@ -282,9 +282,9 @@ app.post('/mercadopago/webhook', async (req, res) => {
                                 const orderIdShort = updatedOrder.id.slice(-4).toUpperCase();
 
                                 if (updatedOrder.type === 'order') {
-                                    aviso = `�圷 *NOVA ENCOMENDA!* (#${orderIdShort}) �圷\n\n�側 *Cliente:* ${updatedOrder.clientName}\n�獅 *Pedido:* ${updatedOrder.product}\n�套 *Data:* ${updatedOrder.scheduledDate}\n竢ｰ *Hora:* ${updatedOrder.scheduledTime}\n�統 *Obs:* ${updatedOrder.notes || '-'}\n�桃 *Entrega:* ${updatedOrder.deliveryAddress || 'Retirada'}\n\nO pagamento foi confirmado e o pedido jﾃ｡ estﾃ｡ no seu painel! 笨ｨ`;
+                                    aviso = `🚨 *NOVA ENCOMENDA!* (#${orderIdShort}) 🚨\n\n👤 *Cliente:* ${updatedOrder.clientName}\n📦 *Pedido:* ${updatedOrder.product}\n📅 *Data:* ${updatedOrder.scheduledDate}\n⏰ *Hora:* ${updatedOrder.scheduledTime}\n📝 *Obs:* ${updatedOrder.notes || '-'}\n🛵 *Entrega:* ${updatedOrder.deliveryAddress || 'Retirada'}\n\nO pagamento foi confirmado e o pedido já está no seu painel! ✨`;
                                 } else {
-                                    aviso = `�腸 *PAGAMENTO APROVADO!* (#${orderIdShort}) �腸\n\n�側 *Cliente:* ${updatedOrder.clientName}\n�獅 *Pedido:* ${updatedOrder.product}\n\nO pedido jﾃ｡ estﾃ｡ na aba *PENDENTES* do seu painel. Aceite-o para iniciar a produﾃｧﾃ｣o! 笨ｨ`;
+                                    aviso = `✅ *PAGAMENTO APROVADO!* (#${orderIdShort}) ✅\n\n👤 *Cliente:* ${updatedOrder.clientName}\n📦 *Pedido:* ${updatedOrder.product}\n\nO pedido já está na aba *PENDENTES* do seu painel. Aceite-o para iniciar a produção! ✨`;
                                 }
 
                                 await sock.sendMessage(settings.managerJid, { text: aviso }).catch(() => { });
@@ -294,7 +294,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                         if (updatedOrder.clientJid) {
                             const sock = sessions.get(updatedOrder.instanceId || 'global') || Array.from(sessions.values())[0];
                             if (sock) {
-                                const msg = `�腸 *PAGAMENTO APROVADO!* �諜\n\nOi, *${updatedOrder.clientName}*! Seu pagamento foi aprovado e seu pedido jﾃ｡ estﾃ｡ na nossa fila de produﾃｧﾃ｣o. �ｧ鯛昨沚ｳ笨ｨ\n\nAvisaremos vocﾃｪ assim que estiver pronto! 笶､�汁`;
+                                const msg = `✅ *PAGAMENTO APROVADO!* 🎉\n\nOi, *${updatedOrder.clientName}*! Seu pagamento foi aprovado e seu pedido já está na nossa fila de produção. 👩‍🍳🚀✨\n\nAvisaremos você assim que estiver pronto! 💖🛵`;
                                 await sock.sendMessage(updatedOrder.clientJid, { text: msg }).catch(() => { });
                             }
                         }
@@ -366,7 +366,7 @@ app.get('/public/menu/:slug', async (req, res) => {
     }
 });
 
-// 笏笏笏 SLUG AVAILABILITY CHECK 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+//  SLUG AVAILABILITY CHECK 
 app.get('/public/check-slug/:slug', async (req, res) => {
     try {
         const base = req.params.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
@@ -449,7 +449,7 @@ app.delete('/marketing-assets/:id', authenticate, async (req, res) => {
     }
 });
 
-// 笏笏笏 GOOGLE CALENDAR OAUTH 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+//  GOOGLE CALENDAR OAUTH 
 
 const GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
@@ -482,7 +482,7 @@ app.get('/auth/google', authenticate, async (req, res) => {
     res.redirect(url);
 });
 
-// Callback do Google com o cﾃｳdigo de autorizaﾃｧﾃ｣o
+// Callback do Google com o cﾃｳdigo de autorizaﾃｧão
 app.get('/auth/google/callback', async (req, res) => {
     const { code, state: userId, error } = req.query;
     const origin = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -506,7 +506,7 @@ app.get('/auth/google/callback', async (req, res) => {
             console.log('[GCal OAuth] Novo Refresh Token recebido.');
             updateData.gcalRefreshToken = tokens.refresh_token;
         } else {
-            console.warn('[GCal OAuth] Refresh Token Nﾃグ recebido. Usando o existente.');
+            console.warn('[GCal OAuth] Refresh Token NÃO recebido. Usando o existente.');
         }
 
         await prisma.setting.update({
@@ -522,7 +522,7 @@ app.get('/auth/google/callback', async (req, res) => {
     }
 });
 
-// Status da conexﾃ｣o com o Google Calendar
+// Status da conexão com o Google Calendar
 app.get('/auth/google/status', authenticate, async (req, res) => {
     const settings = await getSettings(req.user.id);
     const connected = !!(settings?.gcalRefreshToken);
@@ -530,11 +530,11 @@ app.get('/auth/google/status', authenticate, async (req, res) => {
     res.json({ connected, calendarId: settings?.gcalCalendarId, hasCredentials });
 });
 
-// Lista os calendﾃ｡rios disponﾃｭveis na conta conectada
+// Lista os calendários disponﾃｭveis na conta conectada
 app.get('/auth/google/calendars', authenticate, async (req, res) => {
     try {
         const settings = await getSettings(req.user.id);
-        if (!settings?.gcalRefreshToken) return res.status(401).json({ error: 'Nﾃ｣o conectado' });
+        if (!settings?.gcalRefreshToken) return res.status(401).json({ error: 'Não conectado' });
 
         const oauth2Client = getOAuth2Client(req);
         oauth2Client.setCredentials({ refresh_token: settings.gcalRefreshToken, access_token: settings.gcalAccessToken });
@@ -547,15 +547,15 @@ app.get('/auth/google/calendars', authenticate, async (req, res) => {
         res.json(calendars);
     } catch (e) {
         if (e.message.includes('invalid_grant')) {
-            console.error('[GCal Error] Conexﾃ｣o expirada ou revogada. Por favor, reconecte sua conta nas Configuraﾃｧﾃｵes.');
+            console.error('[GCal Error] Conexão expirada ou revogada. Por favor, reconecte sua conta nas Configuraﾃｧﾃｵes.');
         } else {
-            console.error('[GCal Error] Falha ao listar calendﾃ｡rios:', e.message);
+            console.error('[GCal Error] Falha ao listar calendários:', e.message);
         }
         res.status(500).json({ error: e.message });
     }
 });
 
-// Salva o calendﾃ｡rio selecionado
+// Salva o calendário selecionado
 app.patch('/auth/google/calendar', authenticate, async (req, res) => {
     try {
         const { calendarId } = req.body;
@@ -581,7 +581,7 @@ app.post('/auth/google/disconnect', authenticate, async (req, res) => {
 
 
 
-// 笏笏笏 INICIA O SERVIDOR 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+//  INICIA O SERVIDOR 
 process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
@@ -605,7 +605,7 @@ module.exports = { getSocket: (id) => sessions.get(id) };
 
 
 
-// Controle de reconexﾃ｣o com backoff por instﾃ｢ncia
+// Controle de reconexão com backoff por instﾃ｢ncia
 const reconnectAttempts = {};
 
 let cachedWAVersion = null;
@@ -618,7 +618,7 @@ async function initInstance(instanceId) {
 
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
-    // Busca a versﾃ｣o mais recente do WhatsApp Web (Cache para performance)
+    // Busca a versão mais recente do WhatsApp Web (Cache para performance)
     let version = cachedWAVersion || [2, 3000, 1015901307];
     if (!cachedWAVersion) {
         try {
@@ -626,7 +626,7 @@ async function initInstance(instanceId) {
             version = result.version;
             cachedWAVersion = version;
         } catch (e) {
-            console.warn(`[Baileys] Falha ao buscar versﾃ｣o do WA Web. Usando fallback.`);
+            console.warn(`[Baileys] Falha ao buscar versão do WA Web. Usando fallback.`);
         }
     }
 
@@ -652,11 +652,11 @@ async function initInstance(instanceId) {
         browser: ['DigiZap', 'Chrome', '1.0.0'],
         logger: pino({ level: 'silent' }),
         syncFullHistory: false,            // true consome muita memﾃｳria e pode causar desconexﾃｵes
-        keepAliveIntervalMs: 30000,        // envia ping a cada 30s para manter a conexﾃ｣o viva
-        connectTimeoutMs: 60000,           // timeout de 60s para estabelecer conexﾃ｣o
+        keepAliveIntervalMs: 30000,        // envia ping a cada 30s para manter a conexão viva
+        connectTimeoutMs: 60000,           // timeout de 60s para estabelecer conexão
         defaultQueryTimeoutMs: 60000,      // timeout para queries ao servidor do WhatsApp
         retryRequestDelayMs: 500,          // delay entre tentativas de retry de mensagens
-        maxMsgRetryCount: 5                // mﾃ｡ximo de retentativas por mensagem
+        maxMsgRetryCount: 5                // máximo de retentativas por mensagem
     });
 
     store.bind(sock.ev);
@@ -670,7 +670,7 @@ async function initInstance(instanceId) {
                 const isGroup = jid.endsWith('@g.us');
                 const name = contact.name || contact.verifiedName || contact.notify || (isGroup ? 'Grupo' : jid.split('@')[0]);
 
-                // Apenas atualiza o nome se o chat jﾃ｡ existir. Nﾃ｣o cria chats vazios para cada pessoa de um grupo.
+                // Apenas atualiza o nome se o chat já existir. Não cria chats vazios para cada pessoa de um grupo.
                 await prisma.chat.updateMany({
                     where: { instanceId, jid },
                     data: { name: name }
@@ -708,14 +708,14 @@ async function initInstance(instanceId) {
 
         jid = await getCanonicalJid(jid, instanceId);
 
-        // 笏笏笏 INTERCEPTA MENSAGEM APAGADA ("Apagar para Todos") 笏笏笏
+        //  INTERCEPTA MENSAGEM APAGADA ("Apagar para Todos") 
         if (msg.message?.protocolMessage?.type === 0 || msg.message?.protocolMessage?.type === 'REVOKE') {
             const keyToRevoke = msg.message.protocolMessage.key;
             if (keyToRevoke && keyToRevoke.id) {
                 await prisma.message.deleteMany({ where: { instanceId, msgId: keyToRevoke.id } });
                 io.emit('message_deleted', { instanceId, msgId: keyToRevoke.id });
             }
-            return; // Interrompe aqui, nﾃ｣o processa IA
+            return; // Interrompe aqui, não processa IA
         }
 
         let text = msg.message?.conversation ||
@@ -739,12 +739,12 @@ async function initInstance(instanceId) {
                         file: await OpenAI.toFile(buffer, 'audio.ogg'),
                         model: 'whisper-1',
                     });
-                    // Salva apenas o texto para a IA nﾃ｣o se confundir
+                    // Salva apenas o texto para a IA não se confundir
                     text = transcription.text;
                 }
             } catch (err) {
                 console.error('[Audio Error]', err.message);
-                text = "�痔 [ﾃ「dio (Erro na transcriﾃｧﾃ｣o)]";
+                text = "�痔 [ﾃ「dio (Erro na transcriﾃｧão)]";
             }
         }
 
@@ -845,7 +845,7 @@ async function initInstance(instanceId) {
                     }
                 }
 
-                // 笏笏笏 COMANDOS DE ADMINISTRADOR (MANAGER) 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+                //  COMANDOS DE ADMINISTRADOR (MANAGER) 
                 const settings = await getSettings();
                 if (!msg.key.fromMe && settings?.managerJid && jid === settings.managerJid) {
 
@@ -915,7 +915,7 @@ async function initInstance(instanceId) {
                             }
                         }
 
-                        // Juntamos o texto para o motor de fluxos (usando o combinedText jﾃ｡ calculado)
+                        // Juntamos o texto para o motor de fluxos (usando o combinedText já calculado)
                         const textForFlow = combinedText;
                         const instanceData = await getCachedInstance(instanceId);
                         const userId = instanceData?.userId;
@@ -978,7 +978,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "chamar_gerente",
-                                            description: "Avisa o dono/gerente da loja que existe uma dﾃｺvida que a IA nﾃ｣o sabe responder ou um pedido especial.",
+                                            description: "Avisa o dono/gerente da loja que existe uma dﾃｺvida que a IA não sabe responder ou um pedido especial.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
@@ -1006,12 +1006,12 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "check_availability",
-                                            description: "Verifica se hﾃ｡ horﾃ｡rios disponﾃｭveis para agendamento em uma data e hora especﾃｭfica.",
+                                            description: "Verifica se há horários disponﾃｭveis para agendamento em uma data e hora especﾃｭfica.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
                                                     date: { type: "string", description: "A data no formato YYYY-MM-DD" },
-                                                    time: { type: "string", description: "O horﾃ｡rio no formato HH:MM" },
+                                                    time: { type: "string", description: "O horário no formato HH:MM" },
                                                     type: { type: "string", description: "O tipo do pedido: 'order' (encomenda) ou 'delivery' (entrega)" }
                                                 },
                                                 required: ["date", "time", "type"]
@@ -1026,21 +1026,21 @@ async function initInstance(instanceId) {
                                             parameters: {
                                                 type: "object",
                                                 properties: {
-                                                    productId: { type: "string", description: "ID do produto (ex: cmo...) encontrado entre [ID:...] no catﾃ｡logo." },
+                                                    productId: { type: "string", description: "ID do produto (ex: cmo...) encontrado entre [ID:...] no catálogo." },
                                                     product: { type: "string", description: "Nome do produto" },
-                                                    variation: { type: "string", description: "Nome da variaﾃｧﾃ｣o EXACTA (ex: 'P', 'M', 'Mini'). Nﾃ｣o coloque sabores aqui." },
+                                                    variation: { type: "string", description: "Nome da variaﾃｧão EXACTA (ex: 'P', 'M', 'Mini'). Não coloque sabores aqui." },
                                                     quantity: { type: "string", description: "Peso do bolo (ex: 2kg) ou Quantidade" },
                                                     scheduledDate: { type: "string", description: "Data do agendamento YYYY-MM-DD" },
-                                                    scheduledTime: { type: "string", description: "Horﾃ｡rio do agendamento HH:MM" },
+                                                    scheduledTime: { type: "string", description: "Horário do agendamento HH:MM" },
                                                     clientName: { type: "string", description: "Nome do cliente" },
-                                                    paymentMethod: { type: "string", description: "Forma de pagamento (ex: Pix e Cartﾃ｣o com link de pagamento e Dinheiro em alguns casos)" },
-                                                    type: { type: "string", enum: ["order", "delivery"], description: "OBRIGATﾃ迭IO: Use 'delivery' para pedidos imediatos (hoje/agora) com entrega. Use 'order' para agendamentos futuros, encomendas de bolos ou retiradas programadas." },
+                                                    paymentMethod: { type: "string", description: "Forma de pagamento (ex: Pix e Cartão com link de pagamento e Dinheiro em alguns casos)" },
+                                                    type: { type: "string", enum: ["order", "delivery"], description: "OBRIGATÓIO: Use 'delivery' para pedidos imediatos (hoje/agora) com entrega. Use 'order' para agendamentos futuros, encomendas de bolos ou retiradas programadas." },
                                                     deliveryAddress: { type: "string", description: "Endereﾃｧo se for delivery" },
                                                     deliveryFee: { type: "number", description: "Valor da entrega calculado por get_delivery_fee" },
                                                     massa: { type: "string", description: "Sabor da massa escolhida" },
                                                     recheio: { type: "string", description: "Sabor do recheio escolhido" },
                                                     topo: { type: "string", description: "Informaﾃｧﾃｵes sobre o topo do bolo" },
-                                                    carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Produtos ADICIONAIS. IMPORTANTE: Para Kits/Combos, Nﾃグ coloque aqui os itens que jﾃ｡ fazem parte do kit, senﾃ｣o o cliente serﾃ｡ cobrado em dobro. Use apenas para itens extras comprados ﾃ� parte." },
+                                                    carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Produtos ADICIONAIS. IMPORTANTE: Para Kits/Combos, NÃO coloque aqui os itens que já fazem parte do kit, senão o cliente será cobrado em dobro. Use apenas para itens extras comprados ﾃ� parte." },
                                                     notes: { type: "string", description: "Outras observaﾃｧﾃｵes gerais" }
                                                 },
                                                 required: ["product", "paymentMethod"],
@@ -1051,7 +1051,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "update_order",
-                                            description: "Atualiza informaﾃｧﾃｵes de um pedido ou agendamento jﾃ｡ existente. Sﾃｳ use se o cliente pedir para corrigir algo.",
+                                            description: "Atualiza informaﾃｧﾃｵes de um pedido ou agendamento já existente. Sﾃｳ use se o cliente pedir para corrigir algo.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
@@ -1059,7 +1059,7 @@ async function initInstance(instanceId) {
                                                     product: { type: "string", description: "Novo produto (opcional)" },
                                                     quantity: { type: "string", description: "Novo peso ou quantidade (opcional)" },
                                                     scheduledDate: { type: "string", description: "Nova data YYYY-MM-DD (opcional)" },
-                                                    scheduledTime: { type: "string", description: "Novo horﾃ｡rio HH:MM (opcional)" },
+                                                    scheduledTime: { type: "string", description: "Novo horário HH:MM (opcional)" },
                                                     notes: { type: "string", description: "Novas observaﾃｧﾃｵes ou mudanﾃｧas nos sabores (opcional)" },
                                                     carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Nova lista completa de produtos extras." },
                                                     totalValue: { type: "number", description: "Novo valor total do pedido apﾃｳs as alteraﾃｧﾃｵes (opcional)" }
@@ -1072,7 +1072,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "get_order_status",
-                                            description: "Verifica se o pedido do cliente atual estﾃ｡ pronto para retirada ou entrega.",
+                                            description: "Verifica se o pedido do cliente atual está pronto para retirada ou entrega.",
                                             parameters: { type: "object", properties: {} }
                                         }
                                     },
@@ -1088,7 +1088,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "get_delivery_catalog",
-                                            description: "OBRIGATﾃ迭IO: Chame SEMPRE que o cliente perguntar o que tem para hoje, pronta entrega, ou pedir opﾃｧﾃｵes imediatas. Proibido listar produtos manualmente, quando estiver fechado e o cliente pedir informaﾃｧﾃｵes \"sobre o que tem hoje\".",
+                                            description: "OBRIGATÓIO: Chame SEMPRE que o cliente perguntar o que tem para hoje, pronta entrega, ou pedir opﾃｧﾃｵes imediatas. Proibido listar produtos manualmente, quando estiver fechado e o cliente pedir informaﾃｧﾃｵes \"sobre o que tem hoje\".",
                                             parameters: { type: "object", properties: {} }
                                         }
                                     },
@@ -1096,7 +1096,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "get_order_catalog",
-                                            description: "OBRIGATﾃ迭IO: Chame SEMPRE que o cliente pedir cardﾃ｡pio de encomendas, bolos de festa, personalizados ou agendamentos futuros. Proibido listar produtos manualmente.",
+                                            description: "OBRIGATÓIO: Chame SEMPRE que o cliente pedir cardápio de encomendas, bolos de festa, personalizados ou agendamentos futuros. Proibido listar produtos manualmente.",
                                             parameters: { type: "object", properties: {} }
                                         }
                                     },
@@ -1122,7 +1122,7 @@ async function initInstance(instanceId) {
                                             parameters: {
                                                 type: "object",
                                                 properties: {
-                                                    search: { type: "string", description: "Termo de busca (ex: 'vulcﾃ｣o', 'promoﾃｧﾃ｣o'). Deixe vazio para listar todos." }
+                                                    search: { type: "string", description: "Termo de busca (ex: 'vulcão', 'promoﾃｧão'). Deixe vazio para listar todos." }
                                                 }
                                             }
                                         }
@@ -1162,29 +1162,29 @@ async function initInstance(instanceId) {
                                 let responseMessage;
                                 let pendingPaymentLink = null;
                                 let pendingCatalogMessage = null;
-                                let pendingCatalogCTA = null; // 3ﾂｪ mensagem: CTA da Lily apﾃｳs o catﾃ｡logo
+                                let pendingCatalogCTA = null; // 3ﾂｪ mensagem: CTA da Lily apﾃｳs o catálogo
                                 try {
-                                    // Detecta se o usuﾃ｡rio estﾃ｡ pedindo o cardﾃ｡pio e forﾃｧa a ferramenta correta
+                                    // Detecta se o usuário está pedindo o cardápio e forﾃｧa a ferramenta correta
                                     const lastUserMsgObj = messages.filter(m => m.role === 'user').pop();
                                     const lastUserMsgContent = Array.isArray(lastUserMsgObj?.content)
                                         ? lastUserMsgObj.content.map(c => c.text || '').join(' ')
                                         : (lastUserMsgObj?.content || '');
                                     const lastUserMsg = lastUserMsgContent.toLowerCase();
 
-                                    const isDeliveryRequest = /card[aﾃ｡]pio|o que tem|pronta entrega|o que voc[eﾃｪ] tem|tem hoje|tem pra hoje|disponﾃｭvel|disponivel|preﾃｧo|preco|o que vende|possibilidades|opﾃｧﾃｵes|opcoes/i.test(lastUserMsg);
+                                    const isDeliveryRequest = /card[aá]pio|o que tem|pronta entrega|o que voc[eﾃｪ] tem|tem hoje|tem pra hoje|disponﾃｭvel|disponivel|preﾃｧo|preco|o que vende|possibilidades|opﾃｧﾃｵes|opcoes/i.test(lastUserMsg);
                                     const isOrderRequest = /encomenda|bolo de festa|personalizado|encomendar|quero encomendar/i.test(lastUserMsg);
 
                                     let forcedToolChoice = "auto";
 
                                     if (statusLoja.includes("FECHADA")) {
-                                        // Detecta se ﾃｩ um "SIM" genﾃｩrico ou se jﾃ｡ ﾃｩ o nome de um produto
-                                        const isGenericAcceptance = /^(sim|quero|pode|manda|veja|vﾃｪ|ok|agendar|amanhﾃ｣|pode ser|com certeza|claro|uhum)$/i.test(lastUserMsg.trim());
+                                        // Detecta se ﾃｩ um "SIM" genﾃｩrico ou se já ﾃｩ o nome de um produto
+                                        const isGenericAcceptance = /^(sim|quero|pode|manda|veja|vﾃｪ|ok|agendar|amanhã|pode ser|com certeza|claro|uhum)$/i.test(lastUserMsg.trim());
                                         const isAskingOptions = /o que tem|opﾃｧﾃｵes|cardapio|catalogo|vﾃｪ ai/i.test(combinedText);
 
                                         if (isGenericAcceptance || isAskingOptions) {
                                             forcedToolChoice = { type: "function", function: { name: "get_delivery_catalog" } };
                                         } else {
-                                            // Se ele jﾃ｡ falou o nome de um produto (ex: "quero um vulcﾃ｣o"), deixa o fluxo seguir normal
+                                            // Se ele já falou o nome de um produto (ex: "quero um vulcão"), deixa o fluxo seguir normal
                                             forcedToolChoice = "auto";
                                         }
                                     } else if (statusLoja.includes("ABERTA")) {
@@ -1212,13 +1212,13 @@ async function initInstance(instanceId) {
                                         const match = initialAIText.match(/\[ANALISE: (.*?)\]/s);
                                         if (match) {
                                             const analysisContent = match[1];
-                                            console.log(`[AI Memory] Salvando anﾃ｡lise tﾃｩcnica no banco...`);
+                                            console.log(`[AI Memory] Salvando análise tﾃｩcnica no banco...`);
                                             await prisma.chat.update({
                                                 where: { jid_instanceId: { jid, instanceId } },
                                                 data: { lastPixAnalysis: analysisContent }
                                             }).catch(e => console.error("Erro ao salvar memﾃｳria AI:", e));
 
-                                            // Remove o bloco tﾃｩcnico do texto que o cliente verﾃ｡
+                                            // Remove o bloco tﾃｩcnico do texto que o cliente verá
                                             initialAIText = initialAIText.replace(/\[ANALISE: .*?\]/s, '').trim();
                                             responseMessage.content = initialAIText;
                                         }
@@ -1240,7 +1240,6 @@ async function initInstance(instanceId) {
                                                 result = await executeChamarGerente(reason, jid, currentChat, settings, null, sock, prisma, instanceId);
                                             }
                                             else if (functionName === "get_delivery_catalog") {
-                                                const { statusLoja, isBeforeOpening } = await getStoreStatus();
                                                 const prods = await prisma.product.findMany();
 
                                                 let deliveryStr = '';
@@ -1257,7 +1256,7 @@ async function initInstance(instanceId) {
 
                                                 const catalogText = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
                                                 pendingCatalogMessage = catalogText;
-                                                result = "CATﾃ´OGO ENVIADO PARA MEMﾃ迭IA. Responda ao cliente usando o formato: [Intro] --- [CTA].";
+                                                result = "CATÁLOGO ENVIADO PARA MEMÓIA. Responda ao cliente usando o formato: [Intro] --- [CTA].";
                                             }
                                             else if (functionName === "get_order_catalog") {
                                                 const prods = await prisma.product.findMany({
@@ -1281,10 +1280,10 @@ async function initInstance(instanceId) {
 
                                                 let catalogText = orderStr.trim() || 'Nenhum item para encomenda no momento.';
                                                 if (addonStr) {
-                                                    catalogText += '\n\n笨ｨ *ADICIONAIS & EXTRAS:*\n' + addonStr.trim();
+                                                    catalogText += '\n\n✨ *ADICIONAIS & EXTRAS:*\n' + addonStr.trim();
                                                 }
                                                 pendingCatalogMessage = catalogText;
-                                                result = "CATﾃ´OGO DE ENCOMENDAS ENVIADO PARA MEMﾃ迭IA. Responda ao cliente usando o formato: [Intro] --- [CTA].";
+                                                result = "CATÁLOGO DE ENCOMENDAS ENVIADO PARA MEMÓRIA. Responda ao cliente usando o formato: [Intro] --- [CTA].";
                                             }
                                             else if (functionName === "check_availability") {
                                                 result = await checkAvailability(args.date, args.time, args.type || 'order');
@@ -1308,7 +1307,7 @@ async function initInstance(instanceId) {
 
                                                     const feeLabel = feeRes.type === 'fixed' ? 'VALOR DO FRETE' : 'VALOR DO FRETE (ESTIMADO)';
 
-                                                    result = `${feeLabel}: R$ ${feeValue.toFixed(2)}. ${canCash ? 'DINHEIRO LIBERADO' : 'APENAS PIX/CARTﾃグ (Link)'}`;
+                                                    result = `${feeLabel}: R$ ${feeValue.toFixed(2)}. ${canCash ? 'DINHEIRO LIBERADO' : 'APENAS PIX/CARTÃO (Link)'}`;
                                                 }
                                             }
                                             else if (functionName === "create_order") {
@@ -1329,7 +1328,7 @@ async function initInstance(instanceId) {
                                                     if (recentOrder) {
                                                         result = {
                                                             success: false,
-                                                            error: `BLOQUEIO: Jﾃ｡ existe o pedido #${recentOrder.id.slice(-5).toUpperCase()} em aberto. Use 'update_order' com este cﾃｳdigo para adicionar mais produtos ou atualizar o valor total. Nﾃグ CRIE OUTRO PEDIDO.`
+                                                            error: `BLOQUEIO: já existe o pedido #${recentOrder.id.slice(-5).toUpperCase()} em aberto. Use 'update_order' com este cﾃｳdigo para adicionar mais produtos ou atualizar o valor total. NÃO CRIE OUTRO PEDIDO.`
                                                         };
                                                     } else {
                                                         const internalBase = `http://127.0.0.1:${process.env.PORT || 3001}`;
@@ -1348,12 +1347,12 @@ async function initInstance(instanceId) {
                                                         };
                                                         if (res.data.paymentLink) {
                                                             pendingPaymentLink = res.data.paymentLink;
-                                                            result.message = "Pedido criado. SILﾃ劾CIO ABSOLUTO NO PRﾃ店IMO TURNO. Nﾃグ GERE NENHUM TEXTO, O SISTEMA ENVIARﾃ� O LINK.";
+                                                            result.message = "Pedido criado. SILﾃ劾CIO ABSOLUTO NO PRﾃ店IMO TURNO. NÃO GERE NENHUM TEXTO, O SISTEMA ENVIARﾃ� O LINK.";
                                                         } else {
-                                                            result.message = "Pedido criado. Informe que recebemos o pedido (Pagamento em Dinheiro) e que ele estﾃ｡ agora aguardando a aprovaﾃｧﾃ｣o da nossa equipe. Peﾃｧa para o cliente aguardar a confirmaﾃｧﾃ｣o oficial.";
+                                                            result.message = "Pedido criado. Informe que recebemos o pedido (Pagamento em Dinheiro) e que ele está agora aguardando a aprovaﾃｧão da nossa equipe. Peﾃｧa para o cliente aguardar a confirmaﾃｧão oficial.";
                                                         }
 
-                                                        // Se for dinheiro, jﾃ｡ cai como pending, entﾃ｣o dispara o DING agora
+                                                        // Se for dinheiro, já cai como pending, então dispara o DING agora
                                                         if (args.paymentMethod === 'Dinheiro') {
                                                             io.emit('new_order_pending', { orderId: res.data.id });
                                                         }
@@ -1372,7 +1371,7 @@ async function initInstance(instanceId) {
                                                     });
 
                                                     if (!targetOrder) {
-                                                        result = { success: false, error: `Pedido ${refCode} nﾃ｣o encontrado entre seus pedidos ativos.` };
+                                                        result = { success: false, error: `Pedido ${refCode} não encontrado entre seus pedidos ativos.` };
                                                     } else {
                                                         const updateData = {};
                                                         if (args.product) updateData.product = args.product;
@@ -1395,7 +1394,7 @@ async function initInstance(instanceId) {
 
                                                         if (res.data.paymentLink) {
                                                             pendingPaymentLink = res.data.paymentLink;
-                                                            result.message = "Pedido atualizado e novo link gerado. SILﾃ劾CIO ABSOLUTO NO PRﾃ店IMO TURNO. Nﾃグ GERE NENHUM TEXTO, O SISTEMA ENVIARﾃ� O LINK.";
+                                                            result.message = "Pedido atualizado e novo link gerado. SILﾃ劾CIO ABSOLUTO NO PRﾃ店IMO TURNO. NÃO GERE NENHUM TEXTO, O SISTEMA ENVIARﾃ� O LINK.";
                                                         }
                                                     }
                                                 } catch (err) {
@@ -1420,17 +1419,17 @@ async function initInstance(instanceId) {
                                             }
                                             else if (functionName === "get_store_location") {
                                                 result = {
-                                                    address: settings?.businessAddress || "Endereﾃｧo nﾃ｣o configurado.",
-                                                    locationLink: settings?.businessLocation || "Link nﾃ｣o disponﾃｭvel."
+                                                    address: settings?.businessAddress || "Endereﾃｧo não configurado.",
+                                                    locationLink: settings?.businessLocation || "Link não disponﾃｭvel."
                                                 };
                                             }
                                             else if (functionName === "solicitar_cancelamento") {
                                                 const { reason } = args;
                                                 const clientName = currentChat?.name || jid.split('@')[0];
-                                                const alertMsg = `�圷 *SOLICITAﾃ�グ DE CANCELAMENTO* �圷\n\n�側 *Cliente:* ${clientName}\n�導 *WhatsApp:* ${jid.split('@')[0]}\n�統 *Motivo:* ${reason}\n\nLily jﾃ｡ avisou o cliente que o gerente foi notificado. Por favor, verifique o pedido no painel.`;
+                                                const alertMsg = `�圷 *SOLICITAﾃ�グ DE CANCELAMENTO* �圷\n\n�側 *Cliente:* ${clientName}\n�導 *WhatsApp:* ${jid.split('@')[0]}\n�統 *Motivo:* ${reason}\n\nLily já avisou o cliente que o gerente foi notificado. Por favor, verifique o pedido no painel.`;
 
                                                 await sock.sendMessage(settings.managerJid, { text: alertMsg });
-                                                result = { success: true, message: "O gerente foi notificado sobre o seu pedido de cancelamento e entrarﾃ｡ em contato em breve." };
+                                                result = { success: true, message: "O gerente foi notificado sobre o seu pedido de cancelamento e entrará em contato em breve." };
                                             }
                                             else if (functionName === "get_marketing_media") {
                                                 const { search } = args;
@@ -1446,7 +1445,7 @@ async function initInstance(instanceId) {
                                                     await sock.sendMessage(jid, { image: { url: asset.path }, caption: caption || "" });
                                                     result = { success: true, message: "Imagem enviada com sucesso." };
                                                 } else {
-                                                    result = { success: false, error: "Imagem nﾃ｣o encontrada." };
+                                                    result = { success: false, error: "Imagem não encontrada." };
                                                 }
                                             }
                                             else if (functionName === "post_status") {
@@ -1457,7 +1456,7 @@ async function initInstance(instanceId) {
                                                         await sock.sendMessage('status@broadcast', { image: { url: asset.path }, caption: text });
                                                         result = { success: true, message: "Status com imagem postado com sucesso." };
                                                     } else {
-                                                        result = { success: false, error: "Imagem nﾃ｣o encontrada para o status." };
+                                                        result = { success: false, error: "Imagem não encontrada para o status." };
                                                     }
                                                 } else {
                                                     await sock.sendMessage('status@broadcast', { text });
@@ -1480,7 +1479,7 @@ async function initInstance(instanceId) {
                                                     deliveryStr += line + '\n\n';
                                                 });
                                                 pendingCatalogMessage = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
-                                                result = { success: true, message: "Catﾃ｡logo de pronta entrega preparado. O sistema enviarﾃ｡ o catﾃ｡logo agora. SILﾃ劾CIO ABSOLUTO." };
+                                                result = { success: true, message: "Catálogo de pronta entrega preparado. O sistema enviará o catálogo agora. SILﾃ劾CIO ABSOLUTO." };
                                             }
                                             else if (functionName === "get_order_catalog") {
                                                 const { formatProduct } = require('./lib/utils');
@@ -1490,8 +1489,8 @@ async function initInstance(instanceId) {
                                                     const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
                                                     catalogStr += formatProduct(p, vars) + "\n\n";
                                                 });
-                                                pendingCatalogMessage = catalogStr.trim() || "Poxa, nﾃ｣o encontrei itens no momento.";
-                                                result = { success: true, message: "Catﾃ｡logo de encomendas preparado. O sistema enviarﾃ｡ o catﾃ｡logo agora. SILﾃ劾CIO ABSOLUTO." };
+                                                pendingCatalogMessage = catalogStr.trim() || "Poxa, não encontrei itens no momento.";
+                                                result = { success: true, message: "Catálogo de encomendas preparado. O sistema enviará o catálogo agora. SILﾃ劾CIO ABSOLUTO." };
                                             }
                                             else if (functionName === "check_availability") {
                                                 const { checkAvailability } = require('./routes/orders');
@@ -1508,45 +1507,45 @@ async function initInstance(instanceId) {
 
                                         if (currentToken.cancelled) return;
 
-                                        // 笏笏笏 SEQUESTRAR O FLUXO: SE GEROU LINK OU CATﾃ´OGO, A IA SE CALA E O SISTEMA ASSUME 笏笏笏
+                                        //  SEQUESTRAR O FLUXO: SE GEROU LINK OU CATÁLOGO, A IA SE CALA E O SISTEMA ASSUME 
                                         if (pendingPaymentLink) {
-                                            // Balﾃ｣o 1: Aviso
+                                            // Balão 1: Aviso
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 1200));
                                             await sock.sendPresenceUpdate('paused', jid);
                                             await sendRichMessage(sock, jid, 'Vou gerar o link do seu pagamento logo abaixo:');
 
-                                            // Balﾃ｣o 2: Link
+                                            // Balão 2: Link
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 800));
                                             await sock.sendPresenceUpdate('paused', jid);
                                             await sock.sendMessage(jid, { text: pendingPaymentLink });
 
-                                            // Balﾃ｣o 3: Confirmaﾃｧﾃ｣o
+                                            // Balão 3: Confirmaﾃｧão
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 1000));
                                             await sock.sendPresenceUpdate('paused', jid);
-                                            await sendRichMessage(sock, jid, 'O pedido serﾃ｡ confirmado apﾃｳs o pagamento.');
+                                            await sendRichMessage(sock, jid, 'O pedido será confirmado apﾃｳs o pagamento.');
 
-                                            return; // FIM IMEDIATO: a IA nﾃ｣o fala mais nada.
+                                            return; // FIM IMEDIATO: a IA não fala mais nada.
                                         }
 
                                         if (pendingCatalogMessage) {
                                             const isDelivery = pendingCatalogMessage.includes('pronta entrega') || !pendingCatalogMessage.includes('Bolo');
 
-                                            // Balﾃ｣o 1: Intro
+                                            // Balão 1: Intro
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 1000));
                                             await sock.sendPresenceUpdate('paused', jid);
                                             await sock.sendMessage(jid, { text: isDelivery ? 'Hoje teremos os seguintes produtos de pronta entrega:' : 'Vou te mostrar nossas opﾃｧﾃｵes maravilhosas de bolos de encomenda:' });
 
-                                            // Balﾃ｣o 2: Catﾃ｡logo
+                                            // Balão 2: Catálogo
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, Math.min(pendingCatalogMessage.length * 5, 3000)));
                                             await sock.sendPresenceUpdate('paused', jid);
                                             await sock.sendMessage(jid, { text: pendingCatalogMessage });
 
-                                            // Balﾃ｣o 3: CTA
+                                            // Balão 3: CTA
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 1200));
                                             await sock.sendPresenceUpdate('paused', jid);
@@ -1563,7 +1562,7 @@ async function initInstance(instanceId) {
                                         if (currentToken.cancelled) return;
                                         let aiFinalText = secondResponse.choices[0].message.content || "";
 
-                                        // Se houver um catﾃ｡logo pendente, vamos dividir a resposta da IA em Intro e CTA usando o separador ---
+                                        // Se houver um catálogo pendente, vamos dividir a resposta da IA em Intro e CTA usando o separador ---
                                         if (pendingCatalogMessage) {
                                             let introText = "Temos essas delﾃｭcias:";
                                             let ctaText = "Qual desses posso separar para vocﾃｪ? ��";
@@ -1573,7 +1572,7 @@ async function initInstance(instanceId) {
                                                 introText = parts[0].trim();
                                                 ctaText = parts[1].trim();
                                             } else {
-                                                // Fallback inteligente se a IA nﾃ｣o usar o separador
+                                                // Fallback inteligente se a IA não usar o separador
                                                 const sentences = aiFinalText.split(/[.!?\n]/).filter(s => s.trim().length > 5);
                                                 if (sentences.length >= 2) {
                                                     introText = sentences[0].trim() + (aiFinalText.includes(':') ? '' : ':');
@@ -1584,7 +1583,7 @@ async function initInstance(instanceId) {
                                             // Envia Intro (IA)
                                             await sendRichMessage(sock, jid, introText);
 
-                                            // Envia Catﾃ｡logo (SISTEMA)
+                                            // Envia Catálogo (SISTEMA)
                                             await new Promise(resolve => setTimeout(resolve, 1500));
                                             await sock.sendMessage(jid, { text: pendingCatalogMessage });
 
@@ -1592,7 +1591,7 @@ async function initInstance(instanceId) {
                                             await new Promise(resolve => setTimeout(resolve, 2000));
                                             await sendRichMessage(sock, jid, ctaText);
                                         } else {
-                                            // Se nﾃ｣o for catﾃ｡logo, envia a resposta normal
+                                            // Se não for catálogo, envia a resposta normal
                                             await sendRichMessage(sock, jid, aiFinalText);
                                         }
 
@@ -1608,7 +1607,7 @@ async function initInstance(instanceId) {
                                     if (currentToken.cancelled) return;
                                     // LIMPEZA AGRESSIVA DE FORMATAﾃ�グ
                                     replyText = replyText.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$2'); // links markdown -> URL pura
-                                    replyText = replyText.replace(/\*/g, ''); // Remove negrito/itﾃ｡lico
+                                    replyText = replyText.replace(/\*/g, ''); // Remove negrito/itálico
                                     replyText = replyText.replace(/#/g, '');  // Remove hashtags
                                     replyText = replyText.replace(/窶｢/g, '-'); // Troca bullet por traﾃｧo
                                     replyText = replyText.replace(/ﾂｷ/g, '-'); // Troca bullet mﾃｩdio por traﾃｧo
@@ -1617,8 +1616,8 @@ async function initInstance(instanceId) {
                                     replyText = replyText.replace(/`/g, '');  // Remove backticks
                                     replyText = replyText.trim();
 
-                                    // TRAVA DE SEGURANﾃ②: Se o catﾃ｡logo vai ser enviado em seguida,
-                                    // forﾃｧa o replyText a ser APENAS a primeira frase da IA (a introduﾃｧﾃ｣o).
+                                    // TRAVA DE SEGURANﾃ②: Se o catálogo vai ser enviado em seguida,
+                                    // forﾃｧa o replyText a ser APENAS a primeira frase da IA (a introduﾃｧão).
                                     if (pendingCatalogMessage) {
                                         const firstSentence = replyText.split(/[\n!?]/)[0].trim();
                                         replyText = firstSentence || replyText;
@@ -1643,7 +1642,7 @@ async function initInstance(instanceId) {
                                     // Pausa mﾃｭnima para respiro
                                     await new Promise(resolve => setTimeout(resolve, 500));
 
-                                    // Digitaﾃｧﾃ｣o rﾃ｡pida para o catﾃ｡logo
+                                    // Digitaﾃｧão rápida para o catálogo
                                     const catalogDelay = Math.min(Math.max(pendingCatalogMessage.length * 5, 800), 3000);
                                     await sock.sendPresenceUpdate('composing', jid);
                                     await new Promise(resolve => setTimeout(resolve, catalogDelay));
@@ -1657,8 +1656,8 @@ async function initInstance(instanceId) {
                                         await new Promise(resolve => setTimeout(resolve, 800));
 
                                         const ctaPrompt = pendingCatalogCTA === "delivery"
-                                            ? "O cardﾃ｡pio de hoje foi enviado. Agora, como Lily (vendedora sutil e ﾃｳtima), envie UM CTA final (1 frase) perfeito para fechar a venda. Seja natural e direta, sem formalidades. Ex: 'Dﾃｪ uma olhadinha nas opﾃｧﾃｵes e me diz qual dessas posso separar para vocﾃｪ?'"
-                                            : "O cardﾃ｡pio de encomendas foi enviado. Agora, como Lily, envie UM CTA final (1 frase) humano e simpﾃ｡tico para entender o desejo do cliente. Ex: 'Qual dessas combina mais com o que vocﾃｪ estﾃ｡ imaginando?'";
+                                            ? "O cardápio de hoje foi enviado. Agora, como Lily (vendedora sutil e ﾃｳtima), envie UM CTA final (1 frase) perfeito para fechar a venda. Seja natural e direta, sem formalidades. Ex: 'Dﾃｪ uma olhadinha nas opﾃｧﾃｵes e me diz qual dessas posso separar para vocﾃｪ?'"
+                                            : "O cardápio de encomendas foi enviado. Agora, como Lily, envie UM CTA final (1 frase) humano e simpático para entender o desejo do cliente. Ex: 'Qual dessas combina mais com o que vocﾃｪ está imaginando?'";
                                         try {
                                             const ctaResponse = await ai.chat.completions.create({
                                                 model: MODEL_MAP[settings?.activeModel] || 'gpt-4o',
@@ -1669,7 +1668,7 @@ async function initInstance(instanceId) {
                                             if (ctaText) {
                                                 ctaText = ctaText.replace(/\*/g, '').replace(/#/g, '').replace(/_/g, '').trim();
 
-                                                // Digitaﾃｧﾃ｣o rﾃ｡pida para o CTA
+                                                // Digitaﾃｧão rápida para o CTA
                                                 const ctaDelay = Math.min(Math.max(ctaText.length * 20, 1000), 2500);
                                                 await sock.sendPresenceUpdate('composing', jid);
                                                 await new Promise(resolve => setTimeout(resolve, ctaDelay));
@@ -1700,7 +1699,7 @@ async function initInstance(instanceId) {
                                     }
                                 }
                             } else {
-                                console.warn(`[AI] Agente estﾃ｡ ligado para ${jid}, mas a OpenAI API Key nﾃ｣o estﾃ｡ configurada.`);
+                                console.warn(`[AI] Agente está ligado para ${jid}, mas a OpenAI API Key não está configurada.`);
                             }
                         }
                     } catch (errDbnc) {
@@ -1731,7 +1730,7 @@ async function initInstance(instanceId) {
                     msgId: update.key.id,
                     status: newStatus
                 });
-            } catch (e) { /* mensagem pode nﾃ｣o estar no banco ainda */ }
+            } catch (e) { /* mensagem pode não estar no banco ainda */ }
         }
     });
 
@@ -1759,7 +1758,7 @@ async function initInstance(instanceId) {
         const { connection, lastDisconnect, qr } = update;
         if (qr) io.emit('qr', { instanceId, qr });
         if (connection === 'open') {
-            // Conexﾃ｣o bem-sucedida 窶� reseta o contador de tentativas
+            // Conexão bem-sucedida 窶� reseta o contador de tentativas
             delete reconnectAttempts[instanceId];
             await prisma.instance.update({ where: { id: instanceId }, data: { status: 'connected' } }).catch(() => { });
             io.emit('connection_update', { instanceId, status: 'connected' });
@@ -1777,19 +1776,19 @@ async function initInstance(instanceId) {
             io.emit('connection_update', { instanceId, status: 'disconnected' });
 
             if (shouldReconnect && !manualRemoval) {
-                // Backoff exponencial: evita loop de reconexﾃ｣o rﾃ｡pida
+                // Backoff exponencial: evita loop de reconexão rápida
                 const attempts = reconnectAttempts[instanceId] || 0;
                 const delay = Math.min(1000 * Math.pow(2, attempts), 60000); // max 60s
                 reconnectAttempts[instanceId] = attempts + 1;
                 console.log(`[Baileys] Instﾃ｢ncia ${instanceId} reconectando em ${delay / 1000}s (tentativa ${attempts + 1})...`);
                 setTimeout(() => initInstance(instanceId), delay);
             } else {
-                // Deslogado ou remoﾃｧﾃ｣o manual 窶� limpa contador de tentativas
+                // Deslogado ou remoﾃｧão manual 窶� limpa contador de tentativas
                 delete reconnectAttempts[instanceId];
                 if (manualRemoval) {
-                    console.log(`[Baileys] Instﾃ｢ncia ${instanceId} removida manualmente. Ignorando auto-reconexﾃ｣o.`);
+                    console.log(`[Baileys] Instﾃ｢ncia ${instanceId} removida manualmente. Ignorando auto-reconexão.`);
                 } else {
-                    console.log(`[Baileys] Instﾃ｢ncia ${instanceId} deslogada. Nﾃ｣o haverﾃ｡ reconexﾃ｣o automﾃ｡tica.`);
+                    console.log(`[Baileys] Instﾃ｢ncia ${instanceId} deslogada. Não haverá reconexão automática.`);
                 }
             }
         }
@@ -1821,7 +1820,7 @@ app.post('/instances/:id/ai-test', async (req, res) => {
         const { question, botPrompt, knowledge } = req.body;
 
         const ai = await getOpenAI();
-        if (!ai) return res.status(400).json({ error: 'OpenAI nﾃ｣o configurada' });
+        if (!ai) return res.status(400).json({ error: 'OpenAI não configurada' });
 
         const kb = JSON.parse(knowledge || '[]');
         const kbContext = kb.length > 0
@@ -1874,7 +1873,9 @@ app.get('/config/keys', authenticate, async (req, res) => {
         mercadopagoPublicKey: config.mercadopagoPublicKey,
         mercadopagoToken: config.mercadopagoToken,
         pixReceiverName: config.pixReceiverName,
-        pixReceiverKey: config.pixReceiverKey
+        pixReceiverKey: config.pixReceiverKey,
+        maxDeliveryKm: config.maxDeliveryKm,
+        deliveryMode: config.deliveryMode
     });
 });
 
@@ -1886,7 +1887,8 @@ app.post('/config/keys', authenticate, async (req, res) => {
         deliveryJid, reportEnabled, reportHour,
         googleApiKey, deliveryRules, gcalCalendarId,
         mercadopagoToken, mercadopagoPublicKey,
-        pixReceiverName, pixReceiverKey
+        pixReceiverName, pixReceiverKey,
+        maxDeliveryKm, deliveryMode
     } = req.body;
 
     if (slug) {
@@ -1894,7 +1896,7 @@ app.post('/config/keys', authenticate, async (req, res) => {
             where: { slug, NOT: { id: req.user.id } }
         });
         if (existing) {
-            return res.status(400).json({ error: 'Este slug jﾃ｡ estﾃ｡ em uso.' });
+            return res.status(400).json({ error: 'Este slug já está em uso.' });
         }
         await prisma.user.update({
             where: { id: req.user.id },
@@ -1923,10 +1925,12 @@ app.post('/config/keys', authenticate, async (req, res) => {
         deliveryRules: typeof deliveryRules === 'string' ? deliveryRules : JSON.stringify(deliveryRules || []),
         gcalCalendarId: gcalCalendarId || "",
         pixReceiverName,
-        pixReceiverKey
+        pixReceiverKey,
+        maxDeliveryKm: maxDeliveryKm !== undefined ? parseFloat(maxDeliveryKm) : (currentConfig?.maxDeliveryKm || 15.0),
+        deliveryMode: deliveryMode || currentConfig?.deliveryMode || 'hibrido'
     };
 
-    console.log(`[Config Save] Salvando configuraﾃｧﾃｵes do usuﾃ｡rio ${req.user.id}...`);
+    console.log(`[Config Save] Salvando configuraﾃｧﾃｵes do usuário ${req.user.id}...`);
 
     const config = await prisma.setting.upsert({
         where: { userId: req.user.id },
@@ -2012,7 +2016,7 @@ app.post('/instances/:id/logout', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o encontrada' });
+    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
 
     const sock = sessions.get(id);
     if (sock) {
@@ -2035,7 +2039,7 @@ app.post('/instances/:id/restart', authenticate, async (req, res) => {
 
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o encontrada' });
+        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
 
         console.log(`[Restart] Reiniciando instﾃ｢ncia ${id} solicitada por ${req.user.id}`);
 
@@ -2049,10 +2053,10 @@ app.post('/instances/:id/restart', authenticate, async (req, res) => {
         // Reseta contador de tentativas
         delete reconnectAttempts[id];
 
-        // Inicia em background para nﾃ｣o travar a resposta HTTP
+        // Inicia em background para não travar a resposta HTTP
         initInstance(id).catch(err => console.error(`[Restart Error] Falha ao iniciar ${id}:`, err));
 
-        res.json({ success: true, message: 'Reinicializaﾃｧﾃ｣o iniciada' });
+        res.json({ success: true, message: 'Reinicializaﾃｧão iniciada' });
     } catch (err) {
         console.error('[Instance Restart Error]', err);
         res.status(500).json({ error: err.message });
@@ -2064,7 +2068,7 @@ app.delete('/instances/:id', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o encontrada' });
+    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
 
     const sock = sessions.get(id);
     if (sock) {
@@ -2089,7 +2093,7 @@ app.delete('/instances/:id', authenticate, async (req, res) => {
 app.get('/instances/:id/chats', authenticate, async (req, res) => {
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id: req.params.id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o encontrada' });
+    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
 
     const skip = parseInt(req.query.skip) || 0;
     const take = parseInt(req.query.take) || 40;
@@ -2114,7 +2118,7 @@ app.get('/instances/:id/chats', authenticate, async (req, res) => {
         prisma.flowState.findMany({ where: { instanceId: req.params.id } })
     ]);
 
-    // Mapeia quais chats estﾃ｣o em fluxo
+    // Mapeia quais chats estão em fluxo
     const chatsWithFlow = chats.map(chat => ({
         ...chat,
         inFlow: flowStates.some(fs => fs.jid === chat.jid)
@@ -2130,7 +2134,7 @@ app.patch('/instances/:id/chats/:jid', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o encontrada' });
+    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
 
     const chat = await prisma.chat.update({
         where: { jid_instanceId: { jid, instanceId: id } },
@@ -2145,7 +2149,7 @@ app.get('/instances/:id/messages/:jid', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o encontrada' });
+    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
 
     // Carrega apenas as ﾃｺltimas 20 mensagens para manter o carregamento instantﾃ｢neo
     let messages = await prisma.message.findMany({
@@ -2179,10 +2183,10 @@ app.get('/instances/:id/profile-pic/:jid', authenticate, async (req, res) => {
 
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o encontrada' });
+        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
 
         const sock = sessions.get(id);
-        if (!sock) return res.status(404).json({ error: 'Sessﾃ｣o nﾃ｣o encontrada' });
+        if (!sock) return res.status(404).json({ error: 'Sessão não encontrada' });
 
         const urlPromise = sock.profilePictureUrl(jid, 'image');
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000));
@@ -2202,10 +2206,10 @@ app.post('/instances/:id/messages/delete', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o encontrada' });
+    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
 
     const sock = sessions.get(id);
-    if (!sock) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o conectada' });
+    if (!sock) return res.status(404).json({ error: 'Instﾃ｢ncia não conectada' });
 
     try {
         if (forEveryone && fromMe) {
@@ -2229,10 +2233,10 @@ app.post('/instances/:id/chats/read', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o encontrada' });
+    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
 
     const sock = sessions.get(id);
-    if (!sock) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o conectada' });
+    if (!sock) return res.status(404).json({ error: 'Instﾃ｢ncia não conectada' });
 
     try {
         // Emite o check azul no WhatsApp
@@ -2248,14 +2252,14 @@ app.post('/instances/:id/chats/read', authenticate, async (req, res) => {
     }
 });
 
-// Marcar como nﾃ｣o lido (Manual)
+// Marcar como não lido (Manual)
 app.patch('/instances/:id/chats/:jid/unread', authenticate, async (req, res) => {
     let { id, jid } = req.params;
     jid = await getCanonicalJid(jid, id);
     try {
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o encontrada' });
+        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
 
         await prisma.chat.updateMany({
             where: { instanceId: id, jid },
@@ -2274,7 +2278,7 @@ app.delete('/instances/:id/chats/:jid', authenticate, async (req, res) => {
     try {
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o encontrada' });
+        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
 
         // Remove do banco local as mensagens, o chat e o ESTADO DO FLUXO
         await prisma.message.deleteMany({ where: { instanceId: id, jid } });
@@ -2296,7 +2300,7 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
 
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia nﾃ｣o encontrada' });
+        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
 
         let { jid, text } = req.body;
         const sock = sessions.get(id);
@@ -2349,7 +2353,7 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
                 const isSessionError = err.message.includes('SessionError') || err.message.includes('No sessions');
 
                 if (isSessionError && attempts < maxAttempts) {
-                    console.warn(`[${id}] Erro de sessﾃ｣o detectado. Tentando recuperar metadados e reenviar (${attempts}/${maxAttempts})...`);
+                    console.warn(`[${id}] Erro de sessão detectado. Tentando recuperar metadados e reenviar (${attempts}/${maxAttempts})...`);
 
                     if (finalJid.endsWith('@g.us')) {
                         try {
@@ -2496,18 +2500,18 @@ app.post('/instances/:id/send-audio', uploadAudio.single('audio'), async (req, r
 
         // Clean up temp file
         fs.unlink(audioPath, (err) => {
-            if (err) console.error('Erro ao apagar ﾃ｡udio temporﾃ｡rio:', err);
+            if (err) console.error('Erro ao apagar áudio temporário:', err);
         });
 
         res.json(result);
     } catch (err) {
         console.error('ERRO AO ENVIAR ﾃゞDIO:', err);
-        res.status(500).json({ error: 'Erro ao enviar ﾃ｡udio: ' + err.message });
+        res.status(500).json({ error: 'Erro ao enviar áudio: ' + err.message });
     }
 });
 
 
-// 笏笏笏 ROTAS 窶� FLUXOS (FLOW BUILDER) 笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏笏
+//  ROTAS 窶� FLUXOS (FLOW BUILDER) 
 
 app.get('/flows', authenticate, async (req, res) => {
     try {
@@ -2526,7 +2530,7 @@ app.get('/flows/:id', authenticate, async (req, res) => {
         const flow = await prisma.flow.findUnique({
             where: { id: req.params.id, userId: req.user.id }
         });
-        if (!flow) return res.status(404).json({ error: 'Flow nﾃ｣o encontrado' });
+        if (!flow) return res.status(404).json({ error: 'Flow não encontrado' });
         res.json(flow);
     } catch (err) {
         res.status(500).json({ error: err.message });

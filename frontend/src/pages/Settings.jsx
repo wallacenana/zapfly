@@ -31,7 +31,9 @@ const Settings = () => {
     gcalEnabled: false,
     reminderHours: 2,
     pixReceiverName: '',
-    pixReceiverKey: ''
+    pixReceiverKey: '',
+    maxDeliveryKm: 15,
+    deliveryMode: 'hibrido'
   });
   const [slots, setSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(true);
@@ -55,7 +57,9 @@ const Settings = () => {
             : (Array.isArray(res.data.deliveryRules) ? res.data.deliveryRules : []),
           reminderHours: res.data.reminderHours || 2,
           mercadopagoToken: res.data.mercadopagoToken || '',
-          mercadopagoPublicKey: res.data.mercadopagoPublicKey || ''
+          mercadopagoPublicKey: res.data.mercadopagoPublicKey || '',
+          maxDeliveryKm: res.data.maxDeliveryKm || 15,
+          deliveryMode: res.data.deliveryMode || 'hibrido'
         });
 
         if (res.data.gcalRefreshToken) {
@@ -385,6 +389,21 @@ const Settings = () => {
                   <span style={{ fontWeight: 800 }}>Chave API Google Maps</span>
                 </div>
                 <input {...inp} type="password" value={settings.googleApiKey} onChange={e => setSettings({ ...settings, googleApiKey: e.target.value })} placeholder="Chave do Google Cloud (Distance Matrix)" />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div style={subCard}>
+                  <label style={{...labelStyle, marginBottom: '10px'}}>Modo de Cálculo do Frete</label>
+                  <select {...inp} value={settings.deliveryMode} onChange={e => setSettings({ ...settings, deliveryMode: e.target.value })}>
+                    <option value="hibrido">Híbrido (Regras DB + App)</option>
+                    <option value="manual">Manual (Apenas Regras DB)</option>
+                    <option value="automatico">Automático (Apenas App)</option>
+                  </select>
+                </div>
+                <div style={subCard}>
+                  <label style={{...labelStyle, marginBottom: '10px'}}>Limite Máximo de Entrega (KM)</label>
+                  <input {...inp} type="number" step="0.1" value={settings.maxDeliveryKm} onChange={e => setSettings({ ...settings, maxDeliveryKm: parseFloat(e.target.value) || 0 })} />
+                </div>
               </div>
 
               <div>
