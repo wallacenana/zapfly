@@ -11,10 +11,7 @@ if (php_sapi_name() === 'cli-server') {
     }
 }
 
-$host = '192.185.211.125';
-$db = 'monte814_zapfly';
-$user = 'monte814_zapfly';
-$pass = 'Wa76855867.';
+require_once __DIR__ . '/config.php';
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8", $user, $pass);
@@ -24,18 +21,43 @@ try {
     $parts = explode('/', trim($path, '/'));
     $slug = strtolower(end($parts));
 
-    if (empty($slug) || $slug === 'cardapio' || $slug === 'index.php') {
+    $fallbackToWP = function () {
+        $wp_index = __DIR__ . '/../index.php';
+        if (file_exists($wp_index)) {
+            chdir(dirname($wp_index));
+            $_SERVER['SCRIPT_FILENAME'] = $wp_index;
+            $_SERVER['SCRIPT_NAME'] = '/index.php';
+            require $wp_index;
+            exit;
+        }
         header("Location: /");
         exit;
+    };
+
+    if (empty($slug) || $slug === 'cardapio' || $slug === 'index.php') {
+        $fallbackToWP();
     }
+
+    // --- MINI CACHE ENGINE (LCP KILLER) ---
+    $cacheDir = __DIR__ . '/cache';
+    $cacheFile = $cacheDir . '/store_' . md5($slug) . '.html';
+    $cacheTime = 60; // 60 segundos de cache
+
+    $bypassCache = isset($_GET['nocache']);
+    if (!$bypassCache && file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheTime) {
+        echo file_get_contents($cacheFile);
+        echo "\n<!-- Servido pelo Ultra Cache PHP em " . date('Y-m-d H:i:s', filemtime($cacheFile)) . " -->";
+        exit;
+    }
+
+    ob_start();
 
     $stmt = $pdo->prepare("SELECT u.*, s.businessName, s.logoUrl, s.faviconUrl, s.accentColor, s.backgroundColor, s.textColor, s.buttonColor, s.buttonTextColor, s.seoDescription FROM user u LEFT JOIN setting s ON u.id = s.userId WHERE u.slug = ?");
     $stmt->execute([$slug]);
     $store = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$store) {
-        header("Location: /");
-        exit;
+        $fallbackToWP();
     }
 
     $businessName = $store['businessName'] ?: $store['name'];
@@ -55,7 +77,35 @@ try {
     $stmt->execute([$store['id']]);
     $products = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-?>
+    $stmt = $pdo->prepare("SELECT id, dayOfWeek, startTime, endTime, maxOrders FROM available_slot WHERE userId = ? ORDER BY dayOfWeek ASC, startTime ASC");
+    $stmt->execute([$store['id']]);
+    $availableSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Build SSR payload
+    $ssrData = [
+        'businessName' => $businessName,
+        'googleApiKey' => $store['googleApiKey'] ?? '',
+        'deliveryRules' => $store['deliveryRules'] ?? '[]',
+        'maxDeliveryKm' => (float) ($store['maxDeliveryKm'] ?? 15),
+        'availableSlots' => $availableSlots,
+        'pixelId' => $store['pixelId'] ?? '',
+        'microsoftClarityId' => $store['microsoftClarityId'] ?? '',
+        'googleAnalyticsId' => $store['googleAnalyticsId'] ?? '',
+        'accentColor' => $accentColor,
+        'accentColorOrders' => $store['accentColorOrders'] ?? '#4a2c2a',
+        'buttonColor' => $buttonColor,
+        'buttonColorOrders' => $store['buttonColorOrders'] ?? '#4a2c2a',
+        'buttonTextColor' => $buttonTextColor,
+        'backgroundColor' => $backgroundColor,
+        'textColor' => $textColor,
+        'logoUrl' => $logoUrl,
+        'faviconUrl' => $faviconUrl,
+        'seoDescription' => $store['seoDescription'] ?? '',
+        'products' => $products,
+        'categories' => $categories,
+    ];
+
+    ?>
     <!DOCTYPE html>
     <html lang="pt-BR">
 
@@ -65,29 +115,31 @@ try {
         <?php if (!empty($store['seoDescription'])): ?>
             <meta name="description" content="<?php echo htmlspecialchars($store['seoDescription']); ?>">
         <?php endif; ?>
-        <title><?php echo $businessName; ?> | Cardápio Digital</title>
+        <title><?php echo $businessName; ?> | Cardápio Digital DigiZap</title>
         <link rel="icon" type="image/x-icon" href="<?php echo $faviconUrl; ?>">
-        <link
-            href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-            rel="stylesheet">
-        <link rel="stylesheet" href="/cardapio/style.css?v=2.5">
-        <script src="https://unpkg.com/lucide@latest"></script>
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
+        <!-- SSR Data Hydration: inject all data up front, zero API roundtrip -->
+        <script>window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;</script>
+        <link rel="stylesheet" href="/cardapio/style.css?v=2.7">
         <style>
             :root {
                 --primary-color:
-                    <?php echo $accentColor; ?>;
+                    <?php echo $accentColor; ?>
+                ;
                 --bg-color:
-                    <?php echo $backgroundColor; ?>;
+                    <?php echo $backgroundColor; ?>
+                ;
                 --text-main:
-                    <?php echo $textColor; ?>;
+                    <?php echo $textColor; ?>
+                ;
                 --btn:
-                    <?php echo $buttonColor; ?>;
+                    <?php echo $buttonColor; ?>
+                ;
                 --btn-text:
-                    <?php echo $buttonTextColor; ?>;
+                    <?php echo $buttonTextColor; ?>
+                ;
                 --accent:
-                    <?php echo $accentColor; ?>;
+                    <?php echo $accentColor; ?>
+                ;
             }
 
             body {
@@ -277,13 +329,15 @@ try {
         <header class="top-nav">
             <div class="container nav-wrapper">
                 <div class="store-info">
-                    <div class="store-logo"><img src="<?php echo $logoUrl; ?>" alt="Logo"></div>
+                    <div class="store-logo"><img src="<?php echo $logoUrl; ?>" alt="Logo" fetchpriority="high"
+                            decoding="async"></div>
                     <div class="store-details">
                         <h1 id="store-name"><?php echo $businessName; ?></h1>
                         <div id="store-status-badge" class="status-badge open">● Aberto agora</div>
                     </div>
                 </div>
-                <button class="icon-btn" id="history-toggle-btn"><i data-lucide="history"></i></button>
+                <button class="icon-btn" id="history-toggle-btn" aria-label="Ver Histórico"><i
+                        data-lucide="history"></i></button>
             </div>
         </header>
 
@@ -305,13 +359,15 @@ try {
             <div id="menu-sections">
                 <div id="skeleton-loader" class="hidden"></div>
                 <div id="actual-menu-content">
-                    <?php foreach ($categories as $cat):
+                    <?php
+                    $imgCounter = 0;
+                    foreach ($categories as $cat):
                         $catProducts = array_filter($products, function ($p) use ($cat) {
                             return $p['categoryId'] == $cat['id'];
                         });
                         if (empty($catProducts))
                             continue;
-                    ?>
+                        ?>
                         <section class="menu-section">
                             <h2 class="section-title"><?php echo $cat['name']; ?></h2>
                             <div class="products-grid">
@@ -325,7 +381,8 @@ try {
                                         </div>
                                         <?php if ($p['image']): ?>
                                             <img src="<?php echo str_replace('.webp', '_90.webp', json_decode($p['image'], true)[0] ?? $p['image']); ?>"
-                                                class="product-img">
+                                                class="product-img" <?php echo $imgCounter < 4 ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"'; ?>>
+                                            <?php $imgCounter++; ?>
                                         <?php endif; ?>
                                     </div>
                                 <?php endforeach; ?>
@@ -337,17 +394,20 @@ try {
         </main>
         </footer>
         <!-- MODAL DETALHE -->
-        <div id="item-detail-modal" class="modal hidden">
+        <div id="item-detail-modal" class="modal hidden" aria-modal="true" role="dialog" aria-label="Detalhes do Produto">
             <div class="modal-overlay"></div>
             <div class="modal-content item-detail-content">
-                <button class="close-modal-btn" onclick="closeWithAnimation('item-detail-modal')"><i
-                        data-lucide="x"></i></button>
+                <button class="close-modal-btn" onclick="closeWithAnimation('item-detail-modal')" aria-label="Fechar Modal">
+                    <i data-lucide="x"></i>
+                </button>
                 <div id="item-detail-body"></div>
                 <div class="modal-footer-sticky">
                     <div class="qty-selector">
-                        <button class="qty-btn" id="qty-minus"><i data-lucide="minus"></i></button>
+                        <button class="qty-btn" id="qty-minus" aria-label="Diminuir Quantidade"><i
+                                data-lucide="minus"></i></button>
                         <span id="detail-qty">1</span>
-                        <button class="qty-btn" id="qty-plus"><i data-lucide="plus"></i></button>
+                        <button class="qty-btn" id="qty-plus" aria-label="Aumentar Quantidade"><i
+                                data-lucide="plus"></i></button>
                     </div>
                     <button id="add-to-cart-btn" class="primary-btn">Adicionar <span id="add-btn-price"></span></button>
                 </div>
@@ -355,13 +415,14 @@ try {
         </div>
 
         <!-- MODAL CHECKOUT 2.0 -->
-        <div id="checkout-modal" class="modal hidden">
+        <div id="checkout-modal" class="modal hidden" aria-modal="true" role="dialog" aria-label="Checkout">
             <div class="modal-overlay"></div>
             <div class="modal-content checkout-content">
                 <div class="modal-header">
-                    <button id="checkout-back-btn" class="back-btn"><i data-lucide="chevron-left"></i></button>
+                    <button id="checkout-back-btn" class="back-btn" aria-label="Voltar"><i
+                            data-lucide="chevron-left"></i></button>
                     <h2 id="checkout-step-title">Finalizar Pedido</h2>
-                    <button class="close-modal-btn"><i data-lucide="x"></i></button>
+                    <button class="close-modal-btn" aria-label="Fechar Checkout"><i data-lucide="x"></i></button>
                 </div>
 
                 <div class="modal-scroll-body">
@@ -384,8 +445,11 @@ try {
                     <div class="checkout-step hidden" id="step-2">
                         <!-- Toggle Delivery/Pickup -->
                         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
-                            <button type="button" class="ifood-btn type-tab active" style="flex: 1; padding: 10px;" onclick="setDeliveryType('delivery')">Entrega</button>
-                            <button type="button" class="ifood-btn type-tab" style="flex: 1; background: var(--bg-gray); color: var(--text-main); padding: 10px;" onclick="setDeliveryType('pickup')">Retirada na Loja</button>
+                            <button type="button" class="ifood-btn type-tab active" style="flex: 1; padding: 10px;"
+                                onclick="setDeliveryType('delivery')">Entrega</button>
+                            <button type="button" class="ifood-btn type-tab"
+                                style="flex: 1; background: var(--bg-gray); color: var(--text-main); padding: 10px;"
+                                onclick="setDeliveryType('pickup')">Retirada na Loja</button>
                         </div>
 
                         <!-- Address Section -->
@@ -421,7 +485,8 @@ try {
 
                     <!-- Step 3: Payment Method -->
                     <div class="checkout-step hidden" id="step-3">
-                        <h3 style="font-size:1rem; font-weight:700; margin-bottom:18px; color:var(--text-main);">Forma de Pagamento</h3>
+                        <h3 style="font-size:1rem; font-weight:700; margin-bottom:18px; color:var(--text-main);">Forma de
+                            Pagamento</h3>
                         <div id="payment-options" style="display:flex; flex-direction:column; gap:12px;"></div>
                     </div>
 
@@ -429,20 +494,26 @@ try {
                     <div class="checkout-step hidden" id="step-4">
                         <div id="order-summary-content">
                             <div class="summary-section">
-                                <h3 class="field-label" style="font-size: 1.1rem; margin-bottom: 12px;">Resumo dos Itens</h3>
+                                <h3 class="field-label" style="font-size: 1.1rem; margin-bottom: 12px;">Resumo dos Itens
+                                </h3>
                                 <div id="review-items-list" style="margin-bottom: 20px;"></div>
                             </div>
-                            <div id="payment-method-summary" style="margin-bottom:12px; padding:10px 14px; border-radius:10px; background:#f0fdf4; color:#166534; font-weight:600;"></div>
+                            <div id="payment-method-summary"
+                                style="margin-bottom:12px; padding:10px 14px; border-radius:10px; background:#f0fdf4; color:#166534; font-weight:600;">
+                            </div>
                             <div class="summary-section" style="background: #f9f9f9; padding: 15px; border-radius: 12px;">
-                                <div class="summary-row" style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <div class="summary-row"
+                                    style="display: flex; justify-content: space-between; margin-bottom: 8px;">
                                     <span>Subtotal</span>
                                     <span id="summary-subtotal">R$ 0,00</span>
                                 </div>
-                                <div id="delivery-fee-line" class="summary-row hidden" style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #166534;">
+                                <div id="delivery-fee-line" class="summary-row hidden"
+                                    style="display: flex; justify-content: space-between; margin-bottom: 8px; color: #166534;">
                                     <span>Taxa de entrega</span>
                                     <span id="summary-fee">R$ 0,00</span>
                                 </div>
-                                <div class="summary-total-row" style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.2rem; border-top: 1px dashed #ddd; padding-top: 12px; margin-top: 12px;">
+                                <div class="summary-total-row"
+                                    style="display: flex; justify-content: space-between; font-weight: 800; font-size: 1.2rem; border-top: 1px dashed #ddd; padding-top: 12px; margin-top: 12px;">
                                     <span>Total</span>
                                     <span id="summary-total">R$ 0,00</span>
                                 </div>
@@ -480,6 +551,9 @@ try {
         </footer>
 
         <?php include 'componentes/footer.php'; ?>
+        <!-- Lucide must be synchronous before main scripts -->
+        <script src="https://unpkg.com/lucide@latest"></script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
         <script>
             const API_BASE = 'https://api.digizap.com.br';
@@ -602,123 +676,67 @@ try {
                 loadCart();
                 lucide.createIcons();
 
-                // Inicia o carregamento e aguarda
-                Promise.all([
-                    fetchPublicSettings(),
-                    fetchProducts()
-                ]).then(() => {
+                // Em vez de fazer um fetch pesado, o PHP já injetou tudo em window.__SSR__
+                setTimeout(() => {
+                    hydrateFromSSR();
                     initEventListeners();
                     updateUI();
                     if (state.userInfo.phone) fetchPreviousOrders();
-                });
+                }, 10);
             });
 
-            async function fetchPublicSettings() {
+            function hydrateFromSSR() {
                 try {
-                    const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
-                    if (!response.ok) throw new Error('Loja não encontrada');
-                    const data = await response.json();
+                    const data = window.__SSR__;
+                    if (!data) throw new Error("SSR Data Missing");
 
-                    state.publicSettings = {
-                        ...state.publicSettings,
-                        ...data
-                    };
-
+                    state.publicSettings = { ...state.publicSettings, ...data };
                     state.products = data.products || [];
+                    state.categories = data.categories || [];
                     state.availableSlots = data.availableSlots || [];
+                    state.loading = false;
 
-                    // Remove Skeletons e mostra o conteúdo real
+                    // Remove Skeletons e mostra o conteúdo real instantaneamente
                     const loader = document.getElementById('skeleton-loader');
                     if (loader) loader.remove();
+                    const historyContainer = document.getElementById('history-section');
+                    if (historyContainer) historyContainer.classList.remove('hidden');
                     const content = document.getElementById('actual-menu-content');
                     if (content) content.classList.remove('hidden');
 
                     checkStoreStatus();
 
-                    if (data.googleApiKey) {
-                        loadGoogleMaps(data.googleApiKey);
-                    }
+                    if (data.googleApiKey) loadGoogleMaps(data.googleApiKey);
 
-                    // Favicon
-                    if (data.faviconUrl) {
-                        let fav = document.querySelector('link[rel="icon"]');
-                        if (!fav) {
-                            fav = document.createElement('link');
-                            fav.rel = 'icon';
-                            document.head.appendChild(fav);
-                        }
-                        fav.href = data.faviconUrl;
-                    }
+                    updateTheme();
 
-                    updateTheme(); // Aplica o tema inicial
-                    // SEO Injection Dinâmico (Lido pelo Google JS Engine)
-                    const titleText = data.businessName ? `${data.businessName} | Cardápio Digital DigiZap` : 'Cardápio Digital DigiZap';
-                    document.title = titleText;
-                    const ogTitle = document.querySelector('meta[property="og:title"]');
-                    if (ogTitle) ogTitle.setAttribute('content', titleText);
-
-                    const descText = data.seoDescription || `Confira o cardápio digital de ${data.businessName || 'nossa loja'} e faça seu pedido online.`;
-                    const metaDesc = document.querySelector('meta[name="description"]');
-                    if (metaDesc) metaDesc.setAttribute('content', descText);
-                    const ogDesc = document.querySelector('meta[property="og:description"]');
-                    if (ogDesc) ogDesc.setAttribute('content', descText);
-
-                    if (data.logoUrl) {
-                        const ogImage = document.querySelector('meta[property="og:image"]');
-                        if (ogImage) ogImage.setAttribute('content', data.logoUrl);
-                    }
-
-                    // Scripts de Tracking (Google Analytics, Clarity, Pixel)
+                    // Scripts de Tracking
                     if (data.googleAnalyticsId && !document.getElementById('ga-script')) {
                         const ga = document.createElement('script');
-                        ga.id = 'ga-script';
-                        ga.async = true;
+                        ga.id = 'ga-script'; ga.async = true;
                         ga.src = `https://www.googletagmanager.com/gtag/js?id=${data.googleAnalyticsId}`;
                         document.head.appendChild(ga);
-
                         window.dataLayer = window.dataLayer || [];
-
-                        function gtag() {
-                            dataLayer.push(arguments);
-                        }
+                        function gtag() { dataLayer.push(arguments); }
                         window.gtag = gtag;
-                        gtag('js', new Date());
-                        gtag('config', data.googleAnalyticsId);
+                        gtag('js', new Date()); gtag('config', data.googleAnalyticsId);
                     }
 
                     if (data.microsoftClarityId && !document.getElementById('clarity-script')) {
                         const cl = document.createElement('script');
-                        cl.id = 'clarity-script';
-                        cl.type = 'text/javascript';
-                        cl.innerHTML = `
-                (function(c,l,a,r,i,t,y){
-                    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-                    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-                    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-                })(window, document, "clarity", "script", "${data.microsoftClarityId}");
-            `;
+                        cl.id = 'clarity-script'; cl.type = 'text/javascript';
+                        cl.innerHTML = `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","${data.microsoftClarityId}");`;
                         document.head.appendChild(cl);
                     }
 
                     if (data.pixelId && !document.getElementById('fb-script')) {
                         const fb = document.createElement('script');
                         fb.id = 'fb-script';
-                        fb.innerHTML = `
-                !function(f,b,e,v,n,t,s)
-                {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-                n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-                if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-                n.queue=[];t=b.createElement(e);t.async=!0;
-                t.src=v;s=b.getElementsByTagName(e)[0];
-                s.parentNode.insertBefore(t,s)}(window, document,'script',
-                'https://connect.facebook.net/en_US/fbevents.js');
-                fbq('init', '${data.pixelId}');
-                fbq('track', 'PageView');
-            `;
+                        fb.innerHTML = `!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init','${data.pixelId}');fbq('track','PageView');`;
                         document.head.appendChild(fb);
                     }
 
-                    // Logo
+                    // Logo update
                     const logoImg = document.getElementById('store-logo-img');
                     const placeholder = document.querySelector('.logo-placeholder');
                     if (data.logoUrl && logoImg) {
@@ -727,18 +745,18 @@ try {
                         if (placeholder) placeholder.style.display = 'none';
                     }
 
-                    // Atualiza o título e nome na página
                     const nameEl = document.getElementById('store-name');
                     if (nameEl) nameEl.innerText = data.businessName;
 
                     const statusEl = document.getElementById('store-status-badge');
                     if (statusEl) {
                         checkStoreStatus();
-                        // Atualiza a cada 1 minuto
                         setInterval(checkStoreStatus, 60000);
                     }
+
+                    renderMenu();
                 } catch (err) {
-                    console.error('Erro ao carregar configurações:', err);
+                    console.error('Erro no Hydrate:', err);
                     document.body.innerHTML = `
             <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
                 <h1>Loja não encontrada</h1>
@@ -882,7 +900,7 @@ try {
                     const display = document.getElementById('delivery-fee-display');
                     if (data.fee !== undefined) {
                         state.deliveryFee = data.fee;
-                        state.allowCash = data.allowCash !== false;
+                        state.allowCash = data.type === 'estimated' ? false : (data.allowCash !== false);
                         if (display) {
                             display.style.display = 'block';
                             display.innerHTML = `Taxa de entrega: <strong style="color:var(--primary-color)">R$ ${data.fee.toFixed(2)}</strong>`;
@@ -915,24 +933,7 @@ try {
                 return v;
             }
 
-            async function fetchProducts() {
-                try {
-                    const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
-                    const data = await response.json();
-                    state.products = data.products || [];
-                    state.categories = data.categories || [];
-                    state.loading = false;
 
-                    // History Section
-                    const historyContainer = document.getElementById('history-section');
-                    if (historyContainer) historyContainer.classList.remove('hidden');
-
-                    // Main Menu
-                    renderMenu();
-                } catch (err) {
-                    console.error('Erro ao buscar produtos:', err);
-                }
-            }
 
             function renderMenu() {
                 const skeletonContainer = document.getElementById('skeleton-loader');
@@ -1050,19 +1051,19 @@ try {
                     <h2>Destaques</h2>
                 </div>
                 <div class="featured-list">
-                    ${featured.map(item => renderFeaturedCard(item)).join('')}
+                    ${featured.map((item, idx) => renderFeaturedCard(item, idx < 4)).join('')}
                 </div>
             </section>
         `;
                 }
 
                 // Renderizar Categorias
-                html += sortedCategories.map(category => {
+                html += sortedCategories.map((category, catIdx) => {
                     const items = grouped[category];
                     return `
             <section class="menu-section" id="cat-${category.replace(/\s+/g, '-')}">
                 <h2>${category}</h2>
-                <div class="product-list">${items.map(item => renderProductCard(item)).join('')}</div>
+                <div class="product-list">${items.map((item, itemIdx) => renderProductCard(item, catIdx === 0 && itemIdx < 4)).join('')}</div>
             </section>
         `;
                 }).join('');
@@ -1076,15 +1077,16 @@ try {
                 if (actualContainer) actualContainer.classList.remove('hidden');
             }
 
-            function renderFeaturedCard(product) {
+            function renderFeaturedCard(product, isPriority = false) {
                 const variations = JSON.parse(product.variations || '[]').filter(v => !v.hidden);
                 const priceText = variations.length > 0 ? `A partir de R$ ${Math.min(...variations.map(v => v.price)).toFixed(2)}` : `R$ ${parseFloat(product.price).toFixed(2)}`;
                 const images = parseImages(product.image);
+                const imgAttr = isPriority ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"';
 
                 return `
         <div class="featured-card" onclick="openItemDetail('${product.id}')">
             <div class="featured-img-wrapper">
-                ${images.length > 0 ? `<img src="${getImg(images[0], 'medium')}" alt="${product.name}" loading="lazy" decoding="async">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
+                ${images.length > 0 ? `<img src="${getImg(images[0], 'medium')}" alt="${product.name}" ${imgAttr}>` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
             </div>
             <div class="featured-info">
                 <h3>${product.name}</h3>
@@ -1125,9 +1127,10 @@ try {
                 }
             }
 
-            function renderProductCard(product) {
+            function renderProductCard(product, isPriority = false) {
                 const variations = JSON.parse(product.variations || '[]').filter(v => !v.hidden);
                 const priceText = variations.length > 0 ? `A partir de R$ ${Math.min(...variations.map(v => v.price)).toFixed(2)}` : `R$ ${parseFloat(product.price).toFixed(2)}`;
+                const imgAttr = isPriority ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"';
                 return `
         <div class="product-card" onclick="openItemDetail('${product.id}')">
             <div class="product-info">
@@ -1135,7 +1138,7 @@ try {
                 <p>${product.description || ''}</p>
                 <div class="product-price">${priceText}</div>
             </div>
-            ${parseImages(product.image).length > 0 ? `<img src="${getImg(parseImages(product.image)[0], 'thumb')}" alt="${product.name}" class="product-img" loading="lazy" decoding="async">` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
+            ${parseImages(product.image).length > 0 ? `<img src="${getImg(parseImages(product.image)[0], 'thumb')}" alt="${product.name}" class="product-img" ${imgAttr}>` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
         </div>
     `;
             }
@@ -1212,7 +1215,7 @@ try {
                 ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
             </div>
             ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
-                                                                                    `;
+                                                                                                            `;
                     updateDetailFooter();
                     lucide.createIcons();
                 }, 50);
@@ -1409,24 +1412,24 @@ try {
                 }
                 document.getElementById('next-step-btn').disabled = false;
                 list.innerHTML = cart.map(item => `
-                                                                                    <div class="checkout-item">
-                                                                                        <div class="item-name-qty">
-                                                                                            <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
-                                                                                        </div>
-                                                                                        <div style="display: flex; align-items: center; gap: 16px;">
-                                                                                            <div class="cart-qty-control">
-                                                                                                <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
-                                                                                                    ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
-                                                                                                </button>
-                                                                                                <span class="qty-val-mini">${item.quantity}</span>
-                                                                                                <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
-                                                                                                    <i data-lucide="plus"></i>
-                                                                                                </button>
-                                                                                            </div>
-                                                                                            <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                `).join('');
+                                                                                                            <div class="checkout-item">
+                                                                                                                <div class="item-name-qty">
+                                                                                                                    <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
+                                                                                                                </div>
+                                                                                                                <div style="display: flex; align-items: center; gap: 16px;">
+                                                                                                                    <div class="cart-qty-control">
+                                                                                                                        <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
+                                                                                                                            ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
+                                                                                                                        </button>
+                                                                                                                        <span class="qty-val-mini">${item.quantity}</span>
+                                                                                                                        <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
+                                                                                                                            <i data-lucide="plus"></i>
+                                                                                                                        </button>
+                                                                                                                    </div>
+                                                                                                                    <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        `).join('');
                 lucide.createIcons();
             }
 
@@ -1448,91 +1451,123 @@ try {
             function selectPaymentMethod(method) {
                 state.paymentMethod = method;
                 document.querySelectorAll('.payment-card').forEach(el => {
-                    el.classList.toggle('selected', el.dataset.method === method);
+                    const isSelected = el.dataset.method === method;
+                    el.classList.toggle('selected', isSelected);
+                    el.style.borderColor = isSelected ? 'var(--primary-color)' : '#e5e7eb';
+                    el.style.backgroundColor = isSelected ? 'var(--primary-color)05' : '#fff';
+                    const checkIcon = el.querySelector('.payment-check-icon');
+                    if (checkIcon) checkIcon.style.color = isSelected ? 'var(--primary-color)' : '#ccc';
                 });
             }
 
             function renderStep3() {
                 const opts = document.getElementById('payment-options');
-                if(!opts) return;
-                
+                if (!opts) return;
+
                 const isCashAllowed = (state.deliveryType === 'pickup') || state.allowCash;
-                
+
+                // fallback dinâmico:
+                if (!isCashAllowed && state.paymentMethod === 'dinheiro') {
+                    state.paymentMethod = 'mercadopago';
+                }
+
                 let html = `
-                    <div class="payment-card ${state.paymentMethod === 'mercadopago' ? 'selected' : ''}" data-method="mercadopago" onclick="selectPaymentMethod('mercadopago')">
-                        <div class="payment-icon" style="background:#e0f2fe; color:#0284c7;"><i data-lucide="credit-card"></i></div>
-                        <div class="payment-info">
-                            <h4>Pix ou Crédito</h4>
-                            <p>Pagamento online 100% seguro via Mercado Pago.</p>
-                        </div>
-                    </div>
-                `;
-                
+                                            <div class="payment-card" data-method="mercadopago" onclick="selectPaymentMethod('mercadopago')" style="display:flex; align-items:center; border:2px solid #e5e7eb; border-radius:12px; padding:12px; cursor:pointer; transition:0.2s;">
+                                                <div class="payment-icon" style="background:#e0f2fe; color:#0284c7; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:12px;">
+                                                    <i data-lucide="credit-card"></i>
+                                                </div>
+                                                <div class="payment-info" style="flex:1;">
+                                                    <h4 style="margin:0; font-size:1rem;">Pix ou Crédito</h4>
+                                                    <p style="margin:0; font-size:0.8rem; color:#6b7280;">Pagamento online 100% seguro via Mercado Pago.</p>
+                                                </div>
+                                                <div class="payment-check-icon" style="color:#ccc;">
+                                                    <i data-lucide="check-circle-2"></i>
+                                                </div>
+                                            </div>
+                                        `;
+
                 if (isCashAllowed) {
                     html += `
-                        <div class="payment-card ${state.paymentMethod === 'dinheiro' ? 'selected' : ''}" data-method="dinheiro" onclick="selectPaymentMethod('dinheiro')">
-                            <div class="payment-icon" style="background:#fef3c7; color:#d97706;"><i data-lucide="banknote"></i></div>
-                            <div class="payment-info">
-                                <h4>Dinheiro</h4>
-                                <p>Pagamento na entrega ou retirada.</p>
-                            </div>
-                        </div>
-                    `;
+                                                <div class="payment-card" data-method="dinheiro" onclick="selectPaymentMethod('dinheiro')" style="display:flex; align-items:center; border:2px solid #e5e7eb; border-radius:12px; padding:12px; cursor:pointer; transition:0.2s;">
+                                                    <div class="payment-icon" style="background:#fef3c7; color:#d97706; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:12px;">
+                                                        <i data-lucide="banknote"></i>
+                                                    </div>
+                                                    <div class="payment-info" style="flex:1;">
+                                                        <h4 style="margin:0; font-size:1rem;">Dinheiro</h4>
+                                                        <p style="margin:0; font-size:0.8rem; color:#6b7280;">Pagamento na entrega ou retirada.</p>
+                                                    </div>
+                                                    <div class="payment-check-icon" style="color:#ccc;">
+                                                        <i data-lucide="check-circle-2"></i>
+                                                    </div>
+                                                </div>
+                                            `;
                 } else {
                     html += `
-                        <div class="payment-card disabled">
-                            <div class="payment-icon" style="background:#f3f4f6; color:#9ca3af;"><i data-lucide="banknote"></i></div>
-                            <div class="payment-info">
-                                <h4 style="color:#9ca3af;">Dinheiro</h4>
-                                <p style="color:#ef4444; font-weight:600;">⚠️ Não disponível para este endereço de entrega.</p>
-                            </div>
-                        </div>
-                    `;
-                    if (state.paymentMethod === 'dinheiro') {
-                        state.paymentMethod = 'mercadopago'; // fallback
-                    }
+                                                <div class="payment-card disabled" style="display:flex; align-items:center; border:2px solid #e5e7eb; border-radius:12px; padding:12px; opacity:0.6; background:#f9fafb;">
+                                                    <div class="payment-icon" style="background:#f3f4f6; color:#9ca3af; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:12px;">
+                                                        <i data-lucide="banknote"></i>
+                                                    </div>
+                                                    <div class="payment-info" style="flex:1;">
+                                                        <h4 style="margin:0; font-size:1rem; color:#9ca3af;">Dinheiro</h4>
+                                                        <p style="margin:0; font-size:0.8rem; color:#ef4444; font-weight:600;">⚠️ Não disponível para este endereço de entrega.</p>
+                                                    </div>
+                                                </div>
+                                            `;
                 }
                 opts.innerHTML = html;
                 lucide.createIcons();
+                selectPaymentMethod(state.paymentMethod);
             }
 
             function renderStep2() {
+                setDeliveryType(state.deliveryType); // Ensure UI is completely updated based on current state
                 const isDelivery = state.activeTab === 'delivery';
                 const deliveryContent = document.getElementById('delivery-step-content');
                 const orderContent = document.getElementById('order-step-content');
                 if (deliveryContent) deliveryContent.classList.toggle('hidden', !isDelivery);
-                    
-                    if (orderContent) orderContent.classList.toggle('hidden', isDelivery);
 
-                    // Sempre carrega o mapa se deliveryType = delivery
-                    if (state.deliveryType === 'delivery') {
-                        if (window.google && !state.googleMap) {
-                            initMapsAutocomplete();
-                            initDeliveryMap();
-                        }
-                        if (state.googleMap) {
-                            setTimeout(() => {
-                                google.maps.event.trigger(state.googleMap, 'resize');
-                                if (state.mapMarker) {
-                                    state.googleMap.panTo(state.mapMarker.getPosition());
-                                } else if (state.userInfo.address) {
-                                    geocodeAddress(state.userInfo.address);
-                                }
-                            }, 300);
-                        }
+                if (orderContent) orderContent.classList.toggle('hidden', isDelivery);
+
+                // Sempre carrega o mapa se deliveryType = delivery
+                if (state.deliveryType === 'delivery') {
+                    if (window.google && !state.googleMap) {
+                        initMapsAutocomplete();
+                        initDeliveryMap();
+                    }
+                    if (state.googleMap) {
+                        setTimeout(() => {
+                            google.maps.event.trigger(state.googleMap, 'resize');
+                            if (state.mapMarker) {
+                                state.googleMap.panTo(state.mapMarker.getPosition());
+                            } else if (state.userInfo.address) {
+                                geocodeAddress(state.userInfo.address);
+                            }
+                        }, 300);
                     }
                 }
+            }
 
             function setDeliveryType(type) {
                 state.deliveryType = type;
                 const btns = document.querySelectorAll('.type-tab');
-                btns[0].classList.toggle('active', type === 'delivery');
-                btns[0].style.background = type === 'delivery' ? 'var(--primary-color)' : 'var(--bg-gray)';
-                btns[0].style.color = type === 'delivery' ? '#fff' : 'var(--text-main)';
-                
-                btns[1].classList.toggle('active', type === 'pickup');
-                btns[1].style.background = type === 'pickup' ? 'var(--primary-color)' : 'var(--bg-gray)';
-                btns[1].style.color = type === 'pickup' ? '#fff' : 'var(--text-main)';
+
+                const isDelivery = type === 'delivery';
+                btns[0].classList.toggle('active', isDelivery);
+                btns[0].style.background = isDelivery ? '#fff' : '#f9fafb';
+                btns[0].style.color = isDelivery ? 'var(--primary-color)' : '#6b7280';
+                btns[0].style.border = isDelivery ? '2px solid var(--primary-color)' : '2px solid #e5e7eb';
+                btns[0].style.fontWeight = isDelivery ? '700' : '500';
+                btns[0].innerHTML = isDelivery ? '<i data-lucide="check-circle-2" style="margin-right:6px; display:inline-block; vertical-align:middle; width:18px; height:18px;"></i> Entrega' : 'Entrega';
+
+                const isPickup = type === 'pickup';
+                btns[1].classList.toggle('active', isPickup);
+                btns[1].style.background = isPickup ? '#fff' : '#f9fafb';
+                btns[1].style.color = isPickup ? 'var(--primary-color)' : '#6b7280';
+                btns[1].style.border = isPickup ? '2px solid var(--primary-color)' : '2px solid #e5e7eb';
+                btns[1].style.fontWeight = isPickup ? '700' : '500';
+                btns[1].innerHTML = isPickup ? '<i data-lucide="check-circle-2" style="margin-right:6px; display:inline-block; vertical-align:middle; width:18px; height:18px;"></i> Retirada na Loja' : 'Retirada na Loja';
+
+                lucide.createIcons();
 
                 const addressSection = document.getElementById('delivery-address-section');
                 if (addressSection) addressSection.classList.toggle('hidden', type === 'pickup');
@@ -1801,17 +1836,17 @@ try {
                 });
 
                 list.innerHTML = uniqueItems.slice(0, 6).map(o => `
-                                                                                    <div class="history-card" onclick="reorderItem('${o.id}')">
-                                                                                        <div class="history-card-info">
-                                                                                            <strong>${o.product}</strong>
-                                                                                            ${o.variation ? `<p>${o.variation}</p>` : ''}
-                                                                                        </div>
-                                                                                        <div class="history-card-action">
-                                                                                            <span>Pedir de novo</span>
-                                                                                            <i data-lucide="chevron-right"></i>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                `).join('');
+                                                                                                            <div class="history-card" onclick="reorderItem('${o.id}')">
+                                                                                                                <div class="history-card-info">
+                                                                                                                    <strong>${o.product}</strong>
+                                                                                                                    ${o.variation ? `<p>${o.variation}</p>` : ''}
+                                                                                                                </div>
+                                                                                                                <div class="history-card-action">
+                                                                                                                    <span>Pedir de novo</span>
+                                                                                                                    <i data-lucide="chevron-right"></i>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        `).join('');
                 lucide.createIcons();
             }
 
@@ -1868,10 +1903,19 @@ try {
         <script>
             lucide.createIcons();
         </script>
-    </body>
 
     </html>
-<?php
+    <?php
+    $finalHtml = ob_get_clean();
+
+    // Salva no cache silenciosamente
+    if (!is_dir($cacheDir)) {
+        @mkdir($cacheDir, 0755, true);
+    }
+    @file_put_contents($cacheFile, $finalHtml);
+
+    echo $finalHtml;
+
 } catch (Exception $e) {
     die("Erro: " . $e->getMessage());
 }

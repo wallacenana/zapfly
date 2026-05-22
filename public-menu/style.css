@@ -22,7 +22,7 @@ body.theme-order {
     padding: 0;
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: Arial, Helvetica, sans-serif;
     line-height: 1.4;
 }
 
@@ -139,7 +139,7 @@ h3 {
     font-weight: 600;
     color: var(--text-gray);
     white-space: nowrap;
-    padding: 4px 0;
+    padding: 2px 14px;
     cursor: pointer;
     position: relative;
 }
@@ -159,20 +159,25 @@ h3 {
 }
 
 .skeleton {
-    background: linear-gradient(90deg, rgba(0,0,0,0.06) 25%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.06) 75%);
+    background: linear-gradient(90deg, rgba(0, 0, 0, 0.06) 25%, rgba(0, 0, 0, 0.1) 50%, rgba(0, 0, 0, 0.06) 75%);
     background-size: 200% 100%;
     animation: skeleton-pulse 1.5s infinite linear;
 }
 
 @keyframes skeleton-pulse {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    0% {
+        background-position: 200% 0;
+    }
+
+    100% {
+        background-position: -200% 0;
+    }
 }
 
 .skeleton-card {
-    background: rgba(0,0,0,0.04);
+    background: rgba(0, 0, 0, 0.04);
     border-radius: 16px;
-    border: 1px solid rgba(0,0,0,0.05);
+    border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 /* Search Box */
@@ -1113,7 +1118,9 @@ body.theme-order .delivery-fee-badge {
     font-size: 0.8rem;
     font-weight: 700;
     color: var(--primary-color);
-}/* Checkout Payment Methods */
+}
+
+/* Checkout Payment Methods */
 #payment-options {
     display: flex;
     flex-direction: column;
@@ -1137,7 +1144,7 @@ body.theme-order .delivery-fee-badge {
     border-color: var(--primary-color, #ff4d6d);
     background: #fffafa;
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .payment-card.selected {
