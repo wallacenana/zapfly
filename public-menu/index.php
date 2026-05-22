@@ -52,7 +52,7 @@ try {
 
     ob_start();
 
-    $stmt = $pdo->prepare("SELECT u.*, s.businessName, s.logoUrl, s.faviconUrl, s.accentColor, s.backgroundColor, s.textColor, s.buttonColor, s.buttonTextColor, s.seoDescription FROM user u LEFT JOIN setting s ON u.id = s.userId WHERE u.slug = ?");
+    $stmt = $pdo->prepare("SELECT u.*, s.businessName, s.logoUrl, s.faviconUrl, s.accentColor, s.backgroundColor, s.textColor, s.buttonColor, s.buttonTextColor, s.seoDescription, s.googleApiKey, s.deliveryRules, s.maxDeliveryKm, s.pixelId, s.microsoftClarityId, s.googleAnalyticsId FROM user u LEFT JOIN setting s ON u.id = s.userId WHERE u.slug = ?");
     $stmt->execute([$slug]);
     $store = $stmt->fetch(PDO::FETCH_ASSOC);
 
