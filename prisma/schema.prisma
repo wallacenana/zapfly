@@ -267,6 +267,7 @@ model Setting {
   dailyMaxOrders       Int     @default(10)
   maxDeliveryKm        Float   @default(15.0)
   deliveryMode         String  @default("hibrido")
+  allowCashOnDelivery  Boolean @default(true)
   dailyDeliveryItems   String? @db.Text
   reportEnabled        Boolean @default(false)
   reportHour           Int     @default(7)

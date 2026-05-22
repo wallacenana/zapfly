@@ -33,7 +33,8 @@ const Settings = () => {
     pixReceiverName: '',
     pixReceiverKey: '',
     maxDeliveryKm: 15,
-    deliveryMode: 'hibrido'
+    deliveryMode: 'hibrido',
+    allowCashOnDelivery: true
   });
   const [slots, setSlots] = useState([]);
   const [loadingSlots, setLoadingSlots] = useState(true);
@@ -59,7 +60,8 @@ const Settings = () => {
           mercadopagoToken: res.data.mercadopagoToken || '',
           mercadopagoPublicKey: res.data.mercadopagoPublicKey || '',
           maxDeliveryKm: res.data.maxDeliveryKm || 15,
-          deliveryMode: res.data.deliveryMode || 'hibrido'
+          deliveryMode: res.data.deliveryMode || 'hibrido',
+          allowCashOnDelivery: res.data.allowCashOnDelivery ?? true
         });
 
         if (res.data.gcalRefreshToken) {
@@ -404,8 +406,13 @@ const Settings = () => {
                   <label style={{...labelStyle, marginBottom: '10px'}}>Limite Máximo de Entrega (KM)</label>
                   <input {...inp} type="number" step="0.1" value={settings.maxDeliveryKm} onChange={e => setSettings({ ...settings, maxDeliveryKm: parseFloat(e.target.value) || 0 })} />
                 </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', gridColumn: '1 / -1' }}>
+                  <input type="checkbox" checked={settings.allowCashOnDelivery} onChange={e => setSettings({ ...settings, allowCashOnDelivery: e.target.checked })} style={{ width: '18px', height: '18px' }} />
+                  <label style={{ fontSize: '14px', fontWeight: 600 }}>Permitir pagamento em Dinheiro (quando calculado pelo App)</label>
+                </div>
               </div>
 
+              {settings.deliveryMode !== 'automatico' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <label style={{ ...labelStyle, marginBottom: 0 }}>Tabela de Preços por Distância</label>
@@ -446,6 +453,7 @@ const Settings = () => {
                   ))}
                 </div>
               </div>
+              )}
 
               <div>
                 <label style={labelStyle}>WhatsApp do Entregador (Notificações)</label>

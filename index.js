@@ -1875,7 +1875,8 @@ app.get('/config/keys', authenticate, async (req, res) => {
         pixReceiverName: config.pixReceiverName,
         pixReceiverKey: config.pixReceiverKey,
         maxDeliveryKm: config.maxDeliveryKm,
-        deliveryMode: config.deliveryMode
+        deliveryMode: config.deliveryMode,
+        allowCashOnDelivery: config.allowCashOnDelivery
     });
 });
 
@@ -1888,7 +1889,7 @@ app.post('/config/keys', authenticate, async (req, res) => {
         googleApiKey, deliveryRules, gcalCalendarId,
         mercadopagoToken, mercadopagoPublicKey,
         pixReceiverName, pixReceiverKey,
-        maxDeliveryKm, deliveryMode
+        maxDeliveryKm, deliveryMode, allowCashOnDelivery
     } = req.body;
 
     if (slug) {
@@ -1927,7 +1928,8 @@ app.post('/config/keys', authenticate, async (req, res) => {
         pixReceiverName,
         pixReceiverKey,
         maxDeliveryKm: maxDeliveryKm !== undefined ? parseFloat(maxDeliveryKm) : (currentConfig?.maxDeliveryKm || 15.0),
-        deliveryMode: deliveryMode || currentConfig?.deliveryMode || 'hibrido'
+        deliveryMode: deliveryMode || currentConfig?.deliveryMode || 'hibrido',
+        allowCashOnDelivery: allowCashOnDelivery !== undefined ? !!allowCashOnDelivery : (currentConfig?.allowCashOnDelivery ?? true)
     };
 
     console.log(`[Config Save] Salvando configuraﾃｧﾃｵes do usuário ${req.user.id}...`);
