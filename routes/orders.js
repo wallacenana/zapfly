@@ -815,6 +815,10 @@ router.post('/', async (req, res) => {
     const finalClientJid = (clientJid && clientJid.trim() !== "") ? clientJid.trim() : 'manual_LOJA';
     const isManual = finalClientJid === 'manual_LOJA';
 
+    if ((type || 'order') === 'order' && settings?.acceptOrders === false && !isManual) {
+      return res.status(403).json({ error: 'As encomendas estão desativadas no momento.' });
+    }
+
     await prisma.customer.upsert({
       where: { jid_userId: { jid: finalClientJid, userId } },
       update: { name: clientName || 'Cliente Balcão', address: deliveryAddress, lastOrderDate: new Date() },
@@ -1013,8 +1017,13 @@ router.get('/products', authenticate, async (req, res) => {
 });
 
 router.post('/products', authenticate, async (req, res) => {
-  const { name, description, price, image, category, type, variations, comboItems, customFields, stock, trackStock, featured, capacityCost } = req.body;
+  const { name, description, price, image, category, type, variations, comboItems, customFields, stock, trackStock, featured, capacityCost, bannerUrl, displayOrder } = req.body;
   const addonGroups = await normalizeProductAddonGroups(req.body.addonGroups, req.user.id);
+  const currentMaxOrder = await prisma.product.aggregate({
+    where: { userId: req.user.id },
+    _max: { displayOrder: true }
+  });
+  const nextDisplayOrder = (currentMaxOrder._max.displayOrder ?? 0) + 1;
   const product = await prisma.product.create({
     data: {
       name,
@@ -1029,6 +1038,8 @@ router.post('/products', authenticate, async (req, res) => {
       stock: parseInt(stock, 10) || 0,
       trackStock: !!trackStock,
       featured: !!featured,
+      bannerUrl: bannerUrl || null,
+      displayOrder: parseInt(displayOrder, 10) || nextDisplayOrder,
       capacityCost: parseInt(capacityCost, 10) || 1,
       addonGroups,
       userId: req.user.id
@@ -1274,6 +1285,9 @@ router.patch('/products/:id', authenticate, async (req, res) => {
     }
     if (Object.prototype.hasOwnProperty.call(updateData, 'featured')) {
       updateData.featured = !!updateData.featured;
+    }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'displayOrder')) {
+      updateData.displayOrder = parseInt(updateData.displayOrder, 10) || 0;
     }
     if (Object.prototype.hasOwnProperty.call(updateData, 'addonGroups')) {
       updateData.addonGroups = await normalizeProductAddonGroups(updateData.addonGroups, userId);

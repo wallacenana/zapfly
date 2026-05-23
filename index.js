@@ -146,7 +146,8 @@ app.post('/settings', authenticate, async (req, res) => {
             accentColor, buttonColor,
             accentColorOrders, buttonColorOrders,
             buttonTextColor, backgroundColor, textColor,
-            seoDescription, pixelId, googleAnalyticsId, microsoftClarityId
+            seoDescription, pixelId, googleAnalyticsId, microsoftClarityId,
+            acceptOrders
         } = req.body;
 
         const data = {
@@ -154,7 +155,8 @@ app.post('/settings', authenticate, async (req, res) => {
             accentColor, buttonColor,
             accentColorOrders, buttonColorOrders,
             buttonTextColor, backgroundColor, textColor,
-            seoDescription, pixelId, googleAnalyticsId, microsoftClarityId
+            seoDescription, pixelId, googleAnalyticsId, microsoftClarityId,
+            acceptOrders
         };
 
         console.log('[DEBUG] Tentando salvar configurações para o usuário:', req.user.id);
@@ -353,6 +355,7 @@ app.get('/public/menu/:slug', async (req, res) => {
             pixelId: settings?.pixelId || '',
             googleAnalyticsId: settings?.googleAnalyticsId || '',
             microsoftClarityId: settings?.microsoftClarityId || '',
+            acceptOrders: settings?.acceptOrders ?? true,
             products: user.products,
             categories: user.categories,
             availableSlots: user.availableSlots,

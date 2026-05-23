@@ -52,7 +52,7 @@ try {
 
     ob_start();
 
-    $stmt = $pdo->prepare("SELECT u.*, s.businessName, s.logoUrl, s.faviconUrl, s.accentColor, s.backgroundColor, s.textColor, s.buttonColor, s.buttonTextColor, s.seoDescription, s.googleApiKey, s.deliveryRules, s.maxDeliveryKm, s.pixelId, s.microsoftClarityId, s.googleAnalyticsId FROM user u LEFT JOIN setting s ON u.id = s.userId WHERE u.slug = ?");
+    $stmt = $pdo->prepare("SELECT u.*, s.businessName, s.logoUrl, s.faviconUrl, s.accentColor, s.backgroundColor, s.textColor, s.buttonColor, s.buttonTextColor, s.seoDescription, s.googleApiKey, s.deliveryRules, s.maxDeliveryKm, s.pixelId, s.microsoftClarityId, s.googleAnalyticsId, s.acceptOrders FROM user u LEFT JOIN setting s ON u.id = s.userId WHERE u.slug = ?");
     $stmt->execute([$slug]);
     $store = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -102,6 +102,7 @@ try {
         'buttonTextColor' => $buttonTextColor,
         'backgroundColor' => $backgroundColor,
         'textColor' => $textColor,
+        'acceptOrders' => $store['acceptOrders'] ?? true,
         'logoUrl' => $logoUrl,
         'faviconUrl' => $faviconUrl,
         'seoDescription' => $store['seoDescription'] ?? '',
@@ -110,7 +111,7 @@ try {
         'addonGroups' => $addonGroups
     ];
 
-    ?>
+?>
     <!DOCTYPE html>
     <html lang="pt-BR">
 
@@ -126,28 +127,24 @@ try {
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
         <link rel="preconnect" href="https://files.blinkvertex.com" crossorigin>
         <!-- SSR Data Hydration: inject all data up front, zero API roundtrip -->
-        <script>window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;</script>
-        <link rel="stylesheet" href="/cardapio/style.css?v=3.2">
+        <script>
+            window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+        </script>
+        <link rel="stylesheet" href="/cardapio/style.css?v=3.9">
         <style>
             :root {
                 --primary-color:
-                    <?php echo $accentColor; ?>
-                ;
+                    <?php echo $accentColor; ?>;
                 --bg-color:
-                    <?php echo $backgroundColor; ?>
-                ;
+                    <?php echo $backgroundColor; ?>;
                 --text-main:
-                    <?php echo $textColor; ?>
-                ;
+                    <?php echo $textColor; ?>;
                 --btn:
-                    <?php echo $buttonColor; ?>
-                ;
+                    <?php echo $buttonColor; ?>;
                 --btn-text:
-                    <?php echo $buttonTextColor; ?>
-                ;
+                    <?php echo $buttonTextColor; ?>;
                 --accent:
-                    <?php echo $accentColor; ?>
-                ;
+                    <?php echo $accentColor; ?>;
             }
 
             body {
@@ -352,7 +349,9 @@ try {
         <nav class="category-tabs">
             <div class="container tabs-scroll">
                 <button class="cat-tab active" data-tab="delivery">Entrega</button>
-                <button class="cat-tab" data-tab="order">Encomendas</button>
+                <?php if (($store['acceptOrders'] ?? true) !== false): ?>
+                    <button class="cat-tab" data-tab="order">Encomendas</button>
+                <?php endif; ?>
             </div>
         </nav>
 
@@ -375,7 +374,7 @@ try {
                         });
                         if (empty($catProducts))
                             continue;
-                        ?>
+                    ?>
                         <section class="menu-section">
                             <h2 class="section-title"><?php echo $cat['name']; ?></h2>
                             <div class="products-grid">
@@ -388,7 +387,7 @@ try {
                                             </div>
                                         </div>
                                         <?php if ($p['image']): ?>
-                                            <img src="<?php echo str_replace('.webp', '_90.webp', json_decode($p['image'], true)[0] ?? $p['image']); ?>"
+                                            <img src="<?php echo str_replace('.webp', '_550.webp', json_decode($p['image'], true)[0] ?? $p['image']); ?>"
                                                 class="product-img" <?php echo $imgCounter < 4 ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"'; ?>>
                                             <?php $imgCounter++; ?>
                                         <?php endif; ?>
@@ -566,55 +565,102 @@ try {
 
         <!-- Inline SVG Sprite: only the icons we use (~3 KiB vs 92 KiB full Lucide) -->
         <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
-            <symbol id="lucide-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
-            <symbol id="lucide-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
-            <symbol id="lucide-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
-            <symbol id="lucide-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></symbol>
-            <symbol id="lucide-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
-            <symbol id="lucide-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
-            <symbol id="lucide-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
-            <symbol id="lucide-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
-            <symbol id="lucide-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
-            <symbol id="lucide-trash-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></symbol>
-            <symbol id="lucide-credit-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></symbol>
-            <symbol id="lucide-check-circle-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
-            <symbol id="lucide-banknote" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></symbol>
-            <symbol id="lucide-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
-            <symbol id="lucide-shopping-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></symbol>
+            <symbol id="lucide-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+                <path d="M12 7v5l4 2" />
+            </symbol>
+            <symbol id="lucide-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+            </symbol>
+            <symbol id="lucide-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+            </symbol>
+            <symbol id="lucide-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14" />
+            </symbol>
+            <symbol id="lucide-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14" />
+                <path d="M12 5v14" />
+            </symbol>
+            <symbol id="lucide-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6" />
+            </symbol>
+            <symbol id="lucide-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m9 18 6-6-6-6" />
+            </symbol>
+            <symbol id="lucide-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m6 9 6 6 6-6" />
+            </symbol>
+            <symbol id="lucide-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                <circle cx="9" cy="9" r="2" />
+                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+            </symbol>
+            <symbol id="lucide-trash-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                <line x1="10" x2="10" y1="11" y2="17" />
+                <line x1="14" x2="14" y1="11" y2="17" />
+            </symbol>
+            <symbol id="lucide-credit-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="20" height="14" x="2" y="5" rx="2" />
+                <line x1="2" x2="22" y1="10" y2="10" />
+            </symbol>
+            <symbol id="lucide-check-circle-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="m9 12 2 2 4-4" />
+            </symbol>
+            <symbol id="lucide-banknote" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="20" height="12" x="2" y="6" rx="2" />
+                <circle cx="12" cy="12" r="2" />
+                <path d="M6 12h.01M18 12h.01" />
+            </symbol>
+            <symbol id="lucide-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+            </symbol>
+            <symbol id="lucide-shopping-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                <path d="M3 6h18" />
+                <path d="M16 10a4 4 0 0 1-8 0" />
+            </symbol>
         </svg>
 
         <!-- Lightweight Lucide replacement: converts <i data-lucide="name"> to inline SVG -->
         <script>
-        window.lucide = {
-            createIcons: function() {
-                document.querySelectorAll('i[data-lucide]').forEach(function(el) {
-                    if (el.dataset.processed) return;
-                    var name = el.getAttribute('data-lucide');
-                    var symbol = document.getElementById('lucide-' + name);
-                    if (!symbol) return;
-                    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                    svg.setAttribute('width', el.style.width || '24');
-                    svg.setAttribute('height', el.style.height || '24');
-                    svg.setAttribute('viewBox', '0 0 24 24');
-                    svg.setAttribute('fill', symbol.getAttribute('fill') || 'none');
-                    svg.setAttribute('stroke', 'currentColor');
-                    svg.setAttribute('stroke-width', '2');
-                    svg.setAttribute('stroke-linecap', 'round');
-                    svg.setAttribute('stroke-linejoin', 'round');
-                    svg.innerHTML = symbol.innerHTML;
-                    // Copy over inline styles from the <i> tag
-                    if (el.style.cssText) svg.style.cssText = el.style.cssText;
-                    if (el.className) svg.setAttribute('class', el.className);
-                    // Handle fill/color overrides on the <i> tag
-                    var elFill = el.style.fill;
-                    if (elFill) svg.setAttribute('fill', elFill);
-                    var elColor = el.style.color;
-                    if (elColor) svg.setAttribute('stroke', elColor);
-                    el.dataset.processed = '1';
-                    el.replaceWith(svg);
-                });
-            }
-        };
+            window.lucide = {
+                createIcons: function() {
+                    document.querySelectorAll('i[data-lucide]').forEach(function(el) {
+                        if (el.dataset.processed) return;
+                        var name = el.getAttribute('data-lucide');
+                        var symbol = document.getElementById('lucide-' + name);
+                        if (!symbol) return;
+                        var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                        svg.setAttribute('width', el.style.width || '24');
+                        svg.setAttribute('height', el.style.height || '24');
+                        svg.setAttribute('viewBox', '0 0 24 24');
+                        svg.setAttribute('fill', symbol.getAttribute('fill') || 'none');
+                        svg.setAttribute('stroke', 'currentColor');
+                        svg.setAttribute('stroke-width', '2');
+                        svg.setAttribute('stroke-linecap', 'round');
+                        svg.setAttribute('stroke-linejoin', 'round');
+                        svg.innerHTML = symbol.innerHTML;
+                        // Copy over inline styles from the <i> tag
+                        if (el.style.cssText) svg.style.cssText = el.style.cssText;
+                        if (el.className) svg.setAttribute('class', el.className);
+                        // Handle fill/color overrides on the <i> tag
+                        var elFill = el.style.fill;
+                        if (elFill) svg.setAttribute('fill', elFill);
+                        var elColor = el.style.color;
+                        if (elColor) svg.setAttribute('stroke', elColor);
+                        el.dataset.processed = '1';
+                        el.replaceWith(svg);
+                    });
+                }
+            };
         </script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
@@ -659,7 +705,8 @@ try {
                 publicSettings: {
                     googleApiKey: '',
                     deliveryRules: [],
-                    businessName: 'Carregando...'
+                    businessName: 'Carregando...',
+                    acceptOrders: true
                 },
                 currentStep: 1,
                 deliveryFee: 0,
@@ -698,9 +745,13 @@ try {
                 if (!url) return url;
                 if (!url.includes('files.digizap.com.br')) return url; // Só funciona para o nosso servidor
 
-                if (size === 'thumb') return url.replace('.webp', '_90.webp');
+                if (size === 'thumb') return url.replace('.webp', '_550.webp');
                 if (size === 'medium') return url.replace('.webp', '_550.webp');
                 return url;
+            }
+
+            function isOrderEnabled() {
+                return state.publicSettings.acceptOrders !== false;
             }
 
             const getActiveCart = () => state.activeTab === 'delivery' ? state.deliveryCart : state.orderCart;
@@ -756,12 +807,20 @@ try {
                     const data = window.__SSR__;
                     if (!data) throw new Error("SSR Data Missing");
 
-                    state.publicSettings = { ...state.publicSettings, ...data };
+                    state.publicSettings = {
+                        ...state.publicSettings,
+                        ...data
+                    };
                     state.products = data.products || [];
                     state.categories = data.categories || [];
                     state.availableSlots = data.availableSlots || [];
                     state.addonGroups = data.addonGroups || [];
                     state.loading = false;
+
+                    if (!isOrderEnabled() && state.activeTab === 'order') {
+                        state.activeTab = 'delivery';
+                        document.body.className = '';
+                    }
 
                     // Remove Skeletons e mostra o conteúdo real instantaneamente
                     const loader = document.getElementById('skeleton-loader');
@@ -780,18 +839,24 @@ try {
                     // Scripts de Tracking
                     if (data.googleAnalyticsId && !document.getElementById('ga-script')) {
                         const ga = document.createElement('script');
-                        ga.id = 'ga-script'; ga.async = true;
+                        ga.id = 'ga-script';
+                        ga.async = true;
                         ga.src = `https://www.googletagmanager.com/gtag/js?id=${data.googleAnalyticsId}`;
                         document.head.appendChild(ga);
                         window.dataLayer = window.dataLayer || [];
-                        function gtag() { dataLayer.push(arguments); }
+
+                        function gtag() {
+                            dataLayer.push(arguments);
+                        }
                         window.gtag = gtag;
-                        gtag('js', new Date()); gtag('config', data.googleAnalyticsId);
+                        gtag('js', new Date());
+                        gtag('config', data.googleAnalyticsId);
                     }
 
                     if (data.microsoftClarityId && !document.getElementById('clarity-script')) {
                         const cl = document.createElement('script');
-                        cl.id = 'clarity-script'; cl.type = 'text/javascript';
+                        cl.id = 'clarity-script';
+                        cl.type = 'text/javascript';
                         cl.innerHTML = `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y)})(window,document,"clarity","script","${data.microsoftClarityId}");`;
                         document.head.appendChild(cl);
                     }
@@ -849,7 +914,7 @@ try {
 
                 const statusEl = document.getElementById('store-status-badge');
                 if (statusEl) {
-                    statusEl.innerText = state.isOpen ? '● Aberto agora' : '● Fechado (Apenas encomendas)';
+                    statusEl.innerText = state.isOpen ? '● Aberto agora' : (isOrderEnabled() ? '● Fechado (Apenas encomendas)' : '● Fechado');
                     statusEl.className = state.isOpen ? 'status-badge open' : 'status-badge closed';
                 }
             }
@@ -1008,23 +1073,26 @@ try {
                 const preview = document.getElementById(`cf-${index}-preview`);
                 const previewImg = preview.querySelector('img');
                 const hiddenInput = document.getElementById(`cf-${index}`);
-                
+
                 const originalBtnText = input.nextElementSibling.innerHTML;
                 input.nextElementSibling.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Enviando...';
-                
+
                 const formData = new FormData();
                 formData.append('file', file);
                 formData.append('secret', 'BlinkMediaSecret123!');
-                
+
                 try {
-                    const res = await fetch('https://files.digizap.com.br/upload.php', { method: 'POST', body: formData });
+                    const res = await fetch('https://files.digizap.com.br/upload.php', {
+                        method: 'POST',
+                        body: formData
+                    });
                     const data = await res.json();
                     if (data.url) {
                         hiddenInput.value = data.url;
                         preview.style.display = 'flex';
                         previewImg.src = data.url;
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                     showAlert('Erro', 'Falha ao fazer upload da imagem.');
                 } finally {
@@ -1100,7 +1168,7 @@ try {
                         if (!hasVisibleVar) return false;
                     }
 
-                    const matchesTab = (state.activeTab === 'delivery' && p.type === 'delivery') || (state.activeTab === 'order');
+                    const matchesTab = (state.activeTab === 'delivery' && p.type === 'delivery') || (state.activeTab === 'order' && isOrderEnabled());
                     const matchesSearch = p.name.toLowerCase().includes(query) || (p.description && p.description.toLowerCase().includes(query));
                     return matchesTab && matchesSearch;
                 });
@@ -1181,6 +1249,23 @@ try {
                 const images = parseImages(product.image);
                 const imgAttr = isPriority ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"';
 
+                if (product.bannerUrl) {
+                    return `
+            <div class="featured-card banner" onclick="openItemDetail('${product.id}')">
+                <div class="featured-banner-media">
+                    <img src="${getImg(product.bannerUrl, 'full')}" alt="${product.name}" ${imgAttr}>
+                    <div class="featured-banner-gradient"></div>
+                </div>
+                <div class="featured-banner-content">
+                    <span class="featured-banner-badge">Destaque</span>
+                    <h3>${product.name}</h3>
+                    ${product.description ? `<p>${product.description}</p>` : ''}
+                    <div class="product-price">${priceText}</div>
+                </div>
+            </div>
+        `;
+                }
+
                 return `
         <div class="featured-card" onclick="openItemDetail('${product.id}')">
             <div class="featured-img-wrapper">
@@ -1246,19 +1331,22 @@ try {
                 const file = input.files[0];
                 const btn = input.nextElementSibling;
                 const originalBtnText = btn.innerHTML;
-                
+
                 btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Enviando...';
                 btn.disabled = true;
                 lucide.createIcons();
-                
+
                 try {
                     const formData = new FormData();
                     formData.append('file', file);
                     formData.append('secret', 'BlinkMediaSecret123!');
-                    
-                    const res = await fetch('https://files.digizap.com.br/upload.php', { method: 'POST', body: formData });
+
+                    const res = await fetch('https://files.digizap.com.br/upload.php', {
+                        method: 'POST',
+                        body: formData
+                    });
                     const data = await res.json();
-                    
+
                     if (data.url) {
                         document.getElementById(`cf-${idx}`).value = data.url;
                         const preview = document.getElementById(`cf-${idx}-preview`);
@@ -1267,7 +1355,7 @@ try {
                     } else {
                         showAlert('Erro', 'Falha no upload da imagem.');
                     }
-                } catch(e) {
+                } catch (e) {
                     console.error(e);
                     showAlert('Erro', 'Ocorreu um erro ao enviar a imagem.');
                 } finally {
@@ -1288,13 +1376,21 @@ try {
 
                 // Inicia com Skeleton
                 body.innerHTML = `
-        <div class="skeleton" style="width:100%; height:300px; border-radius:0;"></div>
-        <div style="padding:20px;">
-            <div class="skeleton" style="height:24px; width:70%; margin-bottom:10px;"></div>
-            <div class="skeleton" style="height:14px; width:90%; margin-bottom:5px;"></div>
-            <div class="skeleton" style="height:14px; width:80%; margin-bottom:20px;"></div>
-        </div>
-    `;
+                    <div class="item-detail-layout">
+                        <div class="item-detail-media">
+                            <div class="skeleton" style="width:100%; height:100%; min-height:320px; border-radius:0;"></div>
+                        </div>
+                        <div class="item-detail-panel">
+                            <div style="padding:4px 0 0;">
+                                <div class="skeleton" style="height:24px; width:70%; margin-bottom:10px;"></div>
+                                <div class="skeleton" style="height:14px; width:90%; margin-bottom:5px;"></div>
+                                <div class="skeleton" style="height:14px; width:80%; margin-bottom:20px;"></div>
+                            </div>
+                            <div class="skeleton" style="height:92px; width:100%;"></div>
+                            <div class="skeleton" style="height:92px; width:100%;"></div>
+                        </div>
+                    </div>
+                `;
 
                 openModal('item-detail-modal');
                 lucide.createIcons();
@@ -1322,70 +1418,108 @@ try {
                 }
 
                 setTimeout(() => {
-                    state.currentCarouselIdx = 0;
-                    const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
-                    const images = parseImages(item.image);
-
-                    body.innerHTML = `
-            ${images.length > 0 ? `
-                <div class="carousel-container">
-                    <div class="carousel-track" style="transform: translateX(0%)">
-                        ${images.map(img => `<div class="carousel-slide"><img src="${getImg(img, 'medium')}" alt="${item.name}"></div>`).join('')}
-                    </div>
-                    ${images.length > 1 ? `
-                        <button class="carousel-btn carousel-prev" onclick="moveCarousel(-1)" aria-label="Imagem Anterior"><i data-lucide="chevron-left"></i></button>
-                        <button class="carousel-btn carousel-next" onclick="moveCarousel(1)" aria-label="Próxima Imagem"><i data-lucide="chevron-right"></i></button>
-                        <div class="carousel-dots">
-                            ${images.map((_, i) => `<div class="carousel-dot ${i === 0 ? 'active' : ''}"></div>`).join('')}
-                        </div>
-                    ` : ''}
-                </div>
-            ` : ''}
-            <div class="item-main-info">
-                <h2>${item.name}</h2>
-                <p>${item.description || ''}</p>
-                ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price || 0).toFixed(2)}</div>` : ''}
-            </div>
-            ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price || 0})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price || 0).toFixed(2)}</div></div>`).join('')}</div>` : ''}
-            ${(() => {
-                let cfHtml = '';
-                try {
-                    const cfs = JSON.parse(item.customFields || '[]');
-                    if (cfs.length > 0) {
-                        cfHtml = `<div class="custom-fields-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
-                            <h4 style="margin-bottom: 15px; font-weight: 700;">Personalize seu pedido</h4>
-                            ${cfs.map((cf, i) => {
-                                let inputHtml = '';
-                                if (cf.type === 'dropdown') {
-                                    const opts = typeof cf.options === 'string' ? cf.options.split(',').map(o => o.trim()).filter(o => o) : [];
-                                    inputHtml = `<select id="cf-${i}" class="custom-field-input" data-name="${cf.name}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-family: inherit;">
-                                        <option value="">Selecione...</option>
-                                        ${opts.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
-                                    </select>`;
-                                } else if (cf.type === 'image') {
-                                    inputHtml = `<div style="display:flex; flex-direction:column; gap:10px;">
-                                        <input type="file" id="cf-${i}-file" accept="image/*" style="display:none;" onchange="handleCustomFieldImageUpload(this, ${i})">
-                                        <button type="button" onclick="document.getElementById('cf-${i}-file').click()" style="padding: 10px; border-radius: 8px; border: 1px dashed var(--primary-color); background: var(--bg-tertiary); color: var(--primary-color); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;"><i data-lucide="image" style="width:16px; height:16px;"></i> Anexar Imagem</button>
-                                        <input type="hidden" id="cf-${i}" class="custom-field-input" data-name="${cf.name}">
-                                        <div id="cf-${i}-preview" style="display:none; margin-top: 10px; align-items: center;">
-                                            <img src="" style="max-width: 80px; max-height: 80px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: cover;">
-                                            <span style="font-size: 12px; color: #ef4444; margin-left: 10px; cursor:pointer; font-weight: 700;" onclick="document.getElementById('cf-${i}').value=''; document.getElementById('cf-${i}-preview').style.display='none';">Remover</span>
+                        state.currentCarouselIdx = 0;
+                        const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
+                        const images = parseImages(item.image);
+                        const mediaHtml = images.length > 0 ?
+                            `
+                            <div class="item-detail-media">
+                                <div class="carousel-container">
+                                    <div class="carousel-track" style="transform: translateX(0%)">
+                                        ${images.map(img => `<div class="carousel-slide"><img src="${getImg(img, 'medium')}" alt="${item.name}"></div>`).join('')}
+                                    </div>
+                                    ${images.length > 1 ? `
+                                        <button class="carousel-btn carousel-prev" onclick="moveCarousel(-1)" aria-label="Imagem Anterior"><i data-lucide="chevron-left"></i></button>
+                                        <button class="carousel-btn carousel-next" onclick="moveCarousel(1)" aria-label="Próxima Imagem"><i data-lucide="chevron-right"></i></button>
+                                        <div class="carousel-dots">
+                                            ${images.map((_, i) => `<div class="carousel-dot ${i === 0 ? 'active' : ''}"></div>`).join('')}
                                         </div>
-                                    </div>`;
-                                } else {
-                                    inputHtml = `<input type="text" id="cf-${i}" class="custom-field-input" data-name="${cf.name}" placeholder="Ex: ${cf.name}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-family: inherit;">`;
-                                }
-                                return `<div style="margin-bottom: 15px;">
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px;">${cf.name} ${cf.required ? '<span style="color:#ef4444">*</span>' : ''}</label>
-                                    ${inputHtml}
-                                </div>`;
-                            }).join('')}
-                        </div>`;
+                                    ` : ''}
+                                </div>
+                            </div>
+                        ` :
+                            `
+                            <div class="item-detail-media item-detail-media-empty">
+                                <div class="item-hero-placeholder">
+                                    <i data-lucide="image"></i>
+                                    <div>Sem imagem cadastrada</div>
+                                </div>
+                            </div>
+                        `;
+
+                        const mainInfoHtml = `
+                        <div class="item-main-info">
+                            <h2>${item.name}</h2>
+                            <p>${item.description || ''}</p>
+                            ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price || 0).toFixed(2)}</div>` : ''}
+                        </div>
+                    `;
+
+                        const variationsHtml = variations.length > 0 ?
+                            `<div class="variation-section"><div class="addon-group-header"><h4>Escolha uma opção</h4></div>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price || 0})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price || 0).toFixed(2)}</div></div>`).join('')}</div>` :
+                            '';
+
+                        const customFieldsHtml = (() => {
+                                    let cfHtml = '';
+                                    try {
+                                        const cfs = JSON.parse(item.customFields || '[]');
+                                        if (cfs.length > 0) {
+                                            cfHtml = `<div class="custom-fields-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                                    <h4 style="margin-bottom: 15px; font-weight: 700;">Personalize seu pedido</h4>
+                                    ${cfs.map((cf, i) => {
+                                        let inputHtml = '';
+                                        if (cf.type === 'dropdown') {
+                                            const opts = typeof cf.options === 'string' ? cf.options.split(',').map(o => o.trim()).filter(o => o) : [];
+                                            inputHtml = `<select id="cf-${i}" class="custom-field-input" data-name="${cf.name}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-family: inherit;">
+                                                <option value="">Selecione...</option>
+                                                ${opts.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                                            </select>`;
+                                        } else if (cf.type === 'image') {
+                                            inputHtml = ` < div style = "display:flex; flex-direction:column; gap:10px;" >
+                                                <
+                                                input type = "file"
+                                            id = "cf-${i}-file"
+                                            accept = "image/*"
+                                            style = "display:none;"
+                                            onchange = "handleCustomFieldImageUpload(this, ${i})" >
+                                                <
+                                                button type = "button"
+                                            onclick = "document.getElementById('cf-${i}-file').click()"
+                                            style = "padding: 10px; border-radius: 8px; border: 1px dashed var(--primary-color); background: var(--bg-tertiary); color: var(--primary-color); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;" > < i data - lucide = "image"
+                                            style = "width:16px; height:16px;" > < /i> Anexar Imagem</button >
+                                                <
+                                                input type = "hidden"
+                                            id = "cf-${i}"
+                                            class = "custom-field-input"
+                                            data - name = "${cf.name}" >
+                                                <
+                                                div id = "cf-${i}-preview"
+                                            style = "display:none; margin-top: 10px; align-items: center;" >
+                                                <
+                                                img src = ""
+                                            style = "max-width: 80px; max-height: 80px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: cover;" >
+                                                <
+                                                span style = "font-size: 12px; color: #ef4444; margin-left: 10px; cursor:pointer; font-weight: 700;"
+                                            onclick = "document.getElementById('cf-${i}').value=''; document.getElementById('cf-${i}-preview').style.display='none';" > Remover < /span> <
+                                                /div> <
+                                                /div>`;
+                                        } else {
+                                            inputHtml = `<input type="text" id="cf-${i}" class="custom-field-input" data-name="${cf.name}" placeholder="Ex: ${cf.name}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-family: inherit;">`;
+                                        }
+                                        return `<div style="margin-bottom: 15px;">
+                                            <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px;">${cf.name} ${cf.required ? '<span style="color:#ef4444">*</span>' : ''}</label>
+                                            ${inputHtml}
+                                        </div>`;
+                                    }).join('')
+                            } <
+                            /div>`;
                     }
-                } catch(e) {}
+                }
+                catch (e) {}
                 return cfHtml;
-            })()}
-            ${(() => {
+            })();
+
+            const addonsHtml = (() => {
                 let agHtml = '';
                 try {
                     const groupIds = JSON.parse(item.addonGroups || '[]');
@@ -1395,37 +1529,50 @@ try {
                             const gItems = JSON.parse(g.items || '[]');
                             const maxSelections = Math.max(parseInt(g.max, 10) || 1, 1);
                             return `<div class="variation-section addon-group-section" data-group-id="${g.id}" data-min="${g.min}" data-max="${g.max}">
-                                <div class="addon-group-header">
-                                    <h4>${g.name}</h4>
-                                    <span class="addon-group-badge ${g.min > 0 ? 'required' : 'optional'}">${g.min > 0 ? 'Obrigatório' : 'Opcional'} • Máx ${g.max}</span>
-                                </div>
-                                <div class="addon-options">
-                                ${gItems.map((gItem, ii) => {
-                                    const inputId = `ag-${gi}-${ii}`;
-                                    const inputName = `ag-group-${gi}`;
-                                    const itemAccent = String(gItem.color || gItem.accent || gItem.accentColor || g.color || g.accentColor || 'var(--primary-color)').replace(/"/g, '&quot;');
-                                    return `<label for="${inputId}" class="var-option addon-option" style="--addon-accent: ${itemAccent};" onclick="handleAddonSelect(event, '${g.id}', ${maxSelections}, ${gi}, ${ii}, ${parseFloat(gItem.price || 0)})">
-                                        <div class="addon-option-main">
-                                            <span class="var-label">${gItem.name}</span>
+                                        <div class="addon-group-header">
+                                            <h4>${g.name}</h4>
+                                            <span class="addon-group-badge ${g.min > 0 ? 'required' : 'optional'}">${g.min > 0 ? 'Obrigatório' : 'Opcional'} • Máx ${g.max}</span>
                                         </div>
-                                        <div class="addon-option-meta">
-                                            ${parseFloat(gItem.price || 0) > 0 ? `<span class="var-price addon-option-price">+ R$ ${parseFloat(gItem.price).toFixed(2)}</span>` : ''}
-                                            <span class="addon-option-mark" aria-hidden="true"></span>
+                                        <div class="addon-options">
+                                        ${gItems.map((gItem, ii) => {
+                                            const inputId = `ag-${gi}-${ii}`;
+                                            const inputName = `ag-group-${gi}`;
+                                            const itemAccent = String(gItem.color || gItem.accent || gItem.accentColor || g.color || g.accentColor || 'var(--primary-color)').replace(/"/g, '&quot;');
+                                            return `<label for="${inputId}" class="var-option addon-option" style="--addon-accent: ${itemAccent};" onclick="handleAddonSelect(event, '${g.id}', ${maxSelections}, ${gi}, ${ii}, ${parseFloat(gItem.price || 0)})">
+                                                <div class="addon-option-main">
+                                                    <span class="var-label">${gItem.name}</span>
+                                                </div>
+                                                <div class="addon-option-meta">
+                                                    ${parseFloat(gItem.price || 0) > 0 ? `<span class="var-price addon-option-price">+ R$ ${parseFloat(gItem.price).toFixed(2)}</span>` : ''}
+                                                    <span class="addon-option-mark" aria-hidden="true"></span>
+                                                </div>
+                                                <input type="checkbox" id="${inputId}" name="${inputName}" class="addon-input" data-group-id="${g.id}" data-max="${maxSelections}" data-item-name="${gItem.name.replace(/"/g, '&quot;')}" data-item-price="${parseFloat(gItem.price || 0)}">
+                                            </label>`;
+                                        }).join('')}
                                         </div>
-                                        <input type="checkbox" id="${inputId}" name="${inputName}" class="addon-input" data-group-id="${g.id}" data-max="${maxSelections}" data-item-name="${gItem.name.replace(/"/g, '&quot;')}" data-item-price="${parseFloat(gItem.price || 0)}">
-                                    </label>`;
-                                }).join('')}
-                                </div>
-                            </div>`;
+                                    </div>`;
                         }).join('');
                     }
-                } catch(e) { console.error('Addon render error:', e); }
+                } catch (e) {
+                    console.error('Addon render error:', e);
+                }
                 return agHtml;
-            })()}
-            `;
-                    updateDetailFooter();
-                    lucide.createIcons();
-                }, 50);
+            })();
+
+            body.innerHTML = `
+                        <div class="item-detail-layout">
+                            ${mediaHtml}
+                            <div class="item-detail-panel">
+                                ${mainInfoHtml}
+                                ${variationsHtml}
+                                ${customFieldsHtml}
+                                ${addonsHtml}
+                            </div>
+                        </div>
+                    `;
+            updateDetailFooter();
+            lucide.createIcons();
+            }, 50);
             }
 
             function moveCarousel(delta) {
@@ -1447,7 +1594,10 @@ try {
             }
 
             function selectVariation(name, price) {
-                state.currentVariation = { name, price };
+                state.currentVariation = {
+                    name,
+                    price
+                };
                 document.querySelectorAll('.var-option').forEach(el => el.classList.toggle('selected', el.querySelector('.var-label').innerText === name));
                 updateDetailFooter();
             }
@@ -1522,15 +1672,24 @@ try {
                 let addonTotal = 0;
                 document.querySelectorAll('.addon-input:checked').forEach(input => {
                     const price = parseFloat(input.dataset.itemPrice || 0);
-                    addons.push({ groupId: input.dataset.groupId, name: input.dataset.itemName, price });
+                    addons.push({
+                        groupId: input.dataset.groupId,
+                        name: input.dataset.itemName,
+                        price
+                    });
                     addonTotal += price;
                 });
-                return { addons, addonTotal };
+                return {
+                    addons,
+                    addonTotal
+                };
             }
 
             function updateDetailFooter() {
                 const basePrice = state.currentVariation ? parseFloat(state.currentVariation.price || 0) : parseFloat(state.currentItem?.price || 0);
-                const { addonTotal } = getSelectedAddons();
+                const {
+                    addonTotal
+                } = getSelectedAddons();
                 const totalUnit = basePrice + addonTotal;
                 const priceEl = document.getElementById('add-btn-price');
                 if (priceEl) priceEl.innerText = `R$ ${(totalUnit * state.currentQty).toFixed(2)}`;
@@ -1567,6 +1726,7 @@ try {
                 });
                 document.querySelectorAll('.cat-tab').forEach(btn => {
                     btn.addEventListener('click', () => {
+                        if (btn.dataset.tab === 'order' && !isOrderEnabled()) return;
                         document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
                         btn.classList.add('active');
                         state.activeTab = btn.dataset.tab;
@@ -1623,12 +1783,12 @@ try {
                     const date = new Date(dateStr + 'T12:00:00');
                     const dayOfWeek = date.getDay();
                     const todaySlots = state.availableSlots.filter(s => s.dayOfWeek === dayOfWeek);
-                    
+
                     let optionsHtml = `<option value="">Selecione um horário</option>`;
                     for (let hour = 9; hour <= 20; hour++) {
                         const timeStr = `${hour.toString().padStart(2, '0')}:00`;
                         const timeInMinutes = hour * 60;
-                        
+
                         let isAvailable = true;
                         if (todaySlots.length > 0) {
                             isAvailable = todaySlots.some(s => {
@@ -1639,7 +1799,7 @@ try {
                                 return timeInMinutes >= start && timeInMinutes <= end;
                             });
                         }
-                        
+
                         if (isAvailable) {
                             optionsHtml += `<option value="${timeStr}">${timeStr}</option>`;
                         } else {
@@ -1725,12 +1885,18 @@ try {
                     orderDetailsInfo: state.orderDetailsInfo || '',
                     expires: Date.now() + (24 * 60 * 60 * 1000)
                 };
-                try { localStorage.setItem('zapfly_checkout', JSON.stringify(payload)); } catch (e) {}
+                try {
+                    localStorage.setItem('zapfly_checkout', JSON.stringify(payload));
+                } catch (e) {}
             }
 
             function restoreCheckoutState() {
                 let saved;
-                try { saved = JSON.parse(localStorage.getItem('zapfly_checkout') || 'null'); } catch (e) { saved = null; }
+                try {
+                    saved = JSON.parse(localStorage.getItem('zapfly_checkout') || 'null');
+                } catch (e) {
+                    saved = null;
+                }
                 if (!saved || (saved.expires && saved.expires < Date.now())) {
                     localStorage.removeItem('zapfly_checkout');
                     return;
@@ -1743,7 +1909,7 @@ try {
                 if (saved.orderDetailsInfo) {
                     state.orderDetailsInfo = saved.orderDetailsInfo;
                     const detailsInput = document.getElementById('order-details');
-                    if(detailsInput) detailsInput.value = saved.orderDetailsInfo;
+                    if (detailsInput) detailsInput.value = saved.orderDetailsInfo;
                 }
             }
 
@@ -1753,7 +1919,11 @@ try {
                 if (getActiveCart().length === 0) return 1;
 
                 let saved;
-                try { saved = JSON.parse(localStorage.getItem('zapfly_checkout') || 'null'); } catch (e) { saved = null; }
+                try {
+                    saved = JSON.parse(localStorage.getItem('zapfly_checkout') || 'null');
+                } catch (e) {
+                    saved = null;
+                }
                 // Saved step only counts if the user is on the same tab they were checking out from
                 const sameTab = saved && saved.activeTab === state.activeTab;
                 const savedStep = sameTab && saved.step ? parseInt(saved.step) : 1;
@@ -1909,11 +2079,11 @@ try {
 
             function renderStep2() {
                 const isDelivery = state.activeTab === 'delivery';
-                
+
                 // Hide delivery toggle entirely for orders
                 const typeTabs = document.getElementById('checkout-type-tabs');
                 if (typeTabs) typeTabs.style.display = isDelivery ? 'flex' : 'none';
-                
+
                 // Enforce pickup if it's an order
                 if (!isDelivery && state.deliveryType !== 'pickup') {
                     setDeliveryType('pickup');
@@ -1950,7 +2120,7 @@ try {
                 if (state.activeTab === 'order') {
                     type = 'pickup';
                 }
-                
+
                 state.deliveryType = type;
                 const btns = document.querySelectorAll('.type-tab');
 
@@ -1991,7 +2161,11 @@ try {
                     state.userInfo.name = nameVal;
                     state.userInfo.phone = phoneVal;
                     saveCheckoutState();
-                    if (state.activeTab === 'delivery' && !state.isOpen) return showAlert('Loja Fechada', 'Estamos fechados para pronta entrega no momento. Por favor, utilize a aba de Encomendas para agendar seu pedido.');
+                    if (state.activeTab === 'delivery' && !state.isOpen) {
+                        return showAlert('Loja Fechada', isOrderEnabled() ?
+                            'Estamos fechados para pronta entrega no momento. Por favor, utilize a aba de Encomendas para agendar seu pedido.' :
+                            'Estamos fechados para pronta entrega no momento.');
+                    }
                     goToStep(2);
                 } else if (state.currentStep === 2) {
                     if (state.activeTab === 'delivery') {
@@ -2000,6 +2174,7 @@ try {
                             return showAlert('Taxa Indisponível', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereço está no raio de entrega.');
                         }
                     } else if (state.activeTab === 'order') {
+                        if (!isOrderEnabled()) return showAlert('Encomendas desativadas', 'No momento não estamos aceitando encomendas.');
                         const dateVal = document.getElementById('order-date').value;
                         const timeVal = document.getElementById('order-time').value;
                         const details = document.getElementById('order-details')?.value;
@@ -2058,12 +2233,14 @@ try {
             function addToCart() {
                 const item = state.currentItem;
                 if (state.activeTab === 'delivery' && !state.isOpen) {
-                    return showAlert('Loja Fechada', 'Estamos fechados para pronta entrega no momento. Utilize a aba de Encomendas para agendar!');
+                    return showAlert('Loja Fechada', isOrderEnabled() ?
+                        'Estamos fechados para pronta entrega no momento. Utilize a aba de Encomendas para agendar!' :
+                        'Estamos fechados para pronta entrega no momento.');
                 }
                 const variation = state.currentVariation;
                 const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
                 if (variations.length > 0 && !variation) return showAlert('Quase lá...', 'Por favor, selecione uma opção para continuar.');
-                
+
                 // Coleta custom fields (texto/imagem)
                 let customAnswers = {};
                 let missingRequired = false;
@@ -2074,7 +2251,7 @@ try {
                         if (cf.required && !val) missingRequired = true;
                         if (val) customAnswers[cf.name] = val;
                     });
-                } catch(e) {}
+                } catch (e) {}
                 if (missingRequired) return showAlert('Atenção', 'Por favor, preencha todos os campos obrigatórios (marcados com *).');
 
                 // Valida grupos de adicionais obrigatórios
@@ -2095,7 +2272,10 @@ try {
                 }
 
                 // Coleta adicionais selecionados
-                const { addons, addonTotal } = getSelectedAddons();
+                const {
+                    addons,
+                    addonTotal
+                } = getSelectedAddons();
                 const addonsJSON = addons.length > 0 ? JSON.stringify(addons) : null;
 
                 const basePrice = parseFloat((variation ? variation.price : item.price) || 0);
@@ -2182,13 +2362,13 @@ try {
                         try {
                             const ads = JSON.parse(item.addons);
                             ads.forEach(a => extras.push(a.name));
-                        } catch(e) {}
+                        } catch (e) {}
                     }
                     if (item.customFields) {
                         try {
                             const cfs = JSON.parse(item.customFields);
-                            Object.entries(cfs).forEach(([k,v]) => extras.push(`${k}: ${v.startsWith('http') ? 'Anexo' : v}`));
-                        } catch(e) {}
+                            Object.entries(cfs).forEach(([k, v]) => extras.push(`${k}: ${v.startsWith('http') ? 'Anexo' : v}`));
+                        } catch (e) {}
                     }
                     if (extras.length > 0) base += ` [${extras.join(', ')}]`;
                     return base;
@@ -2385,7 +2565,7 @@ try {
         </script>
 
     </html>
-    <?php
+<?php
     $finalHtml = ob_get_clean();
 
     // Salva no cache silenciosamente
@@ -2395,7 +2575,6 @@ try {
     @file_put_contents($cacheFile, $finalHtml);
 
     echo $finalHtml;
-
 } catch (Exception $e) {
     die("Erro: " . $e->getMessage());
 }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
-import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box, Copy, Pencil, Gift, Clock, AlertTriangle, Upload } from 'lucide-react';
+import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box, Copy, Pencil, Gift, Clock, AlertTriangle, Upload, ArrowUp, ArrowDown } from 'lucide-react';
 
 import Swal from 'sweetalert2';
 
@@ -27,7 +27,7 @@ const Estoque = () => {
   const [addonGroups, setAddonGroups] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [isComboMode, setIsComboMode] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: '', image: '', price: 0, stock: 0, trackStock: false, capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [] });
+  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: '', image: '', bannerUrl: '', price: 0, stock: 0, trackStock: false, capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [] });
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState(null);
 
@@ -36,6 +36,8 @@ const Estoque = () => {
   const [seasonalForm, setSeasonalForm] = useState({ name: '', eventDate: '', preStartDays: 15, postEndDays: 2, description: '', items: [], maxOrders: 0, onlySeasonalOnEventDay: false, active: true });
   const [editingSeasonal, setEditingSeasonal] = useState(null);
   const [showHidden, setShowHidden] = useState(false);
+  const [acceptOrders, setAcceptOrders] = useState(true);
+  const [savingAcceptOrders, setSavingAcceptOrders] = useState(false);
   
   const [categories, setCategories] = useState([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -152,12 +154,41 @@ const Estoque = () => {
     } catch (err) { console.error(err); }
   }, []);
 
+  const fetchStoreSettings = useCallback(async () => {
+    try {
+      const res = await api.get('/settings');
+      setAcceptOrders(res.data?.acceptOrders !== false);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
+
   useEffect(() => { 
     fetchProducts(); 
     fetchAddonGroups();
     fetchSeasonal();
     fetchCategories();
-  }, [fetchProducts, fetchAddonGroups, fetchSeasonal, fetchCategories]);
+    fetchStoreSettings();
+  }, [fetchProducts, fetchAddonGroups, fetchSeasonal, fetchCategories, fetchStoreSettings]);
+
+  const handleAcceptOrdersChange = async (nextValue) => {
+    setAcceptOrders(nextValue);
+    setSavingAcceptOrders(true);
+    try {
+      await api.post('/settings', { acceptOrders: nextValue });
+    } catch (err) {
+      console.error(err);
+      setAcceptOrders(!nextValue);
+      Swal.fire({
+        title: 'Erro',
+        text: 'Não foi possível salvar a configuração de encomendas.',
+        icon: 'error',
+        confirmButtonColor: '#3b82f6'
+      });
+    } finally {
+      setSavingAcceptOrders(false);
+    }
+  };
 
   const compressImage = (file) => {
     return new Promise((resolve) => {
@@ -241,7 +272,7 @@ const Estoque = () => {
   const openAdd = (asCombo = false) => {
     setEditing(null);
     setIsComboMode(asCombo);
-    setForm({ name: '', description: '', type: tab, category: '', image: '', price: 0, stock: 0, trackStock: tab === 'delivery', capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [] });
+    setForm({ name: '', description: '', type: tab, category: '', image: '', bannerUrl: '', price: 0, stock: 0, trackStock: tab === 'delivery', capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [] });
     setShowModal(true);
   };
 
@@ -252,6 +283,14 @@ const Estoque = () => {
     delete productData.customFields;
     setForm({ ...productData, addonGroups: parseJsonArray(p.addonGroups, []) });
     setShowModal(true);
+  };
+
+  const handleBannerUpload = async (file) => {
+    if (!file) return;
+    const url = await handleExternalUpload(file);
+    if (url) {
+      setForm(prev => ({ ...prev, bannerUrl: url }));
+    }
   };
 
   const saveProduct = async () => {
@@ -340,6 +379,33 @@ const Estoque = () => {
 
     return true;
   });
+
+  const moveProductOrder = async (currentIndex, delta) => {
+    const targetIndex = currentIndex + delta;
+    if (currentIndex < 0 || targetIndex < 0 || targetIndex >= filtered.length) return;
+
+    const nextList = [...filtered];
+    const [moved] = nextList.splice(currentIndex, 1);
+    nextList.splice(targetIndex, 0, moved);
+
+    const updated = nextList.map((p, idx) => ({ ...p, displayOrder: idx + 1 }));
+    const orderMap = new Map(updated.map(p => [p.id, p.displayOrder]));
+
+    setProducts(prev => prev
+      .map(p => (orderMap.has(p.id) ? { ...p, displayOrder: orderMap.get(p.id) } : p))
+      .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+    );
+
+    try {
+      await api.post('/orders/products/reorder', {
+        items: updated.map(p => ({ id: p.id, displayOrder: p.displayOrder }))
+      });
+    } catch (err) {
+      console.error(err);
+      fetchProducts();
+    }
+  };
+
   const inp = { style: { width:'100%', padding:'10px 14px', borderRadius:'10px', backgroundColor:'var(--bg-tertiary)', border:'1px solid var(--border-color)', color:'#fff', fontSize:'14px', outline: 'none' } };
 
   return (
@@ -387,9 +453,31 @@ const Estoque = () => {
         <button onClick={() => setTab('seasonal')} style={{ ...tabBtn, backgroundColor: tab === 'seasonal' ? '#ec4899' : 'var(--bg-secondary)', color: tab === 'seasonal' ? '#fff' : 'var(--text-secondary)' }}>
           <Gift size={18} /> Datas Comemorativas
         </button>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
-           <input type="checkbox" id="showHiddenToggle" checked={showHidden} onChange={e => setShowHidden(e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
-           <label htmlFor="showHiddenToggle" style={{ fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600 }}>Mostrar itens ocultos</label>
+        <div style={{
+          marginLeft: 'auto',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          padding: '10px 14px',
+          borderRadius: '12px',
+          border: `1px solid ${acceptOrders ? 'rgba(16, 185, 129, 0.22)' : 'rgba(239, 68, 68, 0.22)'}`,
+          backgroundColor: acceptOrders ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)'
+        }}>
+           <input
+             type="checkbox"
+             checked={acceptOrders}
+             disabled={savingAcceptOrders}
+             onChange={e => handleAcceptOrdersChange(e.target.checked)}
+             style={{ width: '16px', height: '16px', cursor: savingAcceptOrders ? 'wait' : 'pointer', accentColor: acceptOrders ? '#10b981' : '#ef4444' }}
+           />
+           <div>
+             <div style={{ fontSize: '12px', color: acceptOrders ? '#10b981' : '#ef4444', fontWeight: 800 }}>
+               {savingAcceptOrders ? 'Salvando...' : 'Aceitar encomendas'}
+             </div>
+             <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+               {acceptOrders ? 'Mostra a aba de encomendas no cardápio público.' : 'Cardápio de encomendas oculto para clientes.'}
+             </div>
+           </div>
         </div>
       </div>
 
@@ -450,6 +538,8 @@ const Estoque = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ fontWeight: 800, fontSize: '16px', color: '#fff' }}>{p.name}</div>
                         {isCombo && <span style={{ fontSize: '10px', backgroundColor: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', padding: '2px 8px', borderRadius: '4px', fontWeight: 900 }}>COMBO</span>}
+                        <span style={{ fontSize: '10px', backgroundColor: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: '999px', fontWeight: 800 }}>#{p.displayOrder || idx + 1}</span>
+                        {p.featured && <span style={{ fontSize: '10px', backgroundColor: 'rgba(59, 130, 246, 0.16)', color: '#60a5fa', padding: '2px 8px', borderRadius: '999px', fontWeight: 900 }}>DESTAQUE</span>}
                       </div>
                       {p.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{p.description}</div>}
                       {!p.variations.length && !isCombo && <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.trackStock && `| Estoque: ${p.stock}`} {!p.trackStock && '| Estoque: ∞'}</div>}
@@ -481,7 +571,27 @@ const Estoque = () => {
                       )}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button
+                        className="btn-icon"
+                        disabled={idx === 0}
+                        title="Mover para cima"
+                        style={{ padding: '7px', backgroundColor: 'rgba(255,255,255,0.05)', color: idx === 0 ? 'rgba(255,255,255,0.25)' : '#fff', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', cursor: idx === 0 ? 'not-allowed' : 'pointer' }}
+                        onClick={(e) => { e.stopPropagation(); moveProductOrder(idx, -1); }}
+                      >
+                        <ArrowUp size={14} />
+                      </button>
+                      <button
+                        className="btn-icon"
+                        disabled={idx === filtered.length - 1}
+                        title="Mover para baixo"
+                        style={{ padding: '7px', backgroundColor: 'rgba(255,255,255,0.05)', color: idx === filtered.length - 1 ? 'rgba(255,255,255,0.25)' : '#fff', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', cursor: idx === filtered.length - 1 ? 'not-allowed' : 'pointer' }}
+                        onClick={(e) => { e.stopPropagation(); moveProductOrder(idx, 1); }}
+                      >
+                        <ArrowDown size={14} />
+                      </button>
+                    </div>
                     <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); openEdit(p); }}><Pencil size={16} /></button>
                     <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px' }} onClick={(e) => { 
                       e.stopPropagation(); 
@@ -784,6 +894,56 @@ const Estoque = () => {
                       Destaque no Menu (Exibir no topo)
                     </label>
                   </div>
+
+                  {form.featured && (
+                    <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.08)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.22)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>Banner do destaque</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Se tiver banner, ele aparece no topo como promoção. Sem banner, o produto aparece normalmente.</div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <input
+                            id="banner-upload"
+                            type="file"
+                            hidden
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              await handleBannerUpload(file);
+                              e.target.value = '';
+                            }}
+                          />
+                          <button
+                            className="btn"
+                            type="button"
+                            onClick={() => document.getElementById('banner-upload')?.click()}
+                            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            <Upload size={16} /> Enviar banner
+                          </button>
+                        </div>
+                      </div>
+
+                      {form.bannerUrl ? (
+                        <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+                          <img src={form.bannerUrl} alt="Banner do destaque" style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }} />
+                          <button
+                            type="button"
+                            onClick={() => setForm(prev => ({ ...prev, bannerUrl: '' }))}
+                            style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'rgba(0,0,0,0.65)', color: '#fff', border: 'none', borderRadius: '999px', padding: '6px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                          >
+                            Remover banner
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ border: '1px dashed rgba(255,255,255,0.12)', borderRadius: '12px', padding: '16px', color: 'var(--text-secondary)', fontSize: '12px' }}>
+                          Nenhum banner enviado ainda. O destaque vai usar a imagem normal do produto.
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {isComboMode ? (
                   <div style={sectionBox}>
