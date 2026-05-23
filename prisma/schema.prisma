@@ -153,6 +153,7 @@ model Product {
   categoryRel     Category? @relation(fields: [categoryId], references: [id])
   type            String    @default("delivery")
   variations      String?   @db.Text
+  customFields    String?   @db.Text
   comboItems      String?   @db.Text
   prepTime        Int?      @default(0)
   trackStock      Boolean   @default(false)

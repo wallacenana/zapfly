@@ -560,7 +560,7 @@ const Production = () => {
 
     // Apenas pedidos Pendentes, Em Produção e Prontos furam o filtro de data.
     // Pedidos concluídos, cancelados ou agendados ('order' mas em accepted) obedecem à data selecionada.
-    const bypassDateFilter = ['pending', 'production', 'ready'].includes(o.status);
+    const bypassDateFilter = ['waiting_payment', 'pending', 'production', 'ready'].includes(o.status);
     const matchDate = bypassDateFilter ? true : (o.scheduledDate === selectedDate);
 
     return matchType && matchSearch && matchDate;

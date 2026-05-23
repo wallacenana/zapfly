@@ -669,7 +669,7 @@ router.get('/', authenticate, async (req, res) => {
 
   if (date) {
     where.OR = [
-      { status: { in: ['pending', 'production', 'ready'] } },
+      { status: { in: ['waiting_payment', 'pending', 'production', 'ready'] } },
       { scheduledDate: date }
     ];
   } else {
@@ -832,8 +832,25 @@ router.get('/products', authenticate, async (req, res) => {
 });
 
 router.post('/products', authenticate, async (req, res) => {
-  const userId = req.user.id;
-  const product = await prisma.product.create({ data: { ...req.body, userId } });
+  const { name, description, price, image, category, type, variations, comboItems, customFields, stock, trackStock, featured, capacityCost } = req.body;
+  const product = await prisma.product.create({
+    data: {
+      name,
+      description,
+      price: parseFloat(price),
+      image,
+      category,
+      type,
+      variations,
+      comboItems,
+      customFields,
+      stock: parseInt(stock),
+      trackStock,
+      featured,
+      capacityCost: parseInt(capacityCost),
+      userId: req.user.id
+    }
+  });
   res.json(product);
 });
 

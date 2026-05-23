@@ -994,6 +994,37 @@ try {
 
 
 
+            async function handleCustomFieldImageUpload(input, index) {
+                const file = input.files[0];
+                if (!file) return;
+                const preview = document.getElementById(`cf-${index}-preview`);
+                const previewImg = preview.querySelector('img');
+                const hiddenInput = document.getElementById(`cf-${index}`);
+                
+                const originalBtnText = input.nextElementSibling.innerHTML;
+                input.nextElementSibling.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Enviando...';
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('secret', 'BlinkMediaSecret123!');
+                
+                try {
+                    const res = await fetch('https://files.digizap.com.br/upload.php', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    if (data.url) {
+                        hiddenInput.value = data.url;
+                        preview.style.display = 'flex';
+                        previewImg.src = data.url;
+                    }
+                } catch(e) {
+                    console.error(e);
+                    showAlert('Erro', 'Falha ao fazer upload da imagem.');
+                } finally {
+                    input.nextElementSibling.innerHTML = originalBtnText;
+                    lucide.createIcons();
+                }
+            }
+
             function renderMenu() {
                 const skeletonContainer = document.getElementById('skeleton-loader');
                 const actualContainer = document.getElementById('actual-menu-content');
@@ -1274,7 +1305,44 @@ try {
                 ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
             </div>
             ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
-                                                                                                            `;
+            ${(() => {
+                let cfHtml = '';
+                try {
+                    const cfs = JSON.parse(item.customFields || '[]');
+                    if (cfs.length > 0) {
+                        cfHtml = `<div class="custom-fields-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);">
+                            <h4 style="margin-bottom: 15px; font-weight: 700;">Personalize seu pedido</h4>
+                            ${cfs.map((cf, i) => {
+                                let inputHtml = '';
+                                if (cf.type === 'dropdown') {
+                                    inputHtml = \`<select id="cf-\${i}" class="custom-field-input" data-name="\${cf.name}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-family: inherit;">
+                                        <option value="">Selecione...</option>
+                                        \${(cf.options || []).map(opt => \`<option value="\${opt}">\${opt}</option>\`).join('')}
+                                    </select>\`;
+                                } else if (cf.type === 'image') {
+                                    inputHtml = \`<div style="display:flex; flex-direction:column; gap:10px;">
+                                        <input type="file" id="cf-\${i}-file" accept="image/*" style="display:none;" onchange="handleCustomFieldImageUpload(this, \${i})">
+                                        <button type="button" onclick="document.getElementById('cf-\${i}-file').click()" style="padding: 10px; border-radius: 8px; border: 1px dashed var(--primary-color); background: var(--bg-tertiary); color: var(--primary-color); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;"><i data-lucide="image" style="width:16px; height:16px;"></i> Anexar Imagem</button>
+                                        <input type="hidden" id="cf-\${i}" class="custom-field-input" data-name="\${cf.name}">
+                                        <div id="cf-\${i}-preview" style="display:none; margin-top: 10px; align-items: center;">
+                                            <img src="" style="max-width: 80px; max-height: 80px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: cover;">
+                                            <span style="font-size: 12px; color: #ef4444; margin-left: 10px; cursor:pointer; font-weight: 700;" onclick="document.getElementById('cf-\${i}').value=''; document.getElementById('cf-\${i}-preview').style.display='none';">Remover</span>
+                                        </div>
+                                    </div>\`;
+                                } else {
+                                    inputHtml = \`<input type="text" id="cf-\${i}" class="custom-field-input" data-name="\${cf.name}" placeholder="Ex: \${cf.name}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-family: inherit;">\`;
+                                }
+                                return \`<div style="margin-bottom: 15px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px;">\${cf.name} \${cf.required ? '<span style="color:#ef4444">*</span>' : ''}</label>
+                                    \${inputHtml}
+                                </div>\`;
+                            }).join('')}
+                        </div>`;
+                    }
+                } catch(e) {}
+                return cfHtml;
+            })()}
+            `;
                     updateDetailFooter();
                     lucide.createIcons();
                 }, 50);
@@ -1404,7 +1472,7 @@ try {
                     let optionsHtml = `<option value="">Selecione um horário</option>`;
                     for (let hour = 9; hour <= 20; hour++) {
                         const timeStr = `${hour.toString().padStart(2, '0')}:00`;
-                        const isAvailable = availableStarts.includes(timeStr);
+                        const isAvailable = availableStarts.length === 0 || availableStarts.includes(timeStr);
                         if (isAvailable) {
                             optionsHtml += `<option value="${timeStr}">${timeStr}</option>`;
                         } else {
@@ -1562,15 +1630,9 @@ try {
                 list.innerHTML = cart.map(item => `
                                                                                                             <div class="checkout-item">
                                                                                                                 <div class="item-name-qty">
-                                                                                                                    <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}</div>
-                                                                                                                </div>
-                                                                                                                <div style="display: flex; align-items: center; gap: 16px;">
-                                                                                                                    <div class="cart-qty-control">
-                                                                                                                        <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
-                                                                                                                            ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
-                                                                                                                        </button>
-                                                                                                                        <span class="qty-val-mini">${item.quantity}</span>
-                                                                                                                        <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
+                                                                                                                    <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}
+                                                                                                                    ${item.customFields ? (() => {
+                                                                                                                        try {
                                                                                                                             <i data-lucide="plus"></i>
                                                                                                                         </button>
                                                                                                                     </div>
@@ -1817,7 +1879,23 @@ try {
                 const variation = state.currentVariation;
                 const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
                 if (variations.length > 0 && !variation) return showAlert('Quase lá...', 'Por favor, selecione uma opção para continuar.');
-                const itemKey = variation ? `${item.id}-${variation.name}` : item.id;
+                
+                let customAnswers = {};
+                let missingRequired = false;
+                try {
+                    const cfs = JSON.parse(item.customFields || '[]');
+                    cfs.forEach((cf, i) => {
+                        const val = document.getElementById(`cf-${i}`)?.value.trim();
+                        if (cf.required && !val) missingRequired = true;
+                        if (val) customAnswers[cf.name] = val;
+                    });
+                } catch(e) {}
+                if (missingRequired) return showAlert('Atenção', 'Por favor, preencha todos os campos obrigatórios (marcados com *).');
+                
+                const customAnswersJSON = Object.keys(customAnswers).length > 0 ? JSON.stringify(customAnswers) : null;
+                const itemKeyBase = variation ? `${item.id}-${variation.name}` : item.id;
+                const itemKey = customAnswersJSON ? `${itemKeyBase}-${btoa(encodeURIComponent(customAnswersJSON)).substring(0, 10)}` : itemKeyBase;
+                
                 let cart = getActiveCart();
                 const existing = cart.find(c => c.itemKey === itemKey);
                 if (existing) existing.quantity += state.currentQty;
@@ -1827,7 +1905,8 @@ try {
                     name: item.name,
                     variation: variation ? variation.name : null,
                     price: variation ? variation.price : item.price,
-                    quantity: state.currentQty
+                    quantity: state.currentQty,
+                    customFields: customAnswersJSON
                 });
                 setActiveCart(cart);
 
