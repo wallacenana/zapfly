@@ -130,7 +130,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="/cardapio/style.css?v=3.9">
+        <link rel="stylesheet" href="/cardapio/style.css?v=3.15">
         <style>
             :root {
                 --primary-color:
@@ -1248,23 +1248,6 @@ try {
                 const priceText = variations.length > 0 ? `A partir de R$ ${Math.min(...variations.map(v => v.price)).toFixed(2)}` : `R$ ${parseFloat(product.price).toFixed(2)}`;
                 const images = parseImages(product.image);
                 const imgAttr = isPriority ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"';
-
-                if (product.bannerUrl) {
-                    return `
-            <div class="featured-card banner" onclick="openItemDetail('${product.id}')">
-                <div class="featured-banner-media">
-                    <img src="${getImg(product.bannerUrl, 'full')}" alt="${product.name}" ${imgAttr}>
-                    <div class="featured-banner-gradient"></div>
-                </div>
-                <div class="featured-banner-content">
-                    <span class="featured-banner-badge">Destaque</span>
-                    <h3>${product.name}</h3>
-                    ${product.description ? `<p>${product.description}</p>` : ''}
-                    <div class="product-price">${priceText}</div>
-                </div>
-            </div>
-        `;
-                }
 
                 return `
         <div class="featured-card" onclick="openItemDetail('${product.id}')">

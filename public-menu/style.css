@@ -17,12 +17,14 @@ body.theme-order {
     --primary-color: #4a2c2a;
 }
 
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
-    font-family: Arial, Helvetica, sans-serif;
+    font-family: "Plus Jakarta Sans", sans-serif;
     line-height: 1.4;
 }
 
@@ -346,10 +348,10 @@ h3 {
     position: relative;
     background: white;
     width: 100%;
-    max-width: 600px;
+    max-width: 74%;
     margin: 0 auto;
     border-radius: 12px 12px 0 0;
-    max-height: 95vh;
+    max-height: 66vh;
     display: flex;
     flex-direction: column;
 }
@@ -357,8 +359,6 @@ h3 {
 .item-detail-content {
     padding-bottom: 0;
     overflow: hidden;
-    max-width: 74vw;
-    max-height: 66vh;
 }
 
 .close-modal-btn {
@@ -494,11 +494,6 @@ h3 {
 }
 
 /* Variations inside detail */
-.variation-section {
-    background: var(--bg-gray);
-    padding: 16px;
-}
-
 .variation-section h4 {
     font-size: 0.9rem;
     text-transform: none;
@@ -550,6 +545,11 @@ body.theme-order .var-option.selected {
     justify-content: space-between;
     gap: 12px;
     margin-bottom: 12px;
+    position: sticky;
+    top: 0;
+    background: #F9F9F9;
+    padding: 15px 14px;
+    z-index: 1;
 }
 
 .addon-group-header h4 {
@@ -961,7 +961,7 @@ body.theme-order .delivery-fee-badge {
     .modal-content {
         border-radius: 12px;
         height: auto;
-        max-height: 90vh;
+        max-height: 66vh;
     }
 
     .checkout-content {
@@ -1335,7 +1335,6 @@ body.theme-order .delivery-fee-badge {
 
 .featured-list {
     display: flex;
-    align-items: stretch;
     gap: 16px;
     overflow-x: auto;
     padding: 4px 4px 20px 4px;
@@ -1392,93 +1391,6 @@ body.theme-order .delivery-fee-badge {
     font-size: 0.8rem;
     font-weight: 700;
     color: var(--primary-color);
-}
-
-.featured-card.banner {
-    min-width: 320px;
-    width: 320px;
-    height: 180px;
-    position: relative;
-    border-radius: 16px;
-    overflow: hidden;
-    background: #0f172a;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18);
-}
-
-.featured-card.banner .featured-banner-media {
-    position: absolute;
-    inset: 0;
-}
-
-.featured-card.banner .featured-banner-media img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-}
-
-.featured-card.banner .featured-banner-gradient {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, rgba(3, 7, 18, 0.88) 0%, rgba(3, 7, 18, 0.46) 48%, rgba(3, 7, 18, 0.06) 100%);
-}
-
-.featured-card.banner .featured-banner-content {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding: 16px;
-    color: #fff;
-    z-index: 2;
-}
-
-.featured-banner-badge {
-    align-self: flex-start;
-    font-size: 10px;
-    font-weight: 900;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.16);
-    backdrop-filter: blur(6px);
-    margin-bottom: 8px;
-}
-
-.featured-card.banner .featured-banner-content h3 {
-    margin: 0 0 6px 0;
-    font-size: 1.05rem;
-    line-height: 1.15;
-    color: #fff;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-}
-
-.featured-card.banner .featured-banner-content p {
-    margin: 0 0 10px 0;
-    font-size: 0.82rem;
-    line-height: 1.35;
-    color: rgba(255, 255, 255, 0.86);
-    max-width: 90%;
-}
-
-.featured-card.banner .featured-banner-content .product-price {
-    color: #fff;
-    font-size: 0.86rem;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-}
-
-.featured-card.banner:active {
-    transform: scale(0.97);
-}
-
-@media (max-width: 768px) {
-    .featured-card.banner {
-        min-width: 84vw;
-        width: 84vw;
-        height: 160px;
-    }
 }
 
 /* Checkout Payment Methods */
