@@ -36,8 +36,23 @@ model User {
   seasonalCatalogs  SeasonalCatalog[]
   flows             Flow[]
   availableSlots    AvailableSlot[]
+  addonGroups       AddonGroup[]
 
   @@map("user")
+}
+
+model AddonGroup {
+  id          String   @id @default(uuid())
+  name        String
+  min         Int      @default(0)
+  max         Int      @default(1)
+  items       String   @db.Text
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@map("addon_group")
 }
 
 model AvailableSlot {
@@ -161,6 +176,7 @@ model Product {
   capacityCost    Int       @default(1)
   featured        Boolean   @default(false)
   displayOrder    Int       @default(0)
+  addonGroups     String?   @db.Text
   userId          String
   user            User      @relation(fields: [userId], references: [id])
   orders          Order[]

@@ -81,6 +81,10 @@ try {
     $stmt->execute([$store['id']]);
     $availableSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $stmt = $pdo->prepare("SELECT * FROM addon_group WHERE userId = ?");
+    $stmt->execute([$store['id']]);
+    $addonGroups = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
     // Build SSR payload
     $ssrData = [
         'businessName' => $businessName,
@@ -103,6 +107,7 @@ try {
         'seoDescription' => $store['seoDescription'] ?? '',
         'products' => $products,
         'categories' => $categories,
+        'addonGroups' => $addonGroups
     ];
 
     ?>
@@ -666,7 +671,9 @@ try {
                 paymentMethod: 'mercadopago',
                 allowCash: true,
                 withinDeliveryRadius: false,
+                withinDeliveryRadius: false,
                 availableSlots: [],
+                addonGroups: [],
                 currentCarouselIdx: 0,
                 previousOrders: [],
                 orderDetailsInfo: ''
@@ -753,6 +760,7 @@ try {
                     state.products = data.products || [];
                     state.categories = data.categories || [];
                     state.availableSlots = data.availableSlots || [];
+                    state.addonGroups = data.addonGroups || [];
                     state.loading = false;
 
                     // Remove Skeletons e mostra o conteúdo real instantaneamente
@@ -1340,7 +1348,7 @@ try {
                 <p>${item.description || ''}</p>
                 ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
             </div>
-            ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
+            ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price || 0})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price || 0).toFixed(2)}</div></div>`).join('')}</div>` : ''}
             ${(() => {
                 let cfHtml = '';
                 try {
@@ -1379,6 +1387,38 @@ try {
                 } catch(e) {}
                 return cfHtml;
             })()}
+            ${(() => {
+                let agHtml = '';
+                try {
+                    const groupIds = JSON.parse(item.addonGroups || '[]');
+                    const groups = (state.addonGroups || []).filter(g => groupIds.includes(g.id));
+                    if (groups.length > 0) {
+                        agHtml = groups.map((g, gi) => {
+                            const gItems = JSON.parse(g.items || '[]');
+                            const isRadio = g.max === 1;
+                            return `<div class="addon-group-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);" data-group-id="${g.id}" data-min="${g.min}" data-max="${g.max}">
+                                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px;">
+                                    <h4 style="font-weight: 700; font-size: 15px;">${g.name}</h4>
+                                    <span style="font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; background:${g.min > 0 ? '#fef2f2' : '#f3f4f6'}; color:${g.min > 0 ? '#dc2626' : '#6b7280'};">${g.min > 0 ? 'Obrigatório' : 'Opcional'} • Máx ${g.max}</span>
+                                </div>
+                                ${gItems.map((gItem, ii) => {
+                                    const inputId = `ag-${gi}-${ii}`;
+                                    const inputType = isRadio ? 'radio' : 'checkbox';
+                                    const inputName = `ag-group-${gi}`;
+                                    return `<label for="${inputId}" style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border:1px solid var(--border-color); border-radius:10px; margin-bottom:8px; cursor:pointer; transition: all 0.15s;" onclick="handleAddonSelect(event, '${g.id}', ${gi}, ${ii}, ${isRadio ? 'true' : 'false'}, ${parseFloat(gItem.price || 0)})">
+                                        <div style="display:flex; align-items:center; gap:10px;">
+                                            <input type="${inputType}" id="${inputId}" name="${inputName}" class="addon-input" data-group-id="${g.id}" data-item-name="${gItem.name.replace(/"/g, '&quot;')}" data-item-price="${parseFloat(gItem.price || 0)}" style="width:18px; height:18px; accent-color: var(--primary-color); cursor:pointer;" onclick="event.stopPropagation()">
+                                            <span style="font-size:14px;">${gItem.name}</span>
+                                        </div>
+                                        ${parseFloat(gItem.price || 0) > 0 ? `<span style="font-size:13px; font-weight:600; color: var(--primary-color);">+ R$ ${parseFloat(gItem.price).toFixed(2)}</span>` : ''}
+                                    </label>`;
+                                }).join('')}
+                            </div>`;
+                        }).join('');
+                    }
+                } catch(e) { console.error('Addon render error:', e); }
+                return agHtml;
+            })()}
             `;
                     updateDetailFooter();
                     lucide.createIcons();
@@ -1404,18 +1444,52 @@ try {
             }
 
             function selectVariation(name, price) {
-                state.currentVariation = {
-                    name,
-                    price
-                };
+                state.currentVariation = { name, price };
                 document.querySelectorAll('.var-option').forEach(el => el.classList.toggle('selected', el.querySelector('.var-label').innerText === name));
                 updateDetailFooter();
             }
 
+            function handleAddonSelect(event, groupId, gi, ii, isRadio, price) {
+                const inputId = `ag-${gi}-${ii}`;
+                const input = document.getElementById(inputId);
+                if (!input) return;
+
+                if (isRadio) {
+                    // Desmarca visuais do grupo
+                    document.querySelectorAll(`[data-group-id="${groupId}"].addon-input`).forEach(el => {
+                        el.checked = false;
+                        el.closest('label').style.borderColor = 'var(--border-color)';
+                        el.closest('label').style.background = '';
+                    });
+                    input.checked = true;
+                } else {
+                    input.checked = !input.checked;
+                }
+
+                // Aplica visual no label selecionado
+                input.closest('label').style.borderColor = input.checked ? 'var(--primary-color)' : 'var(--border-color)';
+                input.closest('label').style.background = input.checked ? 'var(--primary-color)08' : '';
+
+                updateDetailFooter();
+            }
+
+            function getSelectedAddons() {
+                const addons = [];
+                let addonTotal = 0;
+                document.querySelectorAll('.addon-input:checked').forEach(input => {
+                    const price = parseFloat(input.dataset.itemPrice || 0);
+                    addons.push({ groupId: input.dataset.groupId, name: input.dataset.itemName, price });
+                    addonTotal += price;
+                });
+                return { addons, addonTotal };
+            }
+
             function updateDetailFooter() {
-                const basePrice = state.currentVariation ? state.currentVariation.price : (state.currentItem?.price || 0);
+                const basePrice = state.currentVariation ? parseFloat(state.currentVariation.price || 0) : parseFloat(state.currentItem?.price || 0);
+                const { addonTotal } = getSelectedAddons();
+                const totalUnit = basePrice + addonTotal;
                 const priceEl = document.getElementById('add-btn-price');
-                if (priceEl) priceEl.innerText = `R$ ${(basePrice * state.currentQty).toFixed(2)}`;
+                if (priceEl) priceEl.innerText = `R$ ${(totalUnit * state.currentQty).toFixed(2)}`;
 
                 const qtyEl = document.getElementById('detail-qty');
                 if (qtyEl) qtyEl.innerText = state.currentQty;
@@ -1683,6 +1757,7 @@ try {
                                 <strong>${item.name}</strong>
                                 ${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}
                                 ${item.customFields ? (() => { try { const cfs = JSON.parse(item.customFields); return Object.entries(cfs).map(([k,v]) => '<p style="font-size:0.7rem;color:var(--text-gray);margin-top:2px;"><b>' + k + ':</b> ' + (v.startsWith('http') ? '<a href="'+v+'" target="_blank" style="color:var(--primary-color);">Ver Imagem</a>' : v) + '</p>').join(''); } catch(e){ return ''; } })() : ''}
+                                ${item.addons ? (() => { try { const ads = JSON.parse(item.addons); return ads.map(a => '<p style="font-size:0.7rem;color:var(--text-gray);margin-top:2px;">+ ' + a.name + (a.price > 0 ? ' (R$ ' + parseFloat(a.price).toFixed(2) + ')' : '') + '</p>').join(''); } catch(e){ return ''; } })() : ''}
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 16px;">
@@ -1930,6 +2005,7 @@ try {
                         <div style="margin-bottom: 8px;">
                             <p style="font-size: 0.9rem; margin-bottom: 0;">${item.quantity}x ${item.name} ${item.variation ? `(${item.variation})` : ''}</p>
                             ${item.customFields ? (() => { try { const cfs = JSON.parse(item.customFields); return Object.entries(cfs).map(([k,v]) => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">- ' + k + ': ' + (v.startsWith('http') ? 'Anexo' : v) + '</p>').join(''); } catch(e){ return ''; } })() : ''}
+                            ${item.addons ? (() => { try { const ads = JSON.parse(item.addons); return ads.map(a => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">+ ' + a.name + '</p>').join(''); } catch(e){ return ''; } })() : ''}
                         </div>
                     `).join('');
                 }
@@ -1944,6 +2020,7 @@ try {
                 const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
                 if (variations.length > 0 && !variation) return showAlert('Quase lá...', 'Por favor, selecione uma opção para continuar.');
                 
+                // Coleta custom fields (texto/imagem)
                 let customAnswers = {};
                 let missingRequired = false;
                 try {
@@ -1955,11 +2032,31 @@ try {
                     });
                 } catch(e) {}
                 if (missingRequired) return showAlert('Atenção', 'Por favor, preencha todos os campos obrigatórios (marcados com *).');
-                
+
+                // Valida grupos de adicionais obrigatórios
+                const groupIds = JSON.parse(item.addonGroups || '[]');
+                const groups = (state.addonGroups || []).filter(g => groupIds.includes(g.id));
+                for (const g of groups) {
+                    if (g.min > 0) {
+                        const checked = document.querySelectorAll(`.addon-input[data-group-id="${g.id}"]:checked`).length;
+                        if (checked < g.min) {
+                            return showAlert('Atenção', `Selecione pelo menos ${g.min} opção em "${g.name}".`);
+                        }
+                    }
+                }
+
+                // Coleta adicionais selecionados
+                const { addons, addonTotal } = getSelectedAddons();
+                const addonsJSON = addons.length > 0 ? JSON.stringify(addons) : null;
+
+                const basePrice = parseFloat(variation ? variation.price : item.price);
+                const finalUnitPrice = basePrice + addonTotal;
+
                 const customAnswersJSON = Object.keys(customAnswers).length > 0 ? JSON.stringify(customAnswers) : null;
+                const sigKey = (customAnswersJSON || '') + (addonsJSON || '');
                 const itemKeyBase = variation ? `${item.id}-${variation.name}` : item.id;
-                const itemKey = customAnswersJSON ? `${itemKeyBase}-${btoa(encodeURIComponent(customAnswersJSON)).substring(0, 10)}` : itemKeyBase;
-                
+                const itemKey = sigKey ? `${itemKeyBase}-${btoa(encodeURIComponent(sigKey)).substring(0, 12)}` : itemKeyBase;
+
                 let cart = getActiveCart();
                 const existing = cart.find(c => c.itemKey === itemKey);
                 if (existing) existing.quantity += state.currentQty;
@@ -1968,9 +2065,10 @@ try {
                     itemKey,
                     name: item.name,
                     variation: variation ? variation.name : null,
-                    price: variation ? variation.price : item.price,
+                    price: finalUnitPrice,
                     quantity: state.currentQty,
-                    customFields: customAnswersJSON
+                    customFields: customAnswersJSON,
+                    addons: addonsJSON
                 });
                 setActiveCart(cart);
 
@@ -2030,13 +2128,20 @@ try {
 
                 const formatItemName = (item) => {
                     let base = item.name + (item.variation ? ` (${item.variation})` : '');
+                    const extras = [];
+                    if (item.addons) {
+                        try {
+                            const ads = JSON.parse(item.addons);
+                            ads.forEach(a => extras.push(a.name));
+                        } catch(e) {}
+                    }
                     if (item.customFields) {
                         try {
                             const cfs = JSON.parse(item.customFields);
-                            const cfStrings = Object.entries(cfs).map(([k,v]) => `${k}: ${v.startsWith('http') ? 'Anexo' : v}`);
-                            if (cfStrings.length > 0) base += ` [${cfStrings.join(', ')}]`;
+                            Object.entries(cfs).forEach(([k,v]) => extras.push(`${k}: ${v.startsWith('http') ? 'Anexo' : v}`));
                         } catch(e) {}
                     }
+                    if (extras.length > 0) base += ` [${extras.join(', ')}]`;
                     return base;
                 };
 
