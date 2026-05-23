@@ -23,7 +23,7 @@ const MainLayout = () => {
   const menuItems = [
     { path: '/', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
     { path: '/chat', icon: <MessageCircle size={20} />, label: 'Chat' },
-    { path: '/inventory', icon: <Package size={20} />, label: 'Estoque' },
+    { path: '/estoque', icon: <Package size={20} />, label: 'Estoque' },
     { path: '/production', icon: <ClipboardList size={20} />, label: 'Produção' },
     { path: '/agenda', icon: <Calendar size={20} />, label: 'Agenda' },
     { path: '/flows', icon: <Zap size={20} />, label: 'Automação' },

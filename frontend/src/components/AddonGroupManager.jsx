@@ -309,7 +309,7 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
 
                 {isExpanded && (
                   <div style={{ padding: '0 20px 20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginTop: '18px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginTop: '18px' }}>
                       {items.length === 0 ? (
                         <div style={{
                           padding: '16px',
@@ -328,7 +328,7 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
                             justifyContent: 'space-between',
                             alignItems: 'center',
                             gap: '12px',
-                            padding: '14px 16px',
+                            padding: '16px 18px',
                             borderRadius: '12px',
                             border: '1px solid rgba(255,255,255,0.06)',
                             backgroundColor: 'rgba(255,255,255,0.03)'

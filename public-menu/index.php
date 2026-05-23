@@ -127,7 +127,7 @@ try {
         <link rel="preconnect" href="https://files.blinkvertex.com" crossorigin>
         <!-- SSR Data Hydration: inject all data up front, zero API roundtrip -->
         <script>window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;</script>
-        <link rel="stylesheet" href="/cardapio/style.css?v=2.8">
+        <link rel="stylesheet" href="/cardapio/style.css?v=3.2">
         <style>
             :root {
                 --primary-color:
@@ -1288,7 +1288,6 @@ try {
 
                 // Inicia com Skeleton
                 body.innerHTML = `
-        <button class="chevron-close-btn" onclick="closeWithAnimation('item-detail-modal')"><i data-lucide="chevron-down"></i></button>
         <div class="skeleton" style="width:100%; height:300px; border-radius:0;"></div>
         <div style="padding:20px;">
             <div class="skeleton" style="height:24px; width:70%; margin-bottom:10px;"></div>
@@ -1328,7 +1327,6 @@ try {
                     const images = parseImages(item.image);
 
                     body.innerHTML = `
-            <button class="chevron-close-btn" onclick="closeWithAnimation('item-detail-modal')" aria-label="Fechar Detalhes"><i data-lucide="chevron-down"></i></button>
             ${images.length > 0 ? `
                 <div class="carousel-container">
                     <div class="carousel-track" style="transform: translateX(0%)">
@@ -1395,24 +1393,29 @@ try {
                     if (groups.length > 0) {
                         agHtml = groups.map((g, gi) => {
                             const gItems = JSON.parse(g.items || '[]');
-                            const isRadio = g.max === 1;
-                            return `<div class="addon-group-section" style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border-color);" data-group-id="${g.id}" data-min="${g.min}" data-max="${g.max}">
-                                <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:12px;">
-                                    <h4 style="font-weight: 700; font-size: 15px;">${g.name}</h4>
-                                    <span style="font-size:11px; font-weight:600; padding:2px 8px; border-radius:20px; background:${g.min > 0 ? '#fef2f2' : '#f3f4f6'}; color:${g.min > 0 ? '#dc2626' : '#6b7280'};">${g.min > 0 ? 'Obrigatório' : 'Opcional'} • Máx ${g.max}</span>
+                            const maxSelections = Math.max(parseInt(g.max, 10) || 1, 1);
+                            return `<div class="variation-section addon-group-section" data-group-id="${g.id}" data-min="${g.min}" data-max="${g.max}">
+                                <div class="addon-group-header">
+                                    <h4>${g.name}</h4>
+                                    <span class="addon-group-badge ${g.min > 0 ? 'required' : 'optional'}">${g.min > 0 ? 'Obrigatório' : 'Opcional'} • Máx ${g.max}</span>
                                 </div>
+                                <div class="addon-options">
                                 ${gItems.map((gItem, ii) => {
                                     const inputId = `ag-${gi}-${ii}`;
-                                    const inputType = isRadio ? 'radio' : 'checkbox';
                                     const inputName = `ag-group-${gi}`;
-                                    return `<label for="${inputId}" style="display:flex; align-items:center; justify-content:space-between; padding:10px 12px; border:1px solid var(--border-color); border-radius:10px; margin-bottom:8px; cursor:pointer; transition: all 0.15s;" onclick="handleAddonSelect(event, '${g.id}', ${gi}, ${ii}, ${isRadio ? 'true' : 'false'}, ${parseFloat(gItem.price || 0)})">
-                                        <div style="display:flex; align-items:center; gap:10px;">
-                                            <input type="${inputType}" id="${inputId}" name="${inputName}" class="addon-input" data-group-id="${g.id}" data-item-name="${gItem.name.replace(/"/g, '&quot;')}" data-item-price="${parseFloat(gItem.price || 0)}" style="width:18px; height:18px; accent-color: var(--primary-color); cursor:pointer;" onclick="event.stopPropagation()">
-                                            <span style="font-size:14px;">${gItem.name}</span>
+                                    const itemAccent = String(gItem.color || gItem.accent || gItem.accentColor || g.color || g.accentColor || 'var(--primary-color)').replace(/"/g, '&quot;');
+                                    return `<label for="${inputId}" class="var-option addon-option" style="--addon-accent: ${itemAccent};" onclick="handleAddonSelect(event, '${g.id}', ${maxSelections}, ${gi}, ${ii}, ${parseFloat(gItem.price || 0)})">
+                                        <div class="addon-option-main">
+                                            <span class="var-label">${gItem.name}</span>
                                         </div>
-                                        ${parseFloat(gItem.price || 0) > 0 ? `<span style="font-size:13px; font-weight:600; color: var(--primary-color);">+ R$ ${parseFloat(gItem.price).toFixed(2)}</span>` : ''}
+                                        <div class="addon-option-meta">
+                                            ${parseFloat(gItem.price || 0) > 0 ? `<span class="var-price addon-option-price">+ R$ ${parseFloat(gItem.price).toFixed(2)}</span>` : ''}
+                                            <span class="addon-option-mark" aria-hidden="true"></span>
+                                        </div>
+                                        <input type="checkbox" id="${inputId}" name="${inputName}" class="addon-input" data-group-id="${g.id}" data-max="${maxSelections}" data-item-name="${gItem.name.replace(/"/g, '&quot;')}" data-item-price="${parseFloat(gItem.price || 0)}">
                                     </label>`;
                                 }).join('')}
+                                </div>
                             </div>`;
                         }).join('');
                     }
@@ -1449,27 +1452,68 @@ try {
                 updateDetailFooter();
             }
 
-            function handleAddonSelect(event, groupId, gi, ii, isRadio, price) {
+            function syncAddonGroupState(groupSection) {
+                if (!groupSection) return;
+                const maxAllowed = Math.max(parseInt(groupSection.dataset.max || '1', 10) || 1, 1);
+                const inputs = Array.from(groupSection.querySelectorAll('.addon-input'));
+                const selectedCount = inputs.filter(input => input.checked).length;
+
+                inputs.forEach(input => {
+                    const label = input.closest('label');
+                    const isSelected = input.checked;
+                    const isDisabled = !isSelected && selectedCount >= maxAllowed;
+
+                    input.disabled = isDisabled;
+
+                    if (label) {
+                        label.classList.toggle('selected', isSelected);
+                        label.classList.toggle('disabled', isDisabled);
+                    }
+                });
+            }
+
+            function handleAddonSelect(event, groupId, maxSelections, gi, ii, price) {
+                event.preventDefault();
                 const inputId = `ag-${gi}-${ii}`;
                 const input = document.getElementById(inputId);
                 if (!input) return;
+                const label = input.closest('label');
+                const groupSection = label?.closest('.addon-group-section');
+                const maxAllowed = Math.max(parseInt(maxSelections, 10) || 1, 1);
+                const willSelect = !input.checked;
 
-                if (isRadio) {
-                    // Desmarca visuais do grupo
-                    document.querySelectorAll(`[data-group-id="${groupId}"].addon-input`).forEach(el => {
-                        el.checked = false;
-                        el.closest('label').style.borderColor = 'var(--border-color)';
-                        el.closest('label').style.background = '';
-                    });
-                    input.checked = true;
-                } else {
-                    input.checked = !input.checked;
+                if (input.disabled && !input.checked) {
+                    return;
                 }
 
-                // Aplica visual no label selecionado
-                input.closest('label').style.borderColor = input.checked ? 'var(--primary-color)' : 'var(--border-color)';
-                input.closest('label').style.background = input.checked ? 'var(--primary-color)08' : '';
+                if (maxAllowed <= 1) {
+                    const minRequired = Math.max(parseInt(groupSection?.dataset.min || '0', 10) || 0, 0);
+                    const isCurrentlySelected = input.checked;
 
+                    // Desmarca visuais do grupo
+                    (groupSection ? groupSection.querySelectorAll('.addon-input') : document.querySelectorAll(`[data-group-id="${groupId}"].addon-input`)).forEach(el => {
+                        el.checked = false;
+                        const option = el.closest('label');
+                        if (option) option.classList.remove('selected');
+                    });
+
+                    if (isCurrentlySelected && minRequired === 0) {
+                        syncAddonGroupState(groupSection);
+                        updateDetailFooter();
+                        return;
+                    }
+
+                    input.checked = true;
+                } else {
+                    const selectedCount = groupSection ? groupSection.querySelectorAll('.addon-input:checked').length : 0;
+                    if (willSelect && maxAllowed > 0 && selectedCount >= maxAllowed) {
+                        syncAddonGroupState(groupSection);
+                        return;
+                    }
+                    input.checked = willSelect;
+                }
+
+                syncAddonGroupState(groupSection);
                 updateDetailFooter();
             }
 
@@ -2037,11 +2081,16 @@ try {
                 const groupIds = JSON.parse(item.addonGroups || '[]');
                 const groups = (state.addonGroups || []).filter(g => groupIds.includes(g.id));
                 for (const g of groups) {
+                    const maxAllowed = Math.max(parseInt(g.max, 10) || 1, 1);
                     if (g.min > 0) {
                         const checked = document.querySelectorAll(`.addon-input[data-group-id="${g.id}"]:checked`).length;
                         if (checked < g.min) {
                             return showAlert('Atenção', `Selecione pelo menos ${g.min} opção em "${g.name}".`);
                         }
+                    }
+                    const checked = document.querySelectorAll(`.addon-input[data-group-id="${g.id}"]:checked`).length;
+                    if (checked > maxAllowed) {
+                        return showAlert('Atenção', `O grupo "${g.name}" permite no máximo ${maxAllowed} opção(ões).`);
                     }
                 }
 

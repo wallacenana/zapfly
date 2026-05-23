@@ -46,7 +46,8 @@ function AppRoutes() {
       }>
         <Route index element={<Dashboard />} />
         <Route path="dashboard" element={<Dashboard />} />
-        <Route path="inventory" element={<Estoque />} />
+        <Route path="estoque" element={<Estoque />} />
+        <Route path="inventory" element={<Navigate to="/estoque" replace />} />
         <Route path="production" element={<Production />} />
         <Route path="agenda" element={<Agenda />} />
         <Route path="connections" element={<Connections />} />

@@ -204,7 +204,7 @@ app.use('/orders', (req, res, next) => {
 
 // Redirecionamento de Sucesso do Google Agenda ou Raiz
 app.get('/', (req, res) => {
-    // Se vier do Google Agenda, volta para as configuraﾃｧﾃｵes
+    // Se vier do Google Agenda, volta para as configurações
     if (req.query.gcal_success) {
         return res.send(`
             <script>
@@ -530,7 +530,7 @@ app.get('/auth/google/status', authenticate, async (req, res) => {
     res.json({ connected, calendarId: settings?.gcalCalendarId, hasCredentials });
 });
 
-// Lista os calendários disponﾃｭveis na conta conectada
+// Lista os calendários disponíveis na conta conectada
 app.get('/auth/google/calendars', authenticate, async (req, res) => {
     try {
         const settings = await getSettings(req.user.id);
@@ -547,7 +547,7 @@ app.get('/auth/google/calendars', authenticate, async (req, res) => {
         res.json(calendars);
     } catch (e) {
         if (e.message.includes('invalid_grant')) {
-            console.error('[GCal Error] Conexão expirada ou revogada. Por favor, reconecte sua conta nas Configuraﾃｧﾃｵes.');
+            console.error('[GCal Error] Conexão expirada ou revogada. Por favor, reconecte sua conta nas Configurações.');
         } else {
             console.error('[GCal Error] Falha ao listar calendários:', e.message);
         }
@@ -605,7 +605,7 @@ module.exports = { getSocket: (id) => sessions.get(id) };
 
 
 
-// Controle de reconexão com backoff por instﾃ｢ncia
+// Controle de reconexão com backoff por instância
 const reconnectAttempts = {};
 
 let cachedWAVersion = null;
@@ -756,14 +756,14 @@ async function initInstance(instanceId) {
             msg.message?.viewOnceMessage);
 
         if (!text && isMedia) {
-            // console.log("[DEBUG MEDIA] Mensagem de mﾃｭdia detectada. Estrutura:", JSON.stringify(msg.message, null, 2));
+            // console.log("[DEBUG MEDIA] Mensagem de mídia detectada. Estrutura:", JSON.stringify(msg.message, null, 2));
         }
 
         if (text || isMedia) {
-            // Se for mﾃｭdia sem texto, define um placeholder para o banco de dados
+            // Se for mídia sem texto, define um placeholder para o banco de dados
             if (!text && isMedia) {
                 if (msg.message?.imageMessage) text = "�胴 [Imagem]";
-                else if (msg.message?.videoMessage) text = "�磁 [Vﾃｭdeo]";
+                else if (msg.message?.videoMessage) text = "�磁 [Vídeo]";
                 else if (msg.message?.audioMessage) text = "�痔 [ﾃ「dio]";
                 else if (msg.message?.documentMessage) text = "�塘 [Documento]";
             }
@@ -865,7 +865,7 @@ async function initInstance(instanceId) {
                         }
                     }
 
-                    // Chama o agente especﾃｭfico para o administrador passando imagens se houver
+                    // Chama o agente específico para o administrador passando imagens se houver
                     await handleAdminAgent(sock, instanceId, jid, text, settings, adminImages);
                     return;
                 }
@@ -1006,7 +1006,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "check_availability",
-                                            description: "Verifica se há horários disponﾃｭveis para agendamento em uma data e hora especﾃｭfica.",
+                                            description: "Verifica se há horários disponíveis para agendamento em uma data e hora específica.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
@@ -1039,9 +1039,9 @@ async function initInstance(instanceId) {
                                                     deliveryFee: { type: "number", description: "Valor da entrega calculado por get_delivery_fee" },
                                                     massa: { type: "string", description: "Sabor da massa escolhida" },
                                                     recheio: { type: "string", description: "Sabor do recheio escolhido" },
-                                                    topo: { type: "string", description: "Informaﾃｧﾃｵes sobre o topo do bolo" },
+                                                    topo: { type: "string", description: "Informações sobre o topo do bolo" },
                                                     carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Produtos ADICIONAIS. IMPORTANTE: Para Kits/Combos, NÃO coloque aqui os itens que já fazem parte do kit, senão o cliente será cobrado em dobro. Use apenas para itens extras comprados ﾃ� parte." },
-                                                    notes: { type: "string", description: "Outras observaﾃｧﾃｵes gerais" }
+                                                    notes: { type: "string", description: "Outras observações gerais" }
                                                 },
                                                 required: ["product", "paymentMethod"],
                                             },
@@ -1051,18 +1051,18 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "update_order",
-                                            description: "Atualiza informaﾃｧﾃｵes de um pedido ou agendamento já existente. Sﾃｳ use se o cliente pedir para corrigir algo.",
+                                            description: "Atualiza informações de um pedido ou agendamento já existente. Sﾃｳ use se o cliente pedir para corrigir algo.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
-                                                    orderId: { type: "string", description: "Cﾃｳdigo de referﾃｪncia curto do pedido (ex: FJBIR)" },
+                                                    orderId: { type: "string", description: "Cﾃｳdigo de referência curto do pedido (ex: FJBIR)" },
                                                     product: { type: "string", description: "Novo produto (opcional)" },
                                                     quantity: { type: "string", description: "Novo peso ou quantidade (opcional)" },
                                                     scheduledDate: { type: "string", description: "Nova data YYYY-MM-DD (opcional)" },
                                                     scheduledTime: { type: "string", description: "Novo horário HH:MM (opcional)" },
-                                                    notes: { type: "string", description: "Novas observaﾃｧﾃｵes ou mudanﾃｧas nos sabores (opcional)" },
+                                                    notes: { type: "string", description: "Novas observações ou mudanﾃｧas nos sabores (opcional)" },
                                                     carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Nova lista completa de produtos extras." },
-                                                    totalValue: { type: "number", description: "Novo valor total do pedido apﾃｳs as alteraﾃｧﾃｵes (opcional)" }
+                                                    totalValue: { type: "number", description: "Novo valor total do pedido apﾃｳs as alterações (opcional)" }
                                                 },
                                                 required: ["orderId"]
                                             }
@@ -1080,7 +1080,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "get_store_location",
-                                            description: "Retorna o endereﾃｧo fﾃｭsico da loja e o link do Google Maps para retirada.",
+                                            description: "Retorna o endereﾃｧo físico da loja e o link do Google Maps para retirada.",
                                             parameters: { type: "object", properties: {} }
                                         }
                                     },
@@ -1088,7 +1088,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "get_delivery_catalog",
-                                            description: "OBRIGATÓIO: Chame SEMPRE que o cliente perguntar o que tem para hoje, pronta entrega, ou pedir opﾃｧﾃｵes imediatas. Proibido listar produtos manualmente, quando estiver fechado e o cliente pedir informaﾃｧﾃｵes \"sobre o que tem hoje\".",
+                                            description: "OBRIGATÓIO: Chame SEMPRE que o cliente perguntar o que tem para hoje, pronta entrega, ou pedir opções imediatas. Proibido listar produtos manualmente, quando estiver fechado e o cliente pedir informações \"sobre o que tem hoje\".",
                                             parameters: { type: "object", properties: {} }
                                         }
                                     },
@@ -1118,7 +1118,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "get_marketing_media",
-                                            description: "Busca na biblioteca de marketing imagens de produtos ou promoﾃｧﾃｵes para mostrar ao cliente.",
+                                            description: "Busca na biblioteca de marketing imagens de produtos ou promoções para mostrar ao cliente.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
@@ -1131,7 +1131,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "send_marketing_media",
-                                            description: "Envia uma imagem especﾃｭfica da biblioteca de marketing para o cliente.",
+                                            description: "Envia uma imagem específica da biblioteca de marketing para o cliente.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
@@ -1171,15 +1171,15 @@ async function initInstance(instanceId) {
                                         : (lastUserMsgObj?.content || '');
                                     const lastUserMsg = lastUserMsgContent.toLowerCase();
 
-                                    const isDeliveryRequest = /card[aá]pio|o que tem|pronta entrega|o que voc[eﾃｪ] tem|tem hoje|tem pra hoje|disponﾃｭvel|disponivel|preﾃｧo|preco|o que vende|possibilidades|opﾃｧﾃｵes|opcoes/i.test(lastUserMsg);
+                                    const isDeliveryRequest = /card[aá]pio|o que tem|pronta entrega|o que voc[eê] tem|tem hoje|tem pra hoje|disponível|disponivel|preﾃｧo|preco|o que vende|possibilidades|opções|opcoes/i.test(lastUserMsg);
                                     const isOrderRequest = /encomenda|bolo de festa|personalizado|encomendar|quero encomendar/i.test(lastUserMsg);
 
                                     let forcedToolChoice = "auto";
 
                                     if (statusLoja.includes("FECHADA")) {
-                                        // Detecta se ﾃｩ um "SIM" genﾃｩrico ou se já ﾃｩ o nome de um produto
-                                        const isGenericAcceptance = /^(sim|quero|pode|manda|veja|vﾃｪ|ok|agendar|amanhã|pode ser|com certeza|claro|uhum)$/i.test(lastUserMsg.trim());
-                                        const isAskingOptions = /o que tem|opﾃｧﾃｵes|cardapio|catalogo|vﾃｪ ai/i.test(combinedText);
+                                        // Detecta se é um "SIM" genérico ou se já é o nome de um produto
+                                        const isGenericAcceptance = /^(sim|quero|pode|manda|veja|vê|ok|agendar|amanhã|pode ser|com certeza|claro|uhum)$/i.test(lastUserMsg.trim());
+                                        const isAskingOptions = /o que tem|opções|cardapio|catalogo|vê ai/i.test(combinedText);
 
                                         if (isGenericAcceptance || isAskingOptions) {
                                             forcedToolChoice = { type: "function", function: { name: "get_delivery_catalog" } };
@@ -1212,13 +1212,13 @@ async function initInstance(instanceId) {
                                         const match = initialAIText.match(/\[ANALISE: (.*?)\]/s);
                                         if (match) {
                                             const analysisContent = match[1];
-                                            console.log(`[AI Memory] Salvando análise tﾃｩcnica no banco...`);
+                                            console.log(`[AI Memory] Salvando análise técnica no banco...`);
                                             await prisma.chat.update({
                                                 where: { jid_instanceId: { jid, instanceId } },
                                                 data: { lastPixAnalysis: analysisContent }
                                             }).catch(e => console.error("Erro ao salvar memﾃｳria AI:", e));
 
-                                            // Remove o bloco tﾃｩcnico do texto que o cliente verá
+                                            // Remove o bloco técnico do texto que o cliente verá
                                             initialAIText = initialAIText.replace(/\[ANALISE: .*?\]/s, '').trim();
                                             responseMessage.content = initialAIText;
                                         }
@@ -1420,7 +1420,7 @@ async function initInstance(instanceId) {
                                             else if (functionName === "get_store_location") {
                                                 result = {
                                                     address: settings?.businessAddress || "Endereﾃｧo não configurado.",
-                                                    locationLink: settings?.businessLocation || "Link não disponﾃｭvel."
+                                                    locationLink: settings?.businessLocation || "Link não disponível."
                                                 };
                                             }
                                             else if (functionName === "solicitar_cancelamento") {
@@ -1537,7 +1537,7 @@ async function initInstance(instanceId) {
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 1000));
                                             await sock.sendPresenceUpdate('paused', jid);
-                                            await sock.sendMessage(jid, { text: isDelivery ? 'Hoje teremos os seguintes produtos de pronta entrega:' : 'Vou te mostrar nossas opﾃｧﾃｵes maravilhosas de bolos de encomenda:' });
+                                            await sock.sendMessage(jid, { text: isDelivery ? 'Hoje teremos os seguintes produtos de pronta entrega:' : 'Vou te mostrar nossas opções maravilhosas de bolos de encomenda:' });
 
                                             // Balão 2: Catálogo
                                             await sock.sendPresenceUpdate('composing', jid);
@@ -1549,7 +1549,7 @@ async function initInstance(instanceId) {
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 1200));
                                             await sock.sendPresenceUpdate('paused', jid);
-                                            await sock.sendMessage(jid, { text: isDelivery ? 'Qual desses posso separar para vocﾃｪ? ��' : 'Qual destes mais te encantou? Posso te ajudar a escolher o tamanho ideal para sua festa! ��笨ｨ' });
+                                            await sock.sendMessage(jid, { text: isDelivery ? 'Qual desses posso separar para você? ��' : 'Qual destes mais te encantou? Posso te ajudar a escolher o tamanho ideal para sua festa! ��笨ｨ' });
 
                                             return; // FIM IMEDIATO
                                         }
@@ -1564,8 +1564,8 @@ async function initInstance(instanceId) {
 
                                         // Se houver um catálogo pendente, vamos dividir a resposta da IA em Intro e CTA usando o separador ---
                                         if (pendingCatalogMessage) {
-                                            let introText = "Temos essas delﾃｭcias:";
-                                            let ctaText = "Qual desses posso separar para vocﾃｪ? ��";
+                                            let introText = "Temos essas delícias:";
+                                            let ctaText = "Qual desses posso separar para você? ��";
 
                                             if (aiFinalText.includes('---')) {
                                                 const parts = aiFinalText.split('---');
@@ -1610,7 +1610,7 @@ async function initInstance(instanceId) {
                                     replyText = replyText.replace(/\*/g, ''); // Remove negrito/itálico
                                     replyText = replyText.replace(/#/g, '');  // Remove hashtags
                                     replyText = replyText.replace(/窶｢/g, '-'); // Troca bullet por traﾃｧo
-                                    replyText = replyText.replace(/ﾂｷ/g, '-'); // Troca bullet mﾃｩdio por traﾃｧo
+                                    replyText = replyText.replace(/ﾂｷ/g, '-'); // Troca bullet médio por traﾃｧo
                                     replyText = replyText.replace(/ﾂｷ/g, '-'); // Repetindo para garantir
                                     replyText = replyText.replace(/_/g, '');  // Remove underlines
                                     replyText = replyText.replace(/`/g, '');  // Remove backticks
@@ -1639,7 +1639,7 @@ async function initInstance(instanceId) {
 
                                 // 2ﾂｪ MENSAGEM: CARDﾃ￣IO (SISTEMA)
                                 if (pendingCatalogMessage) {
-                                    // Pausa mﾃｭnima para respiro
+                                    // Pausa mínima para respiro
                                     await new Promise(resolve => setTimeout(resolve, 500));
 
                                     // Digitaﾃｧão rápida para o catálogo
@@ -1652,12 +1652,12 @@ async function initInstance(instanceId) {
 
                                     // 3ﾂｪ MENSAGEM: CTA DA LILY (DINﾃ�ICO)
                                     if (pendingCatalogCTA) {
-                                        // Pausa mﾃｭnima para o CTA
+                                        // Pausa mínima para o CTA
                                         await new Promise(resolve => setTimeout(resolve, 800));
 
                                         const ctaPrompt = pendingCatalogCTA === "delivery"
-                                            ? "O cardápio de hoje foi enviado. Agora, como Lily (vendedora sutil e ﾃｳtima), envie UM CTA final (1 frase) perfeito para fechar a venda. Seja natural e direta, sem formalidades. Ex: 'Dﾃｪ uma olhadinha nas opﾃｧﾃｵes e me diz qual dessas posso separar para vocﾃｪ?'"
-                                            : "O cardápio de encomendas foi enviado. Agora, como Lily, envie UM CTA final (1 frase) humano e simpático para entender o desejo do cliente. Ex: 'Qual dessas combina mais com o que vocﾃｪ está imaginando?'";
+                                            ? "O cardápio de hoje foi enviado. Agora, como Lily (vendedora sutil e ﾃｳtima), envie UM CTA final (1 frase) perfeito para fechar a venda. Seja natural e direta, sem formalidades. Ex: 'Dê uma olhadinha nas opções e me diz qual dessas posso separar para você?'"
+                                            : "O cardápio de encomendas foi enviado. Agora, como Lily, envie UM CTA final (1 frase) humano e simpático para entender o desejo do cliente. Ex: 'Qual dessas combina mais com o que você está imaginando?'";
                                         try {
                                             const ctaResponse = await ai.chat.completions.create({
                                                 model: MODEL_MAP[settings?.activeModel] || 'gpt-4o',
@@ -1707,7 +1707,7 @@ async function initInstance(instanceId) {
                     }
                 }, 4000); // 4 SEGUNDOS DE ESPERA (Otimizado para UX humana)
             } catch (e) {
-                console.error('Erro na persistﾃｪncia/AI:', e.message);
+                console.error('Erro na persistência/AI:', e.message);
             }
         }
         io.emit('new_message', { instanceId, message: msg });
@@ -1780,15 +1780,15 @@ async function initInstance(instanceId) {
                 const attempts = reconnectAttempts[instanceId] || 0;
                 const delay = Math.min(1000 * Math.pow(2, attempts), 60000); // max 60s
                 reconnectAttempts[instanceId] = attempts + 1;
-                console.log(`[Baileys] Instﾃ｢ncia ${instanceId} reconectando em ${delay / 1000}s (tentativa ${attempts + 1})...`);
+                console.log(`[Baileys] Instância ${instanceId} reconectando em ${delay / 1000}s (tentativa ${attempts + 1})...`);
                 setTimeout(() => initInstance(instanceId), delay);
             } else {
                 // Deslogado ou remoﾃｧão manual 窶� limpa contador de tentativas
                 delete reconnectAttempts[instanceId];
                 if (manualRemoval) {
-                    console.log(`[Baileys] Instﾃ｢ncia ${instanceId} removida manualmente. Ignorando auto-reconexão.`);
+                    console.log(`[Baileys] Instância ${instanceId} removida manualmente. Ignorando auto-reconexão.`);
                 } else {
-                    console.log(`[Baileys] Instﾃ｢ncia ${instanceId} deslogada. Não haverá reconexão automática.`);
+                    console.log(`[Baileys] Instância ${instanceId} deslogada. Não haverá reconexão automática.`);
                 }
             }
         }
@@ -1824,12 +1824,12 @@ app.post('/instances/:id/ai-test', async (req, res) => {
 
         const kb = JSON.parse(knowledge || '[]');
         const kbContext = kb.length > 0
-            ? "\n\nUse as seguintes informaﾃｧﾃｵes especﾃｭficas da empresa para responder se relevante:\n" +
+            ? "\n\nUse as seguintes informações específicas da empresa para responder se relevante:\n" +
             kb.map(k => `Pergunta: ${k.q}\nResposta: ${k.a}`).join('\n---\n')
             : "";
 
         const messages = [
-            { role: 'system', content: (botPrompt || 'Vocﾃｪ ﾃｩ um assistente prestativo.') + kbContext },
+            { role: 'system', content: (botPrompt || 'Você é um assistente prestativo.') + kbContext },
             { role: 'user', content: question }
         ];
 
@@ -1932,7 +1932,7 @@ app.post('/config/keys', authenticate, async (req, res) => {
         allowCashOnDelivery: allowCashOnDelivery !== undefined ? !!allowCashOnDelivery : (currentConfig?.allowCashOnDelivery ?? true)
     };
 
-    console.log(`[Config Save] Salvando configuraﾃｧﾃｵes do usuário ${req.user.id}...`);
+    console.log(`[Config Save] Salvando configurações do usuário ${req.user.id}...`);
 
     const config = await prisma.setting.upsert({
         where: { userId: req.user.id },
@@ -1941,7 +1941,7 @@ app.post('/config/keys', authenticate, async (req, res) => {
     });
 
     openaiInstance = null;
-    invalidateSettingsCache(req.user.id); // forﾃｧa reload das configuraﾃｧﾃｵes no prﾃｳximo uso
+    invalidateSettingsCache(req.user.id); // forﾃｧa reload das configurações no prﾃｳximo uso
     res.json(config);
 });
 
@@ -2018,7 +2018,7 @@ app.post('/instances/:id/logout', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
     const sock = sessions.get(id);
     if (sock) {
@@ -2041,9 +2041,9 @@ app.post('/instances/:id/restart', authenticate, async (req, res) => {
 
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
-        console.log(`[Restart] Reiniciando instﾃ｢ncia ${id} solicitada por ${req.user.id}`);
+        console.log(`[Restart] Reiniciando instância ${id} solicitada por ${req.user.id}`);
 
         const sock = sessions.get(id);
         if (sock) {
@@ -2070,7 +2070,7 @@ app.delete('/instances/:id', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
     const sock = sessions.get(id);
     if (sock) {
@@ -2086,7 +2086,7 @@ app.delete('/instances/:id', authenticate, async (req, res) => {
         await prisma.message.deleteMany({ where: { instanceId: id } });
         await prisma.chat.deleteMany({ where: { instanceId: id } });
         await prisma.flowState.deleteMany({ where: { instanceId: id } });
-    } catch (e) { console.error('Erro ao deletar filhos da instﾃ｢ncia:', e.message) }
+    } catch (e) { console.error('Erro ao deletar filhos da instância:', e.message) }
 
     await prisma.instance.delete({ where: { id } });
     res.json({ success: true });
@@ -2095,7 +2095,7 @@ app.delete('/instances/:id', authenticate, async (req, res) => {
 app.get('/instances/:id/chats', authenticate, async (req, res) => {
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id: req.params.id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
     const skip = parseInt(req.query.skip) || 0;
     const take = parseInt(req.query.take) || 40;
@@ -2136,7 +2136,7 @@ app.patch('/instances/:id/chats/:jid', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
     const chat = await prisma.chat.update({
         where: { jid_instanceId: { jid, instanceId: id } },
@@ -2151,9 +2151,9 @@ app.get('/instances/:id/messages/:jid', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
-    // Carrega apenas as ﾃｺltimas 20 mensagens para manter o carregamento instantﾃ｢neo
+    // Carrega apenas as ﾃｺltimas 20 mensagens para manter o carregamento instantâneo
     let messages = await prisma.message.findMany({
         where: { instanceId: id, jid },
         orderBy: { timestamp: 'desc' },
@@ -2185,7 +2185,7 @@ app.get('/instances/:id/profile-pic/:jid', authenticate, async (req, res) => {
 
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
         const sock = sessions.get(id);
         if (!sock) return res.status(404).json({ error: 'Sessão não encontrada' });
@@ -2208,10 +2208,10 @@ app.post('/instances/:id/messages/delete', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
     const sock = sessions.get(id);
-    if (!sock) return res.status(404).json({ error: 'Instﾃ｢ncia não conectada' });
+    if (!sock) return res.status(404).json({ error: 'Instância não conectada' });
 
     try {
         if (forEveryone && fromMe) {
@@ -2235,10 +2235,10 @@ app.post('/instances/:id/chats/read', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
     const sock = sessions.get(id);
-    if (!sock) return res.status(404).json({ error: 'Instﾃ｢ncia não conectada' });
+    if (!sock) return res.status(404).json({ error: 'Instância não conectada' });
 
     try {
         // Emite o check azul no WhatsApp
@@ -2261,7 +2261,7 @@ app.patch('/instances/:id/chats/:jid/unread', authenticate, async (req, res) => 
     try {
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
         await prisma.chat.updateMany({
             where: { instanceId: id, jid },
@@ -2280,7 +2280,7 @@ app.delete('/instances/:id/chats/:jid', authenticate, async (req, res) => {
     try {
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
         // Remove do banco local as mensagens, o chat e o ESTADO DO FLUXO
         await prisma.message.deleteMany({ where: { instanceId: id, jid } });
@@ -2302,7 +2302,7 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
 
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'Instﾃ｢ncia não encontrada' });
+        if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
 
         let { jid, text } = req.body;
         const sock = sessions.get(id);

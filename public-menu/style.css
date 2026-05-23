@@ -412,11 +412,12 @@ h3 {
 }
 
 .variation-section h4 {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    color: var(--text-gray);
+    font-size: 0.9rem;
+    text-transform: none;
+    color: var(--text-black);
     margin-bottom: 12px;
-    letter-spacing: 0.05em;
+    letter-spacing: 0;
+    font-weight: 700;
 }
 
 .var-option {
@@ -448,6 +449,154 @@ body.theme-order .var-option.selected {
 .var-price {
     font-size: 0.85rem;
     color: var(--text-gray);
+}
+
+/* Addons / Complements inside detail */
+.addon-group-section {
+    margin-top: 16px;
+}
+
+.addon-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.addon-group-header h4 {
+    margin: 0;
+}
+
+.addon-group-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+}
+
+.addon-group-badge.required {
+    background: #fef2f2;
+    color: #dc2626;
+}
+
+.addon-group-badge.optional {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+.addon-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.addon-option {
+    margin-bottom: 0;
+    position: relative;
+    transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.addon-option:hover {
+    transform: translateY(-1px);
+}
+
+.addon-option.selected {
+    border-color: var(--addon-accent, var(--primary-color));
+    background: #ffffff;
+    background: color-mix(in srgb, var(--addon-accent, var(--primary-color)) 7%, white);
+}
+
+.addon-option.disabled {
+    opacity: 0.48;
+    cursor: not-allowed;
+    transform: none;
+    background: #fafafa;
+    border-color: #ece9e8;
+}
+
+.addon-option.disabled:hover {
+    transform: none;
+}
+
+.addon-option.disabled .var-label,
+.addon-option.disabled .var-price {
+    color: #a8a29e;
+}
+
+.addon-option.disabled .addon-option-mark {
+    border-color: #d6d3d1;
+    background: #f8fafc;
+    box-shadow: none;
+}
+
+.addon-option-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+
+.addon-option-meta {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.addon-input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+}
+
+.addon-option-price {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.addon-option-mark {
+    width: 20px;
+    height: 20px;
+    border-radius: 6px;
+    border: 2px solid #d1d5db;
+    background: #ffffff;
+    flex: 0 0 auto;
+    position: relative;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.addon-option-mark::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid #ffffff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg) scale(0.85);
+    opacity: 0;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.addon-option.selected .addon-option-mark {
+    border-color: var(--addon-accent, var(--primary-color));
+    background: var(--addon-accent, var(--primary-color));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--addon-accent, var(--primary-color)) 18%, transparent);
+}
+
+.addon-option.selected .addon-option-mark::after {
+    opacity: 1;
+    transform: rotate(45deg) scale(1);
 }
 
 /* Sticky Modal Footer */
