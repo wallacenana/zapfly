@@ -1346,7 +1346,7 @@ try {
             <div class="item-main-info">
                 <h2>${item.name}</h2>
                 <p>${item.description || ''}</p>
-                ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
+                ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price || 0).toFixed(2)}</div>` : ''}
             </div>
             ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price || 0})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price || 0).toFixed(2)}</div></div>`).join('')}</div>` : ''}
             ${(() => {
@@ -2049,7 +2049,7 @@ try {
                 const { addons, addonTotal } = getSelectedAddons();
                 const addonsJSON = addons.length > 0 ? JSON.stringify(addons) : null;
 
-                const basePrice = parseFloat(variation ? variation.price : item.price);
+                const basePrice = parseFloat((variation ? variation.price : item.price) || 0);
                 const finalUnitPrice = basePrice + addonTotal;
 
                 const customAnswersJSON = Object.keys(customAnswers).length > 0 ? JSON.stringify(customAnswers) : null;
