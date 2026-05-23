@@ -117,9 +117,12 @@ try {
         <?php endif; ?>
         <title><?php echo $businessName; ?> | Cardápio Digital DigiZap</title>
         <link rel="icon" type="image/x-icon" href="<?php echo $faviconUrl; ?>">
+        <link rel="preconnect" href="https://maps.googleapis.com" crossorigin>
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+        <link rel="preconnect" href="https://files.blinkvertex.com" crossorigin>
         <!-- SSR Data Hydration: inject all data up front, zero API roundtrip -->
         <script>window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;</script>
-        <link rel="stylesheet" href="/cardapio/style.css?v=2.7">
+        <link rel="stylesheet" href="/cardapio/style.css?v=2.8">
         <style>
             :root {
                 --primary-color:
@@ -444,7 +447,7 @@ try {
                     <!-- Step 2: Details -->
                     <div class="checkout-step hidden" id="step-2">
                         <!-- Toggle Delivery/Pickup -->
-                        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <div id="checkout-type-tabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
                             <button type="button" class="ifood-btn type-tab active" style="flex: 1; padding: 10px;"
                                 onclick="setDeliveryType('delivery')">Entrega</button>
                             <button type="button" class="ifood-btn type-tab"
@@ -469,16 +472,20 @@ try {
 
                         <!-- Scheduled Order (Date/Time) -->
                         <div id="order-step-content" class="hidden">
-                            <div style="border-top: 1px solid #eee; margin: 15px 0;"></div>
                             <div class="form-group">
                                 <label class="field-label">Data da Encomenda</label>
                                 <input type="date" id="order-date" class="ifood-input">
                             </div>
                             <div class="form-group">
-                                <label class="field-label">Horário</label>
+                                <label class="field-label">Horário de Retirada</label>
                                 <select id="order-time" class="ifood-input">
                                     <option value="">Selecione uma data primeiro</option>
                                 </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="field-label">Detalhes do Pedido (Tema, Cores, Topo)</label>
+                                <textarea id="order-details" class="ifood-input" rows="3" placeholder="Ex: Bolo tema Homem-Aranha, com topo de bolo e detalhes em azul..."></textarea>
+                                <small style="color: var(--text-gray); font-size: 0.8rem;">* Você poderá enviar fotos de referência no WhatsApp logo após concluir o pedido.</small>
                             </div>
                         </div>
                     </div>
@@ -544,16 +551,67 @@ try {
         <footer id="cart-footer" class="cart-footer hidden">
             <div class="container">
                 <button class="primary-btn cart-btn" id="view-cart-btn">
-                    <div class="cart-btn-content"><span id="cart-qty-badge">0</span><span>Ver carrinho</span></div>
+                    <div class="cart-btn-content"><i data-lucide="shopping-bag" style="width:20px;height:20px;"></i><span id="cart-qty-badge">0</span><span>Ver carrinho</span></div>
                     <span id="cart-total-footer">R$ 0,00</span>
                 </button>
             </div>
         </footer>
 
         <?php include 'componentes/footer.php'; ?>
-        <!-- Lucide must be synchronous before main scripts -->
-        <script src="https://unpkg.com/lucide@latest"></script>
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+        <!-- Inline SVG Sprite: only the icons we use (~3 KiB vs 92 KiB full Lucide) -->
+        <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+            <symbol id="lucide-history" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></symbol>
+            <symbol id="lucide-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+            <symbol id="lucide-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+            <symbol id="lucide-minus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></symbol>
+            <symbol id="lucide-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+            <symbol id="lucide-chevron-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></symbol>
+            <symbol id="lucide-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+            <symbol id="lucide-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+            <symbol id="lucide-image" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></symbol>
+            <symbol id="lucide-trash-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></symbol>
+            <symbol id="lucide-credit-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></symbol>
+            <symbol id="lucide-check-circle-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+            <symbol id="lucide-banknote" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></symbol>
+            <symbol id="lucide-star" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></symbol>
+            <symbol id="lucide-shopping-bag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></symbol>
+        </svg>
+
+        <!-- Lightweight Lucide replacement: converts <i data-lucide="name"> to inline SVG -->
+        <script>
+        window.lucide = {
+            createIcons: function() {
+                document.querySelectorAll('i[data-lucide]').forEach(function(el) {
+                    if (el.dataset.processed) return;
+                    var name = el.getAttribute('data-lucide');
+                    var symbol = document.getElementById('lucide-' + name);
+                    if (!symbol) return;
+                    var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    svg.setAttribute('width', el.style.width || '24');
+                    svg.setAttribute('height', el.style.height || '24');
+                    svg.setAttribute('viewBox', '0 0 24 24');
+                    svg.setAttribute('fill', symbol.getAttribute('fill') || 'none');
+                    svg.setAttribute('stroke', 'currentColor');
+                    svg.setAttribute('stroke-width', '2');
+                    svg.setAttribute('stroke-linecap', 'round');
+                    svg.setAttribute('stroke-linejoin', 'round');
+                    svg.innerHTML = symbol.innerHTML;
+                    // Copy over inline styles from the <i> tag
+                    if (el.style.cssText) svg.style.cssText = el.style.cssText;
+                    if (el.className) svg.setAttribute('class', el.className);
+                    // Handle fill/color overrides on the <i> tag
+                    var elFill = el.style.fill;
+                    if (elFill) svg.setAttribute('fill', elFill);
+                    var elColor = el.style.color;
+                    if (elColor) svg.setAttribute('stroke', elColor);
+                    el.dataset.processed = '1';
+                    el.replaceWith(svg);
+                });
+            }
+        };
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
         <script>
             const API_BASE = 'https://api.digizap.com.br';
@@ -610,7 +668,8 @@ try {
                 withinDeliveryRadius: false,
                 availableSlots: [],
                 currentCarouselIdx: 0,
-                previousOrders: []
+                previousOrders: [],
+                orderDetailsInfo: ''
             };
 
             function parseImages(imgField) {
@@ -1322,22 +1381,42 @@ try {
                 });
 
                 document.getElementById('add-to-cart-btn').addEventListener('click', addToCart);
-                document.getElementById('view-cart-btn').addEventListener('click', () => goToStep(1));
+                document.getElementById('view-cart-btn').addEventListener('click', () => {
+                    restoreCheckoutState();
+                    goToStep(getResumeStep());
+                });
                 document.getElementById('next-step-btn').addEventListener('click', handleNextStep);
                 document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
 
                 // Listener para carregar horários disponíveis ao selecionar data
                 document.getElementById('order-date').addEventListener('change', (e) => {
                     const dateStr = e.target.value;
-                    if (!dateStr) return;
+                    const timeSelect = document.getElementById('order-time');
+                    if (!dateStr) {
+                        timeSelect.innerHTML = `<option value="">Selecione uma data primeiro</option>`;
+                        return;
+                    }
 
                     const date = new Date(dateStr + 'T12:00:00');
                     const dayOfWeek = date.getDay();
+                    const availableStarts = state.availableSlots.filter(s => s.dayOfWeek === dayOfWeek).map(s => s.startTime);
+                    
+                    let optionsHtml = `<option value="">Selecione um horário</option>`;
+                    for (let hour = 9; hour <= 20; hour++) {
+                        const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+                        const isAvailable = availableStarts.includes(timeStr);
+                        if (isAvailable) {
+                            optionsHtml += `<option value="${timeStr}">${timeStr}</option>`;
+                        } else {
+                            optionsHtml += `<option value="${timeStr}" disabled>${timeStr} - Indisponível</option>`;
+                        }
+                    }
+                    timeSelect.innerHTML = optionsHtml;
+                });
 
-                    const slots = state.availableSlots.filter(s => s.dayOfWeek === dayOfWeek);
-                    const timeSelect = document.getElementById('order-time');
-
-                    timeSelect.innerHTML = `<option value="">Horário</option>` + slots.map(s => `<option value="${s.startTime}">${s.startTime}</option>`).join('');
+                document.getElementById('order-details')?.addEventListener('input', (e) => {
+                    state.orderDetailsInfo = e.target.value;
+                    saveCheckoutState();
                 });
 
                 document.getElementById('user-name').value = state.userInfo.name || '';
@@ -1367,6 +1446,9 @@ try {
             function goToStep(step) {
                 state.currentStep = step;
 
+                // Persist checkout progress
+                saveCheckoutState();
+
                 // Esconde todos os passos explicitamente por ID para não ter erro
                 document.getElementById('step-1')?.classList.add('hidden');
                 document.getElementById('step-2')?.classList.add('hidden');
@@ -1395,6 +1477,72 @@ try {
                 if (step === 4) {
                     updateStep4Summary();
                 }
+            }
+
+            // Persist/restore checkout progress so the user can resume where they left off
+            function saveCheckoutState() {
+                const payload = {
+                    step: state.currentStep,
+                    activeTab: state.activeTab,
+                    deliveryType: state.deliveryType,
+                    paymentMethod: state.paymentMethod,
+                    deliveryFee: state.deliveryFee || 0,
+                    orderDetailsInfo: state.orderDetailsInfo || '',
+                    expires: Date.now() + (24 * 60 * 60 * 1000)
+                };
+                try { localStorage.setItem('zapfly_checkout', JSON.stringify(payload)); } catch (e) {}
+            }
+
+            function restoreCheckoutState() {
+                let saved;
+                try { saved = JSON.parse(localStorage.getItem('zapfly_checkout') || 'null'); } catch (e) { saved = null; }
+                if (!saved || (saved.expires && saved.expires < Date.now())) {
+                    localStorage.removeItem('zapfly_checkout');
+                    return;
+                }
+                // Only restore if the saved progress matches the cart the user is currently looking at
+                if (saved.activeTab && saved.activeTab !== state.activeTab) return;
+                if (saved.deliveryType) state.deliveryType = saved.deliveryType;
+                if (saved.paymentMethod) state.paymentMethod = saved.paymentMethod;
+                if (typeof saved.deliveryFee === 'number') state.deliveryFee = saved.deliveryFee;
+                if (saved.orderDetailsInfo) {
+                    state.orderDetailsInfo = saved.orderDetailsInfo;
+                    const detailsInput = document.getElementById('order-details');
+                    if(detailsInput) detailsInput.value = saved.orderDetailsInfo;
+                }
+            }
+
+            // Returns the step the user should land on when reopening the cart:
+            // the first step with missing data, or the previously saved step if everything is filled.
+            function getResumeStep() {
+                if (getActiveCart().length === 0) return 1;
+
+                let saved;
+                try { saved = JSON.parse(localStorage.getItem('zapfly_checkout') || 'null'); } catch (e) { saved = null; }
+                // Saved step only counts if the user is on the same tab they were checking out from
+                const sameTab = saved && saved.activeTab === state.activeTab;
+                const savedStep = sameTab && saved.step ? parseInt(saved.step) : 1;
+
+                // Step 2 requires name + valid phone (from step 1 form)
+                const phone = state.userInfo.phone || '';
+                if (!state.userInfo.name || !phone || phone.length < 14) return 1;
+
+                // Step 3 requires step 2 data: address + delivery fee for delivery; date+time for order
+                if (state.activeTab === 'delivery') {
+                    if (state.deliveryType === 'delivery') {
+                        if (!state.userInfo.address) return 2;
+                        if (!state.deliveryFee) return 2;
+                    }
+                } else {
+                    // Order tab: date/time live in DOM inputs only, never persisted -> always start at step 2
+                    return 2;
+                }
+
+                // Step 4 requires payment method (defaults to 'mercadopago', but guard anyway)
+                if (!state.paymentMethod) return 3;
+
+                // All data present: respect where the user actually was, capped between 1 and 4
+                return Math.max(1, Math.min(4, savedStep));
             }
 
             document.getElementById('checkout-back-btn')?.addEventListener('click', () => {
@@ -1520,12 +1668,22 @@ try {
             }
 
             function renderStep2() {
-                setDeliveryType(state.deliveryType); // Ensure UI is completely updated based on current state
                 const isDelivery = state.activeTab === 'delivery';
+                
+                // Hide delivery toggle entirely for orders
+                const typeTabs = document.getElementById('checkout-type-tabs');
+                if (typeTabs) typeTabs.style.display = isDelivery ? 'flex' : 'none';
+                
+                // Enforce pickup if it's an order
+                if (!isDelivery && state.deliveryType !== 'pickup') {
+                    setDeliveryType('pickup');
+                } else {
+                    setDeliveryType(state.deliveryType); // Ensure UI is completely updated based on current state
+                }
+
                 const deliveryContent = document.getElementById('delivery-step-content');
                 const orderContent = document.getElementById('order-step-content');
                 if (deliveryContent) deliveryContent.classList.toggle('hidden', !isDelivery);
-
                 if (orderContent) orderContent.classList.toggle('hidden', isDelivery);
 
                 // Sempre carrega o mapa se deliveryType = delivery
@@ -1548,6 +1706,11 @@ try {
             }
 
             function setDeliveryType(type) {
+                // If it's an order, force pickup internally
+                if (state.activeTab === 'order') {
+                    type = 'pickup';
+                }
+                
                 state.deliveryType = type;
                 const btns = document.querySelectorAll('.type-tab');
 
@@ -1587,13 +1750,21 @@ try {
                     if (!nameVal || !phoneVal || phoneVal.length < 14) return showAlert('Ops!', 'Preencha seu nome e um WhatsApp válido.');
                     state.userInfo.name = nameVal;
                     state.userInfo.phone = phoneVal;
+                    saveCheckoutState();
                     if (state.activeTab === 'delivery' && !state.isOpen) return showAlert('Loja Fechada', 'Estamos fechados para pronta entrega no momento. Por favor, utilize a aba de Encomendas para agendar seu pedido.');
                     goToStep(2);
                 } else if (state.currentStep === 2) {
-                    if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
-                    if (state.activeTab === 'order' && (!document.getElementById('order-date').value || !document.getElementById('order-time').value)) return showAlert('Horário Ausente', 'Escolha uma data e um horário para sua encomenda.');
-                    if (state.deliveryFee === 0 && state.deliveryType === 'delivery' && state.userInfo.address) {
-                        return showAlert('Taxa Indisponível', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereço está no raio de entrega.');
+                    if (state.activeTab === 'delivery') {
+                        if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
+                        if (state.deliveryFee === 0 && state.deliveryType === 'delivery' && state.userInfo.address) {
+                            return showAlert('Taxa Indisponível', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereço está no raio de entrega.');
+                        }
+                    } else if (state.activeTab === 'order') {
+                        const dateVal = document.getElementById('order-date').value;
+                        const timeVal = document.getElementById('order-time').value;
+                        const details = document.getElementById('order-details')?.value;
+                        if (!dateVal || !timeVal) return showAlert('Horário Ausente', 'Escolha uma data e um horário para sua encomenda.');
+                        state.orderDetailsInfo = details;
                     }
                     goToStep(3);
                 } else if (state.currentStep === 3) {
