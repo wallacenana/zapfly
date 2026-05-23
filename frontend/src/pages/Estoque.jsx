@@ -12,7 +12,7 @@ const Estoque = () => {
   const [products, setProducts] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [isComboMode, setIsComboMode] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: '', image: '', price: 0, stock: 0, trackStock: false, capacityCost: 1, featured: false, variations: [], comboItems: [] });
+  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: '', image: '', price: 0, stock: 0, trackStock: false, capacityCost: 1, featured: false, variations: [], comboItems: [], customFields: [] });
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState(null);
 
@@ -104,7 +104,14 @@ const Estoque = () => {
           console.error("Erro ao parsear itens do combo:", p.id, e);
           items = [];
         }
-        return { ...p, variations: vars, comboItems: items };
+        let cfs = [];
+        try {
+          cfs = typeof p.customFields === 'string' ? JSON.parse(p.customFields || '[]') : (p.customFields || []);
+        } catch (e) {
+          console.error("Erro ao parsear customFields:", p.id, e);
+          cfs = [];
+        }
+        return { ...p, variations: vars, comboItems: items, customFields: cfs };
       });
       setProducts(data);
     } catch (err) { console.error(err); }
@@ -212,7 +219,7 @@ const Estoque = () => {
   const openAdd = (asCombo = false) => {
     setEditing(null);
     setIsComboMode(asCombo);
-    setForm({ name: '', description: '', type: tab, category: '', image: '', price: 0, stock: 0, trackStock: tab === 'delivery', capacityCost: 1, featured: false, variations: [], comboItems: [] });
+    setForm({ name: '', description: '', type: tab, category: '', image: '', price: 0, stock: 0, trackStock: tab === 'delivery', capacityCost: 1, featured: false, variations: [], comboItems: [], customFields: [] });
     setShowModal(true);
   };
 
@@ -238,7 +245,8 @@ const Estoque = () => {
       ...form, 
       type: isComboMode ? (form.type.startsWith('combo_') ? form.type : `combo_${form.type}`) : form.type.replace('combo_', ''),
       variations: JSON.stringify(form.variations),
-      comboItems: JSON.stringify(isComboMode ? form.comboItems : [])
+      comboItems: JSON.stringify(isComboMode ? form.comboItems : []),
+      customFields: JSON.stringify(form.customFields || [])
     };
     try {
       if (editing) await api.patch(`/orders/products/${editing}`, payload);
@@ -250,6 +258,7 @@ const Estoque = () => {
   };
 
   const addVar = () => setForm(f => ({ ...f, variations: [...f.variations, { name: '', price: 0, stock: 0, description: '', subItems: [] }] }));
+  const addCustomField = () => setForm(f => ({ ...f, customFields: [...(f.customFields || []), { name: '', type: 'text', options: '', required: false }] }));
   const addSub = (vIdx) => {
     setForm(f => {
       const v2 = JSON.parse(JSON.stringify(f.variations));
@@ -846,6 +855,54 @@ const Estoque = () => {
                       )}
                   </div>
                 )}
+
+                <div style={sectionBox}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'15px' }}>
+                        <h5 style={sectionTitle}>📋 CAMPOS PERSONALIZADOS (Encomendas)</h5>
+                        <button className="btn btn-secondary" style={{ fontSize:'11px' }} onClick={addCustomField}>+ Add Campo</button>
+                    </div>
+                    {(form.customFields || []).map((cf, cIdx) => (
+                        <div key={cIdx} style={varGroupStyle}>
+                            <div style={{ display:'grid', gridTemplateColumns: '1.5fr 1fr 2fr auto', gap:'10px', alignItems:'end' }}>
+                                <div>
+                                    <label style={microLabel}>Nome do Campo</label>
+                                    <input {...inp} placeholder="Ex: Sabor da massa..." value={cf.name} onChange={e => { const cfs=[...(form.customFields || [])]; cfs[cIdx].name=e.target.value; setForm(f=>({...f, customFields:cfs})) }} />
+                                </div>
+                                <div>
+                                    <label style={microLabel}>Tipo</label>
+                                    <select {...inp} value={cf.type} onChange={e => { const cfs=[...(form.customFields || [])]; cfs[cIdx].type=e.target.value; setForm(f=>({...f, customFields:cfs})) }}>
+                                        <option value="text">Texto Curto</option>
+                                        <option value="dropdown">Lista de Opções</option>
+                                        <option value="image">Upload de Imagem</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    {cf.type === 'dropdown' ? (
+                                        <>
+                                            <label style={microLabel}>Opções (separadas por vírgula)</label>
+                                            <input {...inp} placeholder="Ex: Chocolate, Baunilha, Morango" value={cf.options || ''} onChange={e => { const cfs=[...(form.customFields || [])]; cfs[cIdx].options=e.target.value; setForm(f=>({...f, customFields:cfs})) }} />
+                                        </>
+                                    ) : (
+                                        <div style={{ paddingTop: '28px', display: 'flex', alignItems: 'center' }}>
+                                            <input type="checkbox" id={`req-${cIdx}`} checked={cf.required || false} onChange={e => { const cfs=[...(form.customFields || [])]; cfs[cIdx].required=e.target.checked; setForm(f=>({...f, customFields:cfs})) }} style={{ width: '16px', height: '16px', cursor: 'pointer', marginRight: '8px' }} />
+                                            <label htmlFor={`req-${cIdx}`} style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Obrigatório?</label>
+                                        </div>
+                                    )}
+                                </div>
+                                <button className="btn-icon" style={{ color:'#ef4444', marginBottom:'6px' }} onClick={() => setForm(f=>({...f, customFields: (f.customFields || []).filter((_, idx)=>idx!==cIdx)}))}><Trash2 size={16} /></button>
+                            </div>
+                            {cf.type === 'dropdown' && (
+                                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center' }}>
+                                    <input type="checkbox" id={`req-${cIdx}`} checked={cf.required || false} onChange={e => { const cfs=[...(form.customFields || [])]; cfs[cIdx].required=e.target.checked; setForm(f=>({...f, customFields:cfs})) }} style={{ width: '16px', height: '16px', cursor: 'pointer', marginRight: '8px' }} />
+                                    <label htmlFor={`req-${cIdx}`} style={{ cursor: 'pointer', fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)' }}>Obrigatório?</label>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                    {(form.customFields || []).length === 0 && (
+                        <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Adicione campos para coletar informações como sabores, detalhes ou envio de fotos (útil para bolos e topos).</p>
+                    )}
+                </div>
                 
                 {isComboMode && (
                    <div style={{ marginTop: '20px' }}>

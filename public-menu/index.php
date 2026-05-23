@@ -1233,6 +1233,42 @@ try {
     `;
             }
 
+            async function handleCustomFieldImageUpload(input, idx) {
+                if (!input.files || input.files.length === 0) return;
+                const file = input.files[0];
+                const btn = input.nextElementSibling;
+                const originalBtnText = btn.innerHTML;
+                
+                btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Enviando...';
+                btn.disabled = true;
+                lucide.createIcons();
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('secret', 'BlinkMediaSecret123!');
+                    
+                    const res = await fetch('https://files.digizap.com.br/upload.php', { method: 'POST', body: formData });
+                    const data = await res.json();
+                    
+                    if (data.url) {
+                        document.getElementById(`cf-${idx}`).value = data.url;
+                        const preview = document.getElementById(`cf-${idx}-preview`);
+                        preview.querySelector('img').src = data.url;
+                        preview.style.display = 'flex';
+                    } else {
+                        showAlert('Erro', 'Falha no upload da imagem.');
+                    }
+                } catch(e) {
+                    console.error(e);
+                    showAlert('Erro', 'Ocorreu um erro ao enviar a imagem.');
+                } finally {
+                    btn.innerHTML = originalBtnText;
+                    btn.disabled = false;
+                    lucide.createIcons();
+                }
+            }
+
             function openItemDetail(productId) {
                 const item = state.products.find(p => p.id === productId);
                 state.currentItem = item;
@@ -1315,27 +1351,28 @@ try {
                             ${cfs.map((cf, i) => {
                                 let inputHtml = '';
                                 if (cf.type === 'dropdown') {
-                                    inputHtml = \`<select id="cf-\${i}" class="custom-field-input" data-name="\${cf.name}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-family: inherit;">
+                                    const opts = typeof cf.options === 'string' ? cf.options.split(',').map(o => o.trim()).filter(o => o) : [];
+                                    inputHtml = `<select id="cf-${i}" class="custom-field-input" data-name="${cf.name}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-family: inherit;">
                                         <option value="">Selecione...</option>
-                                        \${(cf.options || []).map(opt => \`<option value="\${opt}">\${opt}</option>\`).join('')}
-                                    </select>\`;
+                                        ${opts.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                                    </select>`;
                                 } else if (cf.type === 'image') {
-                                    inputHtml = \`<div style="display:flex; flex-direction:column; gap:10px;">
-                                        <input type="file" id="cf-\${i}-file" accept="image/*" style="display:none;" onchange="handleCustomFieldImageUpload(this, \${i})">
-                                        <button type="button" onclick="document.getElementById('cf-\${i}-file').click()" style="padding: 10px; border-radius: 8px; border: 1px dashed var(--primary-color); background: var(--bg-tertiary); color: var(--primary-color); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;"><i data-lucide="image" style="width:16px; height:16px;"></i> Anexar Imagem</button>
-                                        <input type="hidden" id="cf-\${i}" class="custom-field-input" data-name="\${cf.name}">
-                                        <div id="cf-\${i}-preview" style="display:none; margin-top: 10px; align-items: center;">
+                                    inputHtml = `<div style="display:flex; flex-direction:column; gap:10px;">
+                                        <input type="file" id="cf-${i}-file" accept="image/*" style="display:none;" onchange="handleCustomFieldImageUpload(this, ${i})">
+                                        <button type="button" onclick="document.getElementById('cf-${i}-file').click()" style="padding: 10px; border-radius: 8px; border: 1px dashed var(--primary-color); background: var(--bg-tertiary); color: var(--primary-color); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;"><i data-lucide="image" style="width:16px; height:16px;"></i> Anexar Imagem</button>
+                                        <input type="hidden" id="cf-${i}" class="custom-field-input" data-name="${cf.name}">
+                                        <div id="cf-${i}-preview" style="display:none; margin-top: 10px; align-items: center;">
                                             <img src="" style="max-width: 80px; max-height: 80px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: cover;">
-                                            <span style="font-size: 12px; color: #ef4444; margin-left: 10px; cursor:pointer; font-weight: 700;" onclick="document.getElementById('cf-\${i}').value=''; document.getElementById('cf-\${i}-preview').style.display='none';">Remover</span>
+                                            <span style="font-size: 12px; color: #ef4444; margin-left: 10px; cursor:pointer; font-weight: 700;" onclick="document.getElementById('cf-${i}').value=''; document.getElementById('cf-${i}-preview').style.display='none';">Remover</span>
                                         </div>
-                                    </div>\`;
+                                    </div>`;
                                 } else {
-                                    inputHtml = \`<input type="text" id="cf-\${i}" class="custom-field-input" data-name="\${cf.name}" placeholder="Ex: \${cf.name}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-family: inherit;">\`;
+                                    inputHtml = `<input type="text" id="cf-${i}" class="custom-field-input" data-name="${cf.name}" placeholder="Ex: ${cf.name}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-family: inherit;">`;
                                 }
-                                return \`<div style="margin-bottom: 15px;">
-                                    <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px;">\${cf.name} \${cf.required ? '<span style="color:#ef4444">*</span>' : ''}</label>
-                                    \${inputHtml}
-                                </div>\`;
+                                return `<div style="margin-bottom: 15px;">
+                                    <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 5px;">${cf.name} ${cf.required ? '<span style="color:#ef4444">*</span>' : ''}</label>
+                                    ${inputHtml}
+                                </div>`;
                             }).join('')}
                         </div>`;
                     }
@@ -1467,12 +1504,24 @@ try {
 
                     const date = new Date(dateStr + 'T12:00:00');
                     const dayOfWeek = date.getDay();
-                    const availableStarts = state.availableSlots.filter(s => s.dayOfWeek === dayOfWeek).map(s => s.startTime);
+                    const todaySlots = state.availableSlots.filter(s => s.dayOfWeek === dayOfWeek);
                     
                     let optionsHtml = `<option value="">Selecione um horário</option>`;
                     for (let hour = 9; hour <= 20; hour++) {
                         const timeStr = `${hour.toString().padStart(2, '0')}:00`;
-                        const isAvailable = availableStarts.length === 0 || availableStarts.includes(timeStr);
+                        const timeInMinutes = hour * 60;
+                        
+                        let isAvailable = true;
+                        if (todaySlots.length > 0) {
+                            isAvailable = todaySlots.some(s => {
+                                const [sh, sm] = s.startTime.split(':').map(Number);
+                                const [eh, em] = s.endTime.split(':').map(Number);
+                                const start = sh * 60 + sm;
+                                const end = eh * 60 + em;
+                                return timeInMinutes >= start && timeInMinutes <= end;
+                            });
+                        }
+                        
                         if (isAvailable) {
                             optionsHtml += `<option value="${timeStr}">${timeStr}</option>`;
                         } else {
@@ -1628,18 +1677,28 @@ try {
                 }
                 document.getElementById('next-step-btn').disabled = false;
                 list.innerHTML = cart.map(item => `
-                                                                                                            <div class="checkout-item">
-                                                                                                                <div class="item-name-qty">
-                                                                                                                    <div><strong>${item.name}</strong>${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}
-                                                                                                                    ${item.customFields ? (() => {
-                                                                                                                        try {
-                                                                                                                            <i data-lucide="plus"></i>
-                                                                                                                        </button>
-                                                                                                                    </div>
-                                                                                                                    <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
-                                                                                                                </div>
-                                                                                                            </div>
-                                                                                                        `).join('');
+                    <div class="checkout-item">
+                        <div class="item-name-qty">
+                            <div>
+                                <strong>${item.name}</strong>
+                                ${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}
+                                ${item.customFields ? (() => { try { const cfs = JSON.parse(item.customFields); return Object.entries(cfs).map(([k,v]) => '<p style="font-size:0.7rem;color:var(--text-gray);margin-top:2px;"><b>' + k + ':</b> ' + (v.startsWith('http') ? '<a href="'+v+'" target="_blank" style="color:var(--primary-color);">Ver Imagem</a>' : v) + '</p>').join(''); } catch(e){ return ''; } })() : ''}
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <div class="cart-qty-control">
+                                <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', -1)">
+                                    ${item.quantity === 1 ? '<i data-lucide="trash-2"></i>' : '<i data-lucide="minus"></i>'}
+                                </button>
+                                <span class="qty-val-mini">${item.quantity}</span>
+                                <button class="qty-btn-mini" onclick="updateCartQty('${item.itemKey}', 1)">
+                                    <i data-lucide="plus"></i>
+                                </button>
+                            </div>
+                            <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
+                        </div>
+                    </div>
+                `).join('');
                 lucide.createIcons();
             }
 
@@ -1867,7 +1926,12 @@ try {
                 if (lineEl) lineEl.classList.toggle('hidden', state.deliveryType !== 'delivery');
 
                 if (listEl) {
-                    listEl.innerHTML = cart.map(item => `<p style="font-size: 0.9rem; margin-bottom: 4px;">${item.quantity}x ${item.name} ${item.variation ? `(${item.variation})` : ''}</p>`).join('');
+                    listEl.innerHTML = cart.map(item => `
+                        <div style="margin-bottom: 8px;">
+                            <p style="font-size: 0.9rem; margin-bottom: 0;">${item.quantity}x ${item.name} ${item.variation ? `(${item.variation})` : ''}</p>
+                            ${item.customFields ? (() => { try { const cfs = JSON.parse(item.customFields); return Object.entries(cfs).map(([k,v]) => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">- ' + k + ': ' + (v.startsWith('http') ? 'Anexo' : v) + '</p>').join(''); } catch(e){ return ''; } })() : ''}
+                        </div>
+                    `).join('');
                 }
             }
 
@@ -1964,11 +2028,23 @@ try {
 
                 const totalValue = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0) + (state.deliveryType === 'delivery' ? state.deliveryFee : 0);
 
+                const formatItemName = (item) => {
+                    let base = item.name + (item.variation ? ` (${item.variation})` : '');
+                    if (item.customFields) {
+                        try {
+                            const cfs = JSON.parse(item.customFields);
+                            const cfStrings = Object.entries(cfs).map(([k,v]) => `${k}: ${v.startsWith('http') ? 'Anexo' : v}`);
+                            if (cfStrings.length > 0) base += ` [${cfStrings.join(', ')}]`;
+                        } catch(e) {}
+                    }
+                    return base;
+                };
+
                 const payload = {
                     clientName: state.userInfo.name,
                     clientPhone: state.userInfo.phone,
                     productId: cart[0].productId,
-                    product: cart[0].name + (cart[0].variation ? ` (${cart[0].variation})` : ''),
+                    product: formatItemName(cart[0]),
                     variation: cart[0].variation,
                     quantity: cart[0].quantity,
                     type: state.activeTab,
@@ -1980,7 +2056,7 @@ try {
                     totalValue: totalValue,
                     carrinho_itens_extras: cart.slice(1).map(item => ({
                         productId: item.productId,
-                        name: item.name + (item.variation ? ` (${item.variation})` : ''),
+                        name: formatItemName(item),
                         price: item.price,
                         quantity: item.quantity
                     }))
