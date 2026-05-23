@@ -6,13 +6,28 @@ import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box
 import Swal from 'sweetalert2';
 
 import { api, API_URL } from '../api';
+import AddonGroupManager from '../components/AddonGroupManager';
+
+const parseJsonArray = (value, fallback = []) => {
+  if (Array.isArray(value)) return value;
+  if (value === null || value === undefined || value === '') return fallback;
+  if (typeof value !== 'string') return fallback;
+
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch (err) {
+    return fallback;
+  }
+};
 
 const Estoque = () => {
   const [tab, setTab] = useState('delivery'); // 'delivery', 'encomenda' ou 'addon'
   const [products, setProducts] = useState([]);
+  const [addonGroups, setAddonGroups] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [isComboMode, setIsComboMode] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: '', image: '', price: 0, stock: 0, trackStock: false, capacityCost: 1, featured: false, variations: [], comboItems: [], customFields: [] });
+  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: '', image: '', price: 0, stock: 0, trackStock: false, capacityCost: 1, featured: false, variations: [], comboItems: [], customFields: [], addonGroups: [] });
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState(null);
 
@@ -111,10 +126,23 @@ const Estoque = () => {
           console.error("Erro ao parsear customFields:", p.id, e);
           cfs = [];
         }
-        return { ...p, variations: vars, comboItems: items, customFields: cfs };
+        return { ...p, variations: vars, comboItems: items, customFields: cfs, addonGroups: parseJsonArray(p.addonGroups, []) };
       });
       setProducts(data);
     } catch (err) { console.error(err); }
+  }, []);
+
+  const fetchAddonGroups = useCallback(async () => {
+    try {
+      const res = await api.get('/orders/addon-groups');
+      const data = Array.isArray(res.data) ? res.data.map(group => ({
+        ...group,
+        items: parseJsonArray(group.items, [])
+      })) : [];
+      setAddonGroups(data);
+    } catch (err) {
+      console.error(err);
+    }
   }, []);
 
   const fetchSeasonal = useCallback(async () => {
@@ -133,9 +161,10 @@ const Estoque = () => {
 
   useEffect(() => { 
     fetchProducts(); 
+    fetchAddonGroups();
     fetchSeasonal();
     fetchCategories();
-  }, [fetchProducts, fetchSeasonal, fetchCategories]);
+  }, [fetchProducts, fetchAddonGroups, fetchSeasonal, fetchCategories]);
 
   const compressImage = (file) => {
     return new Promise((resolve) => {
@@ -219,14 +248,14 @@ const Estoque = () => {
   const openAdd = (asCombo = false) => {
     setEditing(null);
     setIsComboMode(asCombo);
-    setForm({ name: '', description: '', type: tab, category: '', image: '', price: 0, stock: 0, trackStock: tab === 'delivery', capacityCost: 1, featured: false, variations: [], comboItems: [], customFields: [] });
+    setForm({ name: '', description: '', type: tab, category: '', image: '', price: 0, stock: 0, trackStock: tab === 'delivery', capacityCost: 1, featured: false, variations: [], comboItems: [], customFields: [], addonGroups: [] });
     setShowModal(true);
   };
 
   const openEdit = (p) => {
     setEditing(p.id);
     setIsComboMode(p.comboItems && p.comboItems.length > 0 || p.type.startsWith('combo_'));
-    setForm({ ...p });
+    setForm({ ...p, addonGroups: parseJsonArray(p.addonGroups, []) });
     setShowModal(true);
   };
 
@@ -246,7 +275,8 @@ const Estoque = () => {
       type: isComboMode ? (form.type.startsWith('combo_') ? form.type : `combo_${form.type}`) : form.type.replace('combo_', ''),
       variations: JSON.stringify(form.variations),
       comboItems: JSON.stringify(isComboMode ? form.comboItems : []),
-      customFields: JSON.stringify(form.customFields || [])
+      customFields: JSON.stringify(form.customFields || []),
+      addonGroups: JSON.stringify(form.addonGroups || [])
     };
     try {
       if (editing) await api.patch(`/orders/products/${editing}`, payload);
@@ -329,6 +359,10 @@ const Estoque = () => {
             <button className="btn btn-primary" onClick={openAddSeasonal} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: '#ec4899' }}>
               <Plus size={20} /> Novo Evento
             </button>
+          ) : tab === 'addon' ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 18px', backgroundColor: 'rgba(245, 158, 11, 0.08)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.18)', borderRadius: '12px', fontWeight: 700 }}>
+              <Layers size={18} /> Os grupos são gerenciados na lista abaixo
+            </div>
           ) : (
             <>
               <button className="btn" onClick={() => setShowCategoryModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: '#fff', border: '1px solid var(--border-color)', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}>
@@ -391,6 +425,13 @@ const Estoque = () => {
               </div>
             </div>
           ))
+        ) : tab === 'addon' ? (
+          <AddonGroupManager
+            groups={addonGroups}
+            products={products}
+            onReloadGroups={fetchAddonGroups}
+            onReloadProducts={fetchProducts}
+          />
         ) : (
           filtered.map((p, idx) => {
             const isExpanded = expanded === p.id;
@@ -418,6 +459,31 @@ const Estoque = () => {
                       {p.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{p.description}</div>}
                       {!p.variations.length && !isCombo && <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.trackStock && `| Estoque: ${p.stock}`} {!p.trackStock && '| Estoque: ∞'}</div>}
                       {isCombo && <div style={{ fontSize: '13px', color: '#8b5cf6', marginTop: '4px', fontWeight: 700 }}>R$ {p.price.toFixed(2)} | {p.comboItems.length} itens inclusos</div>}
+                      {!isCombo && Array.isArray(p.addonGroups) && p.addonGroups.length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                          {p.addonGroups.map(groupId => {
+                            const group = addonGroups.find(g => g.id === groupId);
+                            if (!group) return null;
+                            return (
+                              <span
+                                key={groupId}
+                                style={{
+                                  fontSize: '10px',
+                                  padding: '3px 8px',
+                                  borderRadius: '999px',
+                                  backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                                  color: '#f59e0b',
+                                  fontWeight: 800,
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.04em'
+                                }}
+                              >
+                                {group.name}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
@@ -901,6 +967,66 @@ const Estoque = () => {
                     ))}
                     {(form.customFields || []).length === 0 && (
                         <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Adicione campos para coletar informações como sabores, detalhes ou envio de fotos (útil para bolos e topos).</p>
+                    )}
+                </div>
+
+                <div style={sectionBox}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px', marginBottom: '14px' }}>
+                        <h5 style={sectionTitle}><Layers size={14} /> GRUPOS DE ADICIONAIS</h5>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Vincule um ou mais grupos ao produto</span>
+                    </div>
+
+                    {addonGroups.length === 0 ? (
+                        <div style={{ padding: '14px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                            Nenhum grupo foi criado ainda. Use a aba <b>Adicionais</b> para cadastrar recheios, coberturas e complementos reutilizáveis.
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '10px' }}>
+                            {addonGroups.map(group => {
+                                const checked = (form.addonGroups || []).includes(group.id);
+                                const items = parseJsonArray(group.items, []);
+                                return (
+                                    <label
+                                        key={group.id}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'flex-start',
+                                            gap: '12px',
+                                            padding: '14px',
+                                            borderRadius: '12px',
+                                            border: checked ? '1px solid rgba(245, 158, 11, 0.45)' : '1px solid rgba(255,255,255,0.06)',
+                                            backgroundColor: checked ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255,255,255,0.02)',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            onChange={(e) => {
+                                                const current = [...(form.addonGroups || [])];
+                                                const next = e.target.checked
+                                                  ? Array.from(new Set([...current, group.id]))
+                                                  : current.filter(id => id !== group.id);
+                                                setForm(prev => ({ ...prev, addonGroups: next }));
+                                            }}
+                                            style={{ width: '18px', height: '18px', marginTop: '2px', accentColor: '#f59e0b', cursor: 'pointer' }}
+                                        />
+                                        <div style={{ flex: 1 }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                <span style={{ fontWeight: 800, color: '#fff' }}>{group.name}</span>
+                                                <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '999px', backgroundColor: group.min > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(255,255,255,0.08)', color: group.min > 0 ? '#fca5a5' : 'var(--text-secondary)', fontWeight: 800 }}>
+                                                    {group.min > 0 ? 'Obrigatório' : 'Opcional'}
+                                                </span>
+                                            </div>
+                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                                Min {group.min} / Max {group.max} · {items.length} item(ns)
+                                            </div>
+                                        </div>
+                                    </label>
+                                );
+                            })}
+                        </div>
                     )}
                 </div>
                 

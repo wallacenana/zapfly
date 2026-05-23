@@ -13,6 +13,69 @@ const { getSettings } = require('../lib/cache');
 
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+function safeJsonParse(value, fallback) {
+  if (value === undefined || value === null || value === '') return fallback;
+  if (Array.isArray(value) || (typeof value === 'object' && value !== null)) return value;
+  if (typeof value !== 'string') return fallback;
+
+  try {
+    return JSON.parse(value);
+  } catch (err) {
+    return fallback;
+  }
+}
+
+function normalizeStringArray(value) {
+  const parsed = safeJsonParse(value, []);
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed
+    .map(item => {
+      if (typeof item === 'string') return item.trim();
+      if (item === null || item === undefined) return '';
+      return String(item).trim();
+    })
+    .filter(Boolean);
+}
+
+function normalizeAddonGroupItems(value) {
+  const parsed = safeJsonParse(value, []);
+  if (!Array.isArray(parsed)) return '[]';
+
+  const items = parsed
+    .map(item => {
+      if (!item || typeof item !== 'object') return null;
+      const name = typeof item.name === 'string' ? item.name.trim() : String(item.name || '').trim();
+      if (!name) return null;
+      return {
+        name,
+        price: Number(item.price) || 0
+      };
+    })
+    .filter(Boolean);
+
+  return JSON.stringify(items);
+}
+
+async function getOwnedRecord(modelName, id, userId) {
+  const record = await prisma[modelName].findUnique({ where: { id } });
+  if (!record || record.userId !== userId) return null;
+  return record;
+}
+
+async function normalizeProductAddonGroups(value, userId) {
+  const parsedIds = normalizeStringArray(value);
+  if (parsedIds.length === 0) return '[]';
+
+  const allowedGroups = await prisma.addonGroup.findMany({
+    where: { userId },
+    select: { id: true }
+  });
+  const allowedIds = new Set(allowedGroups.map(group => group.id));
+  const filteredIds = parsedIds.filter(id => allowedIds.has(id));
+  return JSON.stringify(filteredIds);
+}
+
 async function getGoogleCalendar(userId) {
   try {
     const settings = await getSettings(userId);
@@ -413,6 +476,17 @@ async function calculateOrderTotal(data, userId) {
     }
   }
 
+  const addonItems = safeJsonParse(data.addons, []);
+  if (Array.isArray(addonItems)) {
+    for (const item of addonItems) {
+      if (typeof item === 'object' && item !== null) {
+        const itemPrice = parseFloat(item.price) || 0;
+        const itemQty = parseFloat(item.quantity) || 1;
+        computedTotalValue += (itemPrice * itemQty);
+      }
+    }
+  }
+
   computedTotalValue += (parseFloat(deliveryFee) || 0);
   return computedTotalValue;
 }
@@ -774,6 +848,7 @@ router.post('/', async (req, res) => {
       paymentMethod: paymentMethod || 'A definir',
       deliveryFee: parseFloat(deliveryFee) || 0,
       totalValue: computedTotal,
+      addons: addons || null,
       status: isManual ? 'accepted' : 'pending',
       paymentStatus: isManual ? 'confirmed' : 'pending',
       instanceId: instanceId || 'global'
@@ -822,6 +897,112 @@ router.post('/stock', authenticate, async (req, res) => {
   res.json(item);
 });
 
+router.get('/addon-groups', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  const groups = await prisma.addonGroup.findMany({
+    where: { userId },
+    orderBy: { name: 'asc' }
+  });
+  res.json(groups);
+});
+
+router.post('/addon-groups', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  const name = String(req.body.name || '').trim();
+  if (!name) return res.status(400).json({ error: 'Nome do grupo é obrigatório.' });
+
+  const min = Math.max(parseInt(req.body.min, 10) || 0, 0);
+  const max = Math.max(parseInt(req.body.max, 10) || 1, 1);
+  if (max < min) return res.status(400).json({ error: 'O máximo não pode ser menor que o mínimo.' });
+
+  const group = await prisma.addonGroup.create({
+    data: {
+      name,
+      min,
+      max,
+      items: normalizeAddonGroupItems(req.body.items),
+      userId
+    }
+  });
+
+  res.json(group);
+});
+
+router.patch('/addon-groups/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+  try {
+    const existing = await getOwnedRecord('addonGroup', id, userId);
+    if (!existing) return res.status(403).json({ error: 'Não autorizado' });
+
+    const updateData = {};
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'name')) {
+      const name = String(req.body.name || '').trim();
+      if (!name) return res.status(400).json({ error: 'Nome do grupo é obrigatório.' });
+      updateData.name = name;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'min')) {
+      updateData.min = Math.max(parseInt(req.body.min, 10) || 0, 0);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'max')) {
+      updateData.max = Math.max(parseInt(req.body.max, 10) || 1, 1);
+    }
+
+    const nextMin = updateData.min !== undefined ? updateData.min : existing.min;
+    const nextMax = updateData.max !== undefined ? updateData.max : existing.max;
+    if (nextMax < nextMin) return res.status(400).json({ error: 'O máximo não pode ser menor que o mínimo.' });
+
+    if (Object.prototype.hasOwnProperty.call(req.body, 'items')) {
+      updateData.items = normalizeAddonGroupItems(req.body.items);
+    }
+
+    const group = await prisma.addonGroup.update({
+      where: { id },
+      data: updateData
+    });
+
+    res.json(group);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/addon-groups/:id', authenticate, async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user.id;
+  try {
+    const existing = await getOwnedRecord('addonGroup', id, userId);
+    if (!existing) return res.status(403).json({ error: 'Não autorizado' });
+
+    await prisma.$transaction(async (tx) => {
+      const products = await tx.product.findMany({
+        where: { userId },
+        select: { id: true, addonGroups: true }
+      });
+
+      for (const product of products) {
+        const currentIds = normalizeStringArray(product.addonGroups);
+        if (!currentIds.includes(id)) continue;
+
+        const nextIds = currentIds.filter(groupId => groupId !== id);
+        await tx.product.update({
+          where: { id: product.id },
+          data: { addonGroups: JSON.stringify(nextIds) }
+        });
+      }
+
+      await tx.addonGroup.delete({ where: { id } });
+    });
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/products', authenticate, async (req, res) => {
   const userId = req.user.id;
   const products = await prisma.product.findMany({
@@ -833,21 +1014,23 @@ router.get('/products', authenticate, async (req, res) => {
 
 router.post('/products', authenticate, async (req, res) => {
   const { name, description, price, image, category, type, variations, comboItems, customFields, stock, trackStock, featured, capacityCost } = req.body;
+  const addonGroups = await normalizeProductAddonGroups(req.body.addonGroups, req.user.id);
   const product = await prisma.product.create({
     data: {
       name,
       description,
-      price: parseFloat(price),
+      price: parseFloat(price) || 0,
       image,
       category,
-      type,
-      variations,
-      comboItems,
-      customFields,
-      stock: parseInt(stock),
-      trackStock,
-      featured,
-      capacityCost: parseInt(capacityCost),
+      type: type || 'delivery',
+      variations: variations || '[]',
+      comboItems: comboItems || '[]',
+      customFields: customFields || '[]',
+      stock: parseInt(stock, 10) || 0,
+      trackStock: !!trackStock,
+      featured: !!featured,
+      capacityCost: parseInt(capacityCost, 10) || 1,
+      addonGroups,
       userId: req.user.id
     }
   });
@@ -859,10 +1042,14 @@ router.post('/products/reorder', authenticate, async (req, res) => {
   const { items } = req.body; // Array de { id, displayOrder }
 
   try {
+    const allProducts = await prisma.product.findMany({ where: { userId }, select: { id: true } });
+    const allowedIds = new Set(allProducts.map(product => product.id));
+    const validItems = Array.isArray(items) ? items.filter(item => allowedIds.has(item.id)) : [];
+
     await prisma.$transaction(
-      items.map(item =>
+      validItems.map(item =>
         prisma.product.update({
-          where: { id: item.id, userId }, // Garante que é do usuário
+          where: { id: item.id },
           data: { displayOrder: item.displayOrder }
         })
       )
@@ -921,12 +1108,15 @@ router.patch('/categories/:id', authenticate, async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
   try {
-    const existing = await prisma.category.findUnique({ where: { id } });
-    if (!existing || existing.userId !== userId) return res.status(403).json({ error: "Não autorizado" });
+    const existing = await getOwnedRecord('category', id, userId);
+    if (!existing) return res.status(403).json({ error: "Não autorizado" });
 
     const updateData = { ...req.body };
     delete updateData.id;
     delete updateData.userId;
+    if (Object.prototype.hasOwnProperty.call(updateData, 'order')) {
+      updateData.order = parseInt(updateData.order, 10) || 0;
+    }
 
     const cat = await prisma.category.update({
       where: { id },
@@ -942,8 +1132,8 @@ router.delete('/categories/:id', authenticate, async (req, res) => {
   const userId = req.user.id;
   const { id } = req.params;
   try {
-    const existing = await prisma.category.findUnique({ where: { id } });
-    if (!existing || existing.userId !== userId) return res.status(403).json({ error: "Não autorizado" });
+    const existing = await getOwnedRecord('category', id, userId);
+    if (!existing) return res.status(403).json({ error: "Não autorizado" });
 
     await prisma.category.delete({ where: { id } });
     res.json({ success: true });
@@ -1031,8 +1221,11 @@ router.patch('/seasonal/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
+    const existing = await getOwnedRecord('seasonalCatalog', id, userId);
+    if (!existing) return res.status(403).json({ error: "Não autorizado" });
+
     const catalog = await prisma.seasonalCatalog.update({
-      where: { id, userId },
+      where: { id },
       data: req.body
     });
     res.json(catalog);
@@ -1045,7 +1238,10 @@ router.delete('/seasonal/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
-    await prisma.seasonalCatalog.delete({ where: { id, userId } });
+    const existing = await getOwnedRecord('seasonalCatalog', id, userId);
+    if (!existing) return res.status(403).json({ error: "Não autorizado" });
+
+    await prisma.seasonalCatalog.delete({ where: { id } });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1056,13 +1252,32 @@ router.patch('/products/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
-    const existing = await prisma.product.findUnique({ where: { id } });
-    if (!existing || existing.userId !== userId) return res.status(403).json({ error: "Não autorizado" });
+    const existing = await getOwnedRecord('product', id, userId);
+    if (!existing) return res.status(403).json({ error: "Não autorizado" });
 
     // Filtra dados invalidos
     const updateData = { ...req.body };
     delete updateData.id;
     delete updateData.userId;
+
+    if (Object.prototype.hasOwnProperty.call(updateData, 'price')) {
+      updateData.price = parseFloat(updateData.price) || 0;
+    }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'stock')) {
+      updateData.stock = parseInt(updateData.stock, 10) || 0;
+    }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'capacityCost')) {
+      updateData.capacityCost = parseInt(updateData.capacityCost, 10) || 1;
+    }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'trackStock')) {
+      updateData.trackStock = !!updateData.trackStock;
+    }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'featured')) {
+      updateData.featured = !!updateData.featured;
+    }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'addonGroups')) {
+      updateData.addonGroups = await normalizeProductAddonGroups(updateData.addonGroups, userId);
+    }
 
     const product = await prisma.product.update({
       where: { id },
@@ -1078,8 +1293,8 @@ router.delete('/products/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
-    const existing = await prisma.product.findUnique({ where: { id } });
-    if (!existing || existing.userId !== userId) return res.status(403).json({ error: "Não autorizado" });
+    const existing = await getOwnedRecord('product', id, userId);
+    if (!existing) return res.status(403).json({ error: "Não autorizado" });
 
     await prisma.product.delete({
       where: { id }
@@ -1094,9 +1309,19 @@ router.patch('/categories/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
+    const existing = await getOwnedRecord('category', id, userId);
+    if (!existing) return res.status(403).json({ error: "Não autorizado" });
+
+    const updateData = { ...req.body };
+    delete updateData.id;
+    delete updateData.userId;
+    if (Object.prototype.hasOwnProperty.call(updateData, 'order')) {
+      updateData.order = parseInt(updateData.order, 10) || 0;
+    }
+
     const cat = await prisma.category.update({
-      where: { id, userId },
-      data: req.body
+      where: { id },
+      data: updateData
     });
     res.json(cat);
   } catch (err) {
@@ -1108,7 +1333,10 @@ router.delete('/categories/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
-    await prisma.category.delete({ where: { id, userId } });
+    const existing = await getOwnedRecord('category', id, userId);
+    if (!existing) return res.status(403).json({ error: "Não autorizado" });
+
+    await prisma.category.delete({ where: { id } });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1119,9 +1347,22 @@ router.patch('/stock/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
+    const existing = await getOwnedRecord('stockItem', id, userId);
+    if (!existing) return res.status(403).json({ error: "Não autorizado" });
+
+    const updateData = { ...req.body };
+    delete updateData.id;
+    delete updateData.userId;
+    if (Object.prototype.hasOwnProperty.call(updateData, 'quantity')) {
+      updateData.quantity = parseFloat(updateData.quantity) || 0;
+    }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'minQuantity')) {
+      updateData.minQuantity = parseFloat(updateData.minQuantity) || 0;
+    }
+
     const item = await prisma.stockItem.update({
-      where: { id, userId },
-      data: req.body
+      where: { id },
+      data: updateData
     });
     res.json(item);
   } catch (err) {
@@ -1133,7 +1374,10 @@ router.delete('/stock/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
-    await prisma.stockItem.delete({ where: { id, userId } });
+    const existing = await getOwnedRecord('stockItem', id, userId);
+    if (!existing) return res.status(403).json({ error: "Não autorizado" });
+
+    await prisma.stockItem.delete({ where: { id } });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1144,10 +1388,26 @@ router.patch('/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
+    const existing = await getOwnedRecord('order', id, userId);
+    if (!existing) return res.status(403).json({ error: "Não autorizado" });
+
+    const updateData = { ...req.body };
+    delete updateData.id;
+    delete updateData.userId;
+    if (Object.prototype.hasOwnProperty.call(updateData, 'deliveryFee')) {
+      updateData.deliveryFee = parseFloat(updateData.deliveryFee) || 0;
+    }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'totalValue')) {
+      updateData.totalValue = parseFloat(updateData.totalValue) || 0;
+    }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'reminderSent')) {
+      updateData.reminderSent = !!updateData.reminderSent;
+    }
+
     // 1. Atualizar o pedido principal com o payload recebido
     let order = await prisma.order.update({
-      where: { id, userId },
-      data: req.body
+      where: { id },
+      data: updateData
     });
 
     // 2. Recalcular o valor total do pedido após o update (se necessário)
@@ -1155,7 +1415,7 @@ router.patch('/:id', authenticate, async (req, res) => {
 
     // Atualiza com o valor final recalculado
     order = await prisma.order.update({
-      where: { id, userId },
+      where: { id },
       data: { totalValue: computedTotal }
     });
 
@@ -1167,7 +1427,7 @@ router.patch('/:id', authenticate, async (req, res) => {
       const paymentLink = await createPaymentLink(order, settings);
       if (paymentLink) {
         order = await prisma.order.update({
-          where: { id, userId },
+          where: { id },
           data: { paymentLink, status: 'waiting_payment' }
         });
       }
@@ -1183,7 +1443,10 @@ router.delete('/:id', authenticate, async (req, res) => {
   const { id } = req.params;
   const userId = req.user.id;
   try {
-    await prisma.order.delete({ where: { id, userId } });
+    const existing = await getOwnedRecord('order', id, userId);
+    if (!existing) return res.status(403).json({ error: "Não autorizado" });
+
+    await prisma.order.delete({ where: { id } });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
