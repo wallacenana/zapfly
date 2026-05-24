@@ -39,8 +39,20 @@ try {
     }
 
     // --- MINI CACHE ENGINE (LCP KILLER) ---
+    $cacheAcceptOrders = true;
+    try {
+        $cacheSettingsStmt = $pdo->prepare("SELECT COALESCE(s.acceptOrders, 1) AS acceptOrders FROM user u LEFT JOIN setting s ON u.id = s.userId WHERE u.slug = ?");
+        $cacheSettingsStmt->execute([$slug]);
+        $cacheSettings = $cacheSettingsStmt->fetch(PDO::FETCH_ASSOC);
+        if ($cacheSettings) {
+            $cacheAcceptOrders = (bool) $cacheSettings['acceptOrders'];
+        }
+    } catch (Exception $e) {
+        $cacheAcceptOrders = true;
+    }
+
     $cacheDir = __DIR__ . '/cache';
-    $cacheFile = $cacheDir . '/store_' . md5($slug) . '.html';
+    $cacheFile = $cacheDir . '/store_' . md5($slug . '_ao_' . ($cacheAcceptOrders ? '1' : '0')) . '.html';
     $cacheTime = 60; // 60 segundos de cache
 
     $bypassCache = isset($_GET['nocache']);
@@ -68,6 +80,7 @@ try {
     $textColor = $store['textColor'] ?: '#1a1a1a';
     $buttonColor = $store['buttonColor'] ?: $accentColor;
     $buttonTextColor = $store['buttonTextColor'] ?: '#ffffff';
+    $acceptOrders = isset($store['acceptOrders']) ? (bool) $store['acceptOrders'] : true;
 
     $stmt = $pdo->prepare("SELECT * FROM category WHERE userId = ? ORDER BY `order` ASC");
     $stmt->execute([$store['id']]);
@@ -102,7 +115,7 @@ try {
         'buttonTextColor' => $buttonTextColor,
         'backgroundColor' => $backgroundColor,
         'textColor' => $textColor,
-        'acceptOrders' => $store['acceptOrders'] ?? true,
+        'acceptOrders' => $acceptOrders,
         'logoUrl' => $logoUrl,
         'faviconUrl' => $faviconUrl,
         'seoDescription' => $store['seoDescription'] ?? '',
@@ -130,7 +143,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="/cardapio/style.css?v=3.18">
+        <link rel="stylesheet" href="/cardapio/style.css?v=3.25">
         <style>
             :root {
                 --primary-color:
@@ -346,12 +359,10 @@ try {
             </div>
         </header>
 
-        <nav class="category-tabs">
+        <nav id="order-tabs-nav" class="category-tabs <?php echo $acceptOrders ? '' : 'hidden'; ?>">
             <div class="container tabs-scroll">
                 <button class="cat-tab active" data-tab="delivery">Entrega</button>
-                <?php if (($store['acceptOrders'] ?? true) !== false): ?>
-                    <button class="cat-tab" data-tab="order">Encomendas</button>
-                <?php endif; ?>
+                <button class="cat-tab" data-tab="order">Encomendas</button>
             </div>
         </nav>
 
@@ -361,6 +372,10 @@ try {
                 <input type="text" id="search-input" placeholder="Buscar no cardápio">
             </div>
         </div>
+
+        <nav class="category-nav hidden">
+            <div class="container category-nav-scroll" id="category-nav-scroll"></div>
+        </nav>
 
         <main class="container main-menu">
             <div id="menu-sections">
@@ -1168,8 +1183,8 @@ try {
                         if (!hasVisibleVar) return false;
                     }
 
-                    const matchesTab = (state.activeTab === 'delivery' && p.type === 'delivery') || (state.activeTab === 'order' && isOrderEnabled());
                     const matchesSearch = p.name.toLowerCase().includes(query) || (p.description && p.description.toLowerCase().includes(query));
+                    const matchesTab = (state.activeTab === 'delivery' && p.type === 'delivery') || (state.activeTab === 'order' && isOrderEnabled());
                     return matchesTab && matchesSearch;
                 });
 
@@ -1212,10 +1227,6 @@ try {
                 if (featured.length > 0) {
                     html += `
             <section class="menu-section featured-section">
-                <div class="section-header">
-                    <i data-lucide="star" style="color: #fbbf24; fill: #fbbf24;"></i>
-                    <h2>Destaques</h2>
-                </div>
                 <div class="featured-list">
                     ${featured.map((item, idx) => renderFeaturedCard(item, idx < 4)).join('')}
                 </div>
@@ -1253,15 +1264,7 @@ try {
                     const bannerAttr = isPriority ? 'fetchpriority="high" loading="eager" decoding="async"' : 'loading="lazy" decoding="async"';
                     return `
         <div class="featured-card featured-card--banner" onclick="openItemDetail('${product.id}')">
-            <div class="featured-banner-media">
-                <img src="${getImg(product.bannerUrl, 'full')}" alt="${product.name}" ${bannerAttr}>
-            </div>
-            <div class="featured-banner-content">
-                <span class="featured-banner-badge">Destaque</span>
-                <h3>${product.name}</h3>
-                ${product.description ? `<p>${product.description}</p>` : ''}
-                <div class="product-price">${priceText}</div>
-            </div>
+            <img src="${getImg(product.bannerUrl, 'full')}" alt="${product.name}" ${bannerAttr}>
         </div>
     `;
                 }

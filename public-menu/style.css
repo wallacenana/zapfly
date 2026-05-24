@@ -344,6 +344,9 @@ h3 {
     background: rgba(0, 0, 0, 0.5);
 }
 
+.modal-content.checkout-content{
+    max-width: 510px;
+}
 .modal-content {
     position: relative;
     background: white;
@@ -1346,6 +1349,8 @@ body.theme-order .delivery-fee-badge {
     margin: 0 -4px;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
 }
 
 .featured-list::-webkit-scrollbar {
@@ -1353,14 +1358,15 @@ body.theme-order .delivery-fee-badge {
 }
 
 .featured-card {
-    min-width: 140px;
-    width: 140px;
+    min-width: 168px;
+    width: 168px;
     background: #fff;
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border);
     cursor: pointer;
     transition: transform 0.2s;
+    scroll-snap-align: start;
 }
 
 .featured-card:active {
@@ -1368,8 +1374,8 @@ body.theme-order .delivery-fee-badge {
 }
 
 .featured-img-wrapper {
-    width: 140px;
-    height: 140px;
+    width: 168px;
+    height: 168px;
     background: var(--bg-gray);
 }
 
@@ -1380,11 +1386,11 @@ body.theme-order .delivery-fee-badge {
 }
 
 .featured-info {
-    padding: 10px;
+    padding: 12px;
 }
 
 .featured-info h3 {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     color: var(--text-main);
     margin-bottom: 4px;
     white-space: nowrap;
@@ -1393,101 +1399,45 @@ body.theme-order .delivery-fee-badge {
 }
 
 .featured-info .product-price {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 700;
     color: var(--primary-color);
 }
 
 .featured-card--banner {
-    display: flex;
-    align-items: stretch;
-    min-width: 380px;
-    width: 380px;
+    min-width: 340px;
+    width: 340px;
+    height: 220px;
     border-radius: 18px;
-    background: linear-gradient(135deg, #ffffff 0%, #fff7f7 100%);
+    overflow: hidden;
+    background: #f4f4f4;
     border: 1px solid rgba(0, 0, 0, 0.06);
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+    scroll-snap-align: start;
 }
 
-.featured-card--banner .featured-banner-media {
-    position: relative;
-    flex: 0 0 46%;
-    min-height: 150px;
-    background: #f4f4f4;
-}
-
-.featured-card--banner .featured-banner-media img {
+.featured-card--banner img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
 }
 
-.featured-card--banner .featured-banner-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 8px;
-    padding: 16px 16px 16px 14px;
-}
-
-.featured-banner-badge {
-    align-self: flex-start;
-    display: inline-flex;
-    align-items: center;
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: rgba(255, 77, 109, 0.12);
-    color: var(--primary-color);
-    font-size: 0.68rem;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-}
-
-.featured-card--banner h3 {
-    font-size: 1.02rem;
-    font-weight: 800;
-    color: var(--text-main);
-    line-height: 1.08;
-    white-space: normal;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-}
-
-.featured-card--banner p {
-    margin: 0;
-    color: rgba(0, 0, 0, 0.58);
-    font-size: 0.82rem;
-    line-height: 1.32;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-}
-
-.featured-card--banner .product-price {
-    font-size: 0.92rem;
-}
-
 @media (max-width: 768px) {
+    .featured-card {
+        min-width: 164px;
+        width: 164px;
+    }
+
+    .featured-img-wrapper {
+        width: 164px;
+        height: 164px;
+    }
+
     .featured-card--banner {
         width: calc(100vw - 28px);
         min-width: calc(100vw - 28px);
-        flex-direction: column;
-    }
-
-    .featured-card--banner .featured-banner-media {
-        flex: none;
-        width: 100%;
-        min-height: 180px;
-    }
-
-    .featured-card--banner .featured-banner-content {
-        padding: 14px;
+        height: 144px;
     }
 }
 
