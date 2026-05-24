@@ -194,7 +194,7 @@ try {
                 cursor: not-allowed;
             }
 
-            #order-time option:disabled {
+            #schedule-time option:disabled {
                 color: #9ca3af;
             }
 
@@ -448,6 +448,37 @@ try {
             </div>
         </div>
 
+        <!-- MODAL AGENDAMENTO DA ENCOMENDA -->
+        <div id="order-schedule-modal" class="modal hidden" aria-modal="true" role="dialog" aria-label="Agendamento da Encomenda">
+            <div class="modal-overlay"></div>
+            <div class="modal-content" style="max-width: 420px;">
+                <div class="modal-header">
+                    <button class="close-modal-btn" onclick="closeWithAnimation('order-schedule-modal')" aria-label="Fechar Agendamento">
+                        <i data-lucide="x"></i>
+                    </button>
+                    <h2 style="margin: 0; font-size: 1.15rem;">Escolha data e horário</h2>
+                    <div style="width: 40px;"></div>
+                </div>
+                <div class="modal-scroll-body" style="padding-top: 10px;">
+                    <p style="margin: 0 0 16px; color: var(--text-gray); font-size: 0.92rem;">Antes de adicionar sua encomenda, confirme quando deseja receber ou retirar.</p>
+                    <div class="form-group">
+                        <label class="field-label">Data da Encomenda</label>
+                        <input type="date" id="schedule-date" class="ifood-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="field-label">Horário</label>
+                        <select id="schedule-time" class="ifood-input">
+                            <option value="">Selecione uma data primeiro</option>
+                        </select>
+                    </div>
+                    <div id="schedule-availability-note" style="margin-top: 10px; color: var(--text-gray); font-size: 0.82rem;"></div>
+                </div>
+                <div class="modal-footer-sticky" style="position: sticky; bottom: 0;">
+                    <button id="confirm-schedule-btn" class="primary-btn">Confirmar horário</button>
+                </div>
+            </div>
+        </div>
+
         <!-- MODAL CHECKOUT 2.0 -->
         <div id="checkout-modal" class="modal hidden" aria-modal="true" role="dialog" aria-label="Checkout">
             <div class="modal-overlay"></div>
@@ -501,24 +532,8 @@ try {
                             </div>
                         </div>
 
-                        <!-- Scheduled Order (Date/Time) -->
-                        <div id="order-step-content" class="hidden">
-                            <div class="form-group">
-                                <label class="field-label">Data da Encomenda</label>
-                                <input type="date" id="order-date" class="ifood-input">
-                            </div>
-                            <div class="form-group">
-                                <label class="field-label">Horário de Retirada</label>
-                                <select id="order-time" class="ifood-input">
-                                    <option value="">Selecione uma data primeiro</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="field-label">Detalhes do Pedido (Tema, Cores, Topo)</label>
-                                <textarea id="order-details" class="ifood-input" rows="3" placeholder="Ex: Bolo tema Homem-Aranha, com topo de bolo e detalhes em azul..."></textarea>
-                                <small style="color: var(--text-gray); font-size: 0.8rem;">* Você poderá enviar fotos de referência no WhatsApp logo após concluir o pedido.</small>
-                            </div>
-                        </div>
+                        <!-- Extras da Encomenda -->
+                        <div id="order-step-content" class="hidden"></div>
                     </div>
 
                     <!-- Step 3: Payment Method -->
@@ -538,6 +553,10 @@ try {
                             </div>
                             <div id="payment-method-summary"
                                 style="margin-bottom:12px; padding:10px 14px; border-radius:10px; background:#f0fdf4; color:#166534; font-weight:600;">
+                            </div>
+                            <div id="order-schedule-review" class="summary-section hidden" style="margin-bottom: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(74, 44, 42, 0.06); border: 1px solid rgba(74, 44, 42, 0.10);">
+                                <div style="font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-gray);">Agendamento</div>
+                                <div id="order-schedule-review-value" style="margin-top: 4px; font-size: 14px; font-weight: 700; color: var(--text-main);">Nenhum horário selecionado.</div>
                             </div>
                             <div class="summary-section" style="background: #f9f9f9; padding: 15px; border-radius: 12px;">
                                 <div class="summary-row"
@@ -750,6 +769,8 @@ try {
                 addonGroups: [],
                 orderAvailabilityRequestId: 0,
                 orderAvailability: null,
+                orderSchedule: null,
+                scheduleModalContext: null,
                 currentCarouselIdx: 0,
                 previousOrders: [],
                 orderDetailsInfo: ''
@@ -783,6 +804,118 @@ try {
                 return state.publicSettings.acceptOrders !== false;
             }
 
+            function parseJsonValue(value, fallback) {
+                if (value === undefined || value === null || value === '') return fallback;
+                if (Array.isArray(value) || (typeof value === 'object' && value !== null)) return value;
+                if (typeof value !== 'string') return fallback;
+
+                try {
+                    return JSON.parse(value);
+                } catch (e) {
+                    return fallback;
+                }
+            }
+
+            function sanitizeDomId(value) {
+                return String(value || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+            }
+
+            function getCustomFieldSchema(item) {
+                const parsed = parseJsonValue(item?.customFieldSchema || item?.customFieldsSchema || item?.customFields, []);
+                return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+            }
+
+            function getCustomFieldAnswers(item) {
+                const parsed = parseJsonValue(item?.customFieldValues || item?.customFields, {});
+                return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+            }
+
+            function hasCheckoutExtras(cart = getActiveCart()) {
+                return Array.isArray(cart) && cart.some(item => getCustomFieldSchema(item).length > 0);
+            }
+
+            function getCustomFieldSummaryParts(item) {
+                return Object.entries(getCustomFieldAnswers(item)).map(([key, value]) => ({
+                    key,
+                    value,
+                    isUrl: typeof value === 'string' && value.startsWith('http')
+                }));
+            }
+
+            function formatOrderSchedule() {
+                if (!state.orderSchedule?.date || !state.orderSchedule?.time) return 'Nenhum horário selecionado.';
+                try {
+                    const dateText = new Date(`${state.orderSchedule.date}T12:00:00`).toLocaleDateString('pt-BR');
+                    return `${dateText} às ${state.orderSchedule.time}`;
+                } catch (e) {
+                    return `${state.orderSchedule.date} às ${state.orderSchedule.time}`;
+                }
+            }
+
+            function openScheduleModal(context = 'add') {
+                state.scheduleModalContext = context;
+                if (context !== 'add') {
+                    state.currentStep = 1;
+                }
+                const modal = document.getElementById('order-schedule-modal');
+                if (!modal) return;
+                const dateInput = document.getElementById('schedule-date');
+                const timeSelect = document.getElementById('schedule-time');
+                const note = document.getElementById('schedule-availability-note');
+                const today = getBrazilDateString();
+                if (dateInput) {
+                    dateInput.min = today;
+                    dateInput.value = state.orderSchedule?.date || today;
+                }
+                if (timeSelect) {
+                    timeSelect.disabled = true;
+                    timeSelect.innerHTML = `<option value="">Selecione uma data primeiro</option>`;
+                    timeSelect.value = state.orderSchedule?.time || '';
+                }
+                if (note) note.innerText = '';
+                openModal('order-schedule-modal');
+                if (dateInput?.value) {
+                    loadOrderAvailability(dateInput.value, true, { timeSelectId: 'schedule-time', dateInputId: 'schedule-date', noteId: 'schedule-availability-note' });
+                }
+            }
+
+            async function commitScheduleAndMaybeAdd() {
+                const dateInput = document.getElementById('schedule-date');
+                const timeSelect = document.getElementById('schedule-time');
+                const dateVal = dateInput?.value;
+                const timeVal = timeSelect?.value;
+
+                if (!dateVal || !timeVal) {
+                    return showAlert('Horário ausente', 'Escolha a data e o horário da encomenda.');
+                }
+
+                const availability = await loadOrderAvailability(dateVal, true, {
+                    timeSelectId: 'schedule-time',
+                    dateInputId: 'schedule-date',
+                    noteId: 'schedule-availability-note'
+                });
+                const selectedSlot = Array.isArray(availability?.times) ? availability.times.find(slot => slot.time === timeVal) : null;
+                if (!selectedSlot || !selectedSlot.available) {
+                    if (timeSelect) timeSelect.value = '';
+                    return showAlert('Horário indisponível', selectedSlot?.reason || availability?.reason || 'Escolha outro horário.');
+                }
+
+                state.orderSchedule = {
+                    date: dateVal,
+                    time: timeVal
+                };
+                saveCheckoutState();
+
+                closeWithAnimation('order-schedule-modal');
+                if (state.scheduleModalContext === 'add') {
+                    commitAddToCart();
+                } else if (state.currentStep === 1 && state.activeTab === 'order') {
+                    goToStep(hasCheckoutExtras() ? 2 : 3);
+                } else if (state.currentStep >= 2 && state.activeTab === 'order') {
+                    renderStep2();
+                }
+            }
+
             function getBrazilDateParts(date = new Date()) {
                 const parts = new Intl.DateTimeFormat('en-CA', {
                     timeZone: 'America/Sao_Paulo',
@@ -804,7 +937,7 @@ try {
             }
 
             function setOrderDateConstraints() {
-                const dateInput = document.getElementById('order-date');
+                const dateInput = document.getElementById('schedule-date');
                 if (!dateInput) return;
 
                 const today = getBrazilDateString();
@@ -814,9 +947,13 @@ try {
                 }
             }
 
-            async function loadOrderAvailability(dateStr, preserveSelection = true) {
-                const timeSelect = document.getElementById('order-time');
-                const dateInput = document.getElementById('order-date');
+            async function loadOrderAvailability(dateStr, preserveSelection = true, config = {}) {
+                const timeSelectId = config.timeSelectId || 'schedule-time';
+                const dateInputId = config.dateInputId || 'schedule-date';
+                const noteId = config.noteId || null;
+                const timeSelect = document.getElementById(timeSelectId);
+                const dateInput = document.getElementById(dateInputId);
+                const noteEl = noteId ? document.getElementById(noteId) : null;
                 if (!timeSelect) return null;
 
                 const today = getBrazilDateString();
@@ -827,6 +964,7 @@ try {
                     state.orderAvailability = null;
                     timeSelect.disabled = true;
                     timeSelect.innerHTML = `<option value="">Selecione uma data primeiro</option>`;
+                    if (noteEl) noteEl.innerText = '';
                     return null;
                 }
 
@@ -840,6 +978,7 @@ try {
                     };
                     timeSelect.disabled = true;
                     timeSelect.innerHTML = `<option value="">Escolha uma data válida</option>`;
+                    if (noteEl) noteEl.innerText = 'Data anterior a hoje.';
                     return state.orderAvailability;
                 }
 
@@ -863,6 +1002,7 @@ try {
                         };
                         timeSelect.disabled = true;
                         timeSelect.innerHTML = `<option value="">${reason}</option>`;
+                        if (noteEl) noteEl.innerText = reason;
                         return state.orderAvailability;
                     }
 
@@ -881,10 +1021,12 @@ try {
                         });
                         timeSelect.innerHTML = html;
                         timeSelect.disabled = false;
+                        if (noteEl) noteEl.innerText = data.reason || (availableTimes.length > 0 ? '' : 'Nenhum horário disponível');
                     } else {
                         const reason = data.reason || 'Nenhum horário disponível';
                         timeSelect.disabled = true;
                         timeSelect.innerHTML = `<option value="">${reason}</option>`;
+                        if (noteEl) noteEl.innerText = reason;
                     }
 
                     if (preserveSelection && previousValue) {
@@ -906,6 +1048,7 @@ try {
                     };
                     timeSelect.disabled = true;
                     timeSelect.innerHTML = `<option value="">${reason}</option>`;
+                    if (noteEl) noteEl.innerText = reason;
                     return state.orderAvailability;
                 }
             }
@@ -1509,6 +1652,52 @@ try {
                 }
             }
 
+            async function handleCheckoutFieldImageUpload(input, hiddenId, previewId) {
+                if (!input.files || input.files.length === 0) return;
+                const file = input.files[0];
+                const btn = input.closest('.checkout-extra-image')?.querySelector('button[data-upload-btn="true"]') || input.previousElementSibling;
+                const originalBtnText = btn?.innerHTML || '';
+
+                if (btn) {
+                    btn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Enviando...';
+                    btn.disabled = true;
+                    lucide.createIcons();
+                }
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('secret', 'BlinkMediaSecret123!');
+
+                    const res = await fetch('https://files.digizap.com.br/upload.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await res.json();
+
+                    if (data.url) {
+                        const hidden = document.getElementById(hiddenId);
+                        if (hidden) hidden.value = data.url;
+                        const preview = document.getElementById(previewId);
+                        if (preview) {
+                            preview.querySelector('img').src = data.url;
+                            preview.style.display = 'flex';
+                        }
+                    } else {
+                        showAlert('Erro', 'Falha no upload da imagem.');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    showAlert('Erro', 'Ocorreu um erro ao enviar a imagem.');
+                } finally {
+                    if (btn) {
+                        btn.innerHTML = originalBtnText;
+                        btn.disabled = false;
+                        lucide.createIcons();
+                    }
+                }
+            }
+
             function openItemDetail(productId) {
                 const item = state.products.find(p => p.id === productId);
                 state.currentItem = item;
@@ -1603,7 +1792,7 @@ try {
                             `<div class="variation-section"><div class="addon-group-header"><h4>Escolha uma opção</h4></div>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price || 0})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price || 0).toFixed(2)}</div></div>`).join('')}</div>` :
                             '';
 
-                        const customFieldsHtml = (() => {
+                        const customFieldsHtml = state.activeTab === 'order' ? '' : (() => {
                                     let cfHtml = '';
                                     try {
                                         const cfs = JSON.parse(item.customFields || '[]');
@@ -1842,6 +2031,122 @@ try {
                 if (qtyEl) qtyEl.innerText = state.currentQty;
             }
 
+            function renderCheckoutExtraField(item, field, idx, itemKeyBase, currentValue = '') {
+                const fieldId = `extra-${itemKeyBase}-${idx}`;
+                const fieldLabel = `${field.name || 'Campo'} ${field.required ? '<span style="color:#ef4444">*</span>' : ''}`;
+                const fieldType = String(field.type || 'text').toLowerCase();
+
+                if (fieldType === 'dropdown') {
+                    const options = parseJsonValue(field.options, []);
+                    const opts = Array.isArray(options)
+                        ? options.filter(Boolean)
+                        : String(field.options || '').split(',').map(opt => opt.trim()).filter(Boolean);
+                    return `
+                        <div style="margin-bottom: 14px;">
+                            <label style="display:block; font-size:13px; font-weight:600; color:var(--text-secondary); margin-bottom:5px;">${fieldLabel}</label>
+                            <select id="${fieldId}" class="ifood-input" data-field-name="${field.name}">
+                                <option value="">Selecione...</option>
+                                ${opts.map(opt => `<option value="${opt}" ${currentValue === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                            </select>
+                        </div>
+                    `;
+                }
+
+                if (fieldType === 'image') {
+                    const previewId = `${fieldId}-preview`;
+                    return `
+                        <div class="checkout-extra-image" style="margin-bottom: 14px;">
+                            <label style="display:block; font-size:13px; font-weight:600; color:var(--text-secondary); margin-bottom:5px;">${fieldLabel}</label>
+                            <input type="hidden" id="${fieldId}" data-field-name="${field.name}" value="${currentValue || ''}">
+                            <button type="button" data-upload-btn="true" onclick="document.getElementById('${fieldId}-file').click()" style="padding: 10px; border-radius: 8px; border: 1px dashed var(--primary-color); background: var(--bg-tertiary); color: var(--primary-color); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;">
+                                <i data-lucide="image" style="width:16px; height:16px;"></i> Anexar Imagem
+                            </button>
+                            <input type="file" id="${fieldId}-file" accept="image/*" style="display:none;" onchange="handleCheckoutFieldImageUpload(this, '${fieldId}', '${previewId}')">
+                            <div id="${previewId}" style="display:${currentValue ? 'flex' : 'none'}; margin-top: 10px; align-items: center;">
+                                <img src="${currentValue || ''}" style="max-width: 80px; max-height: 80px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: cover;">
+                                <span style="font-size: 12px; color: #ef4444; margin-left: 10px; cursor:pointer; font-weight: 700;" onclick="document.getElementById('${fieldId}').value=''; document.getElementById('${previewId}').style.display='none';">Remover</span>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div style="margin-bottom: 14px;">
+                        <label style="display:block; font-size:13px; font-weight:600; color:var(--text-secondary); margin-bottom:5px;">${fieldLabel}</label>
+                        <input type="text" id="${fieldId}" class="ifood-input" data-field-name="${field.name}" placeholder="Ex: ${field.name}" value="${currentValue || ''}">
+                    </div>
+                `;
+            }
+
+            function renderCheckoutExtraStep() {
+                const container = document.getElementById('order-extra-step-content');
+                const orderStepContent = document.getElementById('order-step-content');
+                if (!container || !orderStepContent) return false;
+
+                const cart = getActiveCart();
+                const itemsWithExtras = cart.filter(item => getCustomFieldSchema(item).length > 0);
+                if (state.activeTab !== 'order' || itemsWithExtras.length === 0) {
+                    container.innerHTML = '';
+                    orderStepContent.classList.add('hidden');
+                    return false;
+                }
+
+                container.innerHTML = itemsWithExtras.map(item => {
+                    const schema = getCustomFieldSchema(item);
+                    const answers = getCustomFieldAnswers(item);
+                    const itemKeyBase = sanitizeDomId(item.itemKey || item.productId || item.name);
+                    return `
+                        <div style="padding: 14px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); margin-bottom: 14px;">
+                            <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom: 12px;">
+                                <div>
+                                    <div style="font-weight: 800; color: var(--text-main);">${item.name}${item.variation ? ` (${item.variation})` : ''}</div>
+                                    <div style="font-size: 12px; color: var(--text-gray); margin-top: 3px;">Preencha as informações pedidas abaixo.</div>
+                                </div>
+                            </div>
+                            ${schema.map((field, idx) => renderCheckoutExtraField(item, field, idx, itemKeyBase, answers[field.name] || '')).join('')}
+                        </div>
+                    `;
+                }).join('');
+
+                orderStepContent.classList.remove('hidden');
+                lucide.createIcons();
+                return true;
+            }
+
+            function collectCheckoutExtraStep() {
+                const cart = getActiveCart();
+                const itemsWithExtras = cart.filter(item => getCustomFieldSchema(item).length > 0);
+                if (itemsWithExtras.length === 0) return { ok: true, cart };
+
+                const updatedCart = [...cart];
+                for (const item of itemsWithExtras) {
+                    const schema = getCustomFieldSchema(item);
+                    const itemKeyBase = sanitizeDomId(item.itemKey || item.productId || item.name);
+                    const answers = {};
+                    for (let idx = 0; idx < schema.length; idx++) {
+                        const field = schema[idx];
+                        const fieldId = `extra-${itemKeyBase}-${idx}`;
+                        const input = document.getElementById(fieldId);
+                        const value = input?.value?.trim() || '';
+                        if (field.required && !value) {
+                            return { ok: false, message: `Preencha o campo "${field.name}" do item "${item.name}".` };
+                        }
+                        if (value) answers[field.name] = value;
+                    }
+
+                    const cartIndex = updatedCart.findIndex(c => c.itemKey === item.itemKey);
+                    if (cartIndex >= 0) {
+                        updatedCart[cartIndex] = {
+                            ...updatedCart[cartIndex],
+                            customFieldValues: JSON.stringify(answers)
+                        };
+                    }
+                }
+
+                setActiveCart(updatedCart);
+                return { ok: true, cart: updatedCart };
+            }
+
             function closeModal(modalId = null) {
                 const ids = ['item-detail-modal', 'checkout-modal', 'history-modal'];
                 ids.forEach(id => {
@@ -1910,32 +2215,45 @@ try {
                 document.getElementById('add-to-cart-btn').addEventListener('click', addToCart);
                 document.getElementById('view-cart-btn').addEventListener('click', () => {
                     restoreCheckoutState();
+                    if (state.activeTab === 'order' && (!state.orderSchedule?.date || !state.orderSchedule?.time) && getActiveCart().length > 0) {
+                        openScheduleModal('resume');
+                        return;
+                    }
                     goToStep(getResumeStep());
                 });
                 document.getElementById('next-step-btn').addEventListener('click', handleNextStep);
                 document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
 
-                // Listener para carregar horários disponíveis ao selecionar data
-                const orderDateInput = document.getElementById('order-date');
-                if (orderDateInput) {
-                    const handleOrderDateChange = async (e) => {
+                const scheduleDateInput = document.getElementById('schedule-date');
+                if (scheduleDateInput) {
+                    const handleScheduleDateChange = async (e) => {
                         const dateStr = e.target.value;
                         const today = getBrazilDateString();
                         if (dateStr && dateStr < today) {
                             e.target.value = '';
-                            await loadOrderAvailability('', false);
+                            await loadOrderAvailability('', false, {
+                                timeSelectId: 'schedule-time',
+                                dateInputId: 'schedule-date',
+                                noteId: 'schedule-availability-note'
+                            });
                             return;
                         }
-                        await loadOrderAvailability(dateStr, true);
+                        await loadOrderAvailability(dateStr, true, {
+                            timeSelectId: 'schedule-time',
+                            dateInputId: 'schedule-date',
+                            noteId: 'schedule-availability-note'
+                        });
                     };
 
-                    orderDateInput.addEventListener('change', handleOrderDateChange);
-                    orderDateInput.addEventListener('blur', handleOrderDateChange);
+                    scheduleDateInput.addEventListener('change', handleScheduleDateChange);
+                    scheduleDateInput.addEventListener('blur', handleScheduleDateChange);
                 }
 
-                document.getElementById('order-details')?.addEventListener('input', (e) => {
-                    state.orderDetailsInfo = e.target.value;
-                    saveCheckoutState();
+                document.getElementById('confirm-schedule-btn')?.addEventListener('click', commitScheduleAndMaybeAdd);
+                document.getElementById('schedule-time')?.addEventListener('change', async (e) => {
+                    if (!e.target.value) return;
+                    const noteEl = document.getElementById('schedule-availability-note');
+                    if (noteEl) noteEl.innerText = '';
                 });
 
                 document.getElementById('user-name').value = state.userInfo.name || '';
@@ -1963,6 +2281,10 @@ try {
             }
 
             function goToStep(step) {
+                if (step === 2 && state.activeTab === 'order' && !hasCheckoutExtras()) {
+                    step = 3;
+                }
+
                 state.currentStep = step;
 
                 // Persist checkout progress
@@ -1980,7 +2302,7 @@ try {
                 openModal('checkout-modal');
 
                 let title = "Ver sacola";
-                if (step === 2) title = state.activeTab === 'delivery' ? "Entrega" : "Encomenda";
+                if (step === 2) title = state.activeTab === 'delivery' ? "Entrega" : "Extras do Pedido";
                 if (step === 3) title = "Forma de Pagamento";
                 if (step === 4) title = "Confirmar Pedido";
 
@@ -2006,6 +2328,7 @@ try {
                     deliveryType: state.deliveryType,
                     paymentMethod: state.paymentMethod,
                     deliveryFee: state.deliveryFee || 0,
+                    orderSchedule: state.orderSchedule || null,
                     orderDetailsInfo: state.orderDetailsInfo || '',
                     expires: Date.now() + (24 * 60 * 60 * 1000)
                 };
@@ -2030,10 +2353,14 @@ try {
                 if (saved.deliveryType) state.deliveryType = saved.deliveryType;
                 if (saved.paymentMethod) state.paymentMethod = saved.paymentMethod;
                 if (typeof saved.deliveryFee === 'number') state.deliveryFee = saved.deliveryFee;
+                if (saved.orderSchedule && typeof saved.orderSchedule === 'object') {
+                    state.orderSchedule = {
+                        date: saved.orderSchedule.date || '',
+                        time: saved.orderSchedule.time || ''
+                    };
+                }
                 if (saved.orderDetailsInfo) {
                     state.orderDetailsInfo = saved.orderDetailsInfo;
-                    const detailsInput = document.getElementById('order-details');
-                    if (detailsInput) detailsInput.value = saved.orderDetailsInfo;
                 }
             }
 
@@ -2056,15 +2383,15 @@ try {
                 const phone = state.userInfo.phone || '';
                 if (!state.userInfo.name || !phone || phone.length < 14) return 1;
 
-                // Step 3 requires step 2 data: address + delivery fee for delivery; date+time for order
+                // Step 3 requires step 2 data: address + delivery fee for delivery; schedule + extras for order
                 if (state.activeTab === 'delivery') {
                     if (state.deliveryType === 'delivery') {
                         if (!state.userInfo.address) return 2;
                         if (!state.deliveryFee) return 2;
                     }
                 } else {
-                    // Order tab: date/time live in DOM inputs only, never persisted -> always start at step 2
-                    return 2;
+                    if (!state.orderSchedule?.date || !state.orderSchedule?.time) return 1;
+                    if (hasCheckoutExtras() && savedStep < 3) return 2;
                 }
 
                 // Step 4 requires payment method (defaults to 'mercadopago', but guard anyway)
@@ -2075,7 +2402,10 @@ try {
             }
 
             document.getElementById('checkout-back-btn')?.addEventListener('click', () => {
-                if (state.currentStep > 1) goToStep(state.currentStep - 1);
+                if (state.currentStep > 1) {
+                    const previousStep = (state.activeTab === 'order' && !hasCheckoutExtras() && state.currentStep === 3) ? 1 : state.currentStep - 1;
+                    goToStep(previousStep);
+                }
                 else closeWithAnimation('checkout-modal');
             });
 
@@ -2094,7 +2424,7 @@ try {
                             <div>
                                 <strong>${item.name}</strong>
                                 ${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}
-                                ${item.customFields ? (() => { try { const cfs = JSON.parse(item.customFields); return Object.entries(cfs).map(([k,v]) => '<p style="font-size:0.7rem;color:var(--text-gray);margin-top:2px;"><b>' + k + ':</b> ' + (v.startsWith('http') ? '<a href="'+v+'" target="_blank" style="color:var(--primary-color);">Ver Imagem</a>' : v) + '</p>').join(''); } catch(e){ return ''; } })() : ''}
+                                ${getCustomFieldSummaryParts(item).map(({ key, value, isUrl }) => '<p style="font-size:0.7rem;color:var(--text-gray);margin-top:2px;"><b>' + key + ':</b> ' + (isUrl ? '<a href="' + value + '" target="_blank" style="color:var(--primary-color);">Ver Imagem</a>' : String(value)) + '</p>').join('')}
                                 ${item.addons ? (() => { try { const ads = JSON.parse(item.addons); return ads.map(a => '<p style="font-size:0.7rem;color:var(--text-gray);margin-top:2px;">+ ' + a.name + (a.price > 0 ? ' (R$ ' + parseFloat(a.price).toFixed(2) + ')' : '') + '</p>').join(''); } catch(e){ return ''; } })() : ''}
                             </div>
                         </div>
@@ -2218,13 +2548,27 @@ try {
                 const deliveryContent = document.getElementById('delivery-step-content');
                 const orderContent = document.getElementById('order-step-content');
                 if (deliveryContent) deliveryContent.classList.toggle('hidden', !isDelivery);
-                if (orderContent) orderContent.classList.toggle('hidden', isDelivery);
-
-                if (!isDelivery) {
-                    setOrderDateConstraints();
-                    const dateInput = document.getElementById('order-date');
-                    const dateValue = dateInput?.value || '';
-                    loadOrderAvailability(dateValue, true);
+                if (orderContent) {
+                    if (isDelivery) {
+                        orderContent.classList.add('hidden');
+                        orderContent.innerHTML = '';
+                    } else {
+                        const hasExtras = hasCheckoutExtras();
+                        if (hasExtras) {
+                            orderContent.classList.remove('hidden');
+                            orderContent.innerHTML = `
+                                <div style="margin-bottom: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.14);">
+                                    <div style="font-size: 12px; font-weight: 800; color: #60a5fa;">Agendamento confirmado</div>
+                                    <div id="order-schedule-summary" style="font-size: 13px; color: var(--text-main); margin-top: 4px;">${formatOrderSchedule()}</div>
+                                </div>
+                                <div id="order-extra-step-content"></div>
+                            `;
+                            renderCheckoutExtraStep();
+                        } else {
+                            orderContent.classList.add('hidden');
+                            orderContent.innerHTML = '';
+                        }
+                    }
                 }
 
                 // Sempre carrega o mapa se deliveryType = delivery
@@ -2297,6 +2641,14 @@ try {
                             'Estamos fechados para pronta entrega no momento. Por favor, utilize a aba de Encomendas para agendar seu pedido.' :
                             'Estamos fechados para pronta entrega no momento.');
                     }
+                    if (state.activeTab === 'order') {
+                        if (!state.orderSchedule?.date || !state.orderSchedule?.time) {
+                            openScheduleModal('resume');
+                            return;
+                        }
+                        goToStep(hasCheckoutExtras() ? 2 : 3);
+                        return;
+                    }
                     goToStep(2);
                 } else if (state.currentStep === 2) {
                     if (state.activeTab === 'delivery') {
@@ -2306,25 +2658,14 @@ try {
                         }
                     } else if (state.activeTab === 'order') {
                         if (!isOrderEnabled()) return showAlert('Encomendas desativadas', 'No momento não estamos aceitando encomendas.');
-                        const dateInput = document.getElementById('order-date');
-                        const timeInput = document.getElementById('order-time');
-                        const dateVal = dateInput?.value;
-                        const timeVal = timeInput?.value;
-                        const details = document.getElementById('order-details')?.value;
-                        if (!dateVal || !timeVal) return showAlert('Horário Ausente', 'Escolha uma data e um horário para sua encomenda.');
-                        const today = getBrazilDateString();
-                        if (dateVal < today) {
-                            if (dateInput) dateInput.value = '';
-                            if (timeInput) timeInput.value = '';
-                            return showAlert('Data inválida', 'Escolha uma data de hoje em diante.');
+                        if (hasCheckoutExtras()) {
+                            const extrasResult = collectCheckoutExtraStep();
+                            if (!extrasResult.ok) {
+                                return showAlert('Atenção', extrasResult.message || 'Preencha os campos extras antes de continuar.');
+                            }
                         }
-                        const availability = await loadOrderAvailability(dateVal, true);
-                        const selectedSlot = Array.isArray(availability?.times) ? availability.times.find(slot => slot.time === timeVal) : null;
-                        if (!selectedSlot || !selectedSlot.available) {
-                            if (timeInput) timeInput.value = '';
-                            return showAlert('Horário indisponível', selectedSlot?.reason || availability?.reason || 'Escolha outro horário.');
-                        }
-                        state.orderDetailsInfo = details;
+                        goToStep(3);
+                        return;
                     }
                     goToStep(3);
                 } else if (state.currentStep === 3) {
@@ -2345,6 +2686,8 @@ try {
                 const lineEl = document.getElementById('delivery-fee-line');
                 const listEl = document.getElementById('review-items-list');
                 const paymentSummaryEl = document.getElementById('payment-method-summary');
+                const scheduleReviewEl = document.getElementById('order-schedule-review');
+                const scheduleReviewValueEl = document.getElementById('order-schedule-review-value');
 
                 if (paymentSummaryEl) {
                     if (state.paymentMethod === 'dinheiro') {
@@ -2359,6 +2702,12 @@ try {
                     lucide.createIcons();
                 }
 
+                if (scheduleReviewEl && scheduleReviewValueEl) {
+                    const showSchedule = state.activeTab === 'order' && !!state.orderSchedule?.date && !!state.orderSchedule?.time;
+                    scheduleReviewEl.classList.toggle('hidden', !showSchedule);
+                    scheduleReviewValueEl.innerText = showSchedule ? formatOrderSchedule() : 'Nenhum horário selecionado.';
+                }
+
                 if (subEl) subEl.innerText = `R$ ${subtotal.toFixed(2)}`;
                 if (feeEl) feeEl.innerText = `R$ ${fee.toFixed(2)}`;
                 if (totalEl) totalEl.innerText = `R$ ${total.toFixed(2)}`;
@@ -2368,7 +2717,7 @@ try {
                     listEl.innerHTML = cart.map(item => `
                         <div style="margin-bottom: 8px;">
                             <p style="font-size: 0.9rem; margin-bottom: 0;">${item.quantity}x ${item.name} ${item.variation ? `(${item.variation})` : ''}</p>
-                            ${item.customFields ? (() => { try { const cfs = JSON.parse(item.customFields); return Object.entries(cfs).map(([k,v]) => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">- ' + k + ': ' + (v.startsWith('http') ? 'Anexo' : v) + '</p>').join(''); } catch(e){ return ''; } })() : ''}
+                            ${getCustomFieldSummaryParts(item).map(({ key, value, isUrl }) => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">- ' + key + ': ' + (isUrl ? 'Anexo' : String(value)) + '</p>').join('')}
                             ${item.addons ? (() => { try { const ads = JSON.parse(item.addons); return ads.map(a => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">+ ' + a.name + '</p>').join(''); } catch(e){ return ''; } })() : ''}
                         </div>
                     `).join('');
@@ -2376,6 +2725,14 @@ try {
             }
 
             function addToCart() {
+                if (state.activeTab === 'order' && !state.orderSchedule?.date && !state.orderSchedule?.time) {
+                    openScheduleModal('add');
+                    return;
+                }
+                commitAddToCart();
+            }
+
+            function commitAddToCart() {
                 const item = state.currentItem;
                 if (state.activeTab === 'delivery' && !state.isOpen) {
                     return showAlert('Loja Fechada', isOrderEnabled() ?
@@ -2389,15 +2746,17 @@ try {
                 // Coleta custom fields (texto/imagem)
                 let customAnswers = {};
                 let missingRequired = false;
-                try {
-                    const cfs = JSON.parse(item.customFields || '[]');
-                    cfs.forEach((cf, i) => {
-                        const val = document.getElementById(`cf-${i}`)?.value.trim();
-                        if (cf.required && !val) missingRequired = true;
-                        if (val) customAnswers[cf.name] = val;
-                    });
-                } catch (e) {}
-                if (missingRequired) return showAlert('Atenção', 'Por favor, preencha todos os campos obrigatórios (marcados com *).');
+                if (state.activeTab !== 'order') {
+                    try {
+                        const cfs = JSON.parse(item.customFields || '[]');
+                        cfs.forEach((cf, i) => {
+                            const val = document.getElementById(`cf-${i}`)?.value.trim();
+                            if (cf.required && !val) missingRequired = true;
+                            if (val) customAnswers[cf.name] = val;
+                        });
+                    } catch (e) {}
+                    if (missingRequired) return showAlert('Atenção', 'Por favor, preencha todos os campos obrigatórios (marcados com *).');
+                }
 
                 // Valida grupos de adicionais obrigatórios
                 const groupIds = JSON.parse(item.addonGroups || '[]');
@@ -2426,6 +2785,8 @@ try {
                 const basePrice = parseFloat((variation ? variation.price : item.price) || 0);
                 const finalUnitPrice = basePrice + addonTotal;
 
+                const customFieldSchema = getCustomFieldSchema(item);
+                const customFieldSchemaJSON = customFieldSchema.length > 0 ? JSON.stringify(customFieldSchema) : null;
                 const customAnswersJSON = Object.keys(customAnswers).length > 0 ? JSON.stringify(customAnswers) : null;
                 const sigKey = (customAnswersJSON || '') + (addonsJSON || '');
                 const itemKeyBase = variation ? `${item.id}-${variation.name}` : item.id;
@@ -2441,7 +2802,8 @@ try {
                     variation: variation ? variation.name : null,
                     price: finalUnitPrice,
                     quantity: state.currentQty,
-                    customFields: customAnswersJSON,
+                    customFieldSchema: customFieldSchemaJSON,
+                    customFieldValues: customAnswersJSON,
                     addons: addonsJSON
                 });
                 setActiveCart(cart);
@@ -2498,6 +2860,27 @@ try {
                 btn.disabled = true;
                 btn.innerHTML = 'Processando Pagamento...';
 
+                if (state.activeTab === 'order') {
+                    if (!state.orderSchedule?.date || !state.orderSchedule?.time) {
+                        btn.disabled = false;
+                        btn.innerHTML = 'Fazer pedido';
+                        return showAlert('Agendamento ausente', 'Escolha a data e o horário da encomenda antes de concluir.');
+                    }
+                    const missingExtraItem = cart.find(item => {
+                        const schema = getCustomFieldSchema(item);
+                        if (!schema.length) return false;
+                        const answers = getCustomFieldAnswers(item);
+                        return schema.some(field => field?.required && !String(answers[field.name] || '').trim());
+                    });
+                    if (missingExtraItem) {
+                        btn.disabled = false;
+                        btn.innerHTML = 'Fazer pedido';
+                        showAlert('Campos extras pendentes', `Preencha os campos extras do item "${missingExtraItem.name}" antes de concluir.`);
+                        goToStep(2);
+                        return;
+                    }
+                }
+
                 const totalValue = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0) + (state.deliveryType === 'delivery' ? state.deliveryFee : 0);
 
                 const formatItemName = (item) => {
@@ -2509,12 +2892,7 @@ try {
                             ads.forEach(a => extras.push(a.name));
                         } catch (e) {}
                     }
-                    if (item.customFields) {
-                        try {
-                            const cfs = JSON.parse(item.customFields);
-                            Object.entries(cfs).forEach(([k, v]) => extras.push(`${k}: ${v.startsWith('http') ? 'Anexo' : v}`));
-                        } catch (e) {}
-                    }
+                    getCustomFieldSummaryParts(item).forEach(({ key, value, isUrl }) => extras.push(`${key}: ${isUrl ? 'Anexo' : value}`));
                     if (extras.length > 0) base += ` [${extras.join(', ')}]`;
                     return base;
                 };
@@ -2528,8 +2906,8 @@ try {
                     quantity: cart[0].quantity,
                     type: state.activeTab,
                     deliveryAddress: state.deliveryType === 'delivery' ? state.userInfo.address : 'Retirada na Loja',
-                    scheduledDate: state.activeTab === 'order' ? document.getElementById('order-date').value : null,
-                    scheduledTime: state.activeTab === 'order' ? document.getElementById('order-time').value : null,
+                    scheduledDate: state.activeTab === 'order' ? state.orderSchedule?.date || null : null,
+                    scheduledTime: state.activeTab === 'order' ? state.orderSchedule?.time || null : null,
                     deliveryFee: state.deliveryType === 'delivery' ? state.deliveryFee : 0,
                     paymentMethod: state.paymentMethod,
                     totalValue: totalValue,

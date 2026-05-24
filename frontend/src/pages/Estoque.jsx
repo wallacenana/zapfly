@@ -21,13 +21,27 @@ const parseJsonArray = (value, fallback = []) => {
   }
 };
 
+const normalizeCustomField = (field = {}) => ({
+  name: field?.name || '',
+  type: ['text', 'dropdown', 'image'].includes(String(field?.type || 'text').toLowerCase()) ? String(field?.type || 'text').toLowerCase() : 'text',
+  required: !!field?.required,
+  options: Array.isArray(field?.options) ? field.options.join(', ') : (field?.options || '')
+});
+
+const createCustomField = () => ({
+  name: '',
+  type: 'text',
+  required: false,
+  options: ''
+});
+
 const Estoque = () => {
   const [tab, setTab] = useState('delivery'); // 'delivery', 'encomenda' ou 'addon'
   const [products, setProducts] = useState([]);
   const [addonGroups, setAddonGroups] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [isComboMode, setIsComboMode] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: '', image: '', bannerUrl: '', price: 0, stock: 0, trackStock: false, capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [] });
+  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: '', image: '', bannerUrl: '', price: 0, stock: 0, trackStock: false, capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [], customFields: [] });
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState(null);
 
@@ -121,7 +135,13 @@ const Estoque = () => {
           console.error("Erro ao parsear itens do combo:", p.id, e);
           items = [];
         }
-        return { ...p, variations: vars, comboItems: items, addonGroups: parseJsonArray(p.addonGroups, []) };
+        return {
+          ...p,
+          variations: vars,
+          comboItems: items,
+          addonGroups: parseJsonArray(p.addonGroups, []),
+          customFields: parseJsonArray(p.customFields, []).map(normalizeCustomField)
+        };
       });
       setProducts(data);
     } catch (err) { console.error(err); }
@@ -272,7 +292,7 @@ const Estoque = () => {
   const openAdd = (asCombo = false) => {
     setEditing(null);
     setIsComboMode(asCombo);
-    setForm({ name: '', description: '', type: tab, category: '', image: '', bannerUrl: '', price: 0, stock: 0, trackStock: tab === 'delivery', capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [] });
+    setForm({ name: '', description: '', type: tab, category: '', image: '', bannerUrl: '', price: 0, stock: 0, trackStock: tab === 'delivery', capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [], customFields: [] });
     setShowModal(true);
   };
 
@@ -280,8 +300,11 @@ const Estoque = () => {
     setEditing(p.id);
     setIsComboMode(p.comboItems && p.comboItems.length > 0 || p.type.startsWith('combo_'));
     const productData = { ...p };
-    delete productData.customFields;
-    setForm({ ...productData, addonGroups: parseJsonArray(p.addonGroups, []) });
+    setForm({
+      ...productData,
+      addonGroups: parseJsonArray(p.addonGroups, []),
+      customFields: parseJsonArray(p.customFields, []).map(normalizeCustomField)
+    });
     setShowModal(true);
   };
 
@@ -304,13 +327,29 @@ const Estoque = () => {
       return;
     }
 
+    const invalidCustomField = (form.customFields || []).find(field => {
+      const name = String(field?.name || '').trim();
+      const type = String(field?.type || 'text').toLowerCase();
+      const options = String(field?.options || '').trim();
+      return !name || (type === 'dropdown' && !options);
+    });
+    if (invalidCustomField) {
+      Swal.fire({
+        title: 'Campo extra incompleto',
+        text: 'Preencha o nome do campo e as opções quando o tipo for lista.',
+        icon: 'warning',
+        confirmButtonColor: '#f59e0b'
+      });
+      return;
+    }
+
     const formPayload = { ...form };
-    delete formPayload.customFields;
     const payload = { 
       ...formPayload, 
       type: isComboMode ? (form.type.startsWith('combo_') ? form.type : `combo_${form.type}`) : form.type.replace('combo_', ''),
       variations: JSON.stringify(form.variations),
       comboItems: JSON.stringify(isComboMode ? form.comboItems : []),
+      customFields: JSON.stringify(form.customFields || []),
       addonGroups: JSON.stringify(form.addonGroups || [])
     };
     try {
@@ -323,6 +362,20 @@ const Estoque = () => {
   };
 
   const addVar = () => setForm(f => ({ ...f, variations: [...f.variations, { name: '', price: 0, stock: 0, description: '', subItems: [] }] }));
+  const addCustomFieldRow = () => setForm(f => ({ ...f, customFields: [...(f.customFields || []), createCustomField()] }));
+  const updateCustomFieldRow = (idx, key, value) => {
+    setForm(f => {
+      const rows = [...(f.customFields || [])];
+      rows[idx] = { ...(rows[idx] || createCustomField()), [key]: value };
+      if (key === 'type' && value !== 'dropdown') {
+        rows[idx].options = rows[idx].options || '';
+      }
+      return { ...f, customFields: rows };
+    });
+  };
+  const removeCustomFieldRow = (idx) => {
+    setForm(f => ({ ...f, customFields: (f.customFields || []).filter((_, i) => i !== idx) }));
+  };
   const addSub = (vIdx) => {
     setForm(f => {
       const v2 = JSON.parse(JSON.stringify(f.variations));
@@ -540,6 +593,7 @@ const Estoque = () => {
                         {isCombo && <span style={{ fontSize: '10px', backgroundColor: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', padding: '2px 8px', borderRadius: '4px', fontWeight: 900 }}>COMBO</span>}
                         <span style={{ fontSize: '10px', backgroundColor: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: '999px', fontWeight: 800 }}>#{p.displayOrder || idx + 1}</span>
                         {p.featured && <span style={{ fontSize: '10px', backgroundColor: 'rgba(59, 130, 246, 0.16)', color: '#60a5fa', padding: '2px 8px', borderRadius: '999px', fontWeight: 900 }}>DESTAQUE</span>}
+                        {Array.isArray(p.customFields) && p.customFields.length > 0 && <span style={{ fontSize: '10px', backgroundColor: 'rgba(245, 158, 11, 0.16)', color: '#f59e0b', padding: '2px 8px', borderRadius: '999px', fontWeight: 900 }}>EXTRAS</span>}
                       </div>
                       {p.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{p.description}</div>}
                       {!p.variations.length && !isCombo && <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.trackStock && `| Estoque: ${p.stock}`} {!p.trackStock && '| Estoque: ∞'}</div>}
@@ -944,6 +998,94 @@ const Estoque = () => {
                       )}
                     </div>
                   )}
+
+                  <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.06)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.16)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: '#f59e0b' }}>Campos Extras do Item</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Crie perguntas obrigatórias ou opcionais que aparecem na hora de montar o pedido.</div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={addCustomFieldRow}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'rgba(245, 158, 11, 0.10)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.18)', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        <Plus size={16} /> Add Campo
+                      </button>
+                    </div>
+
+                    {(form.customFields || []).length === 0 ? (
+                      <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '12px' }}>
+                        Nenhum campo extra configurado. Use isso para coletar referência, cor, topo, observações ou qualquer outro dado.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        {(form.customFields || []).map((field, idx) => (
+                          <div key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.9fr 0.55fr auto', gap: '10px', alignItems: 'start' }}>
+                              <div>
+                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Nome do Campo</label>
+                                <input
+                                  {...inp}
+                                  placeholder="Ex: Cor, Tema, Referência"
+                                  value={field.name || ''}
+                                  onChange={e => updateCustomFieldRow(idx, 'name', e.target.value)}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Tipo</label>
+                                <select
+                                  {...inp}
+                                  value={field.type || 'text'}
+                                  onChange={e => updateCustomFieldRow(idx, 'type', e.target.value)}
+                                >
+                                  <option value="text">Texto</option>
+                                  <option value="dropdown">Lista</option>
+                                  <option value="image">Imagem</option>
+                                </select>
+                              </div>
+                              <div style={{ paddingTop: '32px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#fff', fontSize: '13px', fontWeight: 700 }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={!!field.required}
+                                    onChange={e => updateCustomFieldRow(idx, 'required', e.target.checked)}
+                                    style={{ width: '16px', height: '16px', accentColor: '#f59e0b', cursor: 'pointer' }}
+                                  />
+                                  Obrigatório
+                                </label>
+                              </div>
+                              <button
+                                type="button"
+                                className="btn-icon"
+                                onClick={() => removeCustomFieldRow(idx)}
+                                style={{ marginTop: '26px', color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.10)', borderRadius: '8px', padding: '8px' }}
+                                title="Remover campo"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+
+                            {String(field.type || 'text').toLowerCase() === 'dropdown' && (
+                              <div style={{ marginTop: '10px' }}>
+                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Opções da Lista</label>
+                                <input
+                                  {...inp}
+                                  placeholder="Ex: Chocolate, Morango, Ninho"
+                                  value={field.options || ''}
+                                  onChange={e => updateCustomFieldRow(idx, 'options', e.target.value)}
+                                />
+                                <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                  Separe as opções por vírgula.
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
                 {isComboMode ? (
                   <div style={sectionBox}>
