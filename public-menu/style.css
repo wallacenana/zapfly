@@ -17,6 +17,14 @@ body.theme-order {
     --primary-color: #4a2c2a;
 }
 
+body.modal-open {
+    overflow: hidden;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    overscroll-behavior: none;
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
 
 * {
@@ -336,6 +344,7 @@ h3 {
     z-index: 500;
     display: flex;
     align-items: flex-end;
+    overscroll-behavior: contain;
 }
 
 .modal-overlay {
@@ -357,6 +366,7 @@ h3 {
     max-height: 66vh;
     display: flex;
     flex-direction: column;
+    overscroll-behavior: contain;
 }
 
 .item-detail-content {
@@ -693,10 +703,14 @@ body.theme-order .var-option.selected {
 /* Sticky Modal Footer */
 .modal-footer-sticky {
     padding: 16px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--border);
     display: flex;
     gap: 12px;
     background: white;
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
 }
 
 .qty-selector {
@@ -754,7 +768,9 @@ body.theme-order .var-option.selected {
 /* Checkout Modal */
 .checkout-content {
     height: 100vh;
+    height: 100dvh;
     max-height: 100vh;
+    max-height: 100dvh;
     border-radius: 0;
 }
 
@@ -782,6 +798,8 @@ body.theme-order .var-option.selected {
     flex: 1;
     overflow-y: auto;
     padding: 16px;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
 }
 
 .checkout-items {
@@ -995,6 +1013,27 @@ body.theme-order .delivery-fee-badge {
 }
 
 @media (max-width: 599px) {
+    .modal {
+        align-items: stretch;
+    }
+
+    .modal-content {
+        width: 100vw;
+        max-width: none;
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+        border-radius: 0;
+    }
+
+    .checkout-content {
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+    }
+
     #item-detail-modal.modal {
         align-items: stretch;
     }
@@ -1003,7 +1042,9 @@ body.theme-order .delivery-fee-badge {
         width: 100vw;
         max-width: none;
         height: 100vh;
+        height: 100dvh;
         max-height: 100vh;
+        max-height: 100dvh;
         border-radius: 0;
     }
 

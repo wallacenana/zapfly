@@ -276,6 +276,7 @@ model Setting {
   gcalCalendarId       String?
   gcalSyncHour         Int     @default(6)
   businessName         String?
+  businessCategory     String?
   businessAddress      String?
   businessLocation     String?
   googleApiKey         String? @default("")

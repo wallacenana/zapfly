@@ -771,6 +771,8 @@ try {
                 orderAvailability: null,
                 orderSchedule: null,
                 scheduleModalContext: null,
+                bodyScrollY: 0,
+                isBodyScrollLocked: false,
                 currentCarouselIdx: 0,
                 previousOrders: [],
                 orderDetailsInfo: ''
@@ -1118,7 +1120,7 @@ try {
 
                     if (!isOrderEnabled() && state.activeTab === 'order') {
                         state.activeTab = 'delivery';
-                        document.body.className = '';
+                        document.body.classList.remove('theme-order');
                     }
 
                     // Remove Skeletons e mostra o conteúdo real instantaneamente
@@ -1363,40 +1365,85 @@ try {
                 v = v.replace(/(\d)(\d{4})$/, "$1-$2");
                 return v;
             }
+            async function compressImage(file, maxSize = 1000, quality = 0.8) {
+                return new Promise((resolve) => {
+                    if (!file) return resolve(file);
 
+                    const reader = new FileReader();
+                    reader.onerror = () => resolve(file);
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onerror = () => resolve(file);
+                        img.onload = () => {
+                            let width = img.width;
+                            let height = img.height;
 
+                            if (width > height && width > maxSize) {
+                                height = Math.round(height * (maxSize / width));
+                                width = maxSize;
+                            } else if (height >= width && height > maxSize) {
+                                width = Math.round(width * (maxSize / height));
+                                height = maxSize;
+                            }
 
-            async function handleCustomFieldImageUpload(input, index) {
-                const file = input.files[0];
-                if (!file) return;
-                const preview = document.getElementById(`cf-${index}-preview`);
-                const previewImg = preview.querySelector('img');
-                const hiddenInput = document.getElementById(`cf-${index}`);
+                            const canvas = document.createElement('canvas');
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
 
-                const originalBtnText = input.nextElementSibling.innerHTML;
-                input.nextElementSibling.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Enviando...';
+                            canvas.toBlob((blob) => {
+                                if (!blob) return resolve(file);
+                                resolve(new File(
+                                    [blob],
+                                    file.name.replace(/\.[^.]+$/, '') + '.webp',
+                                    {
+                                        type: 'image/webp',
+                                        lastModified: Date.now()
+                                    }
+                                ));
+                            }, 'image/webp', quality);
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
 
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('secret', 'BlinkMediaSecret123!');
+            async function handleExternalUpload(file) {
+                if (!file) return null;
+
+                Swal.fire({
+                    title: 'Otimizando Imagem...',
+                    text: 'Preparando para o cardápio rápido',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
 
                 try {
+                    const compressedFile = await compressImage(file, 1000, 0.8);
+                    const formData = new FormData();
+                    formData.append('file', compressedFile);
+                    formData.append('secret', 'BlinkMediaSecret123!');
+                    formData.append('size', '500');
+
                     const res = await fetch('https://files.digizap.com.br/upload.php', {
                         method: 'POST',
                         body: formData
                     });
-                    const data = await res.json();
-                    if (data.url) {
-                        hiddenInput.value = data.url;
-                        preview.style.display = 'flex';
-                        previewImg.src = data.url;
+                    if (!res.ok) {
+                        throw new Error(`Upload falhou com status ${res.status}`);
                     }
-                } catch (e) {
-                    console.error(e);
-                    showAlert('Erro', 'Falha ao fazer upload da imagem.');
-                } finally {
-                    input.nextElementSibling.innerHTML = originalBtnText;
-                    lucide.createIcons();
+                    const data = await res.json();
+                    Swal.close();
+                    return data?.url || null;
+                } catch (err) {
+                    console.error(err);
+                    Swal.close();
+                    Swal.fire('Erro', 'Falha no upload para o servidor externo', 'error');
+                    return null;
                 }
             }
 
@@ -1624,21 +1671,14 @@ try {
                 lucide.createIcons();
 
                 try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    formData.append('secret', 'BlinkMediaSecret123!');
-
-                    const res = await fetch('https://files.digizap.com.br/upload.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await res.json();
-
-                    if (data.url) {
-                        document.getElementById(`cf-${idx}`).value = data.url;
+                    const url = await handleExternalUpload(file);
+                    if (url) {
+                        document.getElementById(`cf-${idx}`).value = url;
                         const preview = document.getElementById(`cf-${idx}-preview`);
-                        preview.querySelector('img').src = data.url;
-                        preview.style.display = 'flex';
+                        if (preview) {
+                            preview.querySelector('img').src = url;
+                            preview.style.display = 'flex';
+                        }
                     } else {
                         showAlert('Erro', 'Falha no upload da imagem.');
                     }
@@ -1665,22 +1705,13 @@ try {
                 }
 
                 try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-                    formData.append('secret', 'BlinkMediaSecret123!');
-
-                    const res = await fetch('https://files.digizap.com.br/upload.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await res.json();
-
-                    if (data.url) {
+                    const url = await handleExternalUpload(file);
+                    if (url) {
                         const hidden = document.getElementById(hiddenId);
-                        if (hidden) hidden.value = data.url;
+                        if (hidden) hidden.value = url;
                         const preview = document.getElementById(previewId);
                         if (preview) {
-                            preview.querySelector('img').src = data.url;
+                            preview.querySelector('img').src = url;
                             preview.style.display = 'flex';
                         }
                     } else {
@@ -1924,6 +1955,40 @@ try {
             function closeWithAnimation(modalId) {
                 const modal = document.getElementById(modalId);
                 modal.classList.add('hidden');
+                const anyVisibleModal = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal']
+                    .some(id => {
+                        const el = document.getElementById(id);
+                        return el && !el.classList.contains('hidden');
+                    });
+                if (!anyVisibleModal) {
+                    unlockBodyScroll();
+                }
+            }
+
+            function lockBodyScroll() {
+                if (state.isBodyScrollLocked) return;
+                state.bodyScrollY = window.scrollY || window.pageYOffset || 0;
+                state.isBodyScrollLocked = true;
+                document.body.classList.add('modal-open');
+                document.body.style.position = 'fixed';
+                document.body.style.top = `-${state.bodyScrollY}px`;
+                document.body.style.left = '0';
+                document.body.style.right = '0';
+                document.body.style.width = '100%';
+                document.body.style.overflow = 'hidden';
+            }
+
+            function unlockBodyScroll() {
+                if (!state.isBodyScrollLocked) return;
+                state.isBodyScrollLocked = false;
+                document.body.classList.remove('modal-open');
+                document.body.style.position = '';
+                document.body.style.top = '';
+                document.body.style.left = '';
+                document.body.style.right = '';
+                document.body.style.width = '';
+                document.body.style.overflow = '';
+                window.scrollTo(0, state.bodyScrollY || 0);
             }
 
             function selectVariation(name, price) {
@@ -2029,6 +2094,34 @@ try {
 
                 const qtyEl = document.getElementById('detail-qty');
                 if (qtyEl) qtyEl.innerText = state.currentQty;
+            }
+
+            function validateCurrentItemSelections() {
+                const item = state.currentItem;
+                if (!item) {
+                    return { ok: false, message: 'Selecione um item primeiro.' };
+                }
+
+                const variation = state.currentVariation;
+                const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
+                if (variations.length > 0 && !variation) {
+                    return { ok: false, message: 'Por favor, selecione uma opção para continuar.' };
+                }
+
+                const groupIds = JSON.parse(item.addonGroups || '[]');
+                const groups = (state.addonGroups || []).filter(g => groupIds.includes(g.id));
+                for (const g of groups) {
+                    const maxAllowed = Math.max(parseInt(g.max, 10) || 1, 1);
+                    const checked = document.querySelectorAll(`.addon-input[data-group-id="${g.id}"]:checked`).length;
+                    if (g.min > 0 && checked < g.min) {
+                        return { ok: false, message: `Selecione pelo menos ${g.min} opção em "${g.name}".` };
+                    }
+                    if (checked > maxAllowed) {
+                        return { ok: false, message: `O grupo "${g.name}" permite no máximo ${maxAllowed} opção(ões).` };
+                    }
+                }
+
+                return { ok: true };
             }
 
             function renderCheckoutExtraField(item, field, idx, itemKeyBase, currentValue = '') {
@@ -2148,7 +2241,7 @@ try {
             }
 
             function closeModal(modalId = null) {
-                const ids = ['item-detail-modal', 'checkout-modal', 'history-modal'];
+                const ids = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal'];
                 ids.forEach(id => {
                     const m = document.getElementById(id);
                     if (m && !m.classList.contains('hidden')) {
@@ -2159,7 +2252,8 @@ try {
             }
 
             function openModal(id) {
-                const ids = ['item-detail-modal', 'checkout-modal', 'history-modal'];
+                const ids = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal'];
+                lockBodyScroll();
                 ids.forEach(modalId => {
                     const m = document.getElementById(modalId);
                     if (m) m.classList.add('hidden', 'closing');
@@ -2179,7 +2273,7 @@ try {
                         document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
                         btn.classList.add('active');
                         state.activeTab = btn.dataset.tab;
-                        document.body.className = state.activeTab === 'order' ? 'theme-order' : '';
+                        document.body.classList.toggle('theme-order', state.activeTab === 'order');
                         updateTheme(); // Muda as cores ao trocar de aba
                         renderMenu();
                         updateUI();
@@ -2425,7 +2519,7 @@ try {
                                 <strong>${item.name}</strong>
                                 ${item.variation ? `<p style="font-size: 0.75rem; color: var(--text-gray);">${item.variation}</p>` : ''}
                                 ${getCustomFieldSummaryParts(item).map(({ key, value, isUrl }) => '<p style="font-size:0.7rem;color:var(--text-gray);margin-top:2px;"><b>' + key + ':</b> ' + (isUrl ? '<a href="' + value + '" target="_blank" style="color:var(--primary-color);">Ver Imagem</a>' : String(value)) + '</p>').join('')}
-                                ${item.addons ? (() => { try { const ads = JSON.parse(item.addons); return ads.map(a => '<p style="font-size:0.7rem;color:var(--text-gray);margin-top:2px;">+ ' + a.name + (a.price > 0 ? ' (R$ ' + parseFloat(a.price).toFixed(2) + ')' : '') + '</p>').join(''); } catch(e){ return ''; } })() : ''}
+                                ${item.addons ? (() => { try { const ads = JSON.parse(item.addons); return ads.map(a => '<p style="font-size:0.7rem;color:var(--text-gray);margin-top:2px;">- ' + a.name + (a.price > 0 ? ' (R$ ' + parseFloat(a.price).toFixed(2) + ')' : '') + '</p>').join(''); } catch(e){ return ''; } })() : ''}
                             </div>
                         </div>
                         <div style="display: flex; align-items: center; gap: 16px;">
@@ -2557,10 +2651,6 @@ try {
                         if (hasExtras) {
                             orderContent.classList.remove('hidden');
                             orderContent.innerHTML = `
-                                <div style="margin-bottom: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.14);">
-                                    <div style="font-size: 12px; font-weight: 800; color: #60a5fa;">Agendamento confirmado</div>
-                                    <div id="order-schedule-summary" style="font-size: 13px; color: var(--text-main); margin-top: 4px;">${formatOrderSchedule()}</div>
-                                </div>
                                 <div id="order-extra-step-content"></div>
                             `;
                             renderCheckoutExtraStep();
@@ -2718,14 +2808,21 @@ try {
                         <div style="margin-bottom: 8px;">
                             <p style="font-size: 0.9rem; margin-bottom: 0;">${item.quantity}x ${item.name} ${item.variation ? `(${item.variation})` : ''}</p>
                             ${getCustomFieldSummaryParts(item).map(({ key, value, isUrl }) => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">- ' + key + ': ' + (isUrl ? 'Anexo' : String(value)) + '</p>').join('')}
-                            ${item.addons ? (() => { try { const ads = JSON.parse(item.addons); return ads.map(a => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">+ ' + a.name + '</p>').join(''); } catch(e){ return ''; } })() : ''}
+                            ${item.addons ? (() => { try { const ads = JSON.parse(item.addons); return ads.map(a => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">- ' + a.name + '</p>').join(''); } catch(e){ return ''; } })() : ''}
                         </div>
                     `).join('');
                 }
             }
 
             function addToCart() {
-                if (state.activeTab === 'order' && !state.orderSchedule?.date && !state.orderSchedule?.time) {
+                if (state.activeTab === 'order') {
+                    const precheck = validateCurrentItemSelections();
+                    if (!precheck.ok) {
+                        return showAlert('Atenção', precheck.message);
+                    }
+                }
+
+                if (state.activeTab === 'order' && (!state.orderSchedule?.date || !state.orderSchedule?.time)) {
                     openScheduleModal('add');
                     return;
                 }

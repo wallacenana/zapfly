@@ -1,0 +1,715 @@
+.dz-home2,
+.dz-home2 * {
+  box-sizing: border-box;
+}
+
+.dz-home2 {
+  width: 100%;
+  color: #20181a;
+  font-family: inherit;
+}
+
+.dz-home2-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 18px;
+  align-items: center;
+  padding: 18px 24px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(32, 24, 26, 0.08);
+}
+
+.dz-home2-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.dz-home2-brand-logo {
+  width: auto;
+  height: 44px;
+  display: block;
+  object-fit: contain;
+}
+
+.dz-home2-brand-mark {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #e21b3c, #ff6d8a);
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 10px 24px rgba(226, 27, 60, 0.22);
+}
+
+.dz-home2-brand-name {
+  font-weight: 900;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.dz-home2-nav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  justify-content: center;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.dz-home2-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.dz-home2-nav a {
+  text-decoration: none;
+  color: #6f6567;
+  font-weight: 800;
+  padding: 8px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.dz-home2-nav a:hover {
+  color: #20181a;
+  background: rgba(32, 24, 26, 0.04);
+}
+
+.dz-home2-header-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.dz-home2-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0.78rem 1rem;
+  border-radius: 999px;
+  border: 0;
+  cursor: pointer;
+  font-weight: 900;
+  text-decoration: none;
+  transition: transform .18s ease, box-shadow .18s ease, background-color .18s ease, opacity .18s ease;
+  white-space: nowrap;
+}
+
+.dz-home2-button:hover {
+  transform: translateY(-1px);
+}
+
+.dz-home2-button-primary {
+  background: #e21b3c;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(226, 27, 60, 0.22);
+}
+
+.dz-home2-button-primary:hover {
+  background: #c51532;
+}
+
+.dz-home2-button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  background: #f5f5f5;
+  color: #a3a3a3;
+  border: 1px solid rgba(32, 24, 26, 0.08);
+}
+
+.dz-home2-button-ghost {
+  background: #fff;
+  color: #20181a;
+  border: 1px solid rgba(32, 24, 26, 0.10);
+}
+
+.dz-home2-main {
+  width: min(1240px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 22px 0 28px;
+}
+
+.dz-home2-landing,
+.dz-home2-catalog {
+  width: 100%;
+}
+
+.dz-home2-landing-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 24px;
+  align-items: stretch;
+  min-height: 430px;
+}
+
+.dz-home2-landing-copy {
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  padding: 12px 0;
+}
+
+.dz-home2-landing-copy h1 {
+  margin: 0;
+  font-size: clamp(2.2rem, 4vw, 4.2rem);
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+
+.dz-home2-landing-copy p {
+  margin: 0;
+  max-width: 54ch;
+  color: #6f6567;
+  font-size: 1.02rem;
+  line-height: 1.55;
+}
+
+.dz-home2-address-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 680px;
+  margin-top: 8px;
+}
+
+.dz-home2-address-form input {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 56px;
+  border-radius: 18px;
+  border: 1px solid rgba(32, 24, 26, 0.12);
+  padding: 0 18px;
+  background: #fff;
+  font: inherit;
+  outline: none;
+  box-shadow: 0 10px 24px rgba(23, 15, 17, 0.05);
+}
+
+.dz-home2-address-form input:focus {
+  border-color: rgba(226, 27, 60, 0.35);
+  box-shadow: 0 0 0 4px rgba(226, 27, 60, 0.10);
+}
+
+.dz-home2-landing-visual {
+  position: relative;
+  border-radius: 32px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.26), transparent 18%),
+    radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.14), transparent 16%),
+    linear-gradient(160deg, #111 0%, #1b1b1b 40%, #e21b3c 100%);
+  box-shadow: 0 22px 52px rgba(18, 18, 18, 0.12);
+  min-height: 430px;
+}
+
+.dz-home2-visual-card,
+.dz-home2-visual-badge,
+.dz-home2-visual-ring {
+  position: absolute;
+  display: block;
+  border-radius: 24px;
+}
+
+.dz-home2-visual-card {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.15);
+}
+
+.dz-home2-visual-card-a {
+  width: 52%;
+  height: 24%;
+  left: 10%;
+  top: 16%;
+}
+
+.dz-home2-visual-card-b {
+  width: 62%;
+  height: 26%;
+  right: 8%;
+  top: 42%;
+}
+
+.dz-home2-visual-card-c {
+  width: 44%;
+  height: 18%;
+  left: 18%;
+  bottom: 14%;
+}
+
+.dz-home2-visual-badge {
+  width: 90px;
+  height: 90px;
+  border-radius: 999px;
+  right: 10%;
+  top: 10%;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(6px);
+}
+
+.dz-home2-visual-ring {
+  width: 170px;
+  height: 170px;
+  border-radius: 999px;
+  left: 8%;
+  bottom: 8%;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.dz-home2-catalog {
+  display: grid;
+  gap: 18px;
+}
+
+.dz-home2-catalog-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dz-home2-catalog-head h2 {
+  margin: 0;
+  font-size: 1.24rem;
+  line-height: 1.2;
+}
+
+.dz-home2-catalog-head p {
+  margin: 4px 0 0;
+  color: #6f6567;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.dz-home2-catalog-count {
+  min-width: 46px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(226, 27, 60, 0.08);
+  color: #c51532;
+  font-weight: 900;
+}
+
+.dz-home2-featured-track {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 2px 2px 10px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+}
+
+.dz-home2-featured-track::-webkit-scrollbar {
+  height: 8px;
+}
+
+.dz-home2-featured-track::-webkit-scrollbar-thumb {
+  background: rgba(32, 24, 26, 0.16);
+  border-radius: 999px;
+}
+
+.dz-home2-featured-card {
+  flex: 0 0 min(360px, 82vw);
+  min-height: 176px;
+  border-radius: 26px;
+  overflow: hidden;
+  position: relative;
+  scroll-snap-align: start;
+  text-decoration: none;
+  color: #fff;
+  box-shadow: 0 18px 42px rgba(18, 18, 18, 0.10);
+  background: #111;
+}
+
+.dz-home2-featured-media,
+.dz-home2-featured-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dz-home2-featured-media img {
+  object-fit: cover;
+}
+
+.dz-home2-featured-card::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 58%;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.45) 78%, rgba(0, 0, 0, 0.70) 100%);
+}
+
+.dz-home2-featured-copy {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 1;
+  display: grid;
+  gap: 3px;
+  padding: 16px 18px 18px;
+}
+
+.dz-home2-featured-copy strong {
+  font-size: 1.04rem;
+  line-height: 1.2;
+}
+
+.dz-home2-featured-copy small {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.85rem;
+  line-height: 1.35;
+}
+
+.dz-home2-restaurants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.dz-home2-restaurant-card,
+.dz-home2-restaurant-link {
+  height: 100%;
+}
+
+.dz-home2-restaurant-link {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 22px;
+  border: 1px solid rgba(32, 24, 26, 0.08);
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 12px 28px rgba(23, 15, 17, 0.06);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.dz-home2-restaurant-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 36px rgba(23, 15, 17, 0.10);
+}
+
+.dz-home2-restaurant-media {
+  display: block;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(226, 27, 60, 0.08), rgba(17, 24, 39, 0.06));
+}
+
+.dz-home2-restaurant-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dz-home2-restaurant-body {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.dz-home2-restaurant-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dz-home2-restaurant-head strong {
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.dz-home2-restaurant-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  flex: 0 0 auto;
+}
+
+.dz-home2-restaurant-status.open {
+  background: rgba(18, 163, 87, 0.10);
+  color: #0f7a40;
+}
+
+.dz-home2-restaurant-status.closed {
+  background: rgba(226, 27, 60, 0.08);
+  color: #c51532;
+}
+
+.dz-home2-restaurant-category,
+.dz-home2-restaurant-address,
+.dz-home2-restaurant-meta {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: #6f6567;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.dz-home2-restaurant-address {
+  color: #20181a;
+}
+
+.dz-home2-empty,
+.dz-home2-empty-results {
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px dashed rgba(32, 24, 26, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  color: #6f6567;
+  font-size: 0.95rem;
+}
+
+.dz-home2-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  min-width: min(420px, 42vw);
+  padding: 0 14px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(32, 24, 26, 0.10);
+}
+
+.dz-home2-search input {
+  flex: 1 1 auto;
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: #20181a;
+}
+
+.dz-home2-search-icon {
+  color: #e21b3c;
+  flex: 0 0 auto;
+}
+
+.dz-home2-location-pill {
+  display: grid;
+  gap: 2px;
+  min-height: 46px;
+  min-width: 220px;
+  padding: 8px 14px;
+  border: 1px solid rgba(32, 24, 26, 0.10);
+  border-radius: 16px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  color: #20181a;
+}
+
+.dz-home2-location-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6f6567;
+  font-weight: 800;
+}
+
+.dz-home2-location-pill strong,
+.dz-home2-location-pill small {
+  display: block;
+  line-height: 1.15;
+}
+
+.dz-home2-location-pill strong {
+  font-size: 0.92rem;
+}
+
+.dz-home2-location-pill small {
+  font-size: 0.78rem;
+  color: #6f6567;
+}
+
+.dz-home2-address-hint {
+  margin: -2px 0 0;
+  min-height: 1.1em;
+  color: #6f6567;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.pac-container {
+  margin-top: 10px !important;
+  border: 1px solid rgba(32, 24, 26, 0.08) !important;
+  border-radius: 22px !important;
+  box-shadow: 0 24px 60px rgba(18, 18, 18, 0.12) !important;
+  overflow: hidden !important;
+  font-family: inherit !important;
+  z-index: 99999 !important;
+  background: #fff;
+}
+
+.pac-item {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 12px;
+  padding: 14px 16px 14px 14px !important;
+  border-top: 0 !important;
+  border-bottom: 1px solid rgba(32, 24, 26, 0.06);
+  line-height: 1.35 !important;
+  cursor: pointer;
+  background: #fff;
+}
+
+.pac-item:last-child {
+  border-bottom: 0 !important;
+}
+
+.pac-item:hover,
+.pac-item.pac-item-selected {
+  background: rgba(226, 27, 60, 0.05) !important;
+  box-shadow: inset 3px 0 0 #e21b3c;
+}
+
+.pac-item-query {
+  display: block;
+  margin-bottom: 1px;
+  color: #20181a !important;
+  font-size: 0.95rem !important;
+  font-weight: 700 !important;
+}
+
+.pac-item > span:last-child {
+  display: block;
+  color: #8b8b8b !important;
+  font-size: 0.82rem !important;
+  line-height: 1.2 !important;
+  font-weight: 500 !important;
+}
+
+.pac-matched {
+  color: #e21b3c !important;
+  font-weight: 800 !important;
+}
+
+.pac-icon {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0 !important;
+  opacity: 0.72 !important;
+  background-size: 18px 18px !important;
+}
+
+.pac-logo {
+  margin: 10px 14px 12px auto !important;
+  opacity: 0.7 !important;
+}
+
+[data-guest-actions][hidden],
+[data-app-actions][hidden],
+[data-landing][hidden],
+[data-catalog][hidden] {
+  display: none !important;
+}
+
+.dz-home2[data-mode="landing"] [data-app-actions] {
+  display: none;
+}
+
+.dz-home2[data-mode="app"] [data-guest-actions] {
+  display: none;
+}
+
+.dz-home2[data-mode="landing"] [data-catalog] {
+  display: none;
+}
+
+.dz-home2[data-mode="app"] [data-landing] {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .dz-home2-header {
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+  }
+
+  .dz-home2-nav,
+  .dz-home2-header-actions {
+    justify-content: flex-start;
+  }
+
+  .dz-home2-landing-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dz-home2-landing-visual {
+    min-height: 260px;
+  }
+}
+
+@media (max-width: 720px) {
+  .dz-home2-main {
+    width: min(100%, calc(100% - 18px));
+  }
+
+  .dz-home2-header {
+    padding: 14px 12px;
+  }
+
+  .dz-home2-address-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .dz-home2-address-form .dz-home2-button {
+    width: 100%;
+  }
+
+  .dz-home2-search {
+    min-width: 100%;
+    width: 100%;
+  }
+
+  .dz-home2-location-pill {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dz-home2-catalog-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dz-home2-restaurants-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dz-home2-featured-card {
+    flex-basis: min(320px, 86vw);
+  }
+}

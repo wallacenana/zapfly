@@ -9,8 +9,8 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [calendars, setCalendars] = useState([]);
   const [settings, setSettings] = useState({
-    slug: '',
     businessName: '',
+    businessCategory: '',
     businessAddress: '',
     businessLocation: '',
     openaiKey: '',
@@ -46,25 +46,26 @@ const Settings = () => {
     try {
       const res = await api.get('/config/keys');
       if (res.data) {
+        const { slug: _ignoredSlug, ...dataWithoutSlug } = res.data;
         setSettings({
-          ...res.data,
-          slug: res.data.slug || '',
-          openaiKey: res.data.openai || '',
-          claudeKey: res.data.claude || '',
-          googleApiKey: res.data.googleApiKey || '',
-          gcalCalendarId: res.data.gcalCalendarId || '',
-          deliveryRules: typeof res.data.deliveryRules === 'string'
-            ? JSON.parse(res.data.deliveryRules || '[]')
-            : (Array.isArray(res.data.deliveryRules) ? res.data.deliveryRules : []),
-          reminderHours: res.data.reminderHours || 2,
-          mercadopagoToken: res.data.mercadopagoToken || '',
-          mercadopagoPublicKey: res.data.mercadopagoPublicKey || '',
-          maxDeliveryKm: res.data.maxDeliveryKm || 15,
-          deliveryMode: res.data.deliveryMode || 'hibrido',
-          allowCashOnDelivery: res.data.allowCashOnDelivery ?? true
+          ...dataWithoutSlug,
+          openaiKey: dataWithoutSlug.openai || '',
+          claudeKey: dataWithoutSlug.claude || '',
+          googleApiKey: dataWithoutSlug.googleApiKey || '',
+          gcalCalendarId: dataWithoutSlug.gcalCalendarId || '',
+          businessCategory: dataWithoutSlug.businessCategory || '',
+          deliveryRules: typeof dataWithoutSlug.deliveryRules === 'string'
+            ? JSON.parse(dataWithoutSlug.deliveryRules || '[]')
+            : (Array.isArray(dataWithoutSlug.deliveryRules) ? dataWithoutSlug.deliveryRules : []),
+          reminderHours: dataWithoutSlug.reminderHours || 2,
+          mercadopagoToken: dataWithoutSlug.mercadopagoToken || '',
+          mercadopagoPublicKey: dataWithoutSlug.mercadopagoPublicKey || '',
+          maxDeliveryKm: dataWithoutSlug.maxDeliveryKm || 15,
+          deliveryMode: dataWithoutSlug.deliveryMode || 'hibrido',
+          allowCashOnDelivery: dataWithoutSlug.allowCashOnDelivery ?? true
         });
 
-        if (res.data.gcalRefreshToken) {
+        if (dataWithoutSlug.gcalRefreshToken) {
           fetchCalendars();
         }
       }
@@ -185,11 +186,12 @@ const Settings = () => {
 
   const handleSave = async () => {
     try {
+      const { slug: _ignoredSlug, ...safeSettings } = settings;
       const payload = {
-        ...settings,
-        openai: settings.openaiKey,
-        claude: settings.claudeKey,
-        deliveryRules: JSON.stringify(settings.deliveryRules)
+        ...safeSettings,
+        openai: safeSettings.openaiKey,
+        claude: safeSettings.claudeKey,
+        deliveryRules: JSON.stringify(safeSettings.deliveryRules)
       };
       await api.post('/config/keys', payload);
       await loadSettings(); // Recarrega para garantir que o estado local bata com o banco (especialmente GCal)
@@ -200,33 +202,11 @@ const Settings = () => {
   };
 
 
-  const [slugStatus, setSlugStatus] = useState({ available: null, suggestion: '' });
-  const [checkingSlug, setCheckingSlug] = useState(false);
-
   const addDeliveryRule = () => setSettings(s => ({ ...s, deliveryRules: [...s.deliveryRules, { maxKm: 5, fee: 10, allowCash: true }] }));
   const updateRule = (idx, field, val) => {
     const rules = [...settings.deliveryRules];
     rules[idx][field] = parseFloat(val);
     setSettings(s => ({ ...s, deliveryRules: rules }));
-  };
-
-  const checkSlugAvailability = async (val) => {
-    if (!val || val.length < 3) return;
-    setCheckingSlug(true);
-    try {
-      const res = await api.get(`/public/check-slug/${val}`);
-      setSlugStatus({ available: res.data.available, suggestion: res.data.suggestion || '' });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setCheckingSlug(false);
-    }
-  };
-
-  const handleSlugChange = (e) => {
-    const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-    setSettings({ ...settings, slug: val });
-    setSlugStatus({ available: null, suggestion: '' });
   };
 
   const tabs = [
@@ -280,45 +260,27 @@ const Settings = () => {
                 <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Perfil do Negócio</h3>
               </div>
               <div style={{ ...subCard, borderLeftColor: 'var(--primary)' }}>
-                <label style={labelStyle}>🔗 Link do Cardápio Digital (Slug)</label>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: '14px', flexShrink: 0 }}>
-                    digizap.com.br/
-                  </div>
-                  <input
-                    {...inp}
-                    value={settings.slug || ''}
-                    onChange={handleSlugChange}
-                    placeholder="nome-da-sua-loja"
-                  />
-                  <button
-                    onClick={() => checkSlugAvailability(settings.slug)}
-                    disabled={checkingSlug || !settings.slug}
-                    className="btn btn-outline"
-                    style={{ padding: '12px 20px', borderRadius: '12px', fontSize: '14px' }}
-                  >
-                    {checkingSlug ? '...' : 'Verificar'}
-                  </button>
-                  {settings.slug && slugStatus.available === true && (
-                    <a
-                      href={`/${settings.slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-primary"
-                      style={{ padding: '12px 20px', borderRadius: '12px', textDecoration: 'none', fontWeight: 700, fontSize: '14px' }}
-                    >
-                      Abrir
-                    </a>
-                  )}
-                </div>
-                {slugStatus.available === true && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '8px', fontWeight: 800 }}>✓ Link disponível!</p>}
-                {slugStatus.available === false && (
-                  <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '8px', fontWeight: 700 }}>
-                    ✗ Este link já está em uso. {slugStatus.suggestion && <>Sugestão: <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#3b82f6' }} onClick={() => { setSettings({ ...settings, slug: slugStatus.suggestion }); setSlugStatus({ available: true, suggestion: '' }); }}>{slugStatus.suggestion}</span></>}
-                  </p>
-                )}
+                <label style={labelStyle}>Categoria do Negócio</label>
+                <input
+                  {...inp}
+                  list="business-category-list"
+                  value={settings.businessCategory || ''}
+                  onChange={e => setSettings({ ...settings, businessCategory: e.target.value })}
+                  placeholder="Ex: Pizza, Marmitaria, Açaí, Confeitaria"
+                />
+                <datalist id="business-category-list">
+                  <option value="Brasileira" />
+                  <option value="Lanches" />
+                  <option value="Pizza" />
+                  <option value="Japonesa" />
+                  <option value="Marmita" />
+                  <option value="Doces & Bolos" />
+                  <option value="Saudável" />
+                  <option value="Açaí" />
+                  <option value="Sorvetes" />
+                </datalist>
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                  Este será o endereço público do seu cardápio. Divulgue este link para seus clientes.
+                  Essa categoria alimenta o diretório público e a home estilo iFood.
                 </p>
               </div>
 
@@ -327,8 +289,8 @@ const Settings = () => {
                 <input {...inp} value={settings.businessName} onChange={e => setSettings({ ...settings, businessName: e.target.value })} placeholder="Nome da sua loja" />
               </div>
               <div>
-                <label style={labelStyle}>Endereço Base (Para cálculo de KM)</label>
-                <input {...inp} value={settings.businessAddress} onChange={e => setSettings({ ...settings, businessAddress: e.target.value })} placeholder="Endereço onde as entregas saem" />
+                <label style={labelStyle}>Endereço completo</label>
+                <input {...inp} value={settings.businessAddress} onChange={e => setSettings({ ...settings, businessAddress: e.target.value })} placeholder="Rua, número, bairro, cidade e estado" />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 <div>

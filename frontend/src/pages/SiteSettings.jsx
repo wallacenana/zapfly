@@ -9,6 +9,7 @@ const SiteSettings = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [settings, setSettings] = useState({
+        slug: '',
         businessName: '',
         logoUrl: '',
         faviconUrl: '',
@@ -32,9 +33,9 @@ const SiteSettings = () => {
     const loadSettings = async () => {
         try {
             const res = await api.get('/settings');
-            if (res.data) {
-                setSettings(prev => ({ ...prev, ...res.data }));
-            }
+        if (res.data) {
+            setSettings(prev => ({ ...prev, ...res.data }));
+        }
         } catch (err) {
             console.error('Erro ao carregar configurações:', err);
             toast.error('Erro ao carregar as configurações do site.');
@@ -47,6 +48,7 @@ const SiteSettings = () => {
         setSaving(true);
         try {
             const payload = {
+                slug: settings.slug,
                 businessName: settings.businessName,
                 logoUrl: settings.logoUrl,
                 faviconUrl: settings.faviconUrl,
@@ -70,6 +72,28 @@ const SiteSettings = () => {
         } finally {
             setSaving(false);
         }
+    };
+
+    const [slugStatus, setSlugStatus] = useState({ available: null, suggestion: '' });
+    const [checkingSlug, setCheckingSlug] = useState(false);
+
+    const checkSlugAvailability = async (val) => {
+        if (!val || val.length < 3) return;
+        setCheckingSlug(true);
+        try {
+            const res = await api.get(`/public/check-slug/${val}`);
+            setSlugStatus({ available: res.data.available, suggestion: res.data.suggestion || '' });
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setCheckingSlug(false);
+        }
+    };
+
+    const handleSlugChange = (e) => {
+        const val = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        setSettings({ ...settings, slug: val });
+        setSlugStatus({ available: null, suggestion: '' });
     };
 
     const compressImage = (file) => {
@@ -171,6 +195,54 @@ const SiteSettings = () => {
 
                 {/* CONFIGURAÇÕES */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+
+                    <section className="card" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <CheckCircle size={18} color="var(--accent-primary)" />
+                            Cardápio Público
+                        </h3>
+
+                        <label style={labelStyle}>🔗 Link do Cardápio (Slug)</label>
+                        <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: '14px', flexShrink: 0 }}>
+                                digizap.com.br/
+                            </div>
+                            <input
+                                style={{ ...inputStyle, flex: '1 1 280px' }}
+                                value={settings.slug || ''}
+                                onChange={handleSlugChange}
+                                placeholder="nome-da-sua-loja"
+                            />
+                            <button
+                                onClick={() => checkSlugAvailability(settings.slug)}
+                                disabled={checkingSlug || !settings.slug}
+                                className="btn btn-outline"
+                                style={{ padding: '12px 20px', borderRadius: '12px', fontSize: '14px' }}
+                            >
+                                {checkingSlug ? '...' : 'Verificar'}
+                            </button>
+                            {settings.slug && slugStatus.available === true && (
+                                <a
+                                    href={`/${settings.slug}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-primary"
+                                    style={{ padding: '12px 20px', borderRadius: '12px', textDecoration: 'none', fontWeight: 700, fontSize: '14px' }}
+                                >
+                                    Abrir
+                                </a>
+                            )}
+                        </div>
+                        {slugStatus.available === true && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '8px', fontWeight: 800 }}>✓ Link disponível!</p>}
+                        {slugStatus.available === false && (
+                            <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '8px', fontWeight: 700 }}>
+                                ✗ Este link já está em uso. {slugStatus.suggestion && <>Sugestão: <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#3b82f6' }} onClick={() => { setSettings({ ...settings, slug: slugStatus.suggestion }); setSlugStatus({ available: true, suggestion: '' }); }}>{slugStatus.suggestion}</span></>}
+                            </p>
+                        )}
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                            Esse endereço será usado no cardápio público e na home do diretório.
+                        </p>
+                    </section>
 
                     {/* Sessão de Imagens */}
                     <section className="card" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)' }}>

@@ -1,0 +1,33 @@
+# BEGIN DigiZap Cardapio Custom Rules
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteBase /
+
+# Arquivos e pastas reais passam direto.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Deixa o WordPress cuidar das rotas dele.
+# Importante: não use "- [L]" aqui para wp-json, senão o REST para no Apache
+# e devolve 404 antes de chegar no index.php do WordPress.
+RewriteCond %{REQUEST_URI} !^/(wp-admin|wp-content|wp-includes|wp-json|wp-login\.php|xmlrpc\.php|blog|privacidade|politica-de-privacidade|termos|termos-de-uso|contato|sobre|ajuda)(/|$) [NC]
+
+# Todo slug raiz restante vira cardápio.
+RewriteRule ^([a-zA-Z0-9_-]+)/?$ /cardapio/index.php?loja=$1 [L,QSA]
+</IfModule>
+# END DigiZap Cardapio Custom Rules
+
+# BEGIN WordPress
+# As diretrizes entre "BEGIN WordPress" e "END WordPress" são geradas
+# dinamicamente e só devem ser alteradas através de filtros do WordPress.
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteBase /
+RewriteRule ^index\.php$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.php [L]
+</IfModule>
+# END WordPress

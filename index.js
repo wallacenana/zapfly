@@ -92,6 +92,7 @@ const {
     invalidateSettingsCache,
     getCachedInstance
 } = require('./lib/cache');
+const { buildHomeDirectoryData, renderCategoryCards, renderHeroRestaurants, renderRestaurantCards, escapeHtml } = require('./lib/home');
 
 const { router: ordersRouter, setupCronJobs, checkAvailability, updateCalendarEvent } = require('./routes/orders');
 const app = express();
@@ -133,7 +134,11 @@ app.get('/settings', authenticate, async (req, res) => {
         const settings = await prisma.setting.findUnique({
             where: { userId: req.user.id }
         });
-        res.json(settings || {});
+        const user = await prisma.user.findUnique({
+            where: { id: req.user.id },
+            select: { slug: true }
+        });
+        res.json({ ...(settings || {}), slug: user?.slug || '' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -147,8 +152,23 @@ app.post('/settings', authenticate, async (req, res) => {
             accentColorOrders, buttonColorOrders,
             buttonTextColor, backgroundColor, textColor,
             seoDescription, pixelId, googleAnalyticsId, microsoftClarityId,
+            slug,
             acceptOrders
         } = req.body;
+
+        if (slug) {
+            const normalizedSlug = String(slug).toLowerCase().trim();
+            const existingSlug = await prisma.user.findFirst({
+                where: { slug: normalizedSlug, NOT: { id: req.user.id } }
+            });
+            if (existingSlug) {
+                return res.status(400).json({ error: 'Este slug já está em uso.' });
+            }
+            await prisma.user.update({
+                where: { id: req.user.id },
+                data: { slug: normalizedSlug }
+            });
+        }
 
         const data = {
             businessName, logoUrl, faviconUrl,
@@ -205,7 +225,7 @@ app.use('/orders', (req, res, next) => {
 }, ordersRouter);
 
 // Redirecionamento de Sucesso do Google Agenda ou Raiz
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
     // Se vier do Google Agenda, volta para as configurações
     if (req.query.gcal_success) {
         return res.send(`
@@ -219,8 +239,41 @@ app.get('/', (req, res) => {
             </script>
         `);
     }
-    // Serve a landing page (Home)
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+    try {
+        const homeData = await buildHomeDirectoryData({ limit: 24 });
+        const template = fs.readFileSync(path.join(__dirname, 'public', 'home.html'), 'utf8');
+        const title = 'DigiZap | Restaurantes, entregas e encomendas';
+        const description = 'Descubra restaurantes, encomendas e ofertas perto de você com a experiência iFood da DigiZap.';
+        const safeJson = JSON.stringify(homeData).replace(/</g, '\\u003c');
+
+        const html = template
+            .replaceAll('__HOME_TITLE__', escapeHtml(title))
+            .replaceAll('__HOME_DESCRIPTION__', escapeHtml(description))
+            .replace('<!--HOME_FEATURED_CARDS-->', renderHeroRestaurants(homeData.featuredStores))
+            .replace('<!--HOME_CATEGORY_CARDS-->', renderCategoryCards(homeData.categories))
+            .replace('<!--HOME_RESTAURANT_CARDS-->', renderRestaurantCards(homeData.restaurants))
+            .replace('__HOME_DATA__', safeJson);
+
+        res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=120');
+        res.send(html);
+    } catch (err) {
+        console.error('[Home Render Error]', err);
+        try {
+            const template = fs.readFileSync(path.join(__dirname, 'public', 'home.html'), 'utf8');
+            const fallbackData = { search: '', category: '', total: 0, categories: [], featuredStores: [], restaurants: [] };
+            const html = template
+                .replaceAll('__HOME_TITLE__', escapeHtml('DigiZap | Restaurantes, entregas e encomendas'))
+                .replaceAll('__HOME_DESCRIPTION__', escapeHtml('Descubra restaurantes, encomendas e ofertas perto de você com a experiência iFood da DigiZap.'))
+                .replace('<!--HOME_FEATURED_CARDS-->', renderHeroRestaurants([]))
+                .replace('<!--HOME_CATEGORY_CARDS-->', renderCategoryCards([]))
+                .replace('<!--HOME_RESTAURANT_CARDS-->', renderRestaurantCards([]))
+                .replace('__HOME_DATA__', JSON.stringify(fallbackData).replace(/</g, '\\u003c'));
+            res.send(html);
+        } catch (fallbackErr) {
+            console.error('[Home Fallback Error]', fallbackErr);
+            res.sendFile(path.join(__dirname, 'public', 'index.html'));
+        }
+    }
 });
 
 //  WEBHOOK MERCADO PAGO 
@@ -366,6 +419,22 @@ app.get('/public/menu/:slug', async (req, res) => {
     } catch (err) {
         console.error('[Public Menu Error]', err);
         res.status(500).json({ error: 'Erro interno no servidor', details: err.message });
+    }
+});
+
+app.get('/public/restaurants', async (req, res) => {
+    try {
+        const search = String(req.query.search || '').trim();
+        const category = String(req.query.category || '').trim();
+        const location = String(req.query.location || '').trim();
+        const limit = Math.min(parseInt(req.query.limit || '18', 10) || 18, 48);
+        const data = await buildHomeDirectoryData({ search, category, location, limit });
+
+        res.setHeader('Cache-Control', 'public, max-age=30, s-maxage=60, stale-while-revalidate=120');
+        res.json(data);
+    } catch (err) {
+        console.error('[Public Restaurants Error]', err);
+        res.status(500).json({ error: 'Erro ao carregar diretório público.', details: err.message });
     }
 });
 
@@ -1863,6 +1932,7 @@ app.get('/config/keys', authenticate, async (req, res) => {
         gcalCalendarId: config.gcalCalendarId,
         gcalSyncHour: config.gcalSyncHour,
         businessName: config.businessName,
+        businessCategory: config.businessCategory,
         businessAddress: config.businessAddress,
         businessLocation: config.businessLocation,
         dailyMaxOrders: config.dailyMaxOrders,
@@ -1886,7 +1956,7 @@ app.get('/config/keys', authenticate, async (req, res) => {
 app.post('/config/keys', authenticate, async (req, res) => {
     const {
         slug, openai, claude, activeModel, gcalSyncHour,
-        businessName, businessAddress, businessLocation,
+        businessName, businessCategory, businessAddress, businessLocation,
         dailyMaxOrders, dailyDeliveryItems, managerJid,
         deliveryJid, reportEnabled, reportHour,
         googleApiKey, deliveryRules, gcalCalendarId,
@@ -1918,6 +1988,7 @@ app.post('/config/keys', authenticate, async (req, res) => {
         activeModel,
         gcalSyncHour: gcalSyncHour ?? (currentConfig?.gcalSyncHour || 6),
         businessName,
+        businessCategory,
         businessAddress,
         businessLocation,
         dailyMaxOrders: parseInt(dailyMaxOrders || 10),
