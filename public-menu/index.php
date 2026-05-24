@@ -52,7 +52,8 @@ try {
     }
 
     $cacheDir = __DIR__ . '/cache';
-    $cacheFile = $cacheDir . '/store_' . md5($slug . '_ao_' . ($cacheAcceptOrders ? '1' : '0')) . '.html';
+    $cacheVersion = @filemtime(__FILE__) ?: time();
+    $cacheFile = $cacheDir . '/store_' . md5($slug . '_ao_' . ($cacheAcceptOrders ? '1' : '0') . '_v_' . $cacheVersion) . '.html';
     $cacheTime = 60; // 60 segundos de cache
 
     $bypassCache = isset($_GET['nocache']);
@@ -184,6 +185,17 @@ try {
                 border-color: var(--accent);
                 outline: none;
                 background: #fff;
+            }
+
+            .ifood-input:disabled,
+            .ifood-input[disabled] {
+                background: #f3f4f6;
+                color: #9ca3af;
+                cursor: not-allowed;
+            }
+
+            #order-time option:disabled {
+                color: #9ca3af;
             }
 
             .checkout-step.hidden {
@@ -736,6 +748,8 @@ try {
                 withinDeliveryRadius: false,
                 availableSlots: [],
                 addonGroups: [],
+                orderAvailabilityRequestId: 0,
+                orderAvailability: null,
                 currentCarouselIdx: 0,
                 previousOrders: [],
                 orderDetailsInfo: ''
@@ -767,6 +781,133 @@ try {
 
             function isOrderEnabled() {
                 return state.publicSettings.acceptOrders !== false;
+            }
+
+            function getBrazilDateParts(date = new Date()) {
+                const parts = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: 'America/Sao_Paulo',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                }).formatToParts(date);
+
+                return Object.fromEntries(
+                    parts
+                    .filter(part => part.type !== 'literal')
+                    .map(part => [part.type, part.value])
+                );
+            }
+
+            function getBrazilDateString(date = new Date()) {
+                const parts = getBrazilDateParts(date);
+                return `${parts.year}-${parts.month}-${parts.day}`;
+            }
+
+            function setOrderDateConstraints() {
+                const dateInput = document.getElementById('order-date');
+                if (!dateInput) return;
+
+                const today = getBrazilDateString();
+                dateInput.min = today;
+                if (dateInput.value && dateInput.value < today) {
+                    dateInput.value = '';
+                }
+            }
+
+            async function loadOrderAvailability(dateStr, preserveSelection = true) {
+                const timeSelect = document.getElementById('order-time');
+                const dateInput = document.getElementById('order-date');
+                if (!timeSelect) return null;
+
+                const today = getBrazilDateString();
+                const cleanDate = (dateStr || '').trim();
+                const previousValue = timeSelect.value;
+
+                if (!cleanDate) {
+                    state.orderAvailability = null;
+                    timeSelect.disabled = true;
+                    timeSelect.innerHTML = `<option value="">Selecione uma data primeiro</option>`;
+                    return null;
+                }
+
+                if (cleanDate < today) {
+                    if (dateInput) dateInput.value = '';
+                    state.orderAvailability = {
+                        available: false,
+                        reason: 'Data anterior a hoje.',
+                        date: cleanDate,
+                        times: []
+                    };
+                    timeSelect.disabled = true;
+                    timeSelect.innerHTML = `<option value="">Escolha uma data válida</option>`;
+                    return state.orderAvailability;
+                }
+
+                const requestId = ++state.orderAvailabilityRequestId;
+                timeSelect.disabled = true;
+                timeSelect.innerHTML = `<option value="">Carregando horários...</option>`;
+
+                try {
+                    const response = await fetch(`${API_BASE}/orders/availability?slug=${encodeURIComponent(STORE_SLUG)}&date=${encodeURIComponent(cleanDate)}&type=order`);
+                    const data = await response.json();
+
+                    if (requestId !== state.orderAvailabilityRequestId) return data;
+
+                    if (!response.ok) {
+                        const reason = data.error || data.reason || 'Falha ao carregar horários.';
+                        state.orderAvailability = {
+                            available: false,
+                            reason,
+                            date: cleanDate,
+                            times: []
+                        };
+                        timeSelect.disabled = true;
+                        timeSelect.innerHTML = `<option value="">${reason}</option>`;
+                        return state.orderAvailability;
+                    }
+
+                    const times = Array.isArray(data.times) ? data.times : [];
+                    state.orderAvailability = {
+                        ...data,
+                        times
+                    };
+
+                    const availableTimes = times.filter(slot => slot.available);
+                    if (times.length > 0) {
+                        let html = `<option value="">${availableTimes.length > 0 ? 'Selecione um horário' : (data.reason || 'Nenhum horário disponível')}</option>`;
+                        times.forEach(slot => {
+                            const label = slot.available ? slot.time : `${slot.time} - Indisponível`;
+                            html += `<option value="${slot.time}" ${slot.available ? '' : 'disabled'}>${label}</option>`;
+                        });
+                        timeSelect.innerHTML = html;
+                        timeSelect.disabled = false;
+                    } else {
+                        const reason = data.reason || 'Nenhum horário disponível';
+                        timeSelect.disabled = true;
+                        timeSelect.innerHTML = `<option value="">${reason}</option>`;
+                    }
+
+                    if (preserveSelection && previousValue) {
+                        const stillAvailable = availableTimes.some(slot => slot.time === previousValue);
+                        timeSelect.value = stillAvailable ? previousValue : '';
+                    } else {
+                        timeSelect.value = '';
+                    }
+
+                    return state.orderAvailability;
+                } catch (error) {
+                    if (requestId !== state.orderAvailabilityRequestId) return null;
+                    const reason = 'Falha ao carregar horários.';
+                    state.orderAvailability = {
+                        available: false,
+                        reason,
+                        date: cleanDate,
+                        times: []
+                    };
+                    timeSelect.disabled = true;
+                    timeSelect.innerHTML = `<option value="">${reason}</option>`;
+                    return state.orderAvailability;
+                }
             }
 
             const getActiveCart = () => state.activeTab === 'delivery' ? state.deliveryCart : state.orderCart;
@@ -1775,42 +1916,22 @@ try {
                 document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
 
                 // Listener para carregar horários disponíveis ao selecionar data
-                document.getElementById('order-date').addEventListener('change', (e) => {
-                    const dateStr = e.target.value;
-                    const timeSelect = document.getElementById('order-time');
-                    if (!dateStr) {
-                        timeSelect.innerHTML = `<option value="">Selecione uma data primeiro</option>`;
-                        return;
-                    }
-
-                    const date = new Date(dateStr + 'T12:00:00');
-                    const dayOfWeek = date.getDay();
-                    const todaySlots = state.availableSlots.filter(s => s.dayOfWeek === dayOfWeek);
-
-                    let optionsHtml = `<option value="">Selecione um horário</option>`;
-                    for (let hour = 9; hour <= 20; hour++) {
-                        const timeStr = `${hour.toString().padStart(2, '0')}:00`;
-                        const timeInMinutes = hour * 60;
-
-                        let isAvailable = true;
-                        if (todaySlots.length > 0) {
-                            isAvailable = todaySlots.some(s => {
-                                const [sh, sm] = s.startTime.split(':').map(Number);
-                                const [eh, em] = s.endTime.split(':').map(Number);
-                                const start = sh * 60 + sm;
-                                const end = eh * 60 + em;
-                                return timeInMinutes >= start && timeInMinutes <= end;
-                            });
+                const orderDateInput = document.getElementById('order-date');
+                if (orderDateInput) {
+                    const handleOrderDateChange = async (e) => {
+                        const dateStr = e.target.value;
+                        const today = getBrazilDateString();
+                        if (dateStr && dateStr < today) {
+                            e.target.value = '';
+                            await loadOrderAvailability('', false);
+                            return;
                         }
+                        await loadOrderAvailability(dateStr, true);
+                    };
 
-                        if (isAvailable) {
-                            optionsHtml += `<option value="${timeStr}">${timeStr}</option>`;
-                        } else {
-                            optionsHtml += `<option value="${timeStr}" disabled>${timeStr} - Indisponível</option>`;
-                        }
-                    }
-                    timeSelect.innerHTML = optionsHtml;
-                });
+                    orderDateInput.addEventListener('change', handleOrderDateChange);
+                    orderDateInput.addEventListener('blur', handleOrderDateChange);
+                }
 
                 document.getElementById('order-details')?.addEventListener('input', (e) => {
                     state.orderDetailsInfo = e.target.value;
@@ -2099,6 +2220,13 @@ try {
                 if (deliveryContent) deliveryContent.classList.toggle('hidden', !isDelivery);
                 if (orderContent) orderContent.classList.toggle('hidden', isDelivery);
 
+                if (!isDelivery) {
+                    setOrderDateConstraints();
+                    const dateInput = document.getElementById('order-date');
+                    const dateValue = dateInput?.value || '';
+                    loadOrderAvailability(dateValue, true);
+                }
+
                 // Sempre carrega o mapa se deliveryType = delivery
                 if (state.deliveryType === 'delivery') {
                     if (window.google && !state.googleMap) {
@@ -2156,7 +2284,7 @@ try {
                 }
             }
 
-            function handleNextStep() {
+            async function handleNextStep() {
                 if (state.currentStep === 1) {
                     const nameVal = document.getElementById('user-name')?.value;
                     const phoneVal = document.getElementById('user-phone')?.value;
@@ -2178,10 +2306,24 @@ try {
                         }
                     } else if (state.activeTab === 'order') {
                         if (!isOrderEnabled()) return showAlert('Encomendas desativadas', 'No momento não estamos aceitando encomendas.');
-                        const dateVal = document.getElementById('order-date').value;
-                        const timeVal = document.getElementById('order-time').value;
+                        const dateInput = document.getElementById('order-date');
+                        const timeInput = document.getElementById('order-time');
+                        const dateVal = dateInput?.value;
+                        const timeVal = timeInput?.value;
                         const details = document.getElementById('order-details')?.value;
                         if (!dateVal || !timeVal) return showAlert('Horário Ausente', 'Escolha uma data e um horário para sua encomenda.');
+                        const today = getBrazilDateString();
+                        if (dateVal < today) {
+                            if (dateInput) dateInput.value = '';
+                            if (timeInput) timeInput.value = '';
+                            return showAlert('Data inválida', 'Escolha uma data de hoje em diante.');
+                        }
+                        const availability = await loadOrderAvailability(dateVal, true);
+                        const selectedSlot = Array.isArray(availability?.times) ? availability.times.find(slot => slot.time === timeVal) : null;
+                        if (!selectedSlot || !selectedSlot.available) {
+                            if (timeInput) timeInput.value = '';
+                            return showAlert('Horário indisponível', selectedSlot?.reason || availability?.reason || 'Escolha outro horário.');
+                        }
                         state.orderDetailsInfo = details;
                     }
                     goToStep(3);

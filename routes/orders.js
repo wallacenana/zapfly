@@ -76,6 +76,99 @@ async function normalizeProductAddonGroups(value, userId) {
   return JSON.stringify(filteredIds);
 }
 
+const SCHEDULING_TIME_ZONE = 'America/Sao_Paulo';
+const ORDER_TIME_OPTIONS = Array.from({ length: 12 }, (_, index) => `${String(index + 9).padStart(2, '0')}:00`);
+
+function getBrazilDateParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: SCHEDULING_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+
+  return Object.fromEntries(
+    parts
+      .filter(part => part.type !== 'literal')
+      .map(part => [part.type, part.value])
+  );
+}
+
+function getBrazilDateString(date = new Date()) {
+  const parts = getBrazilDateParts(date);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function getBrazilTimeString(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: SCHEDULING_TIME_ZONE,
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).formatToParts(date);
+
+  const mapped = Object.fromEntries(
+    parts
+      .filter(part => part.type !== 'literal')
+      .map(part => [part.type, part.value])
+  );
+
+  return `${mapped.hour}:${mapped.minute}`;
+}
+
+function parseTimeToMinutes(time) {
+  if (typeof time !== 'string') return null;
+  const match = time.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+
+  return hours * 60 + minutes;
+}
+
+function getDayOfWeekFromDateString(dateStr) {
+  if (typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+
+  const parsed = new Date(`${dateStr}T12:00:00-03:00`);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  return parsed.getDay();
+}
+
+function isDateBeforeToday(dateStr) {
+  if (!dateStr) return false;
+  return dateStr < getBrazilDateString();
+}
+
+function getTimeWindowForOrder(dateStr, time) {
+  if (!dateStr || !time) return null;
+  const parsed = new Date(`${dateStr}T${time}:00-03:00`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return {
+    start: parsed,
+    end: new Date(parsed.getTime() + 30 * 60 * 1000)
+  };
+}
+
+function timeFitsSlot(time, slot) {
+  const target = parseTimeToMinutes(time);
+  const start = parseTimeToMinutes(slot.startTime);
+  const end = parseTimeToMinutes(slot.endTime);
+  if (target === null || start === null || end === null) return false;
+  return target >= start && target <= end;
+}
+
+function buildDisabledTimes(reason) {
+  return ORDER_TIME_OPTIONS.map(time => ({
+    time,
+    available: false,
+    reason
+  }));
+}
+
 async function getGoogleCalendar(userId) {
   try {
     const settings = await getSettings(userId);
@@ -548,6 +641,26 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
     const settings = await getSettings(userId);
     const dailyLimit = settings?.dailyMaxOrders || 10;
 
+    if ((type || 'order') === 'order' && settings?.acceptOrders === false) {
+      const reason = 'As encomendas estão desativadas no momento.';
+      if (!time) {
+        return { available: false, reason, date, times: buildDisabledTimes(reason) };
+      }
+      return { available: false, reason };
+    }
+
+    if (!date) {
+      const reason = 'Data inválida.';
+      if (!time) return { available: false, reason, date, times: buildDisabledTimes(reason) };
+      return { available: false, reason };
+    }
+
+    if (isDateBeforeToday(date)) {
+      const reason = 'Data anterior a hoje.';
+      if (!time) return { available: false, reason, date, times: buildDisabledTimes(reason) };
+      return { available: false, reason };
+    }
+
     // SOMA O CUSTO DE CAPACIDADE (VAGAS) DE TODOS OS PEDIDOS NO DIA
     const ordersToday = await prisma.order.findMany({
       where: {
@@ -571,7 +684,9 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
     }, 0);
 
     if (totalUsed >= dailyLimit) {
-      return { available: false, reason: `Desculpe, já atingimos nosso limite de produção para o dia ${date}.` };
+      const reason = `Desculpe, já atingimos nosso limite de produção para o dia ${date}.`;
+      if (!time) return { available: false, reason, date, times: buildDisabledTimes(reason) };
+      return { available: false, reason };
     }
 
     if (type === 'delivery') {
@@ -591,17 +706,128 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
       return { available: true, remaining: dailyLimit - totalUsed };
     }
 
-    const endReq = new Date(`${date}T${time}:00`);
-    const startReq = new Date(endReq.getTime() - 30 * 60 * 1000);
+    const dayOfWeek = getDayOfWeekFromDateString(date);
+    const availableSlots = await prisma.availableSlot.findMany({
+      where: { userId, dayOfWeek },
+      orderBy: [{ startTime: 'asc' }, { endTime: 'asc' }]
+    });
+
+    if (!time) {
+      if (!availableSlots.length) {
+        const reason = 'Sem horários disponíveis para este dia.';
+        return { available: false, reason, date, times: buildDisabledTimes(reason) };
+      }
+
+      const dayStart = new Date(`${date}T00:00:00-03:00`);
+      const dayEnd = new Date(`${date}T23:59:59.999-03:00`);
+      const calendarEvents = await prisma.calendarEvent.findMany({
+        where: {
+          userId,
+          OR: [
+            { startAt: { lte: dayEnd }, endAt: { gte: dayStart } },
+            { allDay: true, startAt: { lte: dayEnd } }
+          ]
+        },
+        orderBy: [{ startAt: 'asc' }]
+      });
+
+      const orderCountsByTime = ordersToday.reduce((acc, order) => {
+        if (!order.scheduledTime) return acc;
+        acc[order.scheduledTime] = (acc[order.scheduledTime] || 0) + 1;
+        return acc;
+      }, {});
+
+      const today = getBrazilDateString();
+      const nowMinutes = parseTimeToMinutes(getBrazilTimeString());
+
+      const times = ORDER_TIME_OPTIONS.map(slotTime => {
+        const matchingSlots = availableSlots.filter(slot => timeFitsSlot(slotTime, slot));
+        if (matchingSlots.length === 0) {
+          return { time: slotTime, available: false, reason: 'Fora do horário de atendimento.' };
+        }
+
+        const timeMinutes = parseTimeToMinutes(slotTime);
+        if (date === today && nowMinutes !== null && timeMinutes !== null && timeMinutes <= nowMinutes) {
+          return { time: slotTime, available: false, reason: 'Horário já passou.' };
+        }
+
+        const slotCapacity = matchingSlots.reduce((min, slot) => {
+          const current = Number(slot.maxOrders) || 1;
+          return Math.min(min, current);
+        }, Infinity);
+        const usedAtTime = orderCountsByTime[slotTime] || 0;
+        if (usedAtTime >= slotCapacity) {
+          return { time: slotTime, available: false, reason: 'Horário lotado.' };
+        }
+
+        const conflict = calendarEvents.find(event => {
+          const window = getTimeWindowForOrder(date, slotTime);
+          if (!window) return false;
+          return (
+            (event.startAt <= window.start && event.endAt > window.start) ||
+            (event.startAt < window.end && event.endAt >= window.end) ||
+            (event.startAt >= window.start && event.endAt <= window.end) ||
+            (event.allDay && event.startAt <= window.start)
+          );
+        });
+
+        if (conflict) {
+          return { time: slotTime, available: false, reason: `Horário ocupado (conflito com ${conflict.title}).` };
+        }
+
+        return { time: slotTime, available: true, reason: null };
+      });
+
+      const anyAvailable = times.some(item => item.available);
+      return {
+        available: anyAvailable,
+        reason: anyAvailable ? null : 'Nenhum horário disponível para este dia.',
+        date,
+        times
+      };
+    }
+
+    const matchingSlots = availableSlots.filter(slot => timeFitsSlot(time, slot));
+    if (!matchingSlots.length) {
+      return { available: false, reason: 'Fora do horário de atendimento.' };
+    }
+
+    const today = getBrazilDateString();
+    const nowMinutes = parseTimeToMinutes(getBrazilTimeString());
+    const timeMinutes = parseTimeToMinutes(time);
+    if (date === today && nowMinutes !== null && timeMinutes !== null && timeMinutes <= nowMinutes) {
+      return { available: false, reason: 'Horário já passou.' };
+    }
+
+    const slotCapacity = matchingSlots.reduce((min, slot) => {
+      const current = Number(slot.maxOrders) || 1;
+      return Math.min(min, current);
+    }, Infinity);
+    const usedAtTime = await prisma.order.count({
+      where: {
+        userId,
+        scheduledDate: date,
+        scheduledTime: time,
+        status: { notIn: ['cancelled', 'cancelado'] }
+      }
+    });
+    if (usedAtTime >= slotCapacity) {
+      return { available: false, reason: 'Horário lotado.' };
+    }
+
+    const window = getTimeWindowForOrder(date, time);
+    if (!window) {
+      return { available: false, reason: 'Horário inválido.' };
+    }
 
     const conflict = await prisma.calendarEvent.findFirst({
       where: {
         userId,
         OR: [
-          { startAt: { lte: startReq }, endAt: { gt: startReq } },
-          { startAt: { lt: endReq }, endAt: { gte: endReq } },
-          { startAt: { gte: startReq }, endAt: { lte: endReq } },
-          { allDay: true, startAt: { lte: startReq } }
+          { startAt: { lte: window.start }, endAt: { gt: window.start } },
+          { startAt: { lt: window.end }, endAt: { gte: window.end } },
+          { startAt: { gte: window.start }, endAt: { lte: window.end } },
+          { allDay: true, startAt: { lte: window.start } }
         ]
       }
     });
@@ -812,11 +1038,25 @@ router.post('/', async (req, res) => {
     }
 
     const qtyNum = parseFloat(quantity) || 1;
+    const orderType = type || 'order';
     const finalClientJid = (clientJid && clientJid.trim() !== "") ? clientJid.trim() : 'manual_LOJA';
     const isManual = finalClientJid === 'manual_LOJA';
 
-    if ((type || 'order') === 'order' && settings?.acceptOrders === false && !isManual) {
+    if (orderType === 'order' && settings?.acceptOrders === false && !isManual) {
       return res.status(403).json({ error: 'As encomendas estão desativadas no momento.' });
+    }
+
+    if (orderType === 'order' && !isManual) {
+      if (!scheduledDate) {
+        return res.status(400).json({ error: 'Data da encomenda é obrigatória.' });
+      }
+      if (!scheduledTime) {
+        return res.status(400).json({ error: 'Horário da encomenda é obrigatório.' });
+      }
+      const availability = await checkAvailability(userId, scheduledDate, scheduledTime, orderType);
+      if (!availability.available) {
+        return res.status(400).json({ error: availability.reason || 'Horário indisponível.' });
+      }
     }
 
     await prisma.customer.upsert({
@@ -842,12 +1082,12 @@ router.post('/', async (req, res) => {
       variation: variation || null,
       quantity: qtyNum.toString(),
       notes: notes || '',
-      scheduledDate: scheduledDate || new Date().toISOString().split('T')[0],
+      scheduledDate: scheduledDate || getBrazilDateString(),
       scheduledTime: scheduledTime || fallbackTime,
       clientName: clientName || 'Cliente',
       clientJid: finalClientJid,
       clientPhone: clientPhone || (finalClientJid && finalClientJid.includes('@') ? finalClientJid.split('@')[0] : null),
-      type: type || 'order',
+      type: orderType,
       deliveryAddress: deliveryAddress || null,
       paymentMethod: paymentMethod || 'A definir',
       deliveryFee: parseFloat(deliveryFee) || 0,
@@ -878,14 +1118,14 @@ router.post('/', async (req, res) => {
 });
 
 router.get('/availability', async (req, res) => {
-  const { date, time, slug } = req.query;
+  const { date, time, slug, type } = req.query;
   let userId = req.user?.id;
   if (!userId && slug) {
     const user = await prisma.user.findUnique({ where: { slug } });
     userId = user?.id;
   }
   if (!userId) return res.status(400).json({ error: 'User ID não identificado.' });
-  const result = await checkAvailability(userId, date, time);
+  const result = await checkAvailability(userId, date, time, type || 'order');
   res.json(result);
 });
 
