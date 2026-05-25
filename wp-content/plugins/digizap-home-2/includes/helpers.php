@@ -46,7 +46,6 @@ if (!function_exists('dzhome2_enqueue_assets')) {
 
         wp_enqueue_style('digizap-home-2', dzhome2_asset_url($style_rel), [], dzhome2_asset_version($style_rel));
         wp_enqueue_script('digizap-home-2', dzhome2_asset_url($script_rel), [], dzhome2_asset_version($script_rel), true);
-        wp_add_inline_style('digizap-home-2', dzhome2_critical_css());
 
         wp_localize_script('digizap-home-2', 'dzHome2Config', [
             'apiBase' => dzhome2_api_base(),
@@ -63,66 +62,6 @@ if (!function_exists('dzhome2_enqueue_assets')) {
 
         $loaded = true;
     }
-}
-
-if (!function_exists('dzhome2_critical_css')) {
-    function dzhome2_critical_css()
-    {
-        return <<<CSS
-.dz-home2{width:100%;color:#20181a;font-family:inherit}
-.dz-home2-header{position:sticky;top:0;z-index:50;width:100%;display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;padding:18px 24px;background:rgba(255,255,255,.92);backdrop-filter:blur(16px);border-bottom:1px solid rgba(32,24,26,.08)}
-.dz-home2-brand-link{display:inline-flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
-.dz-home2-brand-mark{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#e21b3c,#ff6d8a);color:#fff;font-weight:900;box-shadow:0 10px 24px rgba(226,27,60,.22)}
-.dz-home2-brand-logo{width:auto;height:44px;display:block;object-fit:contain}
-.dz-home2-brand-name{font-weight:900;font-size:1rem;white-space:nowrap}
-.dz-home2-nav{display:flex;align-items:center;gap:18px;justify-content:center;min-width:0;overflow-x:auto;scrollbar-width:none}
-.dz-home2-nav::-webkit-scrollbar{display:none}
-.dz-home2-nav a{display:inline-flex;text-decoration:none;color:#6f6567;font-weight:800;padding:8px 10px;border-radius:999px;white-space:nowrap}
-.dz-home2-header-actions{display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-.dz-home2-main{width:min(1240px,calc(100% - 32px));margin:0 auto;padding:22px 0 28px}
-.dz-home2-landing-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:stretch;min-height:430px}
-.dz-home2-landing-copy{display:grid;align-content:center;gap:18px;padding:12px 0}
-.dz-home2-landing-copy h1{margin:0;font-size:clamp(2.2rem,4vw,4.2rem);line-height:.98;letter-spacing:-.04em}
-.dz-home2-landing-copy p{margin:0;max-width:54ch;color:#6f6567;font-size:1.02rem;line-height:1.55}
-.dz-home2-address-form{display:flex;align-items:center;gap:10px;max-width:680px;margin-top:8px}
-.dz-home2-address-form input{flex:1 1 auto;width:100%;min-height:56px;border-radius:18px;border:1px solid rgba(32,24,26,.12);padding:0 18px;background:#fff;font:inherit;outline:none;box-shadow:0 10px 24px rgba(23,15,17,.05)}
-.dz-home2-address-form input:focus{border-color:rgba(226,27,60,.35);box-shadow:0 0 0 4px rgba(226,27,60,.1)}
-.dz-home2-landing-visual{position:relative;border-radius:32px;overflow:hidden;background:radial-gradient(circle at 20% 20%,rgba(255,255,255,.26),transparent 18%),radial-gradient(circle at 80% 20%,rgba(255,255,255,.14),transparent 16%),linear-gradient(160deg,#111 0%,#1b1b1b 40%,#e21b3c 100%);box-shadow:0 22px 52px rgba(18,18,18,.12);min-height:430px}
-.dz-home2-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:.78rem 1rem;border-radius:999px;border:0;cursor:pointer;font-weight:900;text-decoration:none;white-space:nowrap}
-.dz-home2-button-primary{background:#e21b3c;color:#fff;box-shadow:0 10px 24px rgba(226,27,60,.22)}
-.dz-home2-button-ghost{background:#fff;color:#20181a;border:1px solid rgba(32,24,26,.1)}
-.dz-home2-button:disabled{opacity:.42;cursor:not-allowed;transform:none;box-shadow:none;background:#f5f5f5;color:#a3a3a3;border:1px solid rgba(32,24,26,.08)}
-.dz-home2-search,.dz-home2-location-pill{display:flex;align-items:center;border:1px solid rgba(32,24,26,.1);background:#fff}
-.dz-home2-search{gap:10px;min-height:46px;min-width:min(420px,42vw);padding:0 14px;border-radius:16px}
-.dz-home2-location-pill{display:grid;gap:2px;min-height:46px;min-width:220px;padding:8px 14px;border-radius:16px;text-align:left;cursor:pointer;color:#20181a}
-.dz-home2-address-hint{margin:-2px 0 0;min-height:1.1em;color:#6f6567;font-size:.84rem;line-height:1.35}
-.pac-container{margin-top:10px!important;border:1px solid rgba(32,24,26,.08)!important;border-radius:22px!important;box-shadow:0 24px 60px rgba(18,18,18,.12)!important;overflow:hidden!important;font-family:inherit!important;z-index:99999!important;background:#fff}
-.pac-item{position:relative;display:flex!important;align-items:flex-start!important;gap:12px;padding:14px 16px 14px 14px!important;border-top:0!important;border-bottom:1px solid rgba(32,24,26,.06);line-height:1.35!important;cursor:pointer;background:#fff}
-.pac-item:last-child{border-bottom:0!important}
-.pac-item:hover,.pac-item.pac-item-selected{background:rgba(226,27,60,.05)!important;box-shadow:inset 3px 0 0 #e21b3c}
-.pac-item-query{display:block;margin-bottom:1px;color:#20181a!important;font-size:.95rem!important;font-weight:700!important}
-.pac-item>span:last-child{display:block;color:#8b8b8b!important;font-size:.82rem!important;line-height:1.2!important;font-weight:500!important}
-.pac-matched{color:#e21b3c!important;font-weight:800!important}
-.pac-icon{flex:0 0 18px;width:18px;height:18px;margin:2px 0 0!important;opacity:.72!important;background-size:18px 18px!important}
-.pac-logo{margin:10px 14px 12px auto!important;opacity:.7!important}
-.dz-home2[data-mode="landing"] [data-app-actions],.dz-home2[data-mode="app"] [data-guest-actions],.dz-home2[data-mode="landing"] [data-catalog],.dz-home2[data-mode="app"] [data-landing]{display:none!important}
-@media (max-width:1024px){.dz-home2-header{grid-template-columns:1fr;justify-items:stretch}.dz-home2-nav,.dz-home2-header-actions{justify-content:flex-start}.dz-home2-landing-grid{grid-template-columns:1fr}.dz-home2-landing-visual{min-height:260px}}
-@media (max-width:720px){.dz-home2-main{width:min(100%,calc(100% - 18px))}.dz-home2-header{padding:14px 12px}.dz-home2-address-form{flex-direction:column;align-items:stretch}.dz-home2-address-form .dz-home2-button{width:100%}.dz-home2-search{min-width:100%;width:100%}.dz-home2-location-pill{width:100%;min-width:0}.dz-home2-catalog-head{align-items:flex-start;flex-direction:column}.dz-home2-restaurants-grid{grid-template-columns:1fr}.dz-home2-featured-card{flex-basis:min(320px,86vw)}}
-CSS;
-    }
-}
-
-if (!function_exists('dzhome2_style_loader_tag')) {
-    function dzhome2_style_loader_tag($html, $handle, $href, $media)
-    {
-        if ($handle !== 'digizap-home-2') {
-            return $html;
-        }
-
-        $href = esc_url($href);
-        return "<link rel=\"preload\" as=\"style\" href=\"{$href}\" onload=\"this.onload=null;this.rel='stylesheet'\" media=\"print\" />\n<noscript><link rel=\"stylesheet\" href=\"{$href}\" media=\"all\" /></noscript>";
-    }
-    add_filter('style_loader_tag', 'dzhome2_style_loader_tag', 10, 4);
 }
 
 if (!function_exists('dzhome2_normalize_text')) {
@@ -189,11 +128,50 @@ if (!function_exists('dzhome2_escape_attr')) {
     }
 }
 
+if (!function_exists('dzhome2_read_address_cookie')) {
+    function dzhome2_read_address_cookie($key = 'dz_home2_address')
+    {
+        $raw = isset($_COOKIE[$key]) ? wp_unslash((string) $_COOKIE[$key]) : '';
+
+        if ($raw === '') {
+            return [
+                'address' => '',
+                'placeId' => '',
+                'lat' => null,
+                'lng' => null
+            ];
+        }
+
+        $decoded = rawurldecode($raw);
+        $parsed = json_decode($decoded, true);
+
+        if (is_array($parsed)) {
+            return [
+                'address' => sanitize_text_field((string) ($parsed['address'] ?? $parsed['formatted_address'] ?? '')),
+                'placeId' => sanitize_text_field((string) ($parsed['placeId'] ?? $parsed['place_id'] ?? '')),
+                'lat' => isset($parsed['lat']) ? (float) $parsed['lat'] : null,
+                'lng' => isset($parsed['lng']) ? (float) $parsed['lng'] : null
+            ];
+        }
+
+        return [
+            'address' => sanitize_text_field($decoded),
+            'placeId' => '',
+            'lat' => null,
+            'lng' => null
+        ];
+    }
+}
+
 if (!function_exists('dzhome2_fetch_directory_data')) {
-    function dzhome2_fetch_directory_data($search = '', $limit = 18)
+    function dzhome2_fetch_directory_data($search = '', $category = '', $location = '', $limit = 18, $locationLat = null, $locationLng = null)
     {
         $args = [
             'search' => sanitize_text_field((string) $search),
+            'category' => sanitize_text_field((string) $category),
+            'location' => sanitize_text_field((string) $location),
+            'locationLat' => $locationLat !== null && $locationLat !== '' ? (float) $locationLat : '',
+            'locationLng' => $locationLng !== null && $locationLng !== '' ? (float) $locationLng : '',
             'limit' => min(max(absint($limit), 1), 48)
         ];
 
@@ -214,6 +192,10 @@ if (!function_exists('dzhome2_fetch_directory_data')) {
         if (is_wp_error($response)) {
             return [
                 'search' => $args['search'],
+                'category' => $args['category'],
+                'location' => $args['location'],
+                'locationLat' => $args['locationLat'],
+                'locationLng' => $args['locationLng'],
                 'total' => 0,
                 'featuredStores' => [],
                 'restaurants' => []
@@ -227,6 +209,10 @@ if (!function_exists('dzhome2_fetch_directory_data')) {
         if ($status < 200 || $status >= 300 || !is_array($data)) {
             return [
                 'search' => $args['search'],
+                'category' => $args['category'],
+                'location' => $args['location'],
+                'locationLat' => $args['locationLat'],
+                'locationLng' => $args['locationLng'],
                 'total' => 0,
                 'featuredStores' => [],
                 'restaurants' => []
@@ -325,6 +311,37 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
     }
 }
 
+if (!function_exists('dzhome2_render_restaurants_block')) {
+    function dzhome2_render_restaurants_block($data = [])
+    {
+        $featured = isset($data['featuredStores']) && is_array($data['featuredStores']) ? $data['featuredStores'] : [];
+        $restaurants = isset($data['restaurants']) && is_array($data['restaurants']) ? $data['restaurants'] : [];
+        $total = isset($data['total']) ? absint($data['total']) : count($restaurants);
+
+        ob_start();
+        ?>
+        <section class="dz-home2-catalog dz-home2-catalog-standalone" data-dz-home2-restaurants>
+            <div class="dz-home2-catalog-head">
+                <div>
+                    <h2>Restaurantes</h2>
+                    <p><?php echo esc_html($total > 0 ? ($total === 1 ? '1 restaurante disponível' : sprintf('%d restaurantes disponíveis', $total)) : 'Nenhum restaurante encontrado.'); ?></p>
+                </div>
+                <span class="dz-home2-catalog-count"><?php echo esc_html((string) $total); ?></span>
+            </div>
+
+            <div class="dz-home2-featured-track">
+                <?php echo dzhome2_render_featured_cards($featured); ?>
+            </div>
+
+            <div class="dz-home2-restaurants-grid">
+                <?php echo dzhome2_render_restaurant_cards($restaurants); ?>
+            </div>
+        </section>
+        <?php
+        return trim(ob_get_clean());
+    }
+}
+
 if (!function_exists('dzhome2_render_item_list_schema')) {
     function dzhome2_render_item_list_schema($restaurants = [])
     {
@@ -384,17 +401,95 @@ if (!function_exists('dzhome2_short_address')) {
             return ['', ''];
         }
 
-        $parts = array_values(array_filter(array_map('trim', preg_split('/[,|\\-]/', $address) ?: [])));
-        $first = $parts[0] ?? $address;
-        $second = $parts[1] ?? '';
+        $parts = array_values(array_filter(array_map('trim', preg_split('/[,|\\-]/u', $address) ?: [])));
+        $street = trim((string) ($parts[0] ?? $address));
+        $street = trim(preg_replace('/\\b\\d+[A-Za-z]?\\b/u', '', $street));
+        $street = preg_replace('/\\s+/', ' ', $street);
 
-        if ($second === '') {
-            if (preg_match('/\\b\\d+[A-Za-z]?\\b/', $address, $match)) {
-                $second = 'Nº ' . $match[0];
+        $number = '';
+        if (preg_match('/\\b\\d+[A-Za-z]?\\b/u', $address, $match)) {
+            $number = $match[0];
+        }
+
+        $streetMap = [
+            'travessa' => 'Tv.',
+            'avenida' => 'Av.',
+            'rua' => 'R.',
+            'estrada' => 'Est.',
+            'alameda' => 'Al.',
+            'rodovia' => 'Rod.',
+            'praça' => 'Pç.',
+            'praca' => 'Pç.',
+            'viela' => 'Vl.',
+            'beco' => 'Bc.',
+            'ladeira' => 'Ld.',
+            'conjunto' => 'Cj.',
+            'loteamento' => 'Lot.'
+        ];
+
+        $tokens = preg_split('/\\s+/u', trim($street)) ?: [];
+        $tokens = array_values(array_filter($tokens, static fn($token) => $token !== ''));
+
+        $prefix = '';
+        if (!empty($tokens)) {
+            $firstToken = mb_strtolower($tokens[0]);
+            if (isset($streetMap[$firstToken])) {
+                $prefix = $streetMap[$firstToken];
+                array_shift($tokens);
             }
         }
 
-        return [$first, $second];
+        $labelParts = [];
+        if ($prefix !== '') {
+            $labelParts[] = $prefix;
+        }
+
+        if (!empty($tokens)) {
+            $labelParts[] = mb_convert_case($tokens[0], MB_CASE_TITLE, 'UTF-8');
+            if (isset($tokens[1]) && $tokens[1] !== '') {
+                $labelParts[] = mb_strtoupper(mb_substr($tokens[1], 0, 1), 'UTF-8');
+            }
+        } elseif ($street !== '') {
+            $labelParts[] = mb_convert_case($street, MB_CASE_TITLE, 'UTF-8');
+        }
+
+        $line1 = trim(implode(' ', $labelParts));
+        if ($line1 === '') {
+            $line1 = $address;
+        }
+        if ($number !== '') {
+            $line1 .= ', ' . $number;
+        }
+        if (function_exists('mb_strlen')) {
+            if (mb_strlen($line1) > 16) {
+                $line1 = mb_substr($line1, 0, 16);
+                $line1 = rtrim($line1, " ,.-");
+            }
+        } elseif (strlen($line1) > 16) {
+            $line1 = substr($line1, 0, 16);
+            $line1 = rtrim($line1, " ,.-");
+        }
+
+        $line2Parts = array_slice($parts, 1);
+        $line2Parts = array_values(array_filter($line2Parts, static function ($part) {
+            $normalized = strtolower(trim((string) $part));
+            if ($normalized === '') {
+                return false;
+            }
+            if ($normalized === 'brasil' || $normalized === 'brazil') {
+                return false;
+            }
+            if (preg_match('/^\\d+$/', $normalized)) {
+                return false;
+            }
+            if (preg_match('/^\\d{5,}$/', $normalized)) {
+                return false;
+            }
+            return true;
+        }));
+        $second = implode(' - ', array_slice($line2Parts, 0, 3));
+
+        return [$line1, $second];
     }
 }
 

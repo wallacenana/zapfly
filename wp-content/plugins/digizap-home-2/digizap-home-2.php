@@ -17,4 +17,4 @@ define('DIGIZAP_HOME2_URL', plugin_dir_url(__FILE__));
 
 require_once DIGIZAP_HOME2_DIR . 'includes/helpers.php';
 require_once DIGIZAP_HOME2_DIR . 'shortcodes/home.php';
-
+require_once DIGIZAP_HOME2_DIR . 'shortcodes/restaurants.php';

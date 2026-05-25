@@ -70,27 +70,145 @@
     }
 
     const parts = clean.split(/[,|-]/).map((part) => part.trim()).filter(Boolean);
-    const first = parts[0] || clean;
-    let second = parts.slice(1).join(' - ');
+    const street = parts[0] || clean;
+    const streetMap = {
+      travessa: 'Tv.',
+      avenida: 'Av.',
+      rua: 'R.',
+      estrada: 'Est.',
+      alameda: 'Al.',
+      rodovia: 'Rod.',
+      praça: 'Pç.',
+      praca: 'Pç.',
+      viela: 'Vl.',
+      beco: 'Bc.',
+      ladeira: 'Ld.',
+      conjunto: 'Cj.',
+      loteamento: 'Lot.'
+    };
+    const numberMatch = clean.match(/\b\d+[A-Za-z]?\b/);
+    const number = numberMatch ? numberMatch[0] : '';
+    const normalizedStreet = street.replace(/\b\d+[A-Za-z]?\b/g, '').replace(/\s+/g, ' ').trim();
+    const streetWords = normalizedStreet.split(/\s+/).filter(Boolean);
+    let prefix = '';
 
-    if (!second) {
-      const match = clean.match(/\b\d+[A-Za-z]?\b/);
-      if (match) {
-        second = `Nº ${match[0]}`;
+    if (streetWords.length > 0) {
+      const firstWordKey = normalizeText(streetWords[0]);
+      if (streetMap[firstWordKey]) {
+        prefix = streetMap[firstWordKey];
+        streetWords.shift();
       }
     }
 
-    return [first, second];
+    const prettyWord = (word) => {
+      const value = String(word || '').trim();
+      if (!value) return '';
+      return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+    };
+
+    const line1Parts = [];
+    if (prefix) {
+      line1Parts.push(prefix);
+    }
+    if (streetWords.length > 0) {
+      line1Parts.push(prettyWord(streetWords[0]));
+      if (streetWords[1]) {
+        line1Parts.push(streetWords[1].charAt(0).toUpperCase());
+      }
+    } else if (normalizedStreet) {
+      line1Parts.push(prettyWord(normalizedStreet));
+    }
+
+    let line1 = line1Parts.join(' ').replace(/\s+/g, ' ').trim();
+    if (number) {
+      line1 = line1 ? `${line1}, ${number}` : number;
+    }
+    if (Array.from(line1).length > 16) {
+      line1 = Array.from(line1).slice(0, 16).join('').replace(/[ ,.-]+$/g, '');
+    }
+
+    const line2Parts = parts.slice(1).filter((part) => {
+      const normalized = normalizeText(part);
+      if (!normalized) return false;
+      if (normalized === 'brasil' || normalized === 'brazil') return false;
+      if (/^\d+$/.test(normalized)) return false;
+      if (/^\d{5,}$/.test(normalized)) return false;
+      return true;
+    });
+    const line2 = line2Parts.slice(0, 3).join(' - ');
+
+    return [line1, line2];
   }
 
   function getStorageKey(root) {
     return root.dataset.storageKey || 'dz_home2_address';
   }
 
+  function getAddressCookie(root) {
+    const key = `${getStorageKey(root)}=`;
+    const cookie = String(document.cookie || '')
+      .split(';')
+      .map((part) => part.trim())
+      .find((part) => part.startsWith(key));
+
+    if (!cookie) {
+      return '';
+    }
+
+    const value = cookie.slice(key.length);
+    try {
+      return decodeURIComponent(value);
+    } catch (error) {
+      return value;
+    }
+  }
+
+  function setAddressCookie(root, payload) {
+    try {
+      const key = getStorageKey(root);
+      const value = encodeURIComponent(JSON.stringify(payload));
+      document.cookie = `${key}=${value}; path=/; max-age=2592000; samesite=lax`;
+    } catch (error) {
+      // ignore
+    }
+  }
+
+  function parseAddressPayload(raw) {
+    const value = String(raw || '').trim();
+    if (!value) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(value);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          address: String(parsed.address || parsed.formatted_address || ''),
+          placeId: String(parsed.placeId || parsed.place_id || ''),
+          lat: parsed.lat ?? null,
+          lng: parsed.lng ?? null
+        };
+      }
+    } catch (error) {
+      // fall through to plain string
+    }
+
+    return {
+      address: value,
+      placeId: '',
+      lat: null,
+      lng: null
+    };
+  }
+
   function readAddress(root) {
     try {
-      const raw = window.localStorage.getItem(getStorageKey(root)) || '';
-      if (!raw) {
+      const storageRaw = window.localStorage.getItem(getStorageKey(root)) || '';
+      const cookieRaw = getAddressCookie(root) || '';
+      const candidates = [parseAddressPayload(storageRaw), parseAddressPayload(cookieRaw)]
+        .filter(Boolean);
+
+      if (candidates.length === 0) {
         return {
           address: '',
           placeId: '',
@@ -99,26 +217,14 @@
         };
       }
 
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed === 'object') {
-          return {
-            address: String(parsed.address || parsed.formatted_address || ''),
-            placeId: String(parsed.placeId || parsed.place_id || ''),
-            lat: parsed.lat ?? null,
-            lng: parsed.lng ?? null
-          };
-        }
-      } catch (error) {
-        // fall back to plain string
-      }
-
-      return {
-        address: String(raw),
-        placeId: '',
-        lat: null,
-        lng: null
+      const score = (payload) => {
+        let total = payload.address ? 1 : 0;
+        if (payload.placeId) total += 10;
+        if (payload.lat !== null || payload.lng !== null) total += 5;
+        return total;
       };
+
+      return candidates.sort((a, b) => score(b) - score(a))[0];
     } catch (error) {
       return {
         address: '',
@@ -145,6 +251,7 @@
             lng: address?.lng ?? null
           };
       window.localStorage.setItem(getStorageKey(root), JSON.stringify(payload));
+      setAddressCookie(root, payload);
     } catch (error) {
       // ignore
     }
@@ -168,24 +275,15 @@
     const state = stateFor(root);
     const button = root.querySelector('[data-address-continue]');
     const input = root.querySelector('[data-address-input]');
-    const hint = root.querySelector('[data-address-hint]');
-    const hasText = Boolean(input && input.value.trim());
 
     if (button) {
       button.disabled = !state.addressSelected;
     }
 
-    if (hint) {
-      if (state.addressSelected) {
-        hint.hidden = true;
-        hint.textContent = '';
-      } else if (hasText) {
-        hint.hidden = false;
-        hint.textContent = 'Escolha uma sugestão do Google para continuar.';
-      } else {
-        hint.hidden = true;
-        hint.textContent = '';
-      }
+    if (input && !state.addressSelected) {
+      input.setAttribute('aria-invalid', input.value.trim() ? 'true' : 'false');
+    } else if (input) {
+      input.removeAttribute('aria-invalid');
     }
   }
 
@@ -194,12 +292,10 @@
 
     const landing = root.querySelector('[data-landing]');
     const catalog = root.querySelector('[data-catalog]');
-    const guestActions = root.querySelector('[data-guest-actions]');
     const appActions = root.querySelector('[data-app-actions]');
 
     if (landing) landing.hidden = mode !== 'landing';
     if (catalog) catalog.hidden = mode !== 'app';
-    if (guestActions) guestActions.hidden = mode !== 'landing';
     if (appActions) appActions.hidden = mode !== 'app';
   }
 
@@ -220,6 +316,30 @@
           <span class="dz-home2-featured-copy">
             <strong>${escapeHtml(name)}</strong>
             <small>${escapeHtml(category)}</small>
+          </span>
+        </a>
+      `;
+    }).join('');
+  }
+
+  function renderCategoryCards(categories) {
+    if (!Array.isArray(categories) || categories.length === 0) {
+      return '<div class="dz-home2-empty">Nenhuma categoria cadastrada.</div>';
+    }
+
+    return categories.slice(0, 12).map((category) => {
+      const name = String(category?.name || 'Categoria');
+      const count = Number(category?.count || 0);
+      const image = category?.logoUrl || placeholderLogo(name, category?.accentColor || '#2dbd30');
+
+      return `
+        <a class="dz-home2-category-card" href="#restaurantes" data-category="${escapeHtml(name)}">
+          <span class="dz-home2-category-thumb">
+            <img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async">
+          </span>
+          <span class="dz-home2-category-label">
+            <strong>${escapeHtml(name)}</strong>
+            <small>${count} restaurante${count === 1 ? '' : 's'}</small>
           </span>
         </a>
       `;
@@ -264,6 +384,7 @@
 
   function updateView(root, data) {
     const catalog = root.querySelector('[data-catalog]');
+    const categoriesTrack = root.querySelector('[data-categories-track]');
     const featuredTrack = root.querySelector('[data-featured-track]');
     const restaurantsGrid = root.querySelector('[data-restaurants-grid]');
     const emptyResults = root.querySelector('[data-empty-results]');
@@ -272,6 +393,9 @@
     const total = Number(data?.total || 0);
     const search = stateFor(root).search || '';
 
+    if (categoriesTrack) {
+      categoriesTrack.innerHTML = renderCategoryCards(data?.categories || []);
+    }
     if (featuredTrack) {
       featuredTrack.innerHTML = renderFeaturedCards(data?.featuredStores || []);
     }
@@ -294,7 +418,7 @@
     }
   }
 
-  async function fetchDirectory(root, search = '') {
+  async function fetchDirectory(root, search = '', location = '') {
     const state = stateFor(root);
     state.search = search;
 
@@ -307,6 +431,13 @@
 
     const params = new URLSearchParams();
     params.set('search', search || '');
+    params.set('location', location || '');
+    if (state.selectedAddress?.lat !== null && state.selectedAddress?.lat !== undefined) {
+      params.set('locationLat', String(state.selectedAddress.lat));
+    }
+    if (state.selectedAddress?.lng !== null && state.selectedAddress?.lng !== undefined) {
+      params.set('locationLng', String(state.selectedAddress.lng));
+    }
     params.set('limit', String(Number(root.dataset.limit || 18)));
 
     try {
@@ -340,15 +471,11 @@
 
     const [line1, line2] = formatAddress(address.address);
     const line1Node = root.querySelector('[data-address-line1]');
-    const line2Node = root.querySelector('[data-address-line2]');
     const input = root.querySelector('[data-address-input]');
     const searchInput = root.querySelector('[data-search-input]');
 
     if (line1Node) {
       line1Node.textContent = line1 || 'Digite seu endereço';
-    }
-    if (line2Node) {
-      line2Node.textContent = line2 || 'para ver os restaurantes';
     }
     if (input && !address.address) {
       input.value = '';
@@ -364,7 +491,7 @@
 
     if (state.addressSelected && address.address) {
       setMode(root, 'app');
-      fetchDirectory(root, searchInput ? searchInput.value.trim() : '');
+      fetchDirectory(root, searchInput ? searchInput.value.trim() : '', address.address || state.address || '');
     } else {
       setMode(root, 'landing');
     }
@@ -522,7 +649,7 @@
 
         window.clearTimeout(state.timer);
         state.timer = window.setTimeout(() => {
-          fetchDirectory(root, searchInput.value.trim());
+          fetchDirectory(root, searchInput.value.trim(), state.address || '');
         }, 220);
       });
     }

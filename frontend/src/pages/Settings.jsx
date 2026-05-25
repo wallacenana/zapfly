@@ -4,6 +4,84 @@ import { api, API_URL } from '../api';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 
+let googlePlacesLoaderPromise = null;
+
+function parseGoogleLocationMeta(value) {
+  if (!value) return { address: '', placeId: '', lat: null, lng: null, mapsUrl: '' };
+  if (typeof value === 'object' && !Array.isArray(value)) {
+    return {
+      address: String(value.address || value.formatted_address || ''),
+      placeId: String(value.placeId || value.place_id || ''),
+      lat: value.lat !== undefined && value.lat !== null ? Number(value.lat) : null,
+      lng: value.lng !== undefined && value.lng !== null ? Number(value.lng) : null,
+      mapsUrl: String(value.mapsUrl || value.locationLink || '')
+    };
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return { address: '', placeId: '', lat: null, lng: null, mapsUrl: '' };
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      return {
+        address: String(parsed.address || parsed.formatted_address || ''),
+        placeId: String(parsed.placeId || parsed.place_id || ''),
+        lat: parsed.lat !== undefined && parsed.lat !== null ? Number(parsed.lat) : null,
+        lng: parsed.lng !== undefined && parsed.lng !== null ? Number(parsed.lng) : null,
+        mapsUrl: String(parsed.mapsUrl || parsed.locationLink || '')
+      };
+    }
+  } catch (error) {
+    // plain text fallback
+  }
+
+  return { address: raw, placeId: '', lat: null, lng: null, mapsUrl: '' };
+}
+
+function loadGooglePlaces(apiKey) {
+  if (window.google?.maps?.places?.Autocomplete) {
+    return Promise.resolve(window.google.maps.places);
+  }
+
+  if (googlePlacesLoaderPromise) {
+    return googlePlacesLoaderPromise;
+  }
+
+  if (!apiKey) {
+    return Promise.reject(new Error('missing-google-api-key'));
+  }
+
+  googlePlacesLoaderPromise = new Promise((resolve, reject) => {
+    const callbackName = `dzSettingsGooglePlacesReady_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+    const script = document.createElement('script');
+
+    window[callbackName] = () => {
+      try {
+        delete window[callbackName];
+      } catch (error) {
+        window[callbackName] = undefined;
+      }
+      resolve(window.google?.maps?.places || null);
+    };
+
+    script.async = true;
+    script.defer = true;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&loading=async&libraries=places&callback=${callbackName}`;
+    script.onerror = () => {
+      try {
+        delete window[callbackName];
+      } catch (error) {
+        window[callbackName] = undefined;
+      }
+      reject(new Error('google-maps-load-failed'));
+    };
+    document.head.appendChild(script);
+  });
+
+  return googlePlacesLoaderPromise;
+}
+
 const Settings = () => {
   const [activeTab, setActiveTab] = useState('business');
   const [loading, setLoading] = useState(true);
@@ -41,12 +119,14 @@ const Settings = () => {
   const [marketingAssets, setMarketingAssets] = useState([]);
   const [uploadName, setUploadName] = useState('');
   const fileInputRef = useRef(null);
+  const businessAddressRef = useRef(null);
 
   const loadSettings = async () => {
     try {
       const res = await api.get('/config/keys');
       if (res.data) {
         const { slug: _ignoredSlug, ...dataWithoutSlug } = res.data;
+        const parsedLocation = parseGoogleLocationMeta(dataWithoutSlug.businessLocation);
         setSettings({
           ...dataWithoutSlug,
           openaiKey: dataWithoutSlug.openai || '',
@@ -54,6 +134,8 @@ const Settings = () => {
           googleApiKey: dataWithoutSlug.googleApiKey || '',
           gcalCalendarId: dataWithoutSlug.gcalCalendarId || '',
           businessCategory: dataWithoutSlug.businessCategory || '',
+          businessAddress: dataWithoutSlug.businessAddress || parsedLocation.address || '',
+          businessLocation: dataWithoutSlug.businessLocation || '',
           deliveryRules: typeof dataWithoutSlug.deliveryRules === 'string'
             ? JSON.parse(dataWithoutSlug.deliveryRules || '[]')
             : (Array.isArray(dataWithoutSlug.deliveryRules) ? dataWithoutSlug.deliveryRules : []),
@@ -73,6 +155,70 @@ const Settings = () => {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const attachBusinessAddressAutocomplete = async () => {
+    const input = businessAddressRef.current;
+    const apiKey = String(settings.googleApiKey || '').trim();
+
+    if (!input || input.dataset.autocompleteReady === '1' || input.dataset.autocompleteReady === 'loading') {
+      return;
+    }
+    if (!apiKey) {
+      return;
+    }
+
+    input.dataset.autocompleteReady = 'loading';
+
+    try {
+      await loadGooglePlaces(apiKey);
+      if (!window.google?.maps?.places?.Autocomplete) {
+        input.dataset.autocompleteReady = 'error';
+        return;
+      }
+
+      const autocomplete = new window.google.maps.places.Autocomplete(input, {
+        types: ['address'],
+        componentRestrictions: { country: 'br' }
+      });
+
+      if (typeof autocomplete.setFields === 'function') {
+        autocomplete.setFields(['place_id', 'formatted_address', 'geometry', 'name']);
+      }
+
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace ? autocomplete.getPlace() : null;
+        const formatted = place?.formatted_address || place?.name || input.value.trim();
+        const lat = place?.geometry?.location && typeof place.geometry.location.lat === 'function'
+          ? place.geometry.location.lat()
+          : null;
+        const lng = place?.geometry?.location && typeof place.geometry.location.lng === 'function'
+          ? place.geometry.location.lng()
+          : null;
+        const mapsUrl = place?.place_id
+          ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formatted)}&query_place_id=${encodeURIComponent(place.place_id)}`
+          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formatted)}`;
+
+        setSettings(prev => ({
+          ...prev,
+          businessAddress: formatted,
+          businessLocation: JSON.stringify({
+            address: formatted,
+            placeId: place?.place_id || '',
+            lat,
+            lng,
+            mapsUrl
+          })
+        }));
+
+        input.value = formatted;
+      });
+
+      input.dataset.autocompleteReady = '1';
+    } catch (error) {
+      console.error('Erro ao carregar autocomplete do endereço:', error);
+      input.dataset.autocompleteReady = 'error';
     }
   };
 
@@ -290,7 +436,17 @@ const Settings = () => {
               </div>
               <div>
                 <label style={labelStyle}>Endereço completo</label>
-                <input {...inp} value={settings.businessAddress} onChange={e => setSettings({ ...settings, businessAddress: e.target.value })} placeholder="Rua, número, bairro, cidade e estado" />
+                <input
+                  {...inp}
+                  ref={businessAddressRef}
+                  value={settings.businessAddress}
+                  onFocus={attachBusinessAddressAutocomplete}
+                  onChange={e => setSettings({ ...settings, businessAddress: e.target.value, businessLocation: '' })}
+                  placeholder="Rua, número, bairro, cidade e estado"
+                />
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                  Selecione uma sugestão do Google para registrar a posição correta.
+                </p>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 <div>
