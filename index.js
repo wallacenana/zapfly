@@ -136,9 +136,9 @@ app.get('/settings', authenticate, async (req, res) => {
         });
         const user = await prisma.user.findUnique({
             where: { id: req.user.id },
-            select: { slug: true }
+            select: { slug: true, active: true }
         });
-        res.json({ ...(settings || {}), slug: user?.slug || '' });
+        res.json({ ...(settings || {}), slug: user?.slug || '', active: user?.active ?? true });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -153,7 +153,8 @@ app.post('/settings', authenticate, async (req, res) => {
             buttonTextColor, backgroundColor, textColor,
             seoDescription, pixelId, googleAnalyticsId, microsoftClarityId,
             slug,
-            acceptOrders
+            acceptOrders,
+            active
         } = req.body;
 
         if (slug) {
@@ -167,6 +168,13 @@ app.post('/settings', authenticate, async (req, res) => {
             await prisma.user.update({
                 where: { id: req.user.id },
                 data: { slug: normalizedSlug }
+            });
+        }
+
+        if (active !== undefined) {
+            await prisma.user.update({
+                where: { id: req.user.id },
+                data: { active: !!active }
             });
         }
 
@@ -436,7 +444,7 @@ app.get('/public/restaurants', async (req, res) => {
         res.json(data);
     } catch (err) {
         console.error('[Public Restaurants Error]', err);
-        res.status(500).json({ error: 'Erro ao carregar diretÃ³rio pÃºblico.', details: err.message });
+        res.status(500).json({ error: 'Erro ao carregar diretório público.', details: err.message });
     }
 });
 
@@ -2398,7 +2406,7 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
         if (!sock.user) return res.status(400).json({ error: 'WhatsApp desconectado ou aguardando leitura do QR Code' });
 
         if (!jid || typeof jid !== 'string' || !text) {
-            return res.status(400).json({ error: 'JID (string) e texto sÃ£o obrigatÃ³rios' });
+            return res.status(400).json({ error: 'JID (string) e texto sÃ£o obrigatórios' });
         }
 
         // Clean and fix JID
@@ -2521,7 +2529,7 @@ app.post('/instances/:id/send-audio', uploadAudio.single('audio'), async (req, r
 
         if (!sock) return res.status(404).json({ error: 'SessÃ£o nÃ£o encontrada' });
         if (!sock.user) return res.status(400).json({ error: 'WhatsApp desconectado ou aguardando leitura do QR Code' });
-        if (!jid || !req.file) return res.status(400).json({ error: 'JID e arquivo de Ã¡udio sÃ£o obrigatÃ³rios' });
+        if (!jid || !req.file) return res.status(400).json({ error: 'JID e arquivo de Ã¡udio sÃ£o obrigatórios' });
 
         let finalJid = jid.trim();
         if (!finalJid.includes('@')) {
@@ -2722,7 +2730,7 @@ app.get(['/', '/:slug'], async (req, res) => {
             let html = fs.readFileSync(htmlPath, 'utf8');
             const settings = user.settings || {};
 
-            // --- SSR: RenderizaÃ§Ã£o do ConteÃºdo no Servidor ---
+            // --- SSR: RenderizaÃ§Ã£o do Conteúdo no Servidor ---
             let menuHtml = '';
             const categories = user.categories || [];
             const products = user.products || [];
@@ -2816,4 +2824,3 @@ app.get(['/', '/:slug'], async (req, res) => {
         res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
     }
 });
-

@@ -10,6 +10,7 @@ const SiteSettings = () => {
     const [saving, setSaving] = useState(false);
     const [settings, setSettings] = useState({
         slug: '',
+        active: true,
         businessName: '',
         logoUrl: '',
         faviconUrl: '',
@@ -34,7 +35,7 @@ const SiteSettings = () => {
         try {
             const res = await api.get('/settings');
         if (res.data) {
-            setSettings(prev => ({ ...prev, ...res.data }));
+            setSettings(prev => ({ ...prev, ...res.data, active: res.data.active ?? true }));
         }
         } catch (err) {
             console.error('Erro ao carregar configurações:', err);
@@ -52,6 +53,7 @@ const SiteSettings = () => {
                 businessName: settings.businessName,
                 logoUrl: settings.logoUrl,
                 faviconUrl: settings.faviconUrl,
+                active: settings.active,
                 accentColor: settings.accentColor,
                 buttonColor: settings.buttonColor,
                 accentColorOrders: settings.accentColorOrders,
@@ -241,6 +243,19 @@ const SiteSettings = () => {
                         )}
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
                             Esse endereço será usado no cardápio público e na home do diretório.
+                        </p>
+
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '18px', cursor: 'pointer' }}>
+                            <input
+                                type="checkbox"
+                                checked={!!settings.active}
+                                onChange={(e) => setSettings({ ...settings, active: e.target.checked })}
+                                style={{ width: '16px', height: '16px', accentColor: '#22c55e' }}
+                            />
+                            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Loja ativa no diretório</span>
+                        </label>
+                        <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                            Se desativar, a loja sai da home e da lista pública.
                         </p>
                     </section>
 
