@@ -73,6 +73,18 @@ h3 {
     flex-wrap: wrap;
 }
 
+.top-nav,
+.category-tabs {
+    transition: transform 0.25s ease, opacity 0.25s ease;
+    will-change: transform, opacity;
+}
+
+.category-tabs.is-hidden {
+    transform: translateY(-110%);
+    opacity: 0;
+    pointer-events: none;
+}
+
 .store-info {
     display: flex;
     align-items: center;
@@ -181,6 +193,39 @@ h3 {
     gap: 6px;
     white-space: nowrap;
     color: #f59e0b;
+}
+
+.rating-star-icon {
+    width: 0.95em;
+    height: 0.95em;
+    flex: 0 0 auto;
+    display: inline-block;
+}
+
+.rating-star-icon path {
+    fill: currentColor;
+}
+
+.rating-value,
+.rating-count {
+    line-height: 1;
+}
+
+.review-star-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.review-star-btn .rating-star-icon {
+    width: 20px;
+    height: 20px;
+}
+
+.review-star-btn .rating-star-icon.outline path {
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
 }
 
 .rating-badge.has-rating {
@@ -1109,6 +1154,18 @@ body.theme-order .delivery-fee-badge {
 }
 
 @media (max-width: 599px) {
+    .tabs-scroll {
+        overflow-x: visible;
+        gap: 10px;
+    }
+
+    .tabs-scroll .cat-tab {
+        flex: 1 1 0;
+        text-align: center;
+        padding-left: 8px;
+        padding-right: 8px;
+    }
+
     .modal {
         align-items: stretch;
     }

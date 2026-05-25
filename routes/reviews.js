@@ -31,11 +31,21 @@ function toReviewPayload(review) {
 }
 
 async function getReviewSnapshot(userId, limit = 6) {
-  const [summary, reviews] = await Promise.all([
+  const [summary, orderCount, reviews] = await Promise.all([
     prisma.storeReview.aggregate({
       where: { userId },
       _avg: { rating: true },
       _count: { _all: true }
+    }),
+    prisma.order.count({
+      where: {
+        userId,
+        NOT: {
+          status: {
+            in: ['cancelled', 'canceled']
+          }
+        }
+      }
     }),
     prisma.storeReview.findMany({
       where: { userId },
@@ -62,7 +72,8 @@ async function getReviewSnapshot(userId, limit = 6) {
   return {
     summary: {
       reviewCount: Number(summary._count._all || 0),
-      averageRating: summary._count._all > 0 && summary._avg.rating !== null && summary._avg.rating !== undefined
+      orderCount: Number(orderCount || 0),
+      averageRating: Number(orderCount || 0) > 0 && summary._avg.rating !== null && summary._avg.rating !== undefined
         ? Number(summary._avg.rating)
         : 5
     },

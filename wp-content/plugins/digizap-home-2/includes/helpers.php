@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 if (!defined('ABSPATH')) {
     exit;
@@ -253,19 +253,21 @@ if (!function_exists('dzhome2_render_featured_cards')) {
             $category = isset($store['category']) ? (string) $store['category'] : '';
             $logoUrl = !empty($store['logoUrl']) ? (string) $store['logoUrl'] : dzhome2_placeholder_logo($name, $store['accentColor'] ?? '#e11d48');
             $schedule = dzhome2_store_schedule_state($store);
+            $ratingVisible = isset($store['orderCount']) ? absint($store['orderCount']) > 0 : false;
             $ratingCount = isset($store['ratingCount']) ? absint($store['ratingCount']) : 0;
             $ratingLabel = isset($store['ratingLabel']) && (string) $store['ratingLabel'] !== '' ? (string) $store['ratingLabel'] : '5,0';
-            $ratingText = '★ ' . $ratingLabel . ($ratingCount > 0 ? ' (' . $ratingCount . ')' : '');
+            $ratingText = $ratingVisible ? $ratingLabel . ($ratingCount > 0 ? ' (' . $ratingCount . ')' : '') : '';
+            $ratingMarkup = $ratingVisible ? '<svg class="dz-home2-rating-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="currentColor"></path></svg>' : '';
 
             $html[] = sprintf(
                 '<a class="dz-home2-featured-card %s" href="%s">
                     <span class="dz-home2-featured-media"><img src="%s" alt="%s" loading="lazy" decoding="async"></span>
-                    <span class="dz-home2-featured-copy">
-                        <strong>%s</strong>
-                        <small>%s</small>
-                        <span class="dz-home2-hero-rating">%s</span>
-                        %s
-                    </span>
+                        <span class="dz-home2-featured-copy">
+                            <strong>%s</strong>
+                            <small>%s</small>
+                            %s
+                            %s
+                        </span>
                 </a>',
                 $schedule['isOpenNow'] ? '' : 'is-closed',
                 esc_url(dzhome2_store_url($slug)),
@@ -273,7 +275,7 @@ if (!function_exists('dzhome2_render_featured_cards')) {
                 esc_attr($name),
                 esc_html($name),
                 esc_html($category),
-                esc_html($ratingText),
+                $ratingVisible ? '<span class="dz-home2-hero-rating">' . $ratingMarkup . '<span class="dz-home2-rating-text">' . esc_html($ratingText) . '</span></span>' : '',
                 $schedule['isOpenNow'] ? '' : sprintf(
                     '<span class="dz-home2-restaurant-status %s dz-home2-featured-status">%s</span>',
                     esc_attr($schedule['statusClass']),
@@ -298,16 +300,18 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
             $name = isset($store['name']) ? (string) $store['name'] : 'Restaurante';
             $slug = isset($store['slug']) ? (string) $store['slug'] : '';
             $category = isset($store['category']) ? (string) $store['category'] : '';
-            $address = !empty($store['address']) ? (string) $store['address'] : 'Endereco nao informado';
+            $address = !empty($store['address']) ? (string) $store['address'] : 'Endereço não informado';
             $logoUrl = !empty($store['logoUrl']) ? (string) $store['logoUrl'] : dzhome2_placeholder_logo($name, $store['accentColor'] ?? '#e11d48');
             $featuredLine = !empty($store['featuredProducts'])
                 ? implode(' · ', array_map(static fn($item) => isset($item['name']) ? (string) $item['name'] : '', $store['featuredProducts']))
                 : 'Sem destaques cadastrados';
             $schedule = dzhome2_store_schedule_state($store);
             $count = isset($store['productsCount']) ? absint($store['productsCount']) : 0;
+            $ratingVisible = isset($store['orderCount']) ? absint($store['orderCount']) > 0 : false;
             $ratingCount = isset($store['ratingCount']) ? absint($store['ratingCount']) : 0;
             $ratingLabel = isset($store['ratingLabel']) && (string) $store['ratingLabel'] !== '' ? (string) $store['ratingLabel'] : '5,0';
-            $ratingText = '★ ' . $ratingLabel . ($ratingCount > 0 ? ' (' . $ratingCount . ')' : '');
+            $ratingText = $ratingVisible ? $ratingLabel . ($ratingCount > 0 ? ' (' . $ratingCount . ')' : '') : '';
+            $ratingMarkup = $ratingVisible ? '<svg class="dz-home2-rating-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="currentColor"></path></svg>' : '';
 
             $html[] = sprintf(
                 '<article class="dz-home2-restaurant-card %s">
@@ -322,7 +326,7 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
                             <span class="dz-home2-restaurant-address">%s</span>
                             <span class="dz-home2-restaurant-meta">
                                 <span>%d item%s</span>
-                                <span class="dz-home2-rating-chip">%s</span>
+                                %s
                                 <span>%s</span>
                             </span>
                         </span>
@@ -340,7 +344,7 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
                 esc_html($address),
                 $count,
                 $count === 1 ? '' : 's',
-                esc_html($ratingText),
+                $ratingVisible ? '<span class="dz-home2-rating-chip">' . $ratingMarkup . '<span class="dz-home2-rating-text">' . esc_html($ratingText) . '</span></span>' : '',
                 esc_html($featuredLine)
             );
         }
@@ -557,3 +561,7 @@ if (!function_exists('dzhome2_blog_url')) {
         return home_url('/blog/');
     }
 }
+
+
+
+

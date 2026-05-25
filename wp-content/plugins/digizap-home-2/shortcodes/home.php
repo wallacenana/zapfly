@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 if (!defined('ABSPATH')) {
     exit;
@@ -205,3 +205,4 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
 }
 
 add_shortcode('digizap_home_2', 'dzhome2_render_home_shortcode');
+

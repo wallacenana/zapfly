@@ -1,7 +1,7 @@
 ﻿<?php
 
 /**
- * DigiZap - CardÃ¡pio All-in-One (VersÃ£o Checkout 2.0)
+ * DigiZap - Cardápio All-in-One (VersÃ£o Checkout 2.0)
  */
 
 if (php_sapi_name() === 'cli-server') {
@@ -107,6 +107,11 @@ try {
         ? (float) $reviewSummary['avgRating']
         : 5.0;
 
+    $stmt = $pdo->prepare("SELECT COUNT(*) AS orderCount FROM `order` WHERE userId = ? AND LOWER(COALESCE(status, '')) NOT IN ('cancelled', 'canceled')");
+    $stmt->execute([$store['id']]);
+    $orderSummary = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['orderCount' => 0];
+    $orderCount = (int) ($orderSummary['orderCount'] ?? 0);
+
     $stmt = $pdo->prepare("SELECT sr.id, sr.orderId, sr.clientName, sr.rating, sr.comment, sr.createdAt, o.product, o.variation FROM store_review sr LEFT JOIN `order` o ON o.id = sr.orderId WHERE sr.userId = ? ORDER BY sr.createdAt DESC LIMIT 6");
     $stmt->execute([$store['id']]);
     $recentReviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -137,7 +142,8 @@ try {
         'addonGroups' => $addonGroups,
         'reviewSummary' => [
             'averageRating' => $reviewAverage,
-            'reviewCount' => $reviewCount
+            'reviewCount' => $reviewCount,
+            'orderCount' => $orderCount
         ],
         'recentReviews' => $recentReviews
     ];
@@ -152,7 +158,7 @@ try {
         <?php if (!empty($store['seoDescription'])): ?>
             <meta name="description" content="<?php echo htmlspecialchars($store['seoDescription']); ?>">
         <?php endif; ?>
-        <title><?php echo $businessName; ?> | CardÃ¡pio Digital DigiZap</title>
+        <title><?php echo $businessName; ?> | Cardápio Digital DigiZap</title>
         <link rel="icon" type="image/x-icon" href="<?php echo $faviconUrl; ?>">
         <link rel="preconnect" href="https://maps.googleapis.com" crossorigin>
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -161,7 +167,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="/cardapio/style.css?v=3.26">
+        <link rel="stylesheet" href="/cardapio/style.css?v=3.28">
         <style>
             :root {
                 --primary-color:
@@ -448,9 +454,14 @@ try {
                     <div class="store-details">
                         <div class="store-name-row">
                             <h1 id="store-name"><?php echo $businessName; ?></h1>
-                            <div id="store-rating-badge" class="rating-badge has-rating">
-                                &#9733; <?php echo number_format($reviewAverage, 1, ',', '.'); ?><?php if ($reviewCount > 0): ?> (<?php echo (int) $reviewCount; ?> <?php echo $reviewCount === 1 ? 'avaliação' : 'avaliações'; ?>)<?php endif; ?>
-                            </div>
+                            <?php if ($orderCount > 0): ?>
+                                <div id="store-rating-badge" class="rating-badge has-rating">
+                                    <svg class="rating-star-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="currentColor"></path>
+                                    </svg>
+                                    <?php echo number_format($reviewAverage, 1, ',', '.'); ?><?php if ($reviewCount > 0): ?> (<?php echo (int) $reviewCount; ?> <?php echo $reviewCount === 1 ? 'avaliação' : 'avaliações'; ?>)<?php endif; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -474,7 +485,7 @@ try {
         <div class="container search-container">
             <div class="search-box">
                 <i data-lucide="search"></i>
-                <input type="text" id="search-input" placeholder="Buscar no cardÃ¡pio">
+                <input type="text" id="search-input" placeholder="Buscar no cardápio">
             </div>
         </div>
 
@@ -549,7 +560,7 @@ try {
                     <button class="close-modal-btn" onclick="closeWithAnimation('order-schedule-modal')" aria-label="Fechar Agendamento">
                         <i data-lucide="x"></i>
                     </button>
-                    <h2 style="margin: 0; font-size: 1.15rem;">Escolha data e horÃ¡rio</h2>
+                    <h2 style="margin: 0; font-size: 1.15rem;">Escolha data e horário</h2>
                     <div style="width: 40px;"></div>
                 </div>
                 <div class="modal-scroll-body" style="padding-top: 10px;">
@@ -559,7 +570,7 @@ try {
                         <input type="date" id="schedule-date" class="ifood-input">
                     </div>
                     <div class="form-group">
-                        <label class="field-label">HorÃ¡rio</label>
+                        <label class="field-label">Horário</label>
                         <select id="schedule-time" class="ifood-input">
                             <option value="">Selecione uma data primeiro</option>
                         </select>
@@ -567,7 +578,7 @@ try {
                     <div id="schedule-availability-note" style="margin-top: 10px; color: var(--text-gray); font-size: 0.82rem;"></div>
                 </div>
                 <div class="modal-footer-sticky" style="position: sticky; bottom: 0;">
-                    <button id="confirm-schedule-btn" class="primary-btn">Confirmar horÃ¡rio</button>
+                    <button id="confirm-schedule-btn" class="primary-btn">Confirmar horário</button>
                 </div>
             </div>
         </div>
@@ -649,7 +660,7 @@ try {
                             </div>
                             <div id="order-schedule-review" class="summary-section hidden" style="margin-bottom: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(74, 44, 42, 0.06); border: 1px solid rgba(74, 44, 42, 0.10);">
                                 <div style="font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-gray);">Agendamento</div>
-                                <div id="order-schedule-review-value" style="margin-top: 4px; font-size: 14px; font-weight: 700; color: var(--text-main);">Nenhum horÃ¡rio selecionado.</div>
+                                <div id="order-schedule-review-value" style="margin-top: 4px; font-size: 14px; font-weight: 700; color: var(--text-main);">Nenhum horário selecionado.</div>
                             </div>
                             <div class="summary-section" style="background: #f9f9f9; padding: 15px; border-radius: 12px;">
                                 <div class="summary-row"
@@ -700,7 +711,7 @@ try {
                 <div class="review-modal-body">
                     <div id="review-target" class="review-target">Selecione uma nota para continuar.</div>
                     <div id="review-stars" class="review-stars"></div>
-                    <textarea id="review-comment" class="ifood-input review-comment" placeholder="ComentÃ¡rio opcional"></textarea>
+                    <textarea id="review-comment" class="ifood-input review-comment" placeholder="Comentário opcional"></textarea>
                     <div class="review-modal-note">Sua avaliaÃ§Ã£o ajuda outras pessoas a escolherem melhor.</div>
                     <button id="submit-review-btn" class="primary-btn" onclick="submitStoreReview()">Enviar avaliaÃ§Ã£o</button>
                 </div>
@@ -888,7 +899,7 @@ try {
                 orderDetailsInfo: '',
                 reviewModalOrderId: null,
                 reviewModalRating: 0,
-                storeReviewSummary: window.__SSR__?.reviewSummary || { averageRating: 5, reviewCount: 0 },
+                storeReviewSummary: window.__SSR__?.reviewSummary || { averageRating: 5, reviewCount: 0, orderCount: 0 },
                 storeRecentReviews: window.__SSR__?.recentReviews || []
             };
 
@@ -959,7 +970,7 @@ try {
             }
 
             function formatOrderSchedule() {
-                if (!state.orderSchedule?.date || !state.orderSchedule?.time) return 'Nenhum horÃ¡rio selecionado.';
+                if (!state.orderSchedule?.date || !state.orderSchedule?.time) return 'Nenhum horário selecionado.';
                 try {
                     const dateText = new Date(`${state.orderSchedule.date}T12:00:00`).toLocaleDateString('pt-BR');
                     return `${dateText} Ã s ${state.orderSchedule.time}`;
@@ -1002,7 +1013,7 @@ try {
                 const timeVal = timeSelect?.value;
 
                 if (!dateVal || !timeVal) {
-                    return showAlert('HorÃ¡rio ausente', 'Escolha a data e o horÃ¡rio da encomenda.');
+                    return showAlert('Horário ausente', 'Escolha a data e o horário da encomenda.');
                 }
 
                 const availability = await loadOrderAvailability(dateVal, true, {
@@ -1013,7 +1024,7 @@ try {
                 const selectedSlot = Array.isArray(availability?.times) ? availability.times.find(slot => slot.time === timeVal) : null;
                 if (!selectedSlot || !selectedSlot.available) {
                     if (timeSelect) timeSelect.value = '';
-                    return showAlert('HorÃ¡rio indisponÃ­vel', selectedSlot?.reason || availability?.reason || 'Escolha outro horÃ¡rio.');
+                    return showAlert('Horário indisponÃ­vel', selectedSlot?.reason || availability?.reason || 'Escolha outro horário.');
                 }
 
                 state.orderSchedule = {
@@ -1093,14 +1104,14 @@ try {
                         times: []
                     };
                     timeSelect.disabled = true;
-                    timeSelect.innerHTML = `<option value="">Escolha uma data vÃ¡lida</option>`;
+                    timeSelect.innerHTML = `<option value="">Escolha uma data válida</option>`;
                     if (noteEl) noteEl.innerText = 'Data anterior a hoje.';
                     return state.orderAvailability;
                 }
 
                 const requestId = ++state.orderAvailabilityRequestId;
                 timeSelect.disabled = true;
-                timeSelect.innerHTML = `<option value="">Carregando horÃ¡rios...</option>`;
+                timeSelect.innerHTML = `<option value="">Carregando horários...</option>`;
 
                 try {
                     const response = await fetch(`${API_BASE}/orders/availability?slug=${encodeURIComponent(STORE_SLUG)}&date=${encodeURIComponent(cleanDate)}&type=order`);
@@ -1109,7 +1120,7 @@ try {
                     if (requestId !== state.orderAvailabilityRequestId) return data;
 
                     if (!response.ok) {
-                        const reason = data.error || data.reason || 'Falha ao carregar horÃ¡rios.';
+                        const reason = data.error || data.reason || 'Falha ao carregar horários.';
                         state.orderAvailability = {
                             available: false,
                             reason,
@@ -1130,16 +1141,16 @@ try {
 
                     const availableTimes = times.filter(slot => slot.available);
                     if (times.length > 0) {
-                        let html = `<option value="">${availableTimes.length > 0 ? 'Selecione um horÃ¡rio' : (data.reason || 'Nenhum horÃ¡rio disponÃ­vel')}</option>`;
+                        let html = `<option value="">${availableTimes.length > 0 ? 'Selecione um horário' : (data.reason || 'Nenhum horário disponÃ­vel')}</option>`;
                         times.forEach(slot => {
                             const label = slot.available ? slot.time : `${slot.time} - IndisponÃ­vel`;
                             html += `<option value="${slot.time}" ${slot.available ? '' : 'disabled'}>${label}</option>`;
                         });
                         timeSelect.innerHTML = html;
                         timeSelect.disabled = false;
-                        if (noteEl) noteEl.innerText = data.reason || (availableTimes.length > 0 ? '' : 'Nenhum horÃ¡rio disponÃ­vel');
+                        if (noteEl) noteEl.innerText = data.reason || (availableTimes.length > 0 ? '' : 'Nenhum horário disponÃ­vel');
                     } else {
-                        const reason = data.reason || 'Nenhum horÃ¡rio disponÃ­vel';
+                        const reason = data.reason || 'Nenhum horário disponÃ­vel';
                         timeSelect.disabled = true;
                         timeSelect.innerHTML = `<option value="">${reason}</option>`;
                         if (noteEl) noteEl.innerText = reason;
@@ -1155,7 +1166,7 @@ try {
                     return state.orderAvailability;
                 } catch (error) {
                     if (requestId !== state.orderAvailabilityRequestId) return null;
-                    const reason = 'Falha ao carregar horÃ¡rios.';
+                    const reason = 'Falha ao carregar horários.';
                     state.orderAvailability = {
                         available: false,
                         reason,
@@ -1204,11 +1215,11 @@ try {
             }
 
             document.addEventListener('DOMContentLoaded', () => {
-                // Carrega o cardÃ¡pio (o servidor jÃ¡ garantiu que temos um slug vÃ¡lido aqui)
+                // Carrega o cardápio (o servidor já garantiu que temos um slug válido aqui)
                 loadCart();
                 lucide.createIcons();
 
-                // Em vez de fazer um fetch pesado, o PHP jÃ¡ injetou tudo em window.__SSR__
+                // Em vez de fazer um fetch pesado, o PHP já injetou tudo em window.__SSR__
                 setTimeout(() => {
                     hydrateFromSSR();
                     initEventListeners();
@@ -1230,7 +1241,7 @@ try {
                     state.categories = data.categories || [];
                     state.availableSlots = data.availableSlots || [];
                     state.addonGroups = data.addonGroups || [];
-                    state.storeReviewSummary = data.reviewSummary || state.storeReviewSummary || { averageRating: 5, reviewCount: 0 };
+                    state.storeReviewSummary = data.reviewSummary || state.storeReviewSummary || { averageRating: 5, reviewCount: 0, orderCount: 0 };
                     state.storeRecentReviews = data.recentReviews || state.storeRecentReviews || [];
                     state.loading = false;
 
@@ -1533,7 +1544,7 @@ try {
 
                 Swal.fire({
                     title: 'Otimizando Imagem...',
-                    text: 'Preparando para o cardÃ¡pio rÃ¡pido',
+                    text: 'Preparando para o cardápio rápido',
                     allowOutsideClick: false,
                     didOpen: () => {
                         Swal.showLoading();
@@ -1659,7 +1670,7 @@ try {
                     grouped[cat].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
                 });
 
-                // Ordenar pela propriedade 'order' que jÃ¡ vem do banco de dados
+                // Ordenar pela propriedade 'order' que já vem do banco de dados
                 const sortedCategories = [];
                 const orderedCats = [...(state.categories || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
                 orderedCats.forEach(c => {
@@ -2013,7 +2024,7 @@ try {
                             return `<div class="variation-section addon-group-section" data-group-id="${g.id}" data-min="${g.min}" data-max="${g.max}">
                                         <div class="addon-group-header">
                                             <h4>${g.name}</h4>
-                                            <span class="addon-group-badge ${g.min > 0 ? 'required' : 'optional'}">${g.min > 0 ? 'ObrigatÃ³rio' : 'Opcional'} â€¢ MÃ¡x ${g.max}</span>
+                                            <span class="addon-group-badge ${g.min > 0 ? 'required' : 'optional'}">${g.min > 0 ? 'ObrigatÃ³rio' : 'Opcional'} â€¢ Máx ${g.max}</span>
                                         </div>
                                         <div class="addon-options">
                                         ${gItems.map((gItem, ii) => {
@@ -2235,7 +2246,7 @@ try {
                         return { ok: false, message: `Selecione pelo menos ${g.min} opÃ§Ã£o em "${g.name}".` };
                     }
                     if (checked > maxAllowed) {
-                        return { ok: false, message: `O grupo "${g.name}" permite no mÃ¡ximo ${maxAllowed} opÃ§Ã£o(Ãµes).` };
+                        return { ok: false, message: `O grupo "${g.name}" permite no máximo ${maxAllowed} opÃ§Ã£o(Ãµes).` };
                     }
                 }
 
@@ -2380,6 +2391,29 @@ try {
                 if (target) target.classList.remove('hidden', 'closing');
             }
 
+            let tabsNavScrollY = window.scrollY || window.pageYOffset || 0;
+            let tabsNavScrollTicking = false;
+
+            function updateOrderTabsVisibility(forceSync = false) {
+                const nav = document.getElementById('order-tabs-nav');
+                if (!nav || nav.classList.contains('hidden')) return;
+
+                const currentY = window.scrollY || window.pageYOffset || 0;
+                if (forceSync) {
+                    nav.classList.remove('is-hidden');
+                    tabsNavScrollY = currentY;
+                    return;
+                }
+
+                const scrollDelta = currentY - tabsNavScrollY;
+                if (currentY <= 24 || scrollDelta < -8) {
+                    nav.classList.remove('is-hidden');
+                } else if (scrollDelta > 8) {
+                    nav.classList.add('is-hidden');
+                }
+                tabsNavScrollY = currentY;
+            }
+
             function initEventListeners() {
                 document.getElementById('search-input').addEventListener('input', (e) => {
                     state.searchQuery = e.target.value;
@@ -2435,6 +2469,18 @@ try {
                 });
                 document.getElementById('next-step-btn').addEventListener('click', handleNextStep);
                 document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
+
+                updateOrderTabsVisibility(true);
+                window.addEventListener('scroll', () => {
+                    if (tabsNavScrollTicking) return;
+                    tabsNavScrollTicking = true;
+                    window.requestAnimationFrame(() => {
+                        updateOrderTabsVisibility(false);
+                        tabsNavScrollTicking = false;
+                    });
+                }, {
+                    passive: true
+                });
 
                 const scheduleDateInput = document.getElementById('schedule-date');
                 if (scheduleDateInput) {
@@ -2625,7 +2671,7 @@ try {
                 const cart = getActiveCart();
                 const list = document.getElementById('checkout-items-list');
                 if (cart.length === 0) {
-                    list.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-gray);">Sua sacola estÃ¡ vazia.</p>`;
+                    list.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-gray);">Sua sacola está vazia.</p>`;
                     document.getElementById('next-step-btn').disabled = true;
                     return;
                 }
@@ -2840,7 +2886,7 @@ try {
                 if (state.currentStep === 1) {
                     const nameVal = document.getElementById('user-name')?.value;
                     const phoneVal = document.getElementById('user-phone')?.value;
-                    if (!nameVal || !phoneVal || phoneVal.length < 14) return showAlert('Ops!', 'Preencha seu nome e um WhatsApp vÃ¡lido.');
+                    if (!nameVal || !phoneVal || phoneVal.length < 14) return showAlert('Ops!', 'Preencha seu nome e um WhatsApp válido.');
                     state.userInfo.name = nameVal;
                     state.userInfo.phone = phoneVal;
                     saveCheckoutState();
@@ -2862,7 +2908,7 @@ try {
                     if (state.activeTab === 'delivery') {
                         if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('EndereÃ§o Ausente', 'Por favor, selecione seu endereÃ§o no mapa.');
                         if (state.deliveryFee === 0 && state.deliveryType === 'delivery' && state.userInfo.address) {
-                            return showAlert('Taxa IndisponÃ­vel', 'Por favor, aguarde o cÃ¡lculo da taxa de entrega ou verifique se o endereÃ§o estÃ¡ no raio de entrega.');
+                            return showAlert('Taxa IndisponÃ­vel', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereÃ§o está no raio de entrega.');
                         }
                     } else if (state.activeTab === 'order') {
                         if (!isOrderEnabled()) return showAlert('Encomendas desativadas', 'No momento nÃ£o estamos aceitando encomendas.');
@@ -2913,7 +2959,7 @@ try {
                 if (scheduleReviewEl && scheduleReviewValueEl) {
                     const showSchedule = state.activeTab === 'order' && !!state.orderSchedule?.date && !!state.orderSchedule?.time;
                     scheduleReviewEl.classList.toggle('hidden', !showSchedule);
-                    scheduleReviewValueEl.innerText = showSchedule ? formatOrderSchedule() : 'Nenhum horÃ¡rio selecionado.';
+                    scheduleReviewValueEl.innerText = showSchedule ? formatOrderSchedule() : 'Nenhum horário selecionado.';
                 }
 
                 if (subEl) subEl.innerText = `R$ ${subtotal.toFixed(2)}`;
@@ -2956,7 +3002,7 @@ try {
                 }
                 const variation = state.currentVariation;
                 const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
-                if (variations.length > 0 && !variation) return showAlert('Quase lÃ¡...', 'Por favor, selecione uma opÃ§Ã£o para continuar.');
+                if (variations.length > 0 && !variation) return showAlert('Quase lá...', 'Por favor, selecione uma opÃ§Ã£o para continuar.');
 
                 // Coleta custom fields (texto/imagem)
                 let customAnswers = {};
@@ -2986,7 +3032,7 @@ try {
                     }
                     const checked = document.querySelectorAll(`.addon-input[data-group-id="${g.id}"]:checked`).length;
                     if (checked > maxAllowed) {
-                        return showAlert('AtenÃ§Ã£o', `O grupo "${g.name}" permite no mÃ¡ximo ${maxAllowed} opÃ§Ã£o(Ãµes).`);
+                        return showAlert('AtenÃ§Ã£o', `O grupo "${g.name}" permite no máximo ${maxAllowed} opÃ§Ã£o(Ãµes).`);
                     }
                 }
 
@@ -3079,7 +3125,7 @@ try {
                     if (!state.orderSchedule?.date || !state.orderSchedule?.time) {
                         btn.disabled = false;
                         btn.innerHTML = 'Fazer pedido';
-                        return showAlert('Agendamento ausente', 'Escolha a data e o horÃ¡rio da encomenda antes de concluir.');
+                        return showAlert('Agendamento ausente', 'Escolha a data e o horário da encomenda antes de concluir.');
                     }
                     const missingExtraItem = cart.find(item => {
                         const schema = getCustomFieldSchema(item);
@@ -3175,7 +3221,7 @@ try {
                         if (state.paymentMethod === 'dinheiro') {
                             Swal.fire({
                                 title: 'Pedido Recebido!',
-                                text: 'Seu pedido foi registrado e estÃ¡ aguardando confirmaÃ§Ã£o.',
+                                text: 'Seu pedido foi registrado e está aguardando confirmaÃ§Ã£o.',
                                 icon: 'success',
                                 confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#ff4d6d',
                                 confirmButtonText: 'Ver meus pedidos'
@@ -3213,23 +3259,39 @@ try {
                 }
             }
 
+            function getStarSvg(filled = true) {
+                return `
+                    <svg class="rating-star-icon ${filled ? 'filled' : 'outline'}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="${filled ? 'currentColor' : 'none'}" stroke="${filled ? 'none' : 'currentColor'}" stroke-width="1.8"></path>
+                    </svg>
+                `;
+            }
+
             function updateStoreRatingBadge() {
                 const badge = document.getElementById('store-rating-badge');
                 if (!badge) return;
 
                 const summary = state.storeReviewSummary || {};
+                const orderCount = Number(summary.orderCount || 0);
+                if (orderCount < 1) {
+                    badge.hidden = true;
+                    badge.innerHTML = '';
+                    return;
+                }
+
                 const average = summary.averageRating !== null && summary.averageRating !== undefined
                     ? Number(summary.averageRating)
                     : 5;
                 const count = Number(summary.reviewCount || 0);
 
+                badge.hidden = false;
                 badge.className = 'rating-badge has-rating';
 
                 if (Number.isFinite(average)) {
                     const avgText = average.toFixed(1).replace('.', ',');
-                    badge.innerHTML = `â˜… ${avgText}${count > 0 ? ` (${count} ${count === 1 ? 'avaliaÃ§Ã£o' : 'avaliações'})` : ''}`;
+                    badge.innerHTML = `${getStarSvg(true)}<span class="rating-value">${avgText}</span>${count > 0 ? `<span class="rating-count">(${count})</span>` : ''}`;
                 } else {
-                    badge.innerHTML = '&#9733; 5,0';
+                    badge.innerHTML = `${getStarSvg(true)}<span class="rating-value">5,0</span>`;
                 }
             }
 
@@ -3238,7 +3300,9 @@ try {
                 if (!stars) return;
 
                 stars.innerHTML = [1, 2, 3, 4, 5].map((rating) => `
-                    <button type="button" class="review-star-btn ${state.reviewModalRating >= rating ? 'active' : ''}" aria-label="Nota ${rating}" onclick="setReviewRating(${rating})">${state.reviewModalRating >= rating ? 'â˜…' : 'â˜†'}</button>
+                    <button type="button" class="review-star-btn ${state.reviewModalRating >= rating ? 'active' : ''}" aria-label="Nota ${rating}" onclick="setReviewRating(${rating})">
+                        ${getStarSvg(state.reviewModalRating >= rating)}
+                    </button>
                 `).join('');
             }
 
@@ -3273,7 +3337,7 @@ try {
 
             async function submitStoreReview() {
                 if (!state.reviewModalOrderId) {
-                    return showAlert('AvaliaÃ§Ã£o', 'Selecione um pedido vÃ¡lido.', 'error');
+                    return showAlert('AvaliaÃ§Ã£o', 'Selecione um pedido válido.', 'error');
                 }
                 if (!state.reviewModalRating) {
                     return showAlert('AvaliaÃ§Ã£o', 'Escolha uma nota para continuar.', 'error');
@@ -3380,7 +3444,7 @@ try {
                     closeWithAnimation('history-modal');
                     goToStep(1);
                 } else {
-                    showAlert('Produto IndisponÃ­vel', 'Este produto nÃ£o estÃ¡ mais disponÃ­vel no cardÃ¡pio no momento.', 'error');
+                    showAlert('Produto IndisponÃ­vel', 'Este produto nÃ£o está mais disponÃ­vel no cardápio no momento.', 'error');
                 }
             }
 
@@ -3395,7 +3459,7 @@ try {
                 const accent = isOrder ? (data.accentColorOrders || '#4a2c2a') : (data.accentColor || '#ff4d6d');
                 const button = isOrder ? (data.buttonColorOrders || '#4a2c2a') : (data.buttonColor || '#ff4d6d');
 
-                // Aplica as variÃ¡veis
+                // Aplica as variáveis
                 root.style.setProperty('--primary-color', accent);
                 root.style.setProperty('--btn-bg', button);
                 root.style.setProperty('--btn-text', data.buttonTextColor || '#ffffff');

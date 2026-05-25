@@ -1,4 +1,4 @@
-(function () {
+﻿(function () {
   const config = window.dzHome2Config || {};
   const roots = new Set();
   const stateByRoot = new WeakMap();
@@ -11,6 +11,14 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  function ratingStarSvg(filled = true) {
+    return `
+      <svg class="dz-home2-rating-icon ${filled ? 'filled' : 'outline'}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="${filled ? 'currentColor' : 'none'}" stroke="${filled ? 'none' : 'currentColor'}" stroke-width="1.8"></path>
+      </svg>
+    `;
   }
 
   function slugify(value) {
@@ -265,7 +273,10 @@
         selectedAddress: null,
         addressSelected: false,
         abortController: null,
-        timer: null
+        timer: null,
+        scrollBound: false,
+        scrollTicking: false,
+        lastScrollY: window.scrollY || window.pageYOffset || 0
       });
     }
     return stateByRoot.get(root);
@@ -299,6 +310,38 @@
     if (appActions) appActions.hidden = mode !== 'app';
   }
 
+  function bindHeaderScroll(root) {
+    const header = root.querySelector('.dz-home2-header');
+    if (!header) return;
+
+    const state = stateFor(root);
+    if (state.scrollBound) return;
+    state.scrollBound = true;
+    state.lastScrollY = window.scrollY || window.pageYOffset || 0;
+
+    const update = () => {
+      const currentY = window.scrollY || window.pageYOffset || 0;
+      const delta = currentY - state.lastScrollY;
+      if (currentY <= 24 || delta < -8) {
+        header.classList.remove('is-hidden');
+      } else if (delta > 8) {
+        header.classList.add('is-hidden');
+      }
+      state.lastScrollY = currentY;
+    };
+
+    update();
+
+    window.addEventListener('scroll', () => {
+      if (state.scrollTicking) return;
+      state.scrollTicking = true;
+      window.requestAnimationFrame(() => {
+        update();
+        state.scrollTicking = false;
+      });
+    }, { passive: true });
+  }
+
   function renderFeaturedCards(restaurants) {
     if (!Array.isArray(restaurants) || restaurants.length === 0) {
       return '';
@@ -310,9 +353,12 @@
       const category = String(store?.category || '');
       const image = store?.logoUrl || placeholderLogo(name, store?.accentColor || '#e11d48');
       const schedule = getStoreScheduleState(store);
-      const ratingLabel = String(store?.ratingLabel || '5,0');
+      const ratingVisible = Number(store?.orderCount || 0) > 0;
+      const ratingLabel = String(store?.ratingLabel || '');
       const ratingCount = Number(store?.ratingCount || 0);
-      const ratingText = `★ ${ratingLabel}${ratingCount > 0 ? ` (${ratingCount})` : ''}`;
+      const ratingText = ratingVisible
+        ? `${ratingLabel || '5,0'}${ratingCount > 0 ? ` (${ratingCount})` : ''}`
+        : '';
 
       return `
         <a class="dz-home2-featured-card ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}">
@@ -320,7 +366,7 @@
           <span class="dz-home2-featured-copy">
             <strong>${escapeHtml(name)}</strong>
             <small>${escapeHtml(category)}</small>
-            <span class="dz-home2-hero-rating">${escapeHtml(ratingText)}</span>
+            ${ratingVisible ? `<span class="dz-home2-hero-rating">${ratingStarSvg(true)}<span class="dz-home2-rating-text">${escapeHtml(ratingText)}</span></span>` : ''}
             ${schedule.isOpenNow ? '' : `<span class="dz-home2-restaurant-status ${schedule.statusClass} dz-home2-featured-status">${escapeHtml(schedule.statusLabel)}</span>`}
           </span>
         </a>
@@ -380,9 +426,12 @@
         : 'Sem destaques cadastrados';
       const schedule = getStoreScheduleState(store);
       const count = Number(store?.productsCount || 0);
-      const ratingLabel = String(store?.ratingLabel || '5,0');
+      const ratingVisible = Number(store?.orderCount || 0) > 0;
+      const ratingLabel = String(store?.ratingLabel || '');
       const ratingCount = Number(store?.ratingCount || 0);
-      const ratingText = `★ ${ratingLabel}${ratingCount > 0 ? ` (${ratingCount})` : ''}`;
+      const ratingText = ratingVisible
+        ? `${ratingLabel || '5,0'}${ratingCount > 0 ? ` (${ratingCount})` : ''}`
+        : '';
 
       return `
         <article class="dz-home2-restaurant-card ${schedule.isOpenNow ? '' : 'is-closed'}">
@@ -396,7 +445,7 @@
               <span class="dz-home2-restaurant-category">${escapeHtml(category)}</span>
               <span class="dz-home2-restaurant-meta">
                 <span>${count} item${count === 1 ? '' : 's'}</span>
-                <span class="dz-home2-rating-chip">${escapeHtml(ratingText)}</span>
+                ${ratingVisible ? `<span class="dz-home2-rating-chip">${ratingStarSvg(true)}<span class="dz-home2-rating-text">${escapeHtml(ratingText)}</span></span>` : ''}
                 <span>${escapeHtml(featuredLine)}</span>
               </span>
             </span>
@@ -630,6 +679,7 @@
     const state = stateFor(root);
 
     syncAddressUI(root);
+    bindHeaderScroll(root);
 
     if (form && input) {
       input.addEventListener('focus', () => {
@@ -712,3 +762,6 @@
     init();
   }
 })();
+
+
+

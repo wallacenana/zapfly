@@ -33,6 +33,14 @@
   background: #fff;
   border-bottom: 0;
   box-shadow: none;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  will-change: transform, opacity;
+}
+
+.dz-home2-header.is-hidden {
+  transform: translateY(-110%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 .dz-left,
@@ -267,6 +275,23 @@
   color: #9a5f00;
   font-size: 0.78rem;
   font-weight: 800;
+}
+
+.dz-home2-rating-icon {
+  width: 0.95em;
+  height: 0.95em;
+  flex: 0 0 auto;
+  display: inline-block;
+}
+
+.dz-home2-rating-icon path {
+  fill: currentColor;
+}
+
+.dz-home2-rating-icon.outline path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
 }
 
 .dz-home2-address-form {
@@ -958,6 +983,12 @@
     justify-items: stretch;
   }
 
+  .dz-left,
+  .dz-center,
+  .dz-right {
+    width: 100%;
+  }
+
   .dz-left {
     flex-wrap: wrap;
     gap: 14px 20px;
@@ -1010,6 +1041,10 @@
   }
 
   .dz-home2-header-actions {
+    width: 100%;
+  }
+
+  .dz-home2-header-actions-guest {
     width: 100%;
   }
 
