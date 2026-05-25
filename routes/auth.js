@@ -6,6 +6,7 @@ const QRCode = require('qrcode');
 const nodemailer = require('nodemailer');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { getSettings } = require('../lib/cache');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'zapfly-secret-key-super-safe';
@@ -16,8 +17,6 @@ let mailerInstances = {};
 
 const getMailer = async (userId) => {
   console.log(`[AUTH-DEBUG] 🔍 Iniciando getMailer para o usuário: ${userId}`);
-
-  const settings = await prisma.setting.findUnique({ where: { userId } }).catch(() => null);
 
   const envHost = process.env.SMTP_HOST;
   const envPort = process.env.SMTP_PORT;
@@ -60,7 +59,7 @@ const sendOtpEmail = async (userId, toEmail, code, userName) => {
 
     // Agora usamos apenas o e-mail definido no BACKEND (.env)
     const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
-    const settings = await prisma.setting.findUnique({ where: { userId } }).catch(() => null);
+    const settings = await getSettings(userId);
     const businessName = settings?.businessName || APP_NAME;
 
     if (!mailer) {
@@ -337,7 +336,7 @@ router.post('/test-email', async (req, res) => {
     if (!mailer) return res.status(400).json({ error: 'SMTP global não configurado no servidor (.env).' });
 
     const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
-    const settings = await prisma.setting.findUnique({ where: { userId } });
+    const settings = await getSettings(userId);
 
     await mailer.sendMail({
       from: `"${settings?.businessName || APP_NAME}" <${fromEmail}>`,

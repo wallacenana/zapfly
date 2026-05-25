@@ -90,7 +90,10 @@ const Settings = () => {
     businessName: '',
     businessCategory: '',
     businessAddress: '',
-    businessLocation: '',
+    businessPlaceId: '',
+    businessLat: null,
+    businessLng: null,
+    businessMapsUrl: '',
     openaiKey: '',
     claudeKey: '',
     activeModel: 'openai',
@@ -135,7 +138,10 @@ const Settings = () => {
           gcalCalendarId: dataWithoutSlug.gcalCalendarId || '',
           businessCategory: dataWithoutSlug.businessCategory || '',
           businessAddress: dataWithoutSlug.businessAddress || parsedLocation.address || '',
-          businessLocation: dataWithoutSlug.businessLocation || '',
+          businessPlaceId: dataWithoutSlug.businessPlaceId || parsedLocation.placeId || '',
+          businessLat: dataWithoutSlug.businessLat ?? parsedLocation.lat ?? null,
+          businessLng: dataWithoutSlug.businessLng ?? parsedLocation.lng ?? null,
+          businessMapsUrl: dataWithoutSlug.businessMapsUrl || parsedLocation.mapsUrl || '',
           deliveryRules: typeof dataWithoutSlug.deliveryRules === 'string'
             ? JSON.parse(dataWithoutSlug.deliveryRules || '[]')
             : (Array.isArray(dataWithoutSlug.deliveryRules) ? dataWithoutSlug.deliveryRules : []),
@@ -203,13 +209,10 @@ const Settings = () => {
         setSettings(prev => ({
           ...prev,
           businessAddress: formatted,
-          businessLocation: JSON.stringify({
-            address: formatted,
-            placeId: place?.place_id || '',
-            lat,
-            lng,
-            mapsUrl
-          })
+          businessPlaceId: place?.place_id || '',
+          businessLat: lat,
+          businessLng: lng,
+          businessMapsUrl: mapsUrl
         }));
 
         input.value = formatted;
@@ -441,9 +444,9 @@ const Settings = () => {
                   ref={businessAddressRef}
                   value={settings.businessAddress}
                   onFocus={attachBusinessAddressAutocomplete}
-                  onChange={e => setSettings({ ...settings, businessAddress: e.target.value, businessLocation: '' })}
-                  placeholder="Rua, número, bairro, cidade e estado"
-                />
+          onChange={e => setSettings({ ...settings, businessAddress: e.target.value, businessPlaceId: '', businessLat: null, businessLng: null, businessMapsUrl: '' })}
+          placeholder="Rua, número, bairro, cidade e estado"
+        />
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
                   Selecione uma sugestão do Google para registrar a posição correta.
                 </p>

@@ -29,6 +29,7 @@ model User {
   orders            Order[]
   customers         Customer[]
   settings          Setting?
+  storeProfile      StoreProfile?
   marketingAssets   MarketingAsset[]
   instances         Instance[]
   stockItems        StockItem[]
@@ -39,6 +40,41 @@ model User {
   addonGroups       AddonGroup[]
 
   @@map("user")
+}
+
+model StoreProfile {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id])
+  businessName         String?
+  businessCategory     String?
+  businessAddress      String?
+  businessPlaceId      String?
+  businessLat          Float?
+  businessLng          Float?
+  businessMapsUrl      String?  @db.Text
+  logoUrl              String?  @db.Text
+  faviconUrl           String?  @db.Text
+  accentColor          String?  @default("#ff4d6d")
+  buttonColor          String?  @default("#ff4d6d")
+  accentColorOrders    String?  @default("#4a2c2a")
+  buttonColorOrders    String?  @default("#4a2c2a")
+  buttonTextColor      String?  @default("#ffffff")
+  backgroundColor      String?  @default("#ffffff")
+  textColor            String?  @default("#333333")
+  seoDescription       String?  @db.Text
+  pixelId              String?
+  googleAnalyticsId    String?
+  microsoftClarityId   String?
+  acceptOrders         Boolean  @default(true)
+  active               Boolean  @default(true)
+  maxDeliveryKm        Float    @default(15.0)
+  deliveryMode         String   @default("hibrido")
+  allowCashOnDelivery  Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @default(now()) @updatedAt
+
+  @@map("store_profile")
 }
 
 model AddonGroup {

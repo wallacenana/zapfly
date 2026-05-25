@@ -92,6 +92,7 @@ const {
     invalidateSettingsCache,
     getCachedInstance
 } = require('./lib/cache');
+const { upsertStoreProfile } = require('./lib/storeProfile');
 const { buildHomeDirectoryData, renderCategoryCards, renderHeroRestaurants, renderRestaurantCards, escapeHtml } = require('./lib/home');
 
 const { router: ordersRouter, setupCronJobs, checkAvailability, updateCalendarEvent } = require('./routes/orders');
@@ -131,14 +132,17 @@ app.get('/robots.txt', (req, res) => {
 //  CONFIGURAï¾ƒï¾ƒé«­S DO SITE (BRANDING) 
 app.get('/settings', authenticate, async (req, res) => {
     try {
-        const settings = await prisma.setting.findUnique({
-            where: { userId: req.user.id }
-        });
+        const settings = await getSettings(req.user.id);
         const user = await prisma.user.findUnique({
             where: { id: req.user.id },
             select: { slug: true, active: true }
         });
-        res.json({ ...(settings || {}), slug: user?.slug || '', active: user?.active ?? true });
+        res.json({
+            ...(settings || {}),
+            slug: user?.slug || '',
+            active: settings?.active ?? user?.active ?? true,
+            userActive: user?.active ?? true
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -178,39 +182,28 @@ app.post('/settings', authenticate, async (req, res) => {
             });
         }
 
-        const data = {
-            businessName, logoUrl, faviconUrl,
-            accentColor, buttonColor,
-            accentColorOrders, buttonColorOrders,
-            buttonTextColor, backgroundColor, textColor,
-            seoDescription, pixelId, googleAnalyticsId, microsoftClarityId,
-            acceptOrders
-        };
-
-        console.log('[DEBUG] Tentando salvar configurações para o usuário:', req.user.id);
-        console.log('[DEBUG] Dados do payload:', JSON.stringify(data, null, 2));
-
-        // Tenta encontrar uma configuraÃ§ão existente
-        const existing = await prisma.setting.findUnique({
-            where: { userId: req.user.id }
+        const settings = await upsertStoreProfile(req.user.id, {
+            businessName,
+            logoUrl,
+            faviconUrl,
+            accentColor,
+            buttonColor,
+            accentColorOrders,
+            buttonColorOrders,
+            buttonTextColor,
+            backgroundColor,
+            textColor,
+            seoDescription,
+            pixelId,
+            googleAnalyticsId,
+            microsoftClarityId,
+            acceptOrders,
+            active
         });
 
-        let settings;
-        if (existing) {
-            // Se já existe, atualiza
-            settings = await prisma.setting.update({
-                where: { userId: req.user.id },
-                data: data
-            });
-        } else {
-            // Se não existe, cria do zero
-            settings = await prisma.setting.create({
-                data: { ...data, userId: req.user.id }
-            });
-        }
-
-        console.log('[DEBUG] Configurações salvas com sucesso!');
-        res.json(settings);
+        invalidateSettingsCache(req.user.id);
+        const merged = await getSettings(req.user.id);
+        res.json(merged || settings);
     } catch (err) {
         console.error('[Settings Save Error] Erro detalhado:', err);
         res.status(500).json({ error: err.message });
@@ -1956,7 +1949,25 @@ app.get('/config/keys', authenticate, async (req, res) => {
         businessName: config.businessName,
         businessCategory: config.businessCategory,
         businessAddress: config.businessAddress,
+        businessPlaceId: config.businessPlaceId,
+        businessLat: config.businessLat,
+        businessLng: config.businessLng,
+        businessMapsUrl: config.businessMapsUrl,
         businessLocation: config.businessLocation,
+        logoUrl: config.logoUrl,
+        faviconUrl: config.faviconUrl,
+        accentColor: config.accentColor,
+        buttonColor: config.buttonColor,
+        accentColorOrders: config.accentColorOrders,
+        buttonColorOrders: config.buttonColorOrders,
+        buttonTextColor: config.buttonTextColor,
+        backgroundColor: config.backgroundColor,
+        textColor: config.textColor,
+        seoDescription: config.seoDescription,
+        pixelId: config.pixelId,
+        googleAnalyticsId: config.googleAnalyticsId,
+        microsoftClarityId: config.microsoftClarityId,
+        acceptOrders: config.acceptOrders,
         dailyMaxOrders: config.dailyMaxOrders,
         managerJid: config.managerJid,
         deliveryJid: config.deliveryJid,
@@ -1978,13 +1989,18 @@ app.get('/config/keys', authenticate, async (req, res) => {
 app.post('/config/keys', authenticate, async (req, res) => {
     const {
         slug, openai, claude, activeModel, gcalSyncHour,
-        businessName, businessCategory, businessAddress, businessLocation,
+        businessName, businessCategory, businessAddress, businessPlaceId, businessLat, businessLng, businessMapsUrl, businessLocation,
         dailyMaxOrders, dailyDeliveryItems, managerJid,
         deliveryJid, reportEnabled, reportHour,
         googleApiKey, deliveryRules, gcalCalendarId,
         mercadopagoToken, mercadopagoPublicKey,
         pixReceiverName, pixReceiverKey,
-        maxDeliveryKm, deliveryMode, allowCashOnDelivery
+        maxDeliveryKm, deliveryMode, allowCashOnDelivery,
+        logoUrl, faviconUrl, accentColor, buttonColor,
+        accentColorOrders, buttonColorOrders,
+        buttonTextColor, backgroundColor, textColor,
+        seoDescription, pixelId, googleAnalyticsId, microsoftClarityId,
+        acceptOrders, active
     } = req.body;
 
     if (slug) {
@@ -2009,10 +2025,6 @@ app.post('/config/keys', authenticate, async (req, res) => {
         mercadopagoPublicKey,
         activeModel,
         gcalSyncHour: gcalSyncHour ?? (currentConfig?.gcalSyncHour || 6),
-        businessName,
-        businessCategory,
-        businessAddress,
-        businessLocation,
         dailyMaxOrders: parseInt(dailyMaxOrders || 10),
         managerJid,
         deliveryJid,
@@ -2023,22 +2035,53 @@ app.post('/config/keys', authenticate, async (req, res) => {
         gcalCalendarId: gcalCalendarId || "",
         pixReceiverName,
         pixReceiverKey,
-        maxDeliveryKm: maxDeliveryKm !== undefined ? parseFloat(maxDeliveryKm) : (currentConfig?.maxDeliveryKm || 15.0),
-        deliveryMode: deliveryMode || currentConfig?.deliveryMode || 'hibrido',
-        allowCashOnDelivery: allowCashOnDelivery !== undefined ? !!allowCashOnDelivery : (currentConfig?.allowCashOnDelivery ?? true)
+        dailyDeliveryItems: typeof dailyDeliveryItems === 'string' ? dailyDeliveryItems : JSON.stringify(dailyDeliveryItems || [])
+    };
+
+    const storeProfileData = {
+        businessName,
+        businessCategory,
+        businessAddress,
+        businessPlaceId,
+        businessLat,
+        businessLng,
+        businessMapsUrl,
+        businessLocation,
+        logoUrl,
+        faviconUrl,
+        accentColor,
+        buttonColor,
+        accentColorOrders,
+        buttonColorOrders,
+        buttonTextColor,
+        backgroundColor,
+        textColor,
+        seoDescription,
+        pixelId,
+        googleAnalyticsId,
+        microsoftClarityId,
+        acceptOrders,
+        active,
+        maxDeliveryKm,
+        deliveryMode,
+        allowCashOnDelivery
     };
 
     console.log(`[Config Save] Salvando configurações do usuário ${req.user.id}...`);
 
-    const config = await prisma.setting.upsert({
-        where: { userId: req.user.id },
-        update: updateData,
-        create: { userId: req.user.id, ...updateData, gcalEnabled: false }
-    });
+    const [settingConfig, storeConfig] = await Promise.all([
+        prisma.setting.upsert({
+            where: { userId: req.user.id },
+            update: updateData,
+            create: { userId: req.user.id, ...updateData, gcalEnabled: false }
+        }),
+        upsertStoreProfile(req.user.id, storeProfileData)
+    ]);
 
     openaiInstance = null;
-    invalidateSettingsCache(req.user.id); // forï¾ƒï½§a reload das configurações no prï¾ƒï½³ximo uso
-    res.json(config);
+    invalidateSettingsCache(req.user.id);
+    const merged = await getSettings(req.user.id);
+    res.json(merged || { ...settingConfig, ...storeConfig });
 });
 
 app.get('/config/slots', authenticate, async (req, res) => {
