@@ -310,9 +310,9 @@
       const category = String(store?.category || '');
       const image = store?.logoUrl || placeholderLogo(name, store?.accentColor || '#e11d48');
       const schedule = getStoreScheduleState(store);
-      const ratingText = Number(store?.ratingCount || 0) > 0 && store?.ratingLabel
-        ? `★ ${store.ratingLabel} (${store.ratingCount})`
-        : 'Sem avaliações';
+      const ratingLabel = String(store?.ratingLabel || '5,0');
+      const ratingCount = Number(store?.ratingCount || 0);
+      const ratingText = `★ ${ratingLabel}${ratingCount > 0 ? ` (${ratingCount})` : ''}`;
 
       return `
         <a class="dz-home2-featured-card ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}">
@@ -380,9 +380,9 @@
         : 'Sem destaques cadastrados';
       const schedule = getStoreScheduleState(store);
       const count = Number(store?.productsCount || 0);
-      const ratingText = Number(store?.ratingCount || 0) > 0 && store?.ratingLabel
-        ? `★ ${store.ratingLabel} (${store.ratingCount})`
-        : 'Sem avaliações';
+      const ratingLabel = String(store?.ratingLabel || '5,0');
+      const ratingCount = Number(store?.ratingCount || 0);
+      const ratingText = `★ ${ratingLabel}${ratingCount > 0 ? ` (${ratingCount})` : ''}`;
 
       return `
         <article class="dz-home2-restaurant-card ${schedule.isOpenNow ? '' : 'is-closed'}">

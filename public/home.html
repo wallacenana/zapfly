@@ -999,7 +999,7 @@
                         <div class="hero-promo-tag">Destaque</div>
                         <strong>${escapeHtml(store.name)}</strong>
                         <span>${escapeHtml(store.category)}</span>
-                        <span class="hero-rating">${escapeHtml(store.ratingCount > 0 && store.ratingLabel ? `★ ${store.ratingLabel} (${store.ratingCount})` : 'Sem avaliações')}</span>
+                        <span class="hero-rating">${escapeHtml(`★ ${store.ratingLabel || '5,0'}${Number(store.ratingCount || 0) > 0 ? ` (${store.ratingCount})` : ''}`)}</span>
                         ${getStoreScheduleState(store).isOpenNow ? '' : `<span class="restaurant-status ${getStoreScheduleState(store).statusClass} hero-featured-status">${escapeHtml(getStoreScheduleState(store).statusLabel)}</span>`}
                         <p>${escapeHtml(store.featuredProducts?.[0]?.name || 'Melhores pedidos da loja')}</p>
                     </div>
@@ -1014,9 +1014,7 @@
 
             return stores.map((store) => {
                 const schedule = getStoreScheduleState(store);
-                const ratingText = store.ratingCount > 0 && store.ratingLabel
-                    ? `★ ${store.ratingLabel} (${store.ratingCount})`
-                    : 'Sem avaliações';
+                const ratingText = `★ ${store.ratingLabel || '5,0'}${Number(store.ratingCount || 0) > 0 ? ` (${store.ratingCount})` : ''}`;
                 return `
                 <article class="restaurant-card ${schedule.isOpenNow ? '' : 'is-closed'}">
                     <a class="restaurant-card-link ${schedule.isOpenNow ? '' : 'is-closed'}" href="/${encodeURIComponent(store.slug)}">

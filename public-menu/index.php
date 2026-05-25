@@ -1,7 +1,7 @@
-<?php
+﻿<?php
 
 /**
- * DigiZap - Cardápio All-in-One (Versão Checkout 2.0)
+ * DigiZap - CardÃ¡pio All-in-One (VersÃ£o Checkout 2.0)
  */
 
 if (php_sapi_name() === 'cli-server') {
@@ -102,8 +102,10 @@ try {
     $stmt = $pdo->prepare("SELECT ROUND(AVG(rating), 1) AS avgRating, COUNT(*) AS reviewCount FROM store_review WHERE userId = ?");
     $stmt->execute([$store['id']]);
     $reviewSummary = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['avgRating' => null, 'reviewCount' => 0];
-    $reviewAverage = $reviewSummary['avgRating'] !== null ? (float) $reviewSummary['avgRating'] : null;
     $reviewCount = (int) ($reviewSummary['reviewCount'] ?? 0);
+    $reviewAverage = ($reviewCount > 0 && $reviewSummary['avgRating'] !== null)
+        ? (float) $reviewSummary['avgRating']
+        : 5.0;
 
     $stmt = $pdo->prepare("SELECT sr.id, sr.orderId, sr.clientName, sr.rating, sr.comment, sr.createdAt, o.product, o.variation FROM store_review sr LEFT JOIN `order` o ON o.id = sr.orderId WHERE sr.userId = ? ORDER BY sr.createdAt DESC LIMIT 6");
     $stmt->execute([$store['id']]);
@@ -150,7 +152,7 @@ try {
         <?php if (!empty($store['seoDescription'])): ?>
             <meta name="description" content="<?php echo htmlspecialchars($store['seoDescription']); ?>">
         <?php endif; ?>
-        <title><?php echo $businessName; ?> | Cardápio Digital DigiZap</title>
+        <title><?php echo $businessName; ?> | CardÃ¡pio Digital DigiZap</title>
         <link rel="icon" type="image/x-icon" href="<?php echo $faviconUrl; ?>">
         <link rel="preconnect" href="https://maps.googleapis.com" crossorigin>
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -347,52 +349,91 @@ try {
                 border-radius: 12px;
             }
 
-            .status-badge {
-                padding: 4px 10px;
-                border-radius: 20px;
-                font-size: 0.75rem;
-                font-weight: 700;
-                display: inline-flex;
-                align-items: center;
-                gap: 5px;
-            }
-
-            .status-badge.open {
-                background: #f0fdf4;
-                color: #166534;
-            }
-
-            .status-badge.closed {
-                background: #fef2f2;
-                color: #991b1b;
-            }
-
-            .store-badges-row {
+            .store-name-row {
                 display: flex;
                 align-items: center;
-                gap: 8px;
+                gap: 10px;
                 flex-wrap: wrap;
             }
 
-            .rating-badge {
-                padding: 4px 10px;
+            .status-badge {
+                padding: 6px 10px;
                 border-radius: 999px;
-                font-size: 0.75rem;
-                font-weight: 800;
+                font-size: 0.76rem;
+                font-weight: 700;
                 display: inline-flex;
                 align-items: center;
                 gap: 6px;
                 white-space: nowrap;
+                border: 1px solid transparent;
+            }
+
+            .status-badge.open {
+                background: color-mix(in srgb, var(--primary-color) 10%, #ffffff);
+                color: var(--primary-color);
+                border-color: color-mix(in srgb, var(--primary-color) 18%, #ffffff);
+            }
+
+            .status-badge.closed {
+                background: rgba(220, 38, 38, 0.08);
+                color: #b91c1c;
+                border-color: rgba(220, 38, 38, 0.16);
+            }
+
+            .rating-badge {
+                padding: 0;
+                border-radius: 0;
+                font-size: 0.96rem;
+                font-weight: 700;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                white-space: nowrap;
+                color: #f59e0b;
             }
 
             .rating-badge.has-rating {
-                background: rgba(245, 158, 11, 0.10);
-                color: #9a5f00;
+                color: #f59e0b;
             }
 
             .rating-badge.no-rating {
-                background: rgba(107, 114, 128, 0.08);
                 color: #6b7280;
+                font-size: 0.9rem;
+                font-weight: 600;
+            }
+
+            .store-header-actions {
+                display: inline-flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+                margin-left: auto;
+            }
+
+            .more-link-btn {
+                appearance: none;
+                border: none;
+                background: transparent;
+                color: var(--primary-color);
+                font-size: 0.95rem;
+                font-weight: 700;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                cursor: pointer;
+                padding: 6px 0;
+                white-space: nowrap;
+            }
+
+            .more-link-btn:hover {
+                opacity: 0.82;
+            }
+
+            .header-divider {
+                width: 1px;
+                height: 22px;
+                background: rgba(0, 0, 0, 0.10);
             }
         </style>
     </head>
@@ -405,21 +446,21 @@ try {
                     <div class="store-logo"><img src="<?php echo $logoUrl; ?>" alt="Logo" fetchpriority="high"
                             decoding="async"></div>
                     <div class="store-details">
-                        <h1 id="store-name"><?php echo $businessName; ?></h1>
-                        <div class="store-badges-row">
-                            <div id="store-status-badge" class="status-badge open">● Aberto agora</div>
-                            <div id="store-rating-badge" class="rating-badge <?php echo $reviewCount > 0 ? 'has-rating' : 'no-rating'; ?>">
-                                <?php if ($reviewCount > 0 && $reviewAverage !== null): ?>
-                                    ★ <?php echo number_format($reviewAverage, 1, ',', '.'); ?> (<?php echo (int) $reviewCount; ?> <?php echo $reviewCount === 1 ? 'avaliação' : 'avaliações'; ?>)
-                                <?php else: ?>
-                                    Sem avaliações ainda
-                                <?php endif; ?>
+                        <div class="store-name-row">
+                            <h1 id="store-name"><?php echo $businessName; ?></h1>
+                            <div id="store-rating-badge" class="rating-badge has-rating">
+                                &#9733; <?php echo number_format($reviewAverage, 1, ',', '.'); ?><?php if ($reviewCount > 0): ?> (<?php echo (int) $reviewCount; ?> <?php echo $reviewCount === 1 ? 'avaliação' : 'avaliações'; ?>)<?php endif; ?>
                             </div>
                         </div>
                     </div>
                 </div>
-                <button class="icon-btn" id="history-toggle-btn" aria-label="Ver Histórico"><i
-                        data-lucide="history"></i></button>
+                <div class="store-header-actions">
+                    <button class="more-link-btn" id="history-toggle-btn" aria-label="Ver mais sobre a loja">
+                        Ver mais <i data-lucide="chevron-down"></i>
+                    </button>
+                    <div class="header-divider" aria-hidden="true"></div>
+                    <div id="store-status-badge" class="status-badge open">&#9679; Aberto agora</div>
+                </div>
             </div>
         </header>
 
@@ -433,7 +474,7 @@ try {
         <div class="container search-container">
             <div class="search-box">
                 <i data-lucide="search"></i>
-                <input type="text" id="search-input" placeholder="Buscar no cardápio">
+                <input type="text" id="search-input" placeholder="Buscar no cardÃ¡pio">
             </div>
         </div>
 
@@ -508,7 +549,7 @@ try {
                     <button class="close-modal-btn" onclick="closeWithAnimation('order-schedule-modal')" aria-label="Fechar Agendamento">
                         <i data-lucide="x"></i>
                     </button>
-                    <h2 style="margin: 0; font-size: 1.15rem;">Escolha data e horário</h2>
+                    <h2 style="margin: 0; font-size: 1.15rem;">Escolha data e horÃ¡rio</h2>
                     <div style="width: 40px;"></div>
                 </div>
                 <div class="modal-scroll-body" style="padding-top: 10px;">
@@ -518,7 +559,7 @@ try {
                         <input type="date" id="schedule-date" class="ifood-input">
                     </div>
                     <div class="form-group">
-                        <label class="field-label">Horário</label>
+                        <label class="field-label">HorÃ¡rio</label>
                         <select id="schedule-time" class="ifood-input">
                             <option value="">Selecione uma data primeiro</option>
                         </select>
@@ -526,7 +567,7 @@ try {
                     <div id="schedule-availability-note" style="margin-top: 10px; color: var(--text-gray); font-size: 0.82rem;"></div>
                 </div>
                 <div class="modal-footer-sticky" style="position: sticky; bottom: 0;">
-                    <button id="confirm-schedule-btn" class="primary-btn">Confirmar horário</button>
+                    <button id="confirm-schedule-btn" class="primary-btn">Confirmar horÃ¡rio</button>
                 </div>
             </div>
         </div>
@@ -572,9 +613,9 @@ try {
                         <!-- Address Section -->
                         <div id="delivery-address-section">
                             <div class="form-group">
-                                <label class="field-label">Endereço de Entrega</label>
+                                <label class="field-label">EndereÃ§o de Entrega</label>
                                 <input type="text" id="user-address" class="ifood-input"
-                                    placeholder="Rua, número, bairro...">
+                                    placeholder="Rua, nÃºmero, bairro...">
                             </div>
                             <div id="delivery-map"
                                 style="height:200px; width:100%; border-radius:12px; background:#e8e8e8; margin-bottom:14px; overflow:hidden;">
@@ -608,7 +649,7 @@ try {
                             </div>
                             <div id="order-schedule-review" class="summary-section hidden" style="margin-bottom: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(74, 44, 42, 0.06); border: 1px solid rgba(74, 44, 42, 0.10);">
                                 <div style="font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-gray);">Agendamento</div>
-                                <div id="order-schedule-review-value" style="margin-top: 4px; font-size: 14px; font-weight: 700; color: var(--text-main);">Nenhum horário selecionado.</div>
+                                <div id="order-schedule-review-value" style="margin-top: 4px; font-size: 14px; font-weight: 700; color: var(--text-main);">Nenhum horÃ¡rio selecionado.</div>
                             </div>
                             <div class="summary-section" style="background: #f9f9f9; padding: 15px; border-radius: 12px;">
                                 <div class="summary-row"
@@ -632,7 +673,7 @@ try {
                 </div>
 
                 <div class="modal-footer-sticky">
-                    <button id="next-step-btn" class="primary-btn">Próximo</button>
+                    <button id="next-step-btn" class="primary-btn">PrÃ³ximo</button>
                     <button id="place-order-btn" class="primary-btn hidden">Confirmar e Pagar</button>
                 </div>
             </div>
@@ -654,19 +695,19 @@ try {
             <div class="modal-content" style="max-width: 520px;">
                 <div class="history-modal-header">
                     <h3>Avaliar pedido</h3>
-                    <button class="close-modal-btn" onclick="closeWithAnimation('review-modal')" aria-label="Fechar avaliação"><i data-lucide="x"></i></button>
+                    <button class="close-modal-btn" onclick="closeWithAnimation('review-modal')" aria-label="Fechar avaliaÃ§Ã£o"><i data-lucide="x"></i></button>
                 </div>
                 <div class="review-modal-body">
                     <div id="review-target" class="review-target">Selecione uma nota para continuar.</div>
                     <div id="review-stars" class="review-stars"></div>
-                    <textarea id="review-comment" class="ifood-input review-comment" placeholder="Comentário opcional"></textarea>
-                    <div class="review-modal-note">Sua avaliação ajuda outras pessoas a escolherem melhor.</div>
-                    <button id="submit-review-btn" class="primary-btn" onclick="submitStoreReview()">Enviar avaliação</button>
+                    <textarea id="review-comment" class="ifood-input review-comment" placeholder="ComentÃ¡rio opcional"></textarea>
+                    <div class="review-modal-note">Sua avaliaÃ§Ã£o ajuda outras pessoas a escolherem melhor.</div>
+                    <button id="submit-review-btn" class="primary-btn" onclick="submitStoreReview()">Enviar avaliaÃ§Ã£o</button>
                 </div>
             </div>
         </div>
 
-        <!-- RODAPÉ CARRINHO -->
+        <!-- RODAPÃ‰ CARRINHO -->
         <footer id="cart-footer" class="cart-footer hidden">
             <div class="container">
                 <button class="primary-btn cart-btn" id="view-cart-btn">
@@ -794,7 +835,7 @@ try {
             const pathSegments = window.location.pathname.split('/').filter(p => p);
             const STORE_SLUG = isHome ? '' : (pathSegments[0] || '');
 
-            // Função auxiliar para alertas bonitos
+            // FunÃ§Ã£o auxiliar para alertas bonitos
             const showAlert = (title, text, icon = 'warning') => {
                 Swal.fire({
                     title: title,
@@ -805,7 +846,7 @@ try {
                 });
             };
 
-            // Estado da Aplicação
+            // Estado da AplicaÃ§Ã£o
             let state = {
                 products: [],
                 activeTab: 'delivery',
@@ -847,7 +888,7 @@ try {
                 orderDetailsInfo: '',
                 reviewModalOrderId: null,
                 reviewModalRating: 0,
-                storeReviewSummary: window.__SSR__?.reviewSummary || { averageRating: null, reviewCount: 0 },
+                storeReviewSummary: window.__SSR__?.reviewSummary || { averageRating: 5, reviewCount: 0 },
                 storeRecentReviews: window.__SSR__?.recentReviews || []
             };
 
@@ -862,13 +903,13 @@ try {
             }
 
             /**
-             * Seleciona a versão correta da imagem gerada pelo upload.php
+             * Seleciona a versÃ£o correta da imagem gerada pelo upload.php
              * @param {string} url - URL original
              * @param {'thumb'|'medium'|'full'} size - Tamanho desejado
              */
             function getImg(url, size = 'full') {
                 if (!url) return url;
-                if (!url.includes('files.digizap.com.br')) return url; // Só funciona para o nosso servidor
+                if (!url.includes('files.digizap.com.br')) return url; // SÃ³ funciona para o nosso servidor
 
                 if (size === 'thumb') return url.replace('.webp', '_550.webp');
                 if (size === 'medium') return url.replace('.webp', '_550.webp');
@@ -918,12 +959,12 @@ try {
             }
 
             function formatOrderSchedule() {
-                if (!state.orderSchedule?.date || !state.orderSchedule?.time) return 'Nenhum horário selecionado.';
+                if (!state.orderSchedule?.date || !state.orderSchedule?.time) return 'Nenhum horÃ¡rio selecionado.';
                 try {
                     const dateText = new Date(`${state.orderSchedule.date}T12:00:00`).toLocaleDateString('pt-BR');
-                    return `${dateText} às ${state.orderSchedule.time}`;
+                    return `${dateText} Ã s ${state.orderSchedule.time}`;
                 } catch (e) {
-                    return `${state.orderSchedule.date} às ${state.orderSchedule.time}`;
+                    return `${state.orderSchedule.date} Ã s ${state.orderSchedule.time}`;
                 }
             }
 
@@ -961,7 +1002,7 @@ try {
                 const timeVal = timeSelect?.value;
 
                 if (!dateVal || !timeVal) {
-                    return showAlert('Horário ausente', 'Escolha a data e o horário da encomenda.');
+                    return showAlert('HorÃ¡rio ausente', 'Escolha a data e o horÃ¡rio da encomenda.');
                 }
 
                 const availability = await loadOrderAvailability(dateVal, true, {
@@ -972,7 +1013,7 @@ try {
                 const selectedSlot = Array.isArray(availability?.times) ? availability.times.find(slot => slot.time === timeVal) : null;
                 if (!selectedSlot || !selectedSlot.available) {
                     if (timeSelect) timeSelect.value = '';
-                    return showAlert('Horário indisponível', selectedSlot?.reason || availability?.reason || 'Escolha outro horário.');
+                    return showAlert('HorÃ¡rio indisponÃ­vel', selectedSlot?.reason || availability?.reason || 'Escolha outro horÃ¡rio.');
                 }
 
                 state.orderSchedule = {
@@ -1052,14 +1093,14 @@ try {
                         times: []
                     };
                     timeSelect.disabled = true;
-                    timeSelect.innerHTML = `<option value="">Escolha uma data válida</option>`;
+                    timeSelect.innerHTML = `<option value="">Escolha uma data vÃ¡lida</option>`;
                     if (noteEl) noteEl.innerText = 'Data anterior a hoje.';
                     return state.orderAvailability;
                 }
 
                 const requestId = ++state.orderAvailabilityRequestId;
                 timeSelect.disabled = true;
-                timeSelect.innerHTML = `<option value="">Carregando horários...</option>`;
+                timeSelect.innerHTML = `<option value="">Carregando horÃ¡rios...</option>`;
 
                 try {
                     const response = await fetch(`${API_BASE}/orders/availability?slug=${encodeURIComponent(STORE_SLUG)}&date=${encodeURIComponent(cleanDate)}&type=order`);
@@ -1068,7 +1109,7 @@ try {
                     if (requestId !== state.orderAvailabilityRequestId) return data;
 
                     if (!response.ok) {
-                        const reason = data.error || data.reason || 'Falha ao carregar horários.';
+                        const reason = data.error || data.reason || 'Falha ao carregar horÃ¡rios.';
                         state.orderAvailability = {
                             available: false,
                             reason,
@@ -1089,16 +1130,16 @@ try {
 
                     const availableTimes = times.filter(slot => slot.available);
                     if (times.length > 0) {
-                        let html = `<option value="">${availableTimes.length > 0 ? 'Selecione um horário' : (data.reason || 'Nenhum horário disponível')}</option>`;
+                        let html = `<option value="">${availableTimes.length > 0 ? 'Selecione um horÃ¡rio' : (data.reason || 'Nenhum horÃ¡rio disponÃ­vel')}</option>`;
                         times.forEach(slot => {
-                            const label = slot.available ? slot.time : `${slot.time} - Indisponível`;
+                            const label = slot.available ? slot.time : `${slot.time} - IndisponÃ­vel`;
                             html += `<option value="${slot.time}" ${slot.available ? '' : 'disabled'}>${label}</option>`;
                         });
                         timeSelect.innerHTML = html;
                         timeSelect.disabled = false;
-                        if (noteEl) noteEl.innerText = data.reason || (availableTimes.length > 0 ? '' : 'Nenhum horário disponível');
+                        if (noteEl) noteEl.innerText = data.reason || (availableTimes.length > 0 ? '' : 'Nenhum horÃ¡rio disponÃ­vel');
                     } else {
-                        const reason = data.reason || 'Nenhum horário disponível';
+                        const reason = data.reason || 'Nenhum horÃ¡rio disponÃ­vel';
                         timeSelect.disabled = true;
                         timeSelect.innerHTML = `<option value="">${reason}</option>`;
                         if (noteEl) noteEl.innerText = reason;
@@ -1114,7 +1155,7 @@ try {
                     return state.orderAvailability;
                 } catch (error) {
                     if (requestId !== state.orderAvailabilityRequestId) return null;
-                    const reason = 'Falha ao carregar horários.';
+                    const reason = 'Falha ao carregar horÃ¡rios.';
                     state.orderAvailability = {
                         available: false,
                         reason,
@@ -1163,11 +1204,11 @@ try {
             }
 
             document.addEventListener('DOMContentLoaded', () => {
-                // Carrega o cardápio (o servidor já garantiu que temos um slug válido aqui)
+                // Carrega o cardÃ¡pio (o servidor jÃ¡ garantiu que temos um slug vÃ¡lido aqui)
                 loadCart();
                 lucide.createIcons();
 
-                // Em vez de fazer um fetch pesado, o PHP já injetou tudo em window.__SSR__
+                // Em vez de fazer um fetch pesado, o PHP jÃ¡ injetou tudo em window.__SSR__
                 setTimeout(() => {
                     hydrateFromSSR();
                     initEventListeners();
@@ -1189,7 +1230,7 @@ try {
                     state.categories = data.categories || [];
                     state.availableSlots = data.availableSlots || [];
                     state.addonGroups = data.addonGroups || [];
-                    state.storeReviewSummary = data.reviewSummary || state.storeReviewSummary || { averageRating: null, reviewCount: 0 };
+                    state.storeReviewSummary = data.reviewSummary || state.storeReviewSummary || { averageRating: 5, reviewCount: 0 };
                     state.storeRecentReviews = data.recentReviews || state.storeRecentReviews || [];
                     state.loading = false;
 
@@ -1198,7 +1239,7 @@ try {
                         document.body.classList.remove('theme-order');
                     }
 
-                    // Remove Skeletons e mostra o conteúdo real instantaneamente
+                    // Remove Skeletons e mostra o conteÃºdo real instantaneamente
                     const loader = document.getElementById('skeleton-loader');
                     if (loader) loader.remove();
                     const historyContainer = document.getElementById('history-section');
@@ -1269,7 +1310,7 @@ try {
                     console.error('Erro no Hydrate:', err);
                     document.body.innerHTML = `
             <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
-                <h1>Loja não encontrada</h1>
+                <h1>Loja nÃ£o encontrada</h1>
                 <p>Verifique o link e tente novamente.</p>
             </div>
         `;
@@ -1292,7 +1333,7 @@ try {
 
                 const statusEl = document.getElementById('store-status-badge');
                 if (statusEl) {
-                    statusEl.innerText = state.isOpen ? '● Aberto agora' : (isOrderEnabled() ? '● Fechado (Apenas encomendas)' : '● Fechado');
+                    statusEl.innerText = state.isOpen ? 'Aberto agora' : (isOrderEnabled() ? 'Apenas encomendas' : 'Fechado agora');
                     statusEl.className = state.isOpen ? 'status-badge open' : 'status-badge closed';
                 }
             }
@@ -1423,7 +1464,7 @@ try {
                         state.allowCash = false;
                         if (display) {
                             display.style.display = 'block';
-                            display.innerHTML = `⚠️ ${data.error}`;
+                            display.innerHTML = `âš ï¸ ${data.error}`;
                             display.style.background = '#fef2f2';
                             display.style.color = '#991b1b';
                             display.style.border = '1px solid #fee2e2';
@@ -1492,7 +1533,7 @@ try {
 
                 Swal.fire({
                     title: 'Otimizando Imagem...',
-                    text: 'Preparando para o cardápio rápido',
+                    text: 'Preparando para o cardÃ¡pio rÃ¡pido',
                     allowOutsideClick: false,
                     didOpen: () => {
                         Swal.showLoading();
@@ -1584,7 +1625,7 @@ try {
                     if (p.active === false) return false;
                     if (p.category === 'Adicionais' || p.type === 'addon') return false;
 
-                    // Verificar se tem variações e se todas estão escondidas
+                    // Verificar se tem variações e se todas estÃ£o escondidas
                     const variations = JSON.parse(p.variations || '[]');
                     if (variations.length > 0) {
                         const hasVisibleVar = variations.some(v => !v.hidden);
@@ -1596,7 +1637,7 @@ try {
                     return matchesTab && matchesSearch;
                 });
 
-                // Separar destaques (apenas se não houver busca ativa)
+                // Separar destaques (apenas se nÃ£o houver busca ativa)
                 const featured = query ? [] : filtered.filter(p => p.featured).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
                 const nonFeatured = query ? filtered : filtered.filter(p => !p.featured);
 
@@ -1618,13 +1659,13 @@ try {
                     grouped[cat].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
                 });
 
-                // Ordenar pela propriedade 'order' que já vem do banco de dados
+                // Ordenar pela propriedade 'order' que jÃ¡ vem do banco de dados
                 const sortedCategories = [];
                 const orderedCats = [...(state.categories || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
                 orderedCats.forEach(c => {
                     if (grouped[c.name]) sortedCategories.push(c.name);
                 });
-                // Adiciona categorias legadas ('Geral') que não existem em state.categories
+                // Adiciona categorias legadas ('Geral') que nÃ£o existem em state.categories
                 Object.keys(grouped).forEach(catName => {
                     if (!sortedCategories.includes(catName)) sortedCategories.push(catName);
                 });
@@ -1657,7 +1698,7 @@ try {
                 renderCategoryNav(sortedCategories);
                 lucide.createIcons();
 
-                // Troca a visibilidade SOMENTE APÓS o DOM estar completamente pronto
+                // Troca a visibilidade SOMENTE APÃ“S o DOM estar completamente pronto
                 if (skeletonContainer) skeletonContainer.classList.add('hidden');
                 if (actualContainer) actualContainer.classList.remove('hidden');
             }
@@ -1871,7 +1912,7 @@ try {
                                     </div>
                                     ${images.length > 1 ? `
                                         <button class="carousel-btn carousel-prev" onclick="moveCarousel(-1)" aria-label="Imagem Anterior"><i data-lucide="chevron-left"></i></button>
-                                        <button class="carousel-btn carousel-next" onclick="moveCarousel(1)" aria-label="Próxima Imagem"><i data-lucide="chevron-right"></i></button>
+                                        <button class="carousel-btn carousel-next" onclick="moveCarousel(1)" aria-label="PrÃ³xima Imagem"><i data-lucide="chevron-right"></i></button>
                                         <div class="carousel-dots">
                                             ${images.map((_, i) => `<div class="carousel-dot ${i === 0 ? 'active' : ''}"></div>`).join('')}
                                         </div>
@@ -1897,7 +1938,7 @@ try {
                     `;
 
                         const variationsHtml = variations.length > 0 ?
-                            `<div class="variation-section"><div class="addon-group-header"><h4>Escolha uma opção</h4></div>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price || 0})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price || 0).toFixed(2)}</div></div>`).join('')}</div>` :
+                            `<div class="variation-section"><div class="addon-group-header"><h4>Escolha uma opÃ§Ã£o</h4></div>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price || 0})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price || 0).toFixed(2)}</div></div>`).join('')}</div>` :
                             '';
 
                         const customFieldsHtml = state.activeTab === 'order' ? '' : (() => {
@@ -1972,7 +2013,7 @@ try {
                             return `<div class="variation-section addon-group-section" data-group-id="${g.id}" data-min="${g.min}" data-max="${g.max}">
                                         <div class="addon-group-header">
                                             <h4>${g.name}</h4>
-                                            <span class="addon-group-badge ${g.min > 0 ? 'required' : 'optional'}">${g.min > 0 ? 'Obrigatório' : 'Opcional'} • Máx ${g.max}</span>
+                                            <span class="addon-group-badge ${g.min > 0 ? 'required' : 'optional'}">${g.min > 0 ? 'ObrigatÃ³rio' : 'Opcional'} â€¢ MÃ¡x ${g.max}</span>
                                         </div>
                                         <div class="addon-options">
                                         ${gItems.map((gItem, ii) => {
@@ -2182,7 +2223,7 @@ try {
                 const variation = state.currentVariation;
                 const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
                 if (variations.length > 0 && !variation) {
-                    return { ok: false, message: 'Por favor, selecione uma opção para continuar.' };
+                    return { ok: false, message: 'Por favor, selecione uma opÃ§Ã£o para continuar.' };
                 }
 
                 const groupIds = JSON.parse(item.addonGroups || '[]');
@@ -2191,10 +2232,10 @@ try {
                     const maxAllowed = Math.max(parseInt(g.max, 10) || 1, 1);
                     const checked = document.querySelectorAll(`.addon-input[data-group-id="${g.id}"]:checked`).length;
                     if (g.min > 0 && checked < g.min) {
-                        return { ok: false, message: `Selecione pelo menos ${g.min} opção em "${g.name}".` };
+                        return { ok: false, message: `Selecione pelo menos ${g.min} opÃ§Ã£o em "${g.name}".` };
                     }
                     if (checked > maxAllowed) {
-                        return { ok: false, message: `O grupo "${g.name}" permite no máximo ${maxAllowed} opção(ões).` };
+                        return { ok: false, message: `O grupo "${g.name}" permite no mÃ¡ximo ${maxAllowed} opÃ§Ã£o(Ãµes).` };
                     }
                 }
 
@@ -2461,7 +2502,7 @@ try {
                 // Persist checkout progress
                 saveCheckoutState();
 
-                // Esconde todos os passos explicitamente por ID para não ter erro
+                // Esconde todos os passos explicitamente por ID para nÃ£o ter erro
                 document.getElementById('step-1')?.classList.add('hidden');
                 document.getElementById('step-2')?.classList.add('hidden');
                 document.getElementById('step-3')?.classList.add('hidden');
@@ -2584,7 +2625,7 @@ try {
                 const cart = getActiveCart();
                 const list = document.getElementById('checkout-items-list');
                 if (cart.length === 0) {
-                    list.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-gray);">Sua sacola está vazia.</p>`;
+                    list.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-gray);">Sua sacola estÃ¡ vazia.</p>`;
                     document.getElementById('next-step-btn').disabled = true;
                     return;
                 }
@@ -2649,7 +2690,7 @@ try {
 
                 const isCashAllowed = (state.deliveryType === 'pickup') || state.allowCash;
 
-                // fallback dinâmico:
+                // fallback dinÃ¢mico:
                 if (!isCashAllowed && state.paymentMethod === 'dinheiro') {
                     state.paymentMethod = 'mercadopago';
                 }
@@ -2660,7 +2701,7 @@ try {
                                                     <i data-lucide="credit-card"></i>
                                                 </div>
                                                 <div class="payment-info" style="flex:1;">
-                                                    <h4 style="margin:0; font-size:1rem;">Pix ou Crédito</h4>
+                                                    <h4 style="margin:0; font-size:1rem;">Pix ou CrÃ©dito</h4>
                                                     <p style="margin:0; font-size:0.8rem; color:#6b7280;">Pagamento online 100% seguro via Mercado Pago.</p>
                                                 </div>
                                                 <div class="payment-check-icon" style="color:#ccc;">
@@ -2692,7 +2733,7 @@ try {
                                                     </div>
                                                     <div class="payment-info" style="flex:1;">
                                                         <h4 style="margin:0; font-size:1rem; color:#9ca3af;">Dinheiro</h4>
-                                                        <p style="margin:0; font-size:0.8rem; color:#ef4444; font-weight:600;">⚠️ Não disponível para este endereço de entrega.</p>
+                                                        <p style="margin:0; font-size:0.8rem; color:#ef4444; font-weight:600;">âš ï¸ NÃ£o disponÃ­vel para este endereÃ§o de entrega.</p>
                                                     </div>
                                                 </div>
                                             `;
@@ -2799,7 +2840,7 @@ try {
                 if (state.currentStep === 1) {
                     const nameVal = document.getElementById('user-name')?.value;
                     const phoneVal = document.getElementById('user-phone')?.value;
-                    if (!nameVal || !phoneVal || phoneVal.length < 14) return showAlert('Ops!', 'Preencha seu nome e um WhatsApp válido.');
+                    if (!nameVal || !phoneVal || phoneVal.length < 14) return showAlert('Ops!', 'Preencha seu nome e um WhatsApp vÃ¡lido.');
                     state.userInfo.name = nameVal;
                     state.userInfo.phone = phoneVal;
                     saveCheckoutState();
@@ -2819,16 +2860,16 @@ try {
                     goToStep(2);
                 } else if (state.currentStep === 2) {
                     if (state.activeTab === 'delivery') {
-                        if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
+                        if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('EndereÃ§o Ausente', 'Por favor, selecione seu endereÃ§o no mapa.');
                         if (state.deliveryFee === 0 && state.deliveryType === 'delivery' && state.userInfo.address) {
-                            return showAlert('Taxa Indisponível', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereço está no raio de entrega.');
+                            return showAlert('Taxa IndisponÃ­vel', 'Por favor, aguarde o cÃ¡lculo da taxa de entrega ou verifique se o endereÃ§o estÃ¡ no raio de entrega.');
                         }
                     } else if (state.activeTab === 'order') {
-                        if (!isOrderEnabled()) return showAlert('Encomendas desativadas', 'No momento não estamos aceitando encomendas.');
+                        if (!isOrderEnabled()) return showAlert('Encomendas desativadas', 'No momento nÃ£o estamos aceitando encomendas.');
                         if (hasCheckoutExtras()) {
                             const extrasResult = collectCheckoutExtraStep();
                             if (!extrasResult.ok) {
-                                return showAlert('Atenção', extrasResult.message || 'Preencha os campos extras antes de continuar.');
+                                return showAlert('AtenÃ§Ã£o', extrasResult.message || 'Preencha os campos extras antes de continuar.');
                             }
                         }
                         goToStep(3);
@@ -2836,7 +2877,7 @@ try {
                     }
                     goToStep(3);
                 } else if (state.currentStep === 3) {
-                    if (!state.paymentMethod) return showAlert('Atenção', 'Selecione uma forma de pagamento.');
+                    if (!state.paymentMethod) return showAlert('AtenÃ§Ã£o', 'Selecione uma forma de pagamento.');
                     goToStep(4);
                 }
             }
@@ -2862,7 +2903,7 @@ try {
                         paymentSummaryEl.style.background = '#fef3c7';
                         paymentSummaryEl.style.color = '#d97706';
                     } else {
-                        paymentSummaryEl.innerHTML = '<i data-lucide="credit-card" style="vertical-align: middle; margin-right: 5px;"></i> Pix ou Crédito (Online)';
+                        paymentSummaryEl.innerHTML = '<i data-lucide="credit-card" style="vertical-align: middle; margin-right: 5px;"></i> Pix ou CrÃ©dito (Online)';
                         paymentSummaryEl.style.background = '#f0fdf4';
                         paymentSummaryEl.style.color = '#166534';
                     }
@@ -2872,7 +2913,7 @@ try {
                 if (scheduleReviewEl && scheduleReviewValueEl) {
                     const showSchedule = state.activeTab === 'order' && !!state.orderSchedule?.date && !!state.orderSchedule?.time;
                     scheduleReviewEl.classList.toggle('hidden', !showSchedule);
-                    scheduleReviewValueEl.innerText = showSchedule ? formatOrderSchedule() : 'Nenhum horário selecionado.';
+                    scheduleReviewValueEl.innerText = showSchedule ? formatOrderSchedule() : 'Nenhum horÃ¡rio selecionado.';
                 }
 
                 if (subEl) subEl.innerText = `R$ ${subtotal.toFixed(2)}`;
@@ -2895,7 +2936,7 @@ try {
                 if (state.activeTab === 'order') {
                     const precheck = validateCurrentItemSelections();
                     if (!precheck.ok) {
-                        return showAlert('Atenção', precheck.message);
+                        return showAlert('AtenÃ§Ã£o', precheck.message);
                     }
                 }
 
@@ -2915,7 +2956,7 @@ try {
                 }
                 const variation = state.currentVariation;
                 const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
-                if (variations.length > 0 && !variation) return showAlert('Quase lá...', 'Por favor, selecione uma opção para continuar.');
+                if (variations.length > 0 && !variation) return showAlert('Quase lÃ¡...', 'Por favor, selecione uma opÃ§Ã£o para continuar.');
 
                 // Coleta custom fields (texto/imagem)
                 let customAnswers = {};
@@ -2929,10 +2970,10 @@ try {
                             if (val) customAnswers[cf.name] = val;
                         });
                     } catch (e) {}
-                    if (missingRequired) return showAlert('Atenção', 'Por favor, preencha todos os campos obrigatórios (marcados com *).');
+                    if (missingRequired) return showAlert('AtenÃ§Ã£o', 'Por favor, preencha todos os campos obrigatÃ³rios (marcados com *).');
                 }
 
-                // Valida grupos de adicionais obrigatórios
+                // Valida grupos de adicionais obrigatÃ³rios
                 const groupIds = JSON.parse(item.addonGroups || '[]');
                 const groups = (state.addonGroups || []).filter(g => groupIds.includes(g.id));
                 for (const g of groups) {
@@ -2940,12 +2981,12 @@ try {
                     if (g.min > 0) {
                         const checked = document.querySelectorAll(`.addon-input[data-group-id="${g.id}"]:checked`).length;
                         if (checked < g.min) {
-                            return showAlert('Atenção', `Selecione pelo menos ${g.min} opção em "${g.name}".`);
+                            return showAlert('AtenÃ§Ã£o', `Selecione pelo menos ${g.min} opÃ§Ã£o em "${g.name}".`);
                         }
                     }
                     const checked = document.querySelectorAll(`.addon-input[data-group-id="${g.id}"]:checked`).length;
                     if (checked > maxAllowed) {
-                        return showAlert('Atenção', `O grupo "${g.name}" permite no máximo ${maxAllowed} opção(ões).`);
+                        return showAlert('AtenÃ§Ã£o', `O grupo "${g.name}" permite no mÃ¡ximo ${maxAllowed} opÃ§Ã£o(Ãµes).`);
                     }
                 }
 
@@ -3038,7 +3079,7 @@ try {
                     if (!state.orderSchedule?.date || !state.orderSchedule?.time) {
                         btn.disabled = false;
                         btn.innerHTML = 'Fazer pedido';
-                        return showAlert('Agendamento ausente', 'Escolha a data e o horário da encomenda antes de concluir.');
+                        return showAlert('Agendamento ausente', 'Escolha a data e o horÃ¡rio da encomenda antes de concluir.');
                     }
                     const missingExtraItem = cart.find(item => {
                         const schema = getCustomFieldSchema(item);
@@ -3134,7 +3175,7 @@ try {
                         if (state.paymentMethod === 'dinheiro') {
                             Swal.fire({
                                 title: 'Pedido Recebido!',
-                                text: 'Seu pedido foi registrado e está aguardando confirmação.',
+                                text: 'Seu pedido foi registrado e estÃ¡ aguardando confirmaÃ§Ã£o.',
                                 icon: 'success',
                                 confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#ff4d6d',
                                 confirmButtonText: 'Ver meus pedidos'
@@ -3179,16 +3220,16 @@ try {
                 const summary = state.storeReviewSummary || {};
                 const average = summary.averageRating !== null && summary.averageRating !== undefined
                     ? Number(summary.averageRating)
-                    : null;
+                    : 5;
                 const count = Number(summary.reviewCount || 0);
 
-                badge.className = `rating-badge ${count > 0 ? 'has-rating' : 'no-rating'}`;
+                badge.className = 'rating-badge has-rating';
 
-                if (count > 0 && average !== null && Number.isFinite(average)) {
+                if (Number.isFinite(average)) {
                     const avgText = average.toFixed(1).replace('.', ',');
-                    badge.innerHTML = `★ ${avgText} (${count} ${count === 1 ? 'avaliação' : 'avaliações'})`;
+                    badge.innerHTML = `â˜… ${avgText}${count > 0 ? ` (${count} ${count === 1 ? 'avaliaÃ§Ã£o' : 'avaliações'})` : ''}`;
                 } else {
-                    badge.innerText = 'Sem avaliações ainda';
+                    badge.innerHTML = '&#9733; 5,0';
                 }
             }
 
@@ -3197,14 +3238,14 @@ try {
                 if (!stars) return;
 
                 stars.innerHTML = [1, 2, 3, 4, 5].map((rating) => `
-                    <button type="button" class="review-star-btn ${state.reviewModalRating >= rating ? 'active' : ''}" aria-label="Nota ${rating}" onclick="setReviewRating(${rating})">${state.reviewModalRating >= rating ? '★' : '☆'}</button>
+                    <button type="button" class="review-star-btn ${state.reviewModalRating >= rating ? 'active' : ''}" aria-label="Nota ${rating}" onclick="setReviewRating(${rating})">${state.reviewModalRating >= rating ? 'â˜…' : 'â˜†'}</button>
                 `).join('');
             }
 
             function openReviewModal(orderId) {
                 const order = state.previousOrders.find(o => o.id === orderId);
                 if (!order) {
-                    return showAlert('Avaliação', 'Não foi possível localizar este pedido.', 'error');
+                    return showAlert('AvaliaÃ§Ã£o', 'NÃ£o foi possÃ­vel localizar este pedido.', 'error');
                 }
 
                 state.reviewModalOrderId = orderId;
@@ -3232,10 +3273,10 @@ try {
 
             async function submitStoreReview() {
                 if (!state.reviewModalOrderId) {
-                    return showAlert('Avaliação', 'Selecione um pedido válido.', 'error');
+                    return showAlert('AvaliaÃ§Ã£o', 'Selecione um pedido vÃ¡lido.', 'error');
                 }
                 if (!state.reviewModalRating) {
-                    return showAlert('Avaliação', 'Escolha uma nota para continuar.', 'error');
+                    return showAlert('AvaliaÃ§Ã£o', 'Escolha uma nota para continuar.', 'error');
                 }
 
                 const btn = document.getElementById('submit-review-btn');
@@ -3264,7 +3305,7 @@ try {
                     });
                     const data = await response.json();
                     if (!response.ok) {
-                        throw new Error(data?.error || 'Não foi possível enviar sua avaliação.');
+                        throw new Error(data?.error || 'NÃ£o foi possÃ­vel enviar sua avaliaÃ§Ã£o.');
                     }
 
                     if (data.summary) {
@@ -3273,13 +3314,13 @@ try {
                     updateStoreRatingBadge();
                     closeWithAnimation('review-modal');
                     await fetchPreviousOrders();
-                    showAlert('Obrigado!', 'Sua avaliação foi enviada com sucesso.', 'success');
+                    showAlert('Obrigado!', 'Sua avaliaÃ§Ã£o foi enviada com sucesso.', 'success');
                 } catch (err) {
-                    showAlert('Erro', err.message || 'Não foi possível enviar a avaliação.', 'error');
+                    showAlert('Erro', err.message || 'NÃ£o foi possÃ­vel enviar a avaliaÃ§Ã£o.', 'error');
                 } finally {
                     if (btn) {
                         btn.disabled = false;
-                        btn.innerText = 'Enviar avaliação';
+                        btn.innerText = 'Enviar avaliaÃ§Ã£o';
                     }
                 }
             }
@@ -3289,11 +3330,11 @@ try {
                 if (!list) return;
 
                 if (!Array.isArray(state.previousOrders) || state.previousOrders.length === 0) {
-                    list.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-gray);">Você ainda não possui pedidos anteriores.</p>`;
+                    list.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-gray);">VocÃª ainda nÃ£o possui pedidos anteriores.</p>`;
                     return;
                 }
 
-                // Pegar apenas itens únicos para não repetir
+                // Pegar apenas itens Ãºnicos para nÃ£o repetir
                 const uniqueItems = [];
                 const seen = new Set();
                 state.previousOrders.forEach(o => {
@@ -3339,7 +3380,7 @@ try {
                     closeWithAnimation('history-modal');
                     goToStep(1);
                 } else {
-                    showAlert('Produto Indisponível', 'Este produto não está mais disponível no cardápio no momento.', 'error');
+                    showAlert('Produto IndisponÃ­vel', 'Este produto nÃ£o estÃ¡ mais disponÃ­vel no cardÃ¡pio no momento.', 'error');
                 }
             }
 
@@ -3354,7 +3395,7 @@ try {
                 const accent = isOrder ? (data.accentColorOrders || '#4a2c2a') : (data.accentColor || '#ff4d6d');
                 const button = isOrder ? (data.buttonColorOrders || '#4a2c2a') : (data.buttonColor || '#ff4d6d');
 
-                // Aplica as variáveis
+                // Aplica as variÃ¡veis
                 root.style.setProperty('--primary-color', accent);
                 root.style.setProperty('--btn-bg', button);
                 root.style.setProperty('--btn-text', data.buttonTextColor || '#ffffff');
@@ -3366,7 +3407,7 @@ try {
                 root.style.setProperty('--text-gray', `${data.textColor || '#333333'}99`);
             }
 
-            // Inicialização imediata de elementos visuais síncronos
+            // InicializaÃ§Ã£o imediata de elementos visuais sÃ­ncronos
             renderMenu(); // Mostra o skeleton imediatamente
             updateUI();
         </script>

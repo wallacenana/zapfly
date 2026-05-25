@@ -61,10 +61,10 @@ async function getReviewSnapshot(userId, limit = 6) {
 
   return {
     summary: {
-      averageRating: summary._avg.rating !== null && summary._avg.rating !== undefined
+      reviewCount: Number(summary._count._all || 0),
+      averageRating: summary._count._all > 0 && summary._avg.rating !== null && summary._avg.rating !== undefined
         ? Number(summary._avg.rating)
-        : null,
-      reviewCount: Number(summary._count._all || 0)
+        : 5
     },
     recentReviews: reviews.map(toReviewPayload)
   };
