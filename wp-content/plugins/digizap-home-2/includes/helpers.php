@@ -128,6 +128,21 @@ if (!function_exists('dzhome2_escape_attr')) {
     }
 }
 
+if (!function_exists('dzhome2_store_schedule_state')) {
+    function dzhome2_store_schedule_state($store)
+    {
+        $isOpen = array_key_exists('isOpenNow', $store)
+            ? filter_var($store['isOpenNow'], FILTER_VALIDATE_BOOLEAN)
+            : !empty($store['acceptOrders']);
+
+        return [
+            'isOpenNow' => (bool) $isOpen,
+            'statusLabel' => (bool) $isOpen ? 'Aberto' : 'Apenas encomendas',
+            'statusClass' => (bool) $isOpen ? 'open' : 'closed'
+        ];
+    }
+}
+
 if (!function_exists('dzhome2_read_address_cookie')) {
     function dzhome2_read_address_cookie($key = 'dz_home2_address')
     {
@@ -175,7 +190,7 @@ if (!function_exists('dzhome2_fetch_directory_data')) {
             'limit' => min(max(absint($limit), 1), 48)
         ];
 
-        $cache_key = 'dzhome2_' . md5(wp_json_encode($args));
+        $cache_key = 'dzhome2_v2_' . md5(wp_json_encode($args));
         $cached = get_transient($cache_key);
         if ($cached !== false) {
             return $cached;
@@ -237,20 +252,28 @@ if (!function_exists('dzhome2_render_featured_cards')) {
             $slug = isset($store['slug']) ? (string) $store['slug'] : '';
             $category = isset($store['category']) ? (string) $store['category'] : '';
             $logoUrl = !empty($store['logoUrl']) ? (string) $store['logoUrl'] : dzhome2_placeholder_logo($name, $store['accentColor'] ?? '#e11d48');
+            $schedule = dzhome2_store_schedule_state($store);
 
             $html[] = sprintf(
-                '<a class="dz-home2-featured-card" href="%s">
+                '<a class="dz-home2-featured-card %s" href="%s">
                     <span class="dz-home2-featured-media"><img src="%s" alt="%s" loading="lazy" decoding="async"></span>
                     <span class="dz-home2-featured-copy">
                         <strong>%s</strong>
                         <small>%s</small>
+                        %s
                     </span>
                 </a>',
+                $schedule['isOpenNow'] ? '' : 'is-closed',
                 esc_url(dzhome2_store_url($slug)),
                 esc_url($logoUrl),
                 esc_attr($name),
                 esc_html($name),
-                esc_html($category)
+                esc_html($category),
+                $schedule['isOpenNow'] ? '' : sprintf(
+                    '<span class="dz-home2-restaurant-status %s dz-home2-featured-status">%s</span>',
+                    esc_attr($schedule['statusClass']),
+                    esc_html($schedule['statusLabel'])
+                )
             );
         }
 
@@ -275,12 +298,12 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
             $featuredLine = !empty($store['featuredProducts'])
                 ? implode(' · ', array_map(static fn($item) => isset($item['name']) ? (string) $item['name'] : '', $store['featuredProducts']))
                 : 'Sem destaques cadastrados';
-            $isOpen = !empty($store['acceptOrders']);
+            $schedule = dzhome2_store_schedule_state($store);
             $count = isset($store['productsCount']) ? absint($store['productsCount']) : 0;
 
             $html[] = sprintf(
-                '<article class="dz-home2-restaurant-card">
-                    <a class="dz-home2-restaurant-link" href="%s">
+                '<article class="dz-home2-restaurant-card %s">
+                    <a class="dz-home2-restaurant-link %s" href="%s">
                         <span class="dz-home2-restaurant-media"><img src="%s" alt="%s" loading="lazy" decoding="async"></span>
                         <span class="dz-home2-restaurant-body">
                             <span class="dz-home2-restaurant-head">
@@ -293,12 +316,14 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
                         </span>
                     </a>
                 </article>',
+                $schedule['isOpenNow'] ? '' : 'is-closed',
+                $schedule['isOpenNow'] ? '' : 'is-closed',
                 esc_url(dzhome2_store_url($slug)),
                 esc_url($logoUrl),
                 esc_attr($name),
                 esc_html($name),
-                $isOpen ? 'open' : 'closed',
-                $isOpen ? 'Aberto' : 'Fechado',
+                esc_attr($schedule['statusClass']),
+                esc_html($schedule['statusLabel']),
                 esc_html($category),
                 esc_html($address),
                 $count,

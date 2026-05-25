@@ -309,13 +309,15 @@
       const slug = String(store?.slug || '');
       const category = String(store?.category || '');
       const image = store?.logoUrl || placeholderLogo(name, store?.accentColor || '#e11d48');
+      const schedule = getStoreScheduleState(store);
 
       return `
-        <a class="dz-home2-featured-card" href="${storeUrl(slug)}">
+        <a class="dz-home2-featured-card ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}">
           <span class="dz-home2-featured-media"><img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async"></span>
           <span class="dz-home2-featured-copy">
             <strong>${escapeHtml(name)}</strong>
             <small>${escapeHtml(category)}</small>
+            ${schedule.isOpenNow ? '' : `<span class="dz-home2-restaurant-status ${schedule.statusClass} dz-home2-featured-status">${escapeHtml(schedule.statusLabel)}</span>`}
           </span>
         </a>
       `;
@@ -346,6 +348,18 @@
     }).join('');
   }
 
+  function getStoreScheduleState(store) {
+    const isOpenNow = store?.isOpenNow !== undefined
+      ? !!store.isOpenNow
+      : !!store?.acceptOrders;
+
+    return {
+      isOpenNow,
+      statusLabel: isOpenNow ? 'Aberto' : 'Apenas encomendas',
+      statusClass: isOpenNow ? 'open' : 'closed'
+    };
+  }
+
   function renderRestaurantCards(restaurants) {
     if (!Array.isArray(restaurants) || restaurants.length === 0) {
       return '<div class="dz-home2-empty-results">Nenhum restaurante encontrado.</div>';
@@ -360,17 +374,17 @@
       const featuredLine = Array.isArray(store?.featuredProducts) && store.featuredProducts.length > 0
         ? store.featuredProducts.map((item) => String(item?.name || '')).filter(Boolean).join(' · ')
         : 'Sem destaques cadastrados';
-      const isOpen = !!store?.acceptOrders;
+      const schedule = getStoreScheduleState(store);
       const count = Number(store?.productsCount || 0);
 
       return `
-        <article class="dz-home2-restaurant-card">
-          <a class="dz-home2-restaurant-link" href="${storeUrl(slug)}">
+        <article class="dz-home2-restaurant-card ${schedule.isOpenNow ? '' : 'is-closed'}">
+          <a class="dz-home2-restaurant-link ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}">
             <span class="dz-home2-restaurant-media"><img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async"></span>
             <span class="dz-home2-restaurant-body">
               <span class="dz-home2-restaurant-head">
                 <strong>${escapeHtml(name)}</strong>
-                <span class="dz-home2-restaurant-status ${isOpen ? 'open' : 'closed'}">${isOpen ? 'Aberto' : 'Fechado'}</span>
+                <span class="dz-home2-restaurant-status ${schedule.statusClass}">${escapeHtml(schedule.statusLabel)}</span>
               </span>
               <span class="dz-home2-restaurant-category">${escapeHtml(category)}</span>
               <span class="dz-home2-restaurant-address">${escapeHtml(address)}</span>

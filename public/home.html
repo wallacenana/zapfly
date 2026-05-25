@@ -474,6 +474,10 @@
             box-shadow: 0 8px 22px rgba(32,24,26,.06);
         }
 
+        .hero-promo-card.is-closed {
+            filter: grayscale(1) saturate(0.18) contrast(0.95);
+        }
+
         .hero-promo-media {
             background: linear-gradient(135deg, rgba(226,27,60,.08), rgba(32,24,26,.03));
             display: grid;
@@ -547,69 +551,77 @@
 
         .restaurants-grid {
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 14px;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 18px 24px;
         }
 
         .restaurant-card {
-            background: rgba(255,255,255,0.98);
-            border: 1px solid rgba(32,24,26,0.08);
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: 0 10px 28px rgba(32,24,26,.05);
+            background: transparent;
+            border: 0;
+            border-radius: 0;
+            overflow: visible;
+            box-shadow: none;
         }
 
         .restaurant-card-link {
             display: grid;
-            grid-template-columns: 124px 1fr;
-            min-height: 152px;
+            grid-template-columns: 92px 1fr;
+            min-height: 96px;
+            align-items: center;
+            gap: 14px;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .restaurant-card-link.is-closed {
+            filter: grayscale(1) saturate(0.18) contrast(0.95);
         }
 
         .restaurant-card-media {
-            background: linear-gradient(135deg, rgba(226,27,60,.08), rgba(0,0,0,.04));
+            background: transparent;
             display: grid;
             place-items: center;
-            padding: 14px;
+            padding: 0;
         }
 
         .restaurant-card-media img {
-            width: 92px;
-            height: 92px;
+            width: 72px;
+            height: 72px;
             border-radius: 18px;
             object-fit: cover;
         }
 
         .restaurant-card-content {
-            padding: 16px 16px 16px 0;
+            padding: 0;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 10px;
+            gap: 6px;
         }
 
         .restaurant-card-head {
             display: flex;
-            align-items: start;
+            align-items: center;
             justify-content: space-between;
             gap: 12px;
         }
 
         .restaurant-card-head h3 {
             margin: 0;
-            font-size: 1.02rem;
+            font-size: 0.98rem;
             line-height: 1.15;
         }
 
         .restaurant-card-head p {
-            margin: 5px 0 0;
+            margin: 4px 0 0;
             color: var(--muted);
-            font-size: 0.84rem;
+            font-size: 0.82rem;
         }
 
         .restaurant-status {
-            padding: 6px 10px;
+            padding: 5px 9px;
             border-radius: 999px;
-            font-size: 0.73rem;
+            font-size: 0.68rem;
             font-weight: 900;
             white-space: nowrap;
         }
@@ -624,8 +636,30 @@
             color: var(--accent);
         }
 
+        .dz-home2-restaurant-status {
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 0.73rem;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .dz-home2-restaurant-status.open {
+            background: rgba(16,185,129,.10);
+            color: #0f8b5f;
+        }
+
+        .dz-home2-restaurant-status.closed {
+            background: rgba(226,27,60,.10);
+            color: var(--accent);
+        }
+
+        .dz-home2-featured-status {
+            width: fit-content;
+        }
+
         .restaurant-address {
-            font-size: 0.84rem;
+            font-size: 0.83rem;
             color: var(--muted);
             line-height: 1.4;
         }
@@ -634,15 +668,15 @@
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            font-size: 0.78rem;
+            font-size: 0.76rem;
             color: #887f81;
         }
 
         .restaurant-meta span {
-            background: #f7f3f4;
-            border: 1px solid rgba(32,24,26,0.06);
+            background: transparent;
+            border: 0;
             border-radius: 999px;
-            padding: 6px 10px;
+            padding: 0;
         }
 
         .empty-state,
@@ -694,10 +728,6 @@
                 justify-content: center;
             }
 
-            .restaurants-grid {
-                grid-template-columns: 1fr;
-            }
-
             .promo-card {
                 min-height: 420px;
                 padding: 24px;
@@ -729,15 +759,23 @@
             }
 
             .restaurant-card-link {
-                grid-template-columns: 1fr;
+                grid-template-columns: 80px 1fr;
+                min-height: 84px;
+                gap: 12px;
             }
 
             .restaurant-card-content {
-                padding: 0 16px 16px;
+                padding: 0;
             }
 
             .restaurant-card-media {
-                min-height: 170px;
+                min-height: 0;
+                padding-left: 4px;
+            }
+
+            .restaurant-card-media img {
+                width: 64px;
+                height: 64px;
             }
 
             .location-pill strong {
@@ -875,6 +913,7 @@
         const homeState = {
             locationEnabled: false,
             locationText: '',
+            locationCoords: null,
             search: '',
             category: '',
             data: window.__HOME_DATA__ || { categories: [], featuredStores: [], restaurants: [], total: 0 }
@@ -909,13 +948,25 @@
             `).join('');
         }
 
+        function getStoreScheduleState(store) {
+            const isOpenNow = store?.isOpenNow !== undefined
+                ? !!store.isOpenNow
+                : !!store?.acceptOrders;
+
+            return {
+                isOpenNow,
+                statusLabel: isOpenNow ? 'Aberto' : 'Apenas encomendas',
+                statusClass: isOpenNow ? 'open' : 'closed'
+            };
+        }
+
         function renderFeaturedCards(stores) {
             if (!stores.length) {
                 return '<div class="empty-state">Cadastre lojas com itens em destaque para preencher esta área.</div>';
             }
 
             return stores.slice(0, 4).map((store) => `
-                <a class="hero-promo-card" href="/${encodeURIComponent(store.slug)}">
+                <a class="hero-promo-card ${getStoreScheduleState(store).isOpenNow ? '' : 'is-closed'}" href="/${encodeURIComponent(store.slug)}">
                     <div class="hero-promo-media">
                         <img src="${escapeHtml(store.logoUrl || '')}" alt="${escapeHtml(store.name)}" loading="lazy" decoding="async">
                     </div>
@@ -923,6 +974,7 @@
                         <div class="hero-promo-tag">Destaque</div>
                         <strong>${escapeHtml(store.name)}</strong>
                         <span>${escapeHtml(store.category)}</span>
+                        ${getStoreScheduleState(store).isOpenNow ? '' : `<span class="restaurant-status ${getStoreScheduleState(store).statusClass} hero-featured-status">${escapeHtml(getStoreScheduleState(store).statusLabel)}</span>`}
                         <p>${escapeHtml(store.featuredProducts?.[0]?.name || 'Melhores pedidos da loja')}</p>
                     </div>
                 </a>
@@ -934,9 +986,11 @@
                 return '<div class="empty-results">Nenhum restaurante encontrado com esse filtro.</div>';
             }
 
-            return stores.map((store) => `
-                <article class="restaurant-card">
-                    <a class="restaurant-card-link" href="/${encodeURIComponent(store.slug)}">
+            return stores.map((store) => {
+                const schedule = getStoreScheduleState(store);
+                return `
+                <article class="restaurant-card ${schedule.isOpenNow ? '' : 'is-closed'}">
+                    <a class="restaurant-card-link ${schedule.isOpenNow ? '' : 'is-closed'}" href="/${encodeURIComponent(store.slug)}">
                         <div class="restaurant-card-media">
                             <img src="${escapeHtml(store.logoUrl || '')}" alt="${escapeHtml(store.name)}" loading="lazy" decoding="async">
                         </div>
@@ -946,7 +1000,7 @@
                                     <h3>${escapeHtml(store.name)}</h3>
                                     <p>${escapeHtml(store.category)}</p>
                                 </div>
-                                <span class="restaurant-status ${store.acceptOrders ? 'open' : 'closed'}">${store.acceptOrders ? 'Aberto' : 'Fechado'}</span>
+                                <span class="restaurant-status ${schedule.statusClass}">${escapeHtml(schedule.statusLabel)}</span>
                             </div>
                             <div class="restaurant-address">${escapeHtml(store.address || 'Endereço não informado')}</div>
                             <div class="restaurant-meta">
@@ -956,7 +1010,7 @@
                         </div>
                     </a>
                 </article>
-            `).join('');
+            `;}).join('');
         }
 
         function updateDomWithData(data) {
@@ -985,6 +1039,10 @@
             const params = new URLSearchParams();
             if (homeState.search) params.set('search', homeState.search);
             if (homeState.category) params.set('category', homeState.category);
+            if (homeState.locationCoords?.latitude !== undefined && homeState.locationCoords?.longitude !== undefined) {
+                params.set('locationLat', String(homeState.locationCoords.latitude));
+                params.set('locationLng', String(homeState.locationCoords.longitude));
+            }
             params.set('limit', '24');
 
             $('results-summary').textContent = 'Buscando restaurantes...';
@@ -1010,6 +1068,7 @@
                 async (position) => {
                     const { latitude, longitude } = position.coords;
                     homeState.locationEnabled = true;
+                    homeState.locationCoords = { latitude, longitude };
                     homeState.locationText = `Localização ativada: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
 
                     $('location-text').textContent = homeState.locationText;
@@ -1039,9 +1098,13 @@
             if (savedLocation) {
                 try {
                     const parsed = JSON.parse(savedLocation);
-                    if (parsed?.enabled) {
-                        homeState.locationEnabled = true;
-                        $('home-search').disabled = false;
+                        if (parsed?.enabled) {
+                            homeState.locationEnabled = true;
+                            homeState.locationCoords = {
+                                latitude: parsed.latitude,
+                                longitude: parsed.longitude
+                            };
+                            $('home-search').disabled = false;
                         $('home-search').placeholder = 'Pesquise loja ou item';
                         $('search-status').textContent = 'Você já está com a localização ativa.';
                         $('location-text').textContent = `Localização ativa: ${parsed.latitude?.toFixed ? parsed.latitude.toFixed(4) : ''}, ${parsed.longitude?.toFixed ? parsed.longitude.toFixed(4) : ''}`.trim();

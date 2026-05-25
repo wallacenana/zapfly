@@ -598,6 +598,10 @@
   background: #0f1114;
 }
 
+.dz-home2-featured-card.is-closed {
+  filter: grayscale(1) saturate(0.18) contrast(0.95);
+}
+
 .dz-home2-featured-media,
 .dz-home2-featured-media img {
   display: block;
@@ -637,10 +641,15 @@
   line-height: 1.35;
 }
 
+.dz-home2-featured-status {
+  margin-top: 6px;
+  width: fit-content;
+}
+
 .dz-home2-restaurants-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(248px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px 24px;
 }
 
 .dz-home2-restaurant-card,
@@ -649,29 +658,39 @@
 }
 
 .dz-home2-restaurant-link {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border-radius: 22px;
-  border: 1px solid rgba(17, 24, 39, 0.08);
-  background: #fff;
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 14px;
+  align-items: center;
+  overflow: visible;
+  border-radius: 0;
+  border: 0;
+  background: transparent;
   text-decoration: none;
   color: inherit;
-  box-shadow: 0 12px 28px rgba(17, 24, 39, 0.06);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  box-shadow: none;
+  transition: transform 0.18s ease;
+}
+
+.dz-home2-restaurant-link.is-closed {
+  filter: grayscale(1) saturate(0.18) contrast(0.95);
 }
 
 .dz-home2-restaurant-link:hover {
-  transform: translateY(-2px);
-  border-color: rgba(45, 189, 48, 0.18);
-  box-shadow: 0 18px 36px rgba(17, 24, 39, 0.10);
+  transform: translateY(-1px);
+}
+
+.dz-home2-restaurant-link.is-closed:hover {
+  transform: none;
 }
 
 .dz-home2-restaurant-media {
   display: block;
-  aspect-ratio: 16 / 10;
+  width: 72px;
+  height: 72px;
   overflow: hidden;
   background: linear-gradient(135deg, rgba(45, 189, 48, 0.10), rgba(17, 24, 39, 0.04));
+  border-radius: 18px;
 }
 
 .dz-home2-restaurant-media img {
@@ -684,18 +703,18 @@
 .dz-home2-restaurant-body {
   display: grid;
   gap: 6px;
-  padding: 14px;
+  padding: 0;
 }
 
 .dz-home2-restaurant-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
 
 .dz-home2-restaurant-head strong {
-  font-size: 1rem;
+  font-size: 0.98rem;
   line-height: 1.25;
   letter-spacing: -0.02em;
 }
@@ -726,16 +745,27 @@
 .dz-home2-restaurant-address,
 .dz-home2-restaurant-meta {
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
   color: var(--dz-home2-muted);
-  font-size: 0.86rem;
+  font-size: 0.83rem;
   line-height: 1.45;
 }
 
 .dz-home2-restaurant-address {
   color: var(--dz-home2-text);
+}
+
+.dz-home2-restaurant-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: #887f81;
+  font-size: 0.76rem;
+}
+
+.dz-home2-restaurant-meta > span {
+  background: transparent;
+  border: 0;
+  padding: 0;
 }
 
 .dz-home2-empty,
@@ -1008,6 +1038,17 @@
 
   .dz-home2-restaurants-grid {
     grid-template-columns: 1fr;
+  }
+
+  .dz-home2-restaurant-link {
+    grid-template-columns: 80px 1fr;
+    gap: 12px;
+  }
+
+  .dz-home2-restaurant-media {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
   }
 
   .dz-home2-featured-card {
