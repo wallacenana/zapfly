@@ -48,7 +48,7 @@ async function getCanonicalJid(jid, instanceId) {
     return jid;
 }
 
-// Configuraï¾ƒï½§Ã£o do Multer para Marketing Assets
+// Configuraï¾ƒï½§ão do Multer para Marketing Assets
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'assets/marketing'),
     filename: (req, file, cb) => {
@@ -58,7 +58,7 @@ const storage = multer.diskStorage({
 });
 const uploadMarketing = multer({ storage });
 
-// Configuraï¾ƒï½§Ã£o do Multer para ï¾ƒã€Œdios TemporÃ¡rios
+// Configuraï¾ƒï½§ão do Multer para ï¾ƒã€Œdios Temporários
 const audioStorage = multer.diskStorage({
     destination: (req, file, cb) => {
         const dir = 'assets/temp';
@@ -114,7 +114,7 @@ const aiMessageBuffer = {};
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
-// Assets estÃ¡ticos (PRIORIDADE)
+// Assets estáticos (PRIORIDADE)
 app.use('/menu-assets', express.static(path.join(__dirname, 'public-menu')));
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -163,7 +163,7 @@ app.post('/settings', authenticate, async (req, res) => {
                 where: { slug: normalizedSlug, NOT: { id: req.user.id } }
             });
             if (existingSlug) {
-                return res.status(400).json({ error: 'Este slug jÃ¡ estÃ¡ em uso.' });
+                return res.status(400).json({ error: 'Este slug já está em uso.' });
             }
             await prisma.user.update({
                 where: { id: req.user.id },
@@ -187,29 +187,29 @@ app.post('/settings', authenticate, async (req, res) => {
             acceptOrders
         };
 
-        console.log('[DEBUG] Tentando salvar configuraÃ§Ãµes para o usuÃ¡rio:', req.user.id);
+        console.log('[DEBUG] Tentando salvar configurações para o usuário:', req.user.id);
         console.log('[DEBUG] Dados do payload:', JSON.stringify(data, null, 2));
 
-        // Tenta encontrar uma configuraÃ§Ã£o existente
+        // Tenta encontrar uma configuraÃ§ão existente
         const existing = await prisma.setting.findUnique({
             where: { userId: req.user.id }
         });
 
         let settings;
         if (existing) {
-            // Se jÃ¡ existe, atualiza
+            // Se já existe, atualiza
             settings = await prisma.setting.update({
                 where: { userId: req.user.id },
                 data: data
             });
         } else {
-            // Se nÃ£o existe, cria do zero
+            // Se não existe, cria do zero
             settings = await prisma.setting.create({
                 data: { ...data, userId: req.user.id }
             });
         }
 
-        console.log('[DEBUG] ConfiguraÃ§Ãµes salvas com sucesso!');
+        console.log('[DEBUG] Configurações salvas com sucesso!');
         res.json(settings);
     } catch (err) {
         console.error('[Settings Save Error] Erro detalhado:', err);
@@ -234,7 +234,7 @@ app.use('/orders', (req, res, next) => {
 
 // Redirecionamento de Sucesso do Google Agenda ou Raiz
 app.get('/', async (req, res) => {
-    // Se vier do Google Agenda, volta para as configuraÃ§Ãµes
+    // Se vier do Google Agenda, volta para as configurações
     if (req.query.gcal_success) {
         return res.send(`
             <script>
@@ -294,7 +294,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
 
         if ((type === 'payment' || req.query.topic === 'payment') && paymentId) {
 
-            // TRAVA DE MEMÃ“IA: Evita processar o mesmo ID se ele jÃ¡ estiver em curso
+            // TRAVA DE MEMÃ“IA: Evita processar o mesmo ID se ele já estiver em curso
             if (processingPayments.has(paymentId)) {
                 return res.sendStatus(200);
             }
@@ -306,7 +306,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                 const settings = await getSettings(userId);
 
                 if (!settings?.mercadopagoToken) {
-                    console.warn(`[MercadoPago Webhook] Token nÃ£o encontrado para o usuÃ¡rio: ${userId}`);
+                    console.warn(`[MercadoPago Webhook] Token não encontrado para o usuário: ${userId}`);
                     processingPayments.delete(paymentId);
                     return res.sendStatus(200);
                 }
@@ -320,7 +320,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                 if (p.status === 'approved' && orderId) {
                     const order = await prisma.order.findUnique({ where: { id: orderId } });
 
-                    // Trava de seguranï¾ƒï½§a no DB: Se jÃ¡ foi confirmado, ignora
+                    // Trava de seguranï¾ƒï½§a no DB: Se já foi confirmado, ignora
                     if (order && order.paymentStatus !== 'confirmed') {
 
                         const updatedOrder = await prisma.order.update({
@@ -335,7 +335,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                         io.emit('order_confirmed', updatedOrder);
                         io.emit('new_order_pending', { orderId: updatedOrder.id });
 
-                        // Sincroniza com Google Agenda agora que estÃ¡ confirmado
+                        // Sincroniza com Google Agenda agora que está confirmado
                         await updateCalendarEvent(updatedOrder).catch(e => console.error('[GCal Sync Error]', e.message));
 
                         if (settings?.managerJid) {
@@ -345,9 +345,9 @@ app.post('/mercadopago/webhook', async (req, res) => {
                                 const orderIdShort = updatedOrder.id.slice(-4).toUpperCase();
 
                                 if (updatedOrder.type === 'order') {
-                                    aviso = `ðŸš¨ *NOVA ENCOMENDA!* (#${orderIdShort}) ðŸš¨\n\nðŸ‘¤ *Cliente:* ${updatedOrder.clientName}\nðŸ“¦ *Pedido:* ${updatedOrder.product}\nðŸ“… *Data:* ${updatedOrder.scheduledDate}\nâ° *Hora:* ${updatedOrder.scheduledTime}\nðŸ“ *Obs:* ${updatedOrder.notes || '-'}\nðŸ›µ *Entrega:* ${updatedOrder.deliveryAddress || 'Retirada'}\n\nO pagamento foi confirmado e o pedido jÃ¡ estÃ¡ no seu painel! âœ¨`;
+                                    aviso = `ðŸš¨ *NOVA ENCOMENDA!* (#${orderIdShort}) ðŸš¨\n\nðŸ‘¤ *Cliente:* ${updatedOrder.clientName}\nðŸ“¦ *Pedido:* ${updatedOrder.product}\nðŸ“… *Data:* ${updatedOrder.scheduledDate}\nâ° *Hora:* ${updatedOrder.scheduledTime}\nðŸ“ *Obs:* ${updatedOrder.notes || '-'}\nðŸ›µ *Entrega:* ${updatedOrder.deliveryAddress || 'Retirada'}\n\nO pagamento foi confirmado e o pedido já está no seu painel! âœ¨`;
                                 } else {
-                                    aviso = `âœ… *PAGAMENTO APROVADO!* (#${orderIdShort}) âœ…\n\nðŸ‘¤ *Cliente:* ${updatedOrder.clientName}\nðŸ“¦ *Pedido:* ${updatedOrder.product}\n\nO pedido jÃ¡ estÃ¡ na aba *PENDENTES* do seu painel. Aceite-o para iniciar a produÃ§Ã£o! âœ¨`;
+                                    aviso = `âœ… *PAGAMENTO APROVADO!* (#${orderIdShort}) âœ…\n\nðŸ‘¤ *Cliente:* ${updatedOrder.clientName}\nðŸ“¦ *Pedido:* ${updatedOrder.product}\n\nO pedido já está na aba *PENDENTES* do seu painel. Aceite-o para iniciar a produÃ§ão! âœ¨`;
                                 }
 
                                 await sock.sendMessage(settings.managerJid, { text: aviso }).catch(() => { });
@@ -357,7 +357,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                         if (updatedOrder.clientJid) {
                             const sock = sessions.get(updatedOrder.instanceId || 'global') || Array.from(sessions.values())[0];
                             if (sock) {
-                                const msg = `âœ… *PAGAMENTO APROVADO!* ðŸŽ‰\n\nOi, *${updatedOrder.clientName}*! Seu pagamento foi aprovado e seu pedido jÃ¡ estÃ¡ na nossa fila de produÃ§Ã£o. ðŸ‘©â€ðŸ³ðŸš€âœ¨\n\nAvisaremos vocÃª assim que estiver pronto! ðŸ’–ðŸ›µ`;
+                                const msg = `âœ… *PAGAMENTO APROVADO!* ðŸŽ‰\n\nOi, *${updatedOrder.clientName}*! Seu pagamento foi aprovado e seu pedido já está na nossa fila de produÃ§ão. ðŸ‘©â€ðŸ³ðŸš€âœ¨\n\nAvisaremos vocÃª assim que estiver pronto! ðŸ’–ðŸ›µ`;
                                 await sock.sendMessage(updatedOrder.clientJid, { text: msg }).catch(() => { });
                             }
                         }
@@ -489,8 +489,8 @@ app.post('/marketing-assets', authenticate, uploadMarketing.single('file'), asyn
     try {
         const { name, url } = req.body;
 
-        // Se o frontend jÃ¡ mandou a URL do bucket PHP, usamos ela. 
-        // Caso contrÃ¡rio, usamos o domÃ­nio de arquivos correto.
+        // Se o frontend já mandou a URL do bucket PHP, usamos ela. 
+        // Caso contrário, usamos o domÃ­nio de arquivos correto.
         const finalUrl = url || (req.file ? `https://files.digizap.com.br/marketing/${req.file.filename}` : null);
 
         if (!finalUrl) {
@@ -564,7 +564,7 @@ app.get('/auth/google', authenticate, async (req, res) => {
     res.redirect(url);
 });
 
-// Callback do Google com o cï¾ƒï½³digo de autorizaï¾ƒï½§Ã£o
+// Callback do Google com o cï¾ƒï½³digo de autorizaï¾ƒï½§ão
 app.get('/auth/google/callback', async (req, res) => {
     const { code, state: userId, error } = req.query;
     const origin = process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -604,7 +604,7 @@ app.get('/auth/google/callback', async (req, res) => {
     }
 });
 
-// Status da conexÃ£o com o Google Calendar
+// Status da conexão com o Google Calendar
 app.get('/auth/google/status', authenticate, async (req, res) => {
     const settings = await getSettings(req.user.id);
     const connected = !!(settings?.gcalRefreshToken);
@@ -612,11 +612,11 @@ app.get('/auth/google/status', authenticate, async (req, res) => {
     res.json({ connected, calendarId: settings?.gcalCalendarId, hasCredentials });
 });
 
-// Lista os calendÃ¡rios disponÃ­veis na conta conectada
+// Lista os calendários disponÃ­veis na conta conectada
 app.get('/auth/google/calendars', authenticate, async (req, res) => {
     try {
         const settings = await getSettings(req.user.id);
-        if (!settings?.gcalRefreshToken) return res.status(401).json({ error: 'NÃ£o conectado' });
+        if (!settings?.gcalRefreshToken) return res.status(401).json({ error: 'Não conectado' });
 
         const oauth2Client = getOAuth2Client(req);
         oauth2Client.setCredentials({ refresh_token: settings.gcalRefreshToken, access_token: settings.gcalAccessToken });
@@ -629,15 +629,15 @@ app.get('/auth/google/calendars', authenticate, async (req, res) => {
         res.json(calendars);
     } catch (e) {
         if (e.message.includes('invalid_grant')) {
-            console.error('[GCal Error] ConexÃ£o expirada ou revogada. Por favor, reconecte sua conta nas ConfiguraÃ§Ãµes.');
+            console.error('[GCal Error] Conexão expirada ou revogada. Por favor, reconecte sua conta nas Configurações.');
         } else {
-            console.error('[GCal Error] Falha ao listar calendÃ¡rios:', e.message);
+            console.error('[GCal Error] Falha ao listar calendários:', e.message);
         }
         res.status(500).json({ error: e.message });
     }
 });
 
-// Salva o calendÃ¡rio selecionado
+// Salva o calendário selecionado
 app.patch('/auth/google/calendar', authenticate, async (req, res) => {
     try {
         const { calendarId } = req.body;
@@ -687,7 +687,7 @@ module.exports = { getSocket: (id) => sessions.get(id) };
 
 
 
-// Controle de reconexÃ£o com backoff por instÃ¢ncia
+// Controle de reconexão com backoff por instÃ¢ncia
 const reconnectAttempts = {};
 
 let cachedWAVersion = null;
@@ -700,7 +700,7 @@ async function initInstance(instanceId) {
 
     const { state, saveCreds } = await useMultiFileAuthState(sessionDir);
 
-    // Busca a versÃ£o mais recente do WhatsApp Web (Cache para performance)
+    // Busca a versão mais recente do WhatsApp Web (Cache para performance)
     let version = cachedWAVersion || [2, 3000, 1015901307];
     if (!cachedWAVersion) {
         try {
@@ -708,7 +708,7 @@ async function initInstance(instanceId) {
             version = result.version;
             cachedWAVersion = version;
         } catch (e) {
-            console.warn(`[Baileys] Falha ao buscar versÃ£o do WA Web. Usando fallback.`);
+            console.warn(`[Baileys] Falha ao buscar versão do WA Web. Usando fallback.`);
         }
     }
 
@@ -734,11 +734,11 @@ async function initInstance(instanceId) {
         browser: ['DigiZap', 'Chrome', '1.0.0'],
         logger: pino({ level: 'silent' }),
         syncFullHistory: false,            // true consome muita memï¾ƒï½³ria e pode causar desconexï¾ƒï½µes
-        keepAliveIntervalMs: 30000,        // envia ping a cada 30s para manter a conexÃ£o viva
-        connectTimeoutMs: 60000,           // timeout de 60s para estabelecer conexÃ£o
+        keepAliveIntervalMs: 30000,        // envia ping a cada 30s para manter a conexão viva
+        connectTimeoutMs: 60000,           // timeout de 60s para estabelecer conexão
         defaultQueryTimeoutMs: 60000,      // timeout para queries ao servidor do WhatsApp
         retryRequestDelayMs: 500,          // delay entre tentativas de retry de mensagens
-        maxMsgRetryCount: 5                // mÃ¡ximo de retentativas por mensagem
+        maxMsgRetryCount: 5                // máximo de retentativas por mensagem
     });
 
     store.bind(sock.ev);
@@ -752,7 +752,7 @@ async function initInstance(instanceId) {
                 const isGroup = jid.endsWith('@g.us');
                 const name = contact.name || contact.verifiedName || contact.notify || (isGroup ? 'Grupo' : jid.split('@')[0]);
 
-                // Apenas atualiza o nome se o chat jÃ¡ existir. NÃ£o cria chats vazios para cada pessoa de um grupo.
+                // Apenas atualiza o nome se o chat já existir. Não cria chats vazios para cada pessoa de um grupo.
                 await prisma.chat.updateMany({
                     where: { instanceId, jid },
                     data: { name: name }
@@ -797,7 +797,7 @@ async function initInstance(instanceId) {
                 await prisma.message.deleteMany({ where: { instanceId, msgId: keyToRevoke.id } });
                 io.emit('message_deleted', { instanceId, msgId: keyToRevoke.id });
             }
-            return; // Interrompe aqui, nÃ£o processa IA
+            return; // Interrompe aqui, não processa IA
         }
 
         let text = msg.message?.conversation ||
@@ -821,12 +821,12 @@ async function initInstance(instanceId) {
                         file: await OpenAI.toFile(buffer, 'audio.ogg'),
                         model: 'whisper-1',
                     });
-                    // Salva apenas o texto para a IA nÃ£o se confundir
+                    // Salva apenas o texto para a IA não se confundir
                     text = transcription.text;
                 }
             } catch (err) {
                 console.error('[Audio Error]', err.message);
-                text = "ï¿½ç—” [ï¾ƒã€Œdio (Erro na transcriï¾ƒï½§Ã£o)]";
+                text = "ï¿½ç—” [ï¾ƒã€Œdio (Erro na transcriï¾ƒï½§ão)]";
             }
         }
 
@@ -997,7 +997,7 @@ async function initInstance(instanceId) {
                             }
                         }
 
-                        // Juntamos o texto para o motor de fluxos (usando o combinedText jÃ¡ calculado)
+                        // Juntamos o texto para o motor de fluxos (usando o combinedText já calculado)
                         const textForFlow = combinedText;
                         const instanceData = await getCachedInstance(instanceId);
                         const userId = instanceData?.userId;
@@ -1060,7 +1060,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "chamar_gerente",
-                                            description: "Avisa o dono/gerente da loja que existe uma dï¾ƒï½ºvida que a IA nÃ£o sabe responder ou um pedido especial.",
+                                            description: "Avisa o dono/gerente da loja que existe uma dï¾ƒï½ºvida que a IA não sabe responder ou um pedido especial.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
@@ -1088,12 +1088,12 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "check_availability",
-                                            description: "Verifica se hÃ¡ horÃ¡rios disponÃ­veis para agendamento em uma data e hora especÃ­fica.",
+                                            description: "Verifica se há horários disponÃ­veis para agendamento em uma data e hora especÃ­fica.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
                                                     date: { type: "string", description: "A data no formato YYYY-MM-DD" },
-                                                    time: { type: "string", description: "O horÃ¡rio no formato HH:MM" },
+                                                    time: { type: "string", description: "O horário no formato HH:MM" },
                                                     type: { type: "string", description: "O tipo do pedido: 'order' (encomenda) ou 'delivery' (entrega)" }
                                                 },
                                                 required: ["date", "time", "type"]
@@ -1108,22 +1108,22 @@ async function initInstance(instanceId) {
                                             parameters: {
                                                 type: "object",
                                                 properties: {
-                                                    productId: { type: "string", description: "ID do produto (ex: cmo...) encontrado entre [ID:...] no catÃ¡logo." },
+                                                    productId: { type: "string", description: "ID do produto (ex: cmo...) encontrado entre [ID:...] no catálogo." },
                                                     product: { type: "string", description: "Nome do produto" },
-                                                    variation: { type: "string", description: "Nome da variaï¾ƒï½§Ã£o EXACTA (ex: 'P', 'M', 'Mini'). NÃ£o coloque sabores aqui." },
+                                                    variation: { type: "string", description: "Nome da variaï¾ƒï½§ão EXACTA (ex: 'P', 'M', 'Mini'). Não coloque sabores aqui." },
                                                     quantity: { type: "string", description: "Peso do bolo (ex: 2kg) ou Quantidade" },
                                                     scheduledDate: { type: "string", description: "Data do agendamento YYYY-MM-DD" },
-                                                    scheduledTime: { type: "string", description: "HorÃ¡rio do agendamento HH:MM" },
+                                                    scheduledTime: { type: "string", description: "Horário do agendamento HH:MM" },
                                                     clientName: { type: "string", description: "Nome do cliente" },
-                                                    paymentMethod: { type: "string", description: "Forma de pagamento (ex: Pix e CartÃ£o com link de pagamento e Dinheiro em alguns casos)" },
+                                                    paymentMethod: { type: "string", description: "Forma de pagamento (ex: Pix e Cartão com link de pagamento e Dinheiro em alguns casos)" },
                                                     type: { type: "string", enum: ["order", "delivery"], description: "OBRIGATÃ“IO: Use 'delivery' para pedidos imediatos (hoje/agora) com entrega. Use 'order' para agendamentos futuros, encomendas de bolos ou retiradas programadas." },
                                                     deliveryAddress: { type: "string", description: "Endereï¾ƒï½§o se for delivery" },
                                                     deliveryFee: { type: "number", description: "Valor da entrega calculado por get_delivery_fee" },
                                                     massa: { type: "string", description: "Sabor da massa escolhida" },
                                                     recheio: { type: "string", description: "Sabor do recheio escolhido" },
-                                                    topo: { type: "string", description: "InformaÃ§Ãµes sobre o topo do bolo" },
-                                                    carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Produtos ADICIONAIS. IMPORTANTE: Para Kits/Combos, NÃƒO coloque aqui os itens que jÃ¡ fazem parte do kit, senÃ£o o cliente serÃ¡ cobrado em dobro. Use apenas para itens extras comprados ï¾ƒï¿½ parte." },
-                                                    notes: { type: "string", description: "Outras observaÃ§Ãµes gerais" }
+                                                    topo: { type: "string", description: "Informações sobre o topo do bolo" },
+                                                    carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Produtos ADICIONAIS. IMPORTANTE: Para Kits/Combos, NÃƒO coloque aqui os itens que já fazem parte do kit, senão o cliente será cobrado em dobro. Use apenas para itens extras comprados ï¾ƒï¿½ parte." },
+                                                    notes: { type: "string", description: "Outras observações gerais" }
                                                 },
                                                 required: ["product", "paymentMethod"],
                                             },
@@ -1133,7 +1133,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "update_order",
-                                            description: "Atualiza informaÃ§Ãµes de um pedido ou agendamento jÃ¡ existente. Sï¾ƒï½³ use se o cliente pedir para corrigir algo.",
+                                            description: "Atualiza informações de um pedido ou agendamento já existente. Sï¾ƒï½³ use se o cliente pedir para corrigir algo.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
@@ -1141,10 +1141,10 @@ async function initInstance(instanceId) {
                                                     product: { type: "string", description: "Novo produto (opcional)" },
                                                     quantity: { type: "string", description: "Novo peso ou quantidade (opcional)" },
                                                     scheduledDate: { type: "string", description: "Nova data YYYY-MM-DD (opcional)" },
-                                                    scheduledTime: { type: "string", description: "Novo horÃ¡rio HH:MM (opcional)" },
-                                                    notes: { type: "string", description: "Novas observaÃ§Ãµes ou mudanï¾ƒï½§as nos sabores (opcional)" },
+                                                    scheduledTime: { type: "string", description: "Novo horário HH:MM (opcional)" },
+                                                    notes: { type: "string", description: "Novas observações ou mudanï¾ƒï½§as nos sabores (opcional)" },
                                                     carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Nova lista completa de produtos extras." },
-                                                    totalValue: { type: "number", description: "Novo valor total do pedido apï¾ƒï½³s as alteraÃ§Ãµes (opcional)" }
+                                                    totalValue: { type: "number", description: "Novo valor total do pedido apï¾ƒï½³s as alterações (opcional)" }
                                                 },
                                                 required: ["orderId"]
                                             }
@@ -1154,7 +1154,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "get_order_status",
-                                            description: "Verifica se o pedido do cliente atual estÃ¡ pronto para retirada ou entrega.",
+                                            description: "Verifica se o pedido do cliente atual está pronto para retirada ou entrega.",
                                             parameters: { type: "object", properties: {} }
                                         }
                                     },
@@ -1170,7 +1170,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "get_delivery_catalog",
-                                            description: "OBRIGATÃ“IO: Chame SEMPRE que o cliente perguntar o que tem para hoje, pronta entrega, ou pedir opÃ§Ãµes imediatas. Proibido listar produtos manualmente, quando estiver fechado e o cliente pedir informaÃ§Ãµes \"sobre o que tem hoje\".",
+                                            description: "OBRIGATÃ“IO: Chame SEMPRE que o cliente perguntar o que tem para hoje, pronta entrega, ou pedir opções imediatas. Proibido listar produtos manualmente, quando estiver fechado e o cliente pedir informações \"sobre o que tem hoje\".",
                                             parameters: { type: "object", properties: {} }
                                         }
                                     },
@@ -1178,7 +1178,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "get_order_catalog",
-                                            description: "OBRIGATÃ“IO: Chame SEMPRE que o cliente pedir cardÃ¡pio de encomendas, bolos de festa, personalizados ou agendamentos futuros. Proibido listar produtos manualmente.",
+                                            description: "OBRIGATÃ“IO: Chame SEMPRE que o cliente pedir cardápio de encomendas, bolos de festa, personalizados ou agendamentos futuros. Proibido listar produtos manualmente.",
                                             parameters: { type: "object", properties: {} }
                                         }
                                     },
@@ -1200,11 +1200,11 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "get_marketing_media",
-                                            description: "Busca na biblioteca de marketing imagens de produtos ou promoÃ§Ãµes para mostrar ao cliente.",
+                                            description: "Busca na biblioteca de marketing imagens de produtos ou promoções para mostrar ao cliente.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
-                                                    search: { type: "string", description: "Termo de busca (ex: 'vulcÃ£o', 'promoï¾ƒï½§Ã£o'). Deixe vazio para listar todos." }
+                                                    search: { type: "string", description: "Termo de busca (ex: 'vulcão', 'promoï¾ƒï½§ão'). Deixe vazio para listar todos." }
                                                 }
                                             }
                                         }
@@ -1244,29 +1244,29 @@ async function initInstance(instanceId) {
                                 let responseMessage;
                                 let pendingPaymentLink = null;
                                 let pendingCatalogMessage = null;
-                                let pendingCatalogCTA = null; // 3ï¾‚ï½ª mensagem: CTA da Lily apï¾ƒï½³s o catÃ¡logo
+                                let pendingCatalogCTA = null; // 3ï¾‚ï½ª mensagem: CTA da Lily apï¾ƒï½³s o catálogo
                                 try {
-                                    // Detecta se o usuÃ¡rio estÃ¡ pedindo o cardÃ¡pio e forï¾ƒï½§a a ferramenta correta
+                                    // Detecta se o usuário está pedindo o cardápio e forï¾ƒï½§a a ferramenta correta
                                     const lastUserMsgObj = messages.filter(m => m.role === 'user').pop();
                                     const lastUserMsgContent = Array.isArray(lastUserMsgObj?.content)
                                         ? lastUserMsgObj.content.map(c => c.text || '').join(' ')
                                         : (lastUserMsgObj?.content || '');
                                     const lastUserMsg = lastUserMsgContent.toLowerCase();
 
-                                    const isDeliveryRequest = /card[aÃ¡]pio|o que tem|pronta entrega|o que voc[eÃª] tem|tem hoje|tem pra hoje|disponÃ­vel|disponivel|preï¾ƒï½§o|preco|o que vende|possibilidades|opÃ§Ãµes|opcoes/i.test(lastUserMsg);
+                                    const isDeliveryRequest = /card[aá]pio|o que tem|pronta entrega|o que voc[eÃª] tem|tem hoje|tem pra hoje|disponÃ­vel|disponivel|preï¾ƒï½§o|preco|o que vende|possibilidades|opções|opcoes/i.test(lastUserMsg);
                                     const isOrderRequest = /encomenda|bolo de festa|personalizado|encomendar|quero encomendar/i.test(lastUserMsg);
 
                                     let forcedToolChoice = "auto";
 
                                     if (statusLoja.includes("FECHADA")) {
-                                        // Detecta se Ã© um "SIM" genÃ©rico ou se jÃ¡ Ã© o nome de um produto
-                                        const isGenericAcceptance = /^(sim|quero|pode|manda|veja|vÃª|ok|agendar|amanhÃ£|pode ser|com certeza|claro|uhum)$/i.test(lastUserMsg.trim());
-                                        const isAskingOptions = /o que tem|opÃ§Ãµes|cardapio|catalogo|vÃª ai/i.test(combinedText);
+                                        // Detecta se Ã© um "SIM" genÃ©rico ou se já Ã© o nome de um produto
+                                        const isGenericAcceptance = /^(sim|quero|pode|manda|veja|vÃª|ok|agendar|amanhã|pode ser|com certeza|claro|uhum)$/i.test(lastUserMsg.trim());
+                                        const isAskingOptions = /o que tem|opções|cardapio|catalogo|vÃª ai/i.test(combinedText);
 
                                         if (isGenericAcceptance || isAskingOptions) {
                                             forcedToolChoice = { type: "function", function: { name: "get_delivery_catalog" } };
                                         } else {
-                                            // Se ele jÃ¡ falou o nome de um produto (ex: "quero um vulcÃ£o"), deixa o fluxo seguir normal
+                                            // Se ele já falou o nome de um produto (ex: "quero um vulcão"), deixa o fluxo seguir normal
                                             forcedToolChoice = "auto";
                                         }
                                     } else if (statusLoja.includes("ABERTA")) {
@@ -1294,13 +1294,13 @@ async function initInstance(instanceId) {
                                         const match = initialAIText.match(/\[ANALISE: (.*?)\]/s);
                                         if (match) {
                                             const analysisContent = match[1];
-                                            console.log(`[AI Memory] Salvando anÃ¡lise tÃ©cnica no banco...`);
+                                            console.log(`[AI Memory] Salvando análise tÃ©cnica no banco...`);
                                             await prisma.chat.update({
                                                 where: { jid_instanceId: { jid, instanceId } },
                                                 data: { lastPixAnalysis: analysisContent }
                                             }).catch(e => console.error("Erro ao salvar memï¾ƒï½³ria AI:", e));
 
-                                            // Remove o bloco tÃ©cnico do texto que o cliente verÃ¡
+                                            // Remove o bloco tÃ©cnico do texto que o cliente verá
                                             initialAIText = initialAIText.replace(/\[ANALISE: .*?\]/s, '').trim();
                                             responseMessage.content = initialAIText;
                                         }
@@ -1410,7 +1410,7 @@ async function initInstance(instanceId) {
                                                     if (recentOrder) {
                                                         result = {
                                                             success: false,
-                                                            error: `BLOQUEIO: jÃ¡ existe o pedido #${recentOrder.id.slice(-5).toUpperCase()} em aberto. Use 'update_order' com este cï¾ƒï½³digo para adicionar mais produtos ou atualizar o valor total. NÃƒO CRIE OUTRO PEDIDO.`
+                                                            error: `BLOQUEIO: já existe o pedido #${recentOrder.id.slice(-5).toUpperCase()} em aberto. Use 'update_order' com este cï¾ƒï½³digo para adicionar mais produtos ou atualizar o valor total. NÃƒO CRIE OUTRO PEDIDO.`
                                                         };
                                                     } else {
                                                         const internalBase = `http://127.0.0.1:${process.env.PORT || 3001}`;
@@ -1431,10 +1431,10 @@ async function initInstance(instanceId) {
                                                             pendingPaymentLink = res.data.paymentLink;
                                                             result.message = "Pedido criado. SILï¾ƒåŠ¾CIO ABSOLUTO NO PRï¾ƒåº—IMO TURNO. NÃƒO GERE NENHUM TEXTO, O SISTEMA ENVIARï¾ƒï¿½ O LINK.";
                                                         } else {
-                                                            result.message = "Pedido criado. Informe que recebemos o pedido (Pagamento em Dinheiro) e que ele estÃ¡ agora aguardando a aprovaï¾ƒï½§Ã£o da nossa equipe. Peï¾ƒï½§a para o cliente aguardar a confirmaï¾ƒï½§Ã£o oficial.";
+                                                            result.message = "Pedido criado. Informe que recebemos o pedido (Pagamento em Dinheiro) e que ele está agora aguardando a aprovaï¾ƒï½§ão da nossa equipe. Peï¾ƒï½§a para o cliente aguardar a confirmaï¾ƒï½§ão oficial.";
                                                         }
 
-                                                        // Se for dinheiro, jÃ¡ cai como pending, entÃ£o dispara o DING agora
+                                                        // Se for dinheiro, já cai como pending, então dispara o DING agora
                                                         if (args.paymentMethod === 'Dinheiro') {
                                                             io.emit('new_order_pending', { orderId: res.data.id });
                                                         }
@@ -1453,7 +1453,7 @@ async function initInstance(instanceId) {
                                                     });
 
                                                     if (!targetOrder) {
-                                                        result = { success: false, error: `Pedido ${refCode} nÃ£o encontrado entre seus pedidos ativos.` };
+                                                        result = { success: false, error: `Pedido ${refCode} não encontrado entre seus pedidos ativos.` };
                                                     } else {
                                                         const updateData = {};
                                                         if (args.product) updateData.product = args.product;
@@ -1501,7 +1501,7 @@ async function initInstance(instanceId) {
                                             }
                                             else if (functionName === "get_store_location") {
                                                 result = {
-                                                    address: settings?.businessAddress || "Endereï¾ƒï½§o nÃ£o configurado.",
+                                                    address: settings?.businessAddress || "Endereï¾ƒï½§o não configurado.",
                                                                                                         locationLink: (() => {
                                                         const raw = settings?.businessLocation;
                                                         if (!raw) return "Link não disponível.";
@@ -1520,10 +1520,10 @@ async function initInstance(instanceId) {
                                             else if (functionName === "solicitar_cancelamento") {
                                                 const { reason } = args;
                                                 const clientName = currentChat?.name || jid.split('@')[0];
-                                                const alertMsg = `ï¿½åœ· *SOLICITAï¾ƒï¿½ã‚° DE CANCELAMENTO* ï¿½åœ·\n\nï¿½å´ *Cliente:* ${clientName}\nï¿½å°Ž *WhatsApp:* ${jid.split('@')[0]}\nï¿½çµ± *Motivo:* ${reason}\n\nLily jÃ¡ avisou o cliente que o gerente foi notificado. Por favor, verifique o pedido no painel.`;
+                                                const alertMsg = `ï¿½åœ· *SOLICITAï¾ƒï¿½ã‚° DE CANCELAMENTO* ï¿½åœ·\n\nï¿½å´ *Cliente:* ${clientName}\nï¿½å°Ž *WhatsApp:* ${jid.split('@')[0]}\nï¿½çµ± *Motivo:* ${reason}\n\nLily já avisou o cliente que o gerente foi notificado. Por favor, verifique o pedido no painel.`;
 
                                                 await sock.sendMessage(settings.managerJid, { text: alertMsg });
-                                                result = { success: true, message: "O gerente foi notificado sobre o seu pedido de cancelamento e entrarÃ¡ em contato em breve." };
+                                                result = { success: true, message: "O gerente foi notificado sobre o seu pedido de cancelamento e entrará em contato em breve." };
                                             }
                                             else if (functionName === "get_marketing_media") {
                                                 const { search } = args;
@@ -1539,7 +1539,7 @@ async function initInstance(instanceId) {
                                                     await sock.sendMessage(jid, { image: { url: asset.path }, caption: caption || "" });
                                                     result = { success: true, message: "Imagem enviada com sucesso." };
                                                 } else {
-                                                    result = { success: false, error: "Imagem nÃ£o encontrada." };
+                                                    result = { success: false, error: "Imagem não encontrada." };
                                                 }
                                             }
                                             else if (functionName === "post_status") {
@@ -1550,7 +1550,7 @@ async function initInstance(instanceId) {
                                                         await sock.sendMessage('status@broadcast', { image: { url: asset.path }, caption: text });
                                                         result = { success: true, message: "Status com imagem postado com sucesso." };
                                                     } else {
-                                                        result = { success: false, error: "Imagem nÃ£o encontrada para o status." };
+                                                        result = { success: false, error: "Imagem não encontrada para o status." };
                                                     }
                                                 } else {
                                                     await sock.sendMessage('status@broadcast', { text });
@@ -1573,7 +1573,7 @@ async function initInstance(instanceId) {
                                                     deliveryStr += line + '\n\n';
                                                 });
                                                 pendingCatalogMessage = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
-                                                result = { success: true, message: "CatÃ¡logo de pronta entrega preparado. O sistema enviarÃ¡ o catÃ¡logo agora. SILï¾ƒåŠ¾CIO ABSOLUTO." };
+                                                result = { success: true, message: "Catálogo de pronta entrega preparado. O sistema enviará o catálogo agora. SILï¾ƒåŠ¾CIO ABSOLUTO." };
                                             }
                                             else if (functionName === "get_order_catalog") {
                                                 const { formatProduct } = require('./lib/utils');
@@ -1583,8 +1583,8 @@ async function initInstance(instanceId) {
                                                     const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
                                                     catalogStr += formatProduct(p, vars) + "\n\n";
                                                 });
-                                                pendingCatalogMessage = catalogStr.trim() || "Poxa, nÃ£o encontrei itens no momento.";
-                                                result = { success: true, message: "CatÃ¡logo de encomendas preparado. O sistema enviarÃ¡ o catÃ¡logo agora. SILï¾ƒåŠ¾CIO ABSOLUTO." };
+                                                pendingCatalogMessage = catalogStr.trim() || "Poxa, não encontrei itens no momento.";
+                                                result = { success: true, message: "Catálogo de encomendas preparado. O sistema enviará o catálogo agora. SILï¾ƒåŠ¾CIO ABSOLUTO." };
                                             }
                                             else if (functionName === "check_availability") {
                                                 const { checkAvailability } = require('./routes/orders');
@@ -1603,43 +1603,43 @@ async function initInstance(instanceId) {
 
                                         //  SEQUESTRAR O FLUXO: SE GEROU LINK OU CATÃLOGO, A IA SE CALA E O SISTEMA ASSUME 
                                         if (pendingPaymentLink) {
-                                            // BalÃ£o 1: Aviso
+                                            // Balão 1: Aviso
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 1200));
                                             await sock.sendPresenceUpdate('paused', jid);
                                             await sendRichMessage(sock, jid, 'Vou gerar o link do seu pagamento logo abaixo:');
 
-                                            // BalÃ£o 2: Link
+                                            // Balão 2: Link
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 800));
                                             await sock.sendPresenceUpdate('paused', jid);
                                             await sock.sendMessage(jid, { text: pendingPaymentLink });
 
-                                            // BalÃ£o 3: Confirmaï¾ƒï½§Ã£o
+                                            // Balão 3: Confirmaï¾ƒï½§ão
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 1000));
                                             await sock.sendPresenceUpdate('paused', jid);
-                                            await sendRichMessage(sock, jid, 'O pedido serÃ¡ confirmado apï¾ƒï½³s o pagamento.');
+                                            await sendRichMessage(sock, jid, 'O pedido será confirmado apï¾ƒï½³s o pagamento.');
 
-                                            return; // FIM IMEDIATO: a IA nÃ£o fala mais nada.
+                                            return; // FIM IMEDIATO: a IA não fala mais nada.
                                         }
 
                                         if (pendingCatalogMessage) {
                                             const isDelivery = pendingCatalogMessage.includes('pronta entrega') || !pendingCatalogMessage.includes('Bolo');
 
-                                            // BalÃ£o 1: Intro
+                                            // Balão 1: Intro
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 1000));
                                             await sock.sendPresenceUpdate('paused', jid);
-                                            await sock.sendMessage(jid, { text: isDelivery ? 'Hoje teremos os seguintes produtos de pronta entrega:' : 'Vou te mostrar nossas opÃ§Ãµes maravilhosas de bolos de encomenda:' });
+                                            await sock.sendMessage(jid, { text: isDelivery ? 'Hoje teremos os seguintes produtos de pronta entrega:' : 'Vou te mostrar nossas opções maravilhosas de bolos de encomenda:' });
 
-                                            // BalÃ£o 2: CatÃ¡logo
+                                            // Balão 2: Catálogo
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, Math.min(pendingCatalogMessage.length * 5, 3000)));
                                             await sock.sendPresenceUpdate('paused', jid);
                                             await sock.sendMessage(jid, { text: pendingCatalogMessage });
 
-                                            // BalÃ£o 3: CTA
+                                            // Balão 3: CTA
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 1200));
                                             await sock.sendPresenceUpdate('paused', jid);
@@ -1656,7 +1656,7 @@ async function initInstance(instanceId) {
                                         if (currentToken.cancelled) return;
                                         let aiFinalText = secondResponse.choices[0].message.content || "";
 
-                                        // Se houver um catÃ¡logo pendente, vamos dividir a resposta da IA em Intro e CTA usando o separador ---
+                                        // Se houver um catálogo pendente, vamos dividir a resposta da IA em Intro e CTA usando o separador ---
                                         if (pendingCatalogMessage) {
                                             let introText = "Temos essas delÃ­cias:";
                                             let ctaText = "Qual desses posso separar para vocÃª? ï¿½ï¿½";
@@ -1666,7 +1666,7 @@ async function initInstance(instanceId) {
                                                 introText = parts[0].trim();
                                                 ctaText = parts[1].trim();
                                             } else {
-                                                // Fallback inteligente se a IA nÃ£o usar o separador
+                                                // Fallback inteligente se a IA não usar o separador
                                                 const sentences = aiFinalText.split(/[.!?\n]/).filter(s => s.trim().length > 5);
                                                 if (sentences.length >= 2) {
                                                     introText = sentences[0].trim() + (aiFinalText.includes(':') ? '' : ':');
@@ -1677,7 +1677,7 @@ async function initInstance(instanceId) {
                                             // Envia Intro (IA)
                                             await sendRichMessage(sock, jid, introText);
 
-                                            // Envia CatÃ¡logo (SISTEMA)
+                                            // Envia Catálogo (SISTEMA)
                                             await new Promise(resolve => setTimeout(resolve, 1500));
                                             await sock.sendMessage(jid, { text: pendingCatalogMessage });
 
@@ -1685,7 +1685,7 @@ async function initInstance(instanceId) {
                                             await new Promise(resolve => setTimeout(resolve, 2000));
                                             await sendRichMessage(sock, jid, ctaText);
                                         } else {
-                                            // Se nÃ£o for catÃ¡logo, envia a resposta normal
+                                            // Se não for catálogo, envia a resposta normal
                                             await sendRichMessage(sock, jid, aiFinalText);
                                         }
 
@@ -1701,7 +1701,7 @@ async function initInstance(instanceId) {
                                     if (currentToken.cancelled) return;
                                     // LIMPEZA AGRESSIVA DE FORMATAï¾ƒï¿½ã‚°
                                     replyText = replyText.replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '$2'); // links markdown -> URL pura
-                                    replyText = replyText.replace(/\*/g, ''); // Remove negrito/itÃ¡lico
+                                    replyText = replyText.replace(/\*/g, ''); // Remove negrito/itálico
                                     replyText = replyText.replace(/#/g, '');  // Remove hashtags
                                     replyText = replyText.replace(/çª¶ï½¢/g, '-'); // Troca bullet por traï¾ƒï½§o
                                     replyText = replyText.replace(/ï¾‚ï½·/g, '-'); // Troca bullet mÃ©dio por traï¾ƒï½§o
@@ -1710,8 +1710,8 @@ async function initInstance(instanceId) {
                                     replyText = replyText.replace(/`/g, '');  // Remove backticks
                                     replyText = replyText.trim();
 
-                                    // TRAVA DE SEGURANï¾ƒâ‘¡: Se o catÃ¡logo vai ser enviado em seguida,
-                                    // forï¾ƒï½§a o replyText a ser APENAS a primeira frase da IA (a introduï¾ƒï½§Ã£o).
+                                    // TRAVA DE SEGURANï¾ƒâ‘¡: Se o catálogo vai ser enviado em seguida,
+                                    // forï¾ƒï½§a o replyText a ser APENAS a primeira frase da IA (a introduï¾ƒï½§ão).
                                     if (pendingCatalogMessage) {
                                         const firstSentence = replyText.split(/[\n!?]/)[0].trim();
                                         replyText = firstSentence || replyText;
@@ -1736,7 +1736,7 @@ async function initInstance(instanceId) {
                                     // Pausa mÃ­nima para respiro
                                     await new Promise(resolve => setTimeout(resolve, 500));
 
-                                    // Digitaï¾ƒï½§Ã£o rÃ¡pida para o catÃ¡logo
+                                    // Digitaï¾ƒï½§ão rápida para o catálogo
                                     const catalogDelay = Math.min(Math.max(pendingCatalogMessage.length * 5, 800), 3000);
                                     await sock.sendPresenceUpdate('composing', jid);
                                     await new Promise(resolve => setTimeout(resolve, catalogDelay));
@@ -1750,8 +1750,8 @@ async function initInstance(instanceId) {
                                         await new Promise(resolve => setTimeout(resolve, 800));
 
                                         const ctaPrompt = pendingCatalogCTA === "delivery"
-                                            ? "O cardÃ¡pio de hoje foi enviado. Agora, como Lily (vendedora sutil e ï¾ƒï½³tima), envie UM CTA final (1 frase) perfeito para fechar a venda. Seja natural e direta, sem formalidades. Ex: 'DÃª uma olhadinha nas opÃ§Ãµes e me diz qual dessas posso separar para vocÃª?'"
-                                            : "O cardÃ¡pio de encomendas foi enviado. Agora, como Lily, envie UM CTA final (1 frase) humano e simpÃ¡tico para entender o desejo do cliente. Ex: 'Qual dessas combina mais com o que vocÃª estÃ¡ imaginando?'";
+                                            ? "O cardápio de hoje foi enviado. Agora, como Lily (vendedora sutil e ï¾ƒï½³tima), envie UM CTA final (1 frase) perfeito para fechar a venda. Seja natural e direta, sem formalidades. Ex: 'DÃª uma olhadinha nas opções e me diz qual dessas posso separar para vocÃª?'"
+                                            : "O cardápio de encomendas foi enviado. Agora, como Lily, envie UM CTA final (1 frase) humano e simpático para entender o desejo do cliente. Ex: 'Qual dessas combina mais com o que vocÃª está imaginando?'";
                                         try {
                                             const ctaResponse = await ai.chat.completions.create({
                                                 model: MODEL_MAP[settings?.activeModel] || 'gpt-4o',
@@ -1762,7 +1762,7 @@ async function initInstance(instanceId) {
                                             if (ctaText) {
                                                 ctaText = ctaText.replace(/\*/g, '').replace(/#/g, '').replace(/_/g, '').trim();
 
-                                                // Digitaï¾ƒï½§Ã£o rÃ¡pida para o CTA
+                                                // Digitaï¾ƒï½§ão rápida para o CTA
                                                 const ctaDelay = Math.min(Math.max(ctaText.length * 20, 1000), 2500);
                                                 await sock.sendPresenceUpdate('composing', jid);
                                                 await new Promise(resolve => setTimeout(resolve, ctaDelay));
@@ -1793,7 +1793,7 @@ async function initInstance(instanceId) {
                                     }
                                 }
                             } else {
-                                console.warn(`[AI] Agente estÃ¡ ligado para ${jid}, mas a OpenAI API Key nÃ£o estÃ¡ configurada.`);
+                                console.warn(`[AI] Agente está ligado para ${jid}, mas a OpenAI API Key não está configurada.`);
                             }
                         }
                     } catch (errDbnc) {
@@ -1824,7 +1824,7 @@ async function initInstance(instanceId) {
                     msgId: update.key.id,
                     status: newStatus
                 });
-            } catch (e) { /* mensagem pode nÃ£o estar no banco ainda */ }
+            } catch (e) { /* mensagem pode não estar no banco ainda */ }
         }
     });
 
@@ -1852,7 +1852,7 @@ async function initInstance(instanceId) {
         const { connection, lastDisconnect, qr } = update;
         if (qr) io.emit('qr', { instanceId, qr });
         if (connection === 'open') {
-            // ConexÃ£o bem-sucedida çª¶ï¿½ reseta o contador de tentativas
+            // Conexão bem-sucedida çª¶ï¿½ reseta o contador de tentativas
             delete reconnectAttempts[instanceId];
             await prisma.instance.update({ where: { id: instanceId }, data: { status: 'connected' } }).catch(() => { });
             io.emit('connection_update', { instanceId, status: 'connected' });
@@ -1870,19 +1870,19 @@ async function initInstance(instanceId) {
             io.emit('connection_update', { instanceId, status: 'disconnected' });
 
             if (shouldReconnect && !manualRemoval) {
-                // Backoff exponencial: evita loop de reconexÃ£o rÃ¡pida
+                // Backoff exponencial: evita loop de reconexão rápida
                 const attempts = reconnectAttempts[instanceId] || 0;
                 const delay = Math.min(1000 * Math.pow(2, attempts), 60000); // max 60s
                 reconnectAttempts[instanceId] = attempts + 1;
                 console.log(`[Baileys] InstÃ¢ncia ${instanceId} reconectando em ${delay / 1000}s (tentativa ${attempts + 1})...`);
                 setTimeout(() => initInstance(instanceId), delay);
             } else {
-                // Deslogado ou remoï¾ƒï½§Ã£o manual çª¶ï¿½ limpa contador de tentativas
+                // Deslogado ou remoï¾ƒï½§ão manual çª¶ï¿½ limpa contador de tentativas
                 delete reconnectAttempts[instanceId];
                 if (manualRemoval) {
-                    console.log(`[Baileys] InstÃ¢ncia ${instanceId} removida manualmente. Ignorando auto-reconexÃ£o.`);
+                    console.log(`[Baileys] InstÃ¢ncia ${instanceId} removida manualmente. Ignorando auto-reconexão.`);
                 } else {
-                    console.log(`[Baileys] InstÃ¢ncia ${instanceId} deslogada. NÃ£o haverÃ¡ reconexÃ£o automÃ¡tica.`);
+                    console.log(`[Baileys] InstÃ¢ncia ${instanceId} deslogada. Não haverá reconexão automática.`);
                 }
             }
         }
@@ -1914,11 +1914,11 @@ app.post('/instances/:id/ai-test', async (req, res) => {
         const { question, botPrompt, knowledge } = req.body;
 
         const ai = await getOpenAI();
-        if (!ai) return res.status(400).json({ error: 'OpenAI nÃ£o configurada' });
+        if (!ai) return res.status(400).json({ error: 'OpenAI não configurada' });
 
         const kb = JSON.parse(knowledge || '[]');
         const kbContext = kb.length > 0
-            ? "\n\nUse as seguintes informaÃ§Ãµes especÃ­ficas da empresa para responder se relevante:\n" +
+            ? "\n\nUse as seguintes informações especÃ­ficas da empresa para responder se relevante:\n" +
             kb.map(k => `Pergunta: ${k.q}\nResposta: ${k.a}`).join('\n---\n')
             : "";
 
@@ -1992,7 +1992,7 @@ app.post('/config/keys', authenticate, async (req, res) => {
             where: { slug, NOT: { id: req.user.id } }
         });
         if (existing) {
-            return res.status(400).json({ error: 'Este slug jÃ¡ estÃ¡ em uso.' });
+            return res.status(400).json({ error: 'Este slug já está em uso.' });
         }
         await prisma.user.update({
             where: { id: req.user.id },
@@ -2028,7 +2028,7 @@ app.post('/config/keys', authenticate, async (req, res) => {
         allowCashOnDelivery: allowCashOnDelivery !== undefined ? !!allowCashOnDelivery : (currentConfig?.allowCashOnDelivery ?? true)
     };
 
-    console.log(`[Config Save] Salvando configuraÃ§Ãµes do usuÃ¡rio ${req.user.id}...`);
+    console.log(`[Config Save] Salvando configurações do usuário ${req.user.id}...`);
 
     const config = await prisma.setting.upsert({
         where: { userId: req.user.id },
@@ -2037,7 +2037,7 @@ app.post('/config/keys', authenticate, async (req, res) => {
     });
 
     openaiInstance = null;
-    invalidateSettingsCache(req.user.id); // forï¾ƒï½§a reload das configuraÃ§Ãµes no prï¾ƒï½³ximo uso
+    invalidateSettingsCache(req.user.id); // forï¾ƒï½§a reload das configurações no prï¾ƒï½³ximo uso
     res.json(config);
 });
 
@@ -2114,7 +2114,7 @@ app.post('/instances/:id/logout', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia nÃ£o encontrada' });
+    if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia não encontrada' });
 
     const sock = sessions.get(id);
     if (sock) {
@@ -2137,7 +2137,7 @@ app.post('/instances/:id/restart', authenticate, async (req, res) => {
 
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia nÃ£o encontrada' });
+        if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia não encontrada' });
 
         console.log(`[Restart] Reiniciando instÃ¢ncia ${id} solicitada por ${req.user.id}`);
 
@@ -2151,10 +2151,10 @@ app.post('/instances/:id/restart', authenticate, async (req, res) => {
         // Reseta contador de tentativas
         delete reconnectAttempts[id];
 
-        // Inicia em background para nÃ£o travar a resposta HTTP
+        // Inicia em background para não travar a resposta HTTP
         initInstance(id).catch(err => console.error(`[Restart Error] Falha ao iniciar ${id}:`, err));
 
-        res.json({ success: true, message: 'Reinicializaï¾ƒï½§Ã£o iniciada' });
+        res.json({ success: true, message: 'Reinicializaï¾ƒï½§ão iniciada' });
     } catch (err) {
         console.error('[Instance Restart Error]', err);
         res.status(500).json({ error: err.message });
@@ -2166,7 +2166,7 @@ app.delete('/instances/:id', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia nÃ£o encontrada' });
+    if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia não encontrada' });
 
     const sock = sessions.get(id);
     if (sock) {
@@ -2191,7 +2191,7 @@ app.delete('/instances/:id', authenticate, async (req, res) => {
 app.get('/instances/:id/chats', authenticate, async (req, res) => {
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id: req.params.id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia nÃ£o encontrada' });
+    if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia não encontrada' });
 
     const skip = parseInt(req.query.skip) || 0;
     const take = parseInt(req.query.take) || 40;
@@ -2216,7 +2216,7 @@ app.get('/instances/:id/chats', authenticate, async (req, res) => {
         prisma.flowState.findMany({ where: { instanceId: req.params.id } })
     ]);
 
-    // Mapeia quais chats estÃ£o em fluxo
+    // Mapeia quais chats estão em fluxo
     const chatsWithFlow = chats.map(chat => ({
         ...chat,
         inFlow: flowStates.some(fs => fs.jid === chat.jid)
@@ -2232,7 +2232,7 @@ app.patch('/instances/:id/chats/:jid', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia nÃ£o encontrada' });
+    if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia não encontrada' });
 
     const chat = await prisma.chat.update({
         where: { jid_instanceId: { jid, instanceId: id } },
@@ -2247,7 +2247,7 @@ app.get('/instances/:id/messages/:jid', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia nÃ£o encontrada' });
+    if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia não encontrada' });
 
     // Carrega apenas as ï¾ƒï½ºltimas 20 mensagens para manter o carregamento instantÃ¢neo
     let messages = await prisma.message.findMany({
@@ -2281,10 +2281,10 @@ app.get('/instances/:id/profile-pic/:jid', authenticate, async (req, res) => {
 
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia nÃ£o encontrada' });
+        if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia não encontrada' });
 
         const sock = sessions.get(id);
-        if (!sock) return res.status(404).json({ error: 'SessÃ£o nÃ£o encontrada' });
+        if (!sock) return res.status(404).json({ error: 'Sessão não encontrada' });
 
         const urlPromise = sock.profilePictureUrl(jid, 'image');
         const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000));
@@ -2304,10 +2304,10 @@ app.post('/instances/:id/messages/delete', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia nÃ£o encontrada' });
+    if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia não encontrada' });
 
     const sock = sessions.get(id);
-    if (!sock) return res.status(404).json({ error: 'InstÃ¢ncia nÃ£o conectada' });
+    if (!sock) return res.status(404).json({ error: 'InstÃ¢ncia não conectada' });
 
     try {
         if (forEveryone && fromMe) {
@@ -2331,10 +2331,10 @@ app.post('/instances/:id/chats/read', authenticate, async (req, res) => {
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-    if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia nÃ£o encontrada' });
+    if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia não encontrada' });
 
     const sock = sessions.get(id);
-    if (!sock) return res.status(404).json({ error: 'InstÃ¢ncia nÃ£o conectada' });
+    if (!sock) return res.status(404).json({ error: 'InstÃ¢ncia não conectada' });
 
     try {
         // Emite o check azul no WhatsApp
@@ -2350,14 +2350,14 @@ app.post('/instances/:id/chats/read', authenticate, async (req, res) => {
     }
 });
 
-// Marcar como nÃ£o lido (Manual)
+// Marcar como não lido (Manual)
 app.patch('/instances/:id/chats/:jid/unread', authenticate, async (req, res) => {
     let { id, jid } = req.params;
     jid = await getCanonicalJid(jid, id);
     try {
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia nÃ£o encontrada' });
+        if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia não encontrada' });
 
         await prisma.chat.updateMany({
             where: { instanceId: id, jid },
@@ -2376,7 +2376,7 @@ app.delete('/instances/:id/chats/:jid', authenticate, async (req, res) => {
     try {
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia nÃ£o encontrada' });
+        if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia não encontrada' });
 
         // Remove do banco local as mensagens, o chat e o ESTADO DO FLUXO
         await prisma.message.deleteMany({ where: { instanceId: id, jid } });
@@ -2398,15 +2398,15 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
 
         // Verifica propriedade
         const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
-        if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia nÃ£o encontrada' });
+        if (!instance) return res.status(404).json({ error: 'InstÃ¢ncia não encontrada' });
 
         let { jid, text } = req.body;
         const sock = sessions.get(id);
-        if (!sock) return res.status(404).json({ error: 'SessÃ£o do WhatsApp nÃ£o inicializada' });
+        if (!sock) return res.status(404).json({ error: 'Sessão do WhatsApp não inicializada' });
         if (!sock.user) return res.status(400).json({ error: 'WhatsApp desconectado ou aguardando leitura do QR Code' });
 
         if (!jid || typeof jid !== 'string' || !text) {
-            return res.status(400).json({ error: 'JID (string) e texto sÃ£o obrigatórios' });
+            return res.status(400).json({ error: 'JID (string) e texto são obrigatórios' });
         }
 
         // Clean and fix JID
@@ -2451,7 +2451,7 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
                 const isSessionError = err.message.includes('SessionError') || err.message.includes('No sessions');
 
                 if (isSessionError && attempts < maxAttempts) {
-                    console.warn(`[${id}] Erro de sessÃ£o detectado. Tentando recuperar metadados e reenviar (${attempts}/${maxAttempts})...`);
+                    console.warn(`[${id}] Erro de sessão detectado. Tentando recuperar metadados e reenviar (${attempts}/${maxAttempts})...`);
 
                     if (finalJid.endsWith('@g.us')) {
                         try {
@@ -2527,9 +2527,9 @@ app.post('/instances/:id/send-audio', uploadAudio.single('audio'), async (req, r
         const { jid } = req.body;
         const sock = sessions.get(id);
 
-        if (!sock) return res.status(404).json({ error: 'SessÃ£o nÃ£o encontrada' });
+        if (!sock) return res.status(404).json({ error: 'Sessão não encontrada' });
         if (!sock.user) return res.status(400).json({ error: 'WhatsApp desconectado ou aguardando leitura do QR Code' });
-        if (!jid || !req.file) return res.status(400).json({ error: 'JID e arquivo de Ã¡udio sÃ£o obrigatórios' });
+        if (!jid || !req.file) return res.status(400).json({ error: 'JID e arquivo de áudio são obrigatórios' });
 
         let finalJid = jid.trim();
         if (!finalJid.includes('@')) {
@@ -2598,13 +2598,13 @@ app.post('/instances/:id/send-audio', uploadAudio.single('audio'), async (req, r
 
         // Clean up temp file
         fs.unlink(audioPath, (err) => {
-            if (err) console.error('Erro ao apagar Ã¡udio temporÃ¡rio:', err);
+            if (err) console.error('Erro ao apagar áudio temporário:', err);
         });
 
         res.json(result);
     } catch (err) {
         console.error('ERRO AO ENVIAR ï¾ƒã‚žDIO:', err);
-        res.status(500).json({ error: 'Erro ao enviar Ã¡udio: ' + err.message });
+        res.status(500).json({ error: 'Erro ao enviar áudio: ' + err.message });
     }
 });
 
@@ -2628,7 +2628,7 @@ app.get('/flows/:id', authenticate, async (req, res) => {
         const flow = await prisma.flow.findUnique({
             where: { id: req.params.id, userId: req.user.id }
         });
-        if (!flow) return res.status(404).json({ error: 'Flow nÃ£o encontrado' });
+        if (!flow) return res.status(404).json({ error: 'Flow não encontrado' });
         res.json(flow);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -2705,12 +2705,12 @@ app.get(['/', '/:slug'], async (req, res) => {
     try {
         let slug = req.params.slug;
 
-        // Se nÃ£o tem slug ou Ã© expressamente 'home', serve a PV (PÃ¡gina de Vendas)
+        // Se não tem slug ou Ã© expressamente 'home', serve a PV (Página de Vendas)
         if (!slug || slug === '' || slug.toLowerCase() === 'home') {
             return res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
         }
 
-        // Lista exaustiva de rotas do sistema para nÃ£o confundir com slugs
+        // Lista exaustiva de rotas do sistema para não confundir com slugs
         const reserved = ['api', 'orders', 'auth', 'menu-assets', 'assets', 'uploads', 'favicon.ico', 'robots.txt', 'instances', 'config', 'flows', 'chats', 'messages', 'dashboard', 'settings', 'connections', 'login', 'register'];
         if (reserved.includes(slug.toLowerCase()) || slug.includes('.')) {
             return res.status(404).send('Not Found');
@@ -2730,7 +2730,7 @@ app.get(['/', '/:slug'], async (req, res) => {
             let html = fs.readFileSync(htmlPath, 'utf8');
             const settings = user.settings || {};
 
-            // --- SSR: RenderizaÃ§Ã£o do Conteúdo no Servidor ---
+            // --- SSR: RenderizaÃ§ão do Conteúdo no Servidor ---
             let menuHtml = '';
             const categories = user.categories || [];
             const products = user.products || [];
@@ -2761,8 +2761,8 @@ app.get(['/', '/:slug'], async (req, res) => {
             html = html.replace('<div id="menu-sections">', `<div id="menu-sections">${menuHtml}`);
             res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=60');
 
-            const title = settings.businessName ? `${settings.businessName} - CardÃ¡pio Digital` : 'CardÃ¡pio Digital';
-            const description = settings.seoDescription || `Confira o cardÃ¡pio digital de ${settings.businessName || 'nossa loja'} e faÃ§a seu pedido online.`;
+            const title = settings.businessName ? `${settings.businessName} - Cardápio Digital` : 'Cardápio Digital';
+            const description = settings.seoDescription || `Confira o cardápio digital de ${settings.businessName || 'nossa loja'} e faÃ§a seu pedido online.`;
             const image = settings.logoUrl || 'https://digizap.com.br/default-logo.png';
 
             const metaTags = `
