@@ -1420,11 +1420,30 @@ router.get('/history/public/:slug/:phone', async (req, res) => {
         variation: true,
         quantity: true,
         totalValue: true,
+        status: true,
+        paymentStatus: true,
         type: true,
         createdAt: true
       }
     });
-    res.json(orders);
+
+    const reviews = await prisma.storeReview.findMany({
+      where: {
+        userId: store.id,
+        orderId: { in: orders.map(order => order.id) }
+      },
+      select: { orderId: true }
+    });
+
+    const reviewedOrderIds = new Set(reviews.map(review => review.orderId).filter(Boolean));
+    const serialized = orders.map((order) => ({
+      ...order,
+      totalPrice: Number(order.totalValue || 0),
+      reviewed: reviewedOrderIds.has(order.id),
+      canReview: !reviewedOrderIds.has(order.id) && ['accepted', 'production', 'ready', 'completed'].includes(String(order.status || '').toLowerCase())
+    }));
+
+    res.json(serialized);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

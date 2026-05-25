@@ -301,7 +301,7 @@
 
   function renderFeaturedCards(restaurants) {
     if (!Array.isArray(restaurants) || restaurants.length === 0) {
-      return '<div class="dz-home2-empty">Sem destaques por enquanto.</div>';
+      return '';
     }
 
     return restaurants.slice(0, 8).map((store) => {
@@ -310,6 +310,9 @@
       const category = String(store?.category || '');
       const image = store?.logoUrl || placeholderLogo(name, store?.accentColor || '#e11d48');
       const schedule = getStoreScheduleState(store);
+      const ratingText = Number(store?.ratingCount || 0) > 0 && store?.ratingLabel
+        ? `★ ${store.ratingLabel} (${store.ratingCount})`
+        : 'Sem avaliações';
 
       return `
         <a class="dz-home2-featured-card ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}">
@@ -317,6 +320,7 @@
           <span class="dz-home2-featured-copy">
             <strong>${escapeHtml(name)}</strong>
             <small>${escapeHtml(category)}</small>
+            <span class="dz-home2-hero-rating">${escapeHtml(ratingText)}</span>
             ${schedule.isOpenNow ? '' : `<span class="dz-home2-restaurant-status ${schedule.statusClass} dz-home2-featured-status">${escapeHtml(schedule.statusLabel)}</span>`}
           </span>
         </a>
@@ -326,7 +330,7 @@
 
   function renderCategoryCards(categories) {
     if (!Array.isArray(categories) || categories.length === 0) {
-      return '<div class="dz-home2-empty">Nenhuma categoria cadastrada.</div>';
+      return '<div class="dz-home2-empty">Nenhuma categoria encontrada.</div>';
     }
 
     return categories.slice(0, 12).map((category) => {
@@ -376,6 +380,9 @@
         : 'Sem destaques cadastrados';
       const schedule = getStoreScheduleState(store);
       const count = Number(store?.productsCount || 0);
+      const ratingText = Number(store?.ratingCount || 0) > 0 && store?.ratingLabel
+        ? `★ ${store.ratingLabel} (${store.ratingCount})`
+        : 'Sem avaliações';
 
       return `
         <article class="dz-home2-restaurant-card ${schedule.isOpenNow ? '' : 'is-closed'}">
@@ -387,8 +394,11 @@
                 <span class="dz-home2-restaurant-status ${schedule.statusClass}">${escapeHtml(schedule.statusLabel)}</span>
               </span>
               <span class="dz-home2-restaurant-category">${escapeHtml(category)}</span>
-              <span class="dz-home2-restaurant-address">${escapeHtml(address)}</span>
-              <span class="dz-home2-restaurant-meta">${count} item${count === 1 ? '' : 's'} · ${escapeHtml(featuredLine)}</span>
+              <span class="dz-home2-restaurant-meta">
+                <span>${count} item${count === 1 ? '' : 's'}</span>
+                <span class="dz-home2-rating-chip">${escapeHtml(ratingText)}</span>
+                <span>${escapeHtml(featuredLine)}</span>
+              </span>
             </span>
           </a>
         </article>
@@ -403,7 +413,6 @@
     const restaurantsGrid = root.querySelector('[data-restaurants-grid]');
     const emptyResults = root.querySelector('[data-empty-results]');
     const catalogSummary = root.querySelector('[data-catalog-summary]');
-    const catalogCount = root.querySelector('[data-catalog-count]');
     const total = Number(data?.total || 0);
     const search = stateFor(root).search || '';
 
@@ -423,9 +432,6 @@
       catalogSummary.textContent = search
         ? `${total} resultado${total === 1 ? '' : 's'} para "${search}"`
         : (total > 0 ? `${total} restaurante${total === 1 ? '' : 's'} cadastrado${total === 1 ? '' : 's'}` : 'Nenhum restaurante cadastrado');
-    }
-    if (catalogCount) {
-      catalogCount.textContent = String(total);
     }
     if (catalog && root.dataset.mode !== 'app') {
       catalog.hidden = true;

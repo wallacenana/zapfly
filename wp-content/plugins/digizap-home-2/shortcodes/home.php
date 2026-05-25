@@ -74,8 +74,8 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
                     </div>
 
                     <nav class="dz-home2-nav" aria-label="Menu principal">
-                        <a href="#inicio" class="is-active" aria-current="page">Home</a>
-                        <a href="#restaurantes">Restaurantes</a>
+                        <a href="/" class="is-active" aria-current="page">Home</a>
+                        <a href="/restaurantes">Restaurantes</a>
                         <a href="<?php echo esc_url(dzhome2_blog_url()); ?>">Ajuda</a>
                     </nav>
                 </div>
@@ -160,7 +160,6 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
                             <h2>Restaurantes</h2>
                             <p data-catalog-summary><?php echo esc_html(($initialData['total'] ?? 0) > 0 ? ((int) ($initialData['total'] ?? 0) === 1 ? '1 restaurante encontrado' : sprintf('%d restaurantes encontrados', (int) ($initialData['total'] ?? 0))) : ($hasSelectedAddress ? 'Nenhum restaurante encontrado.' : 'Digite o endereço para ver os restaurantes.')); ?></p>
                         </div>
-                        <span class="dz-home2-catalog-count" data-catalog-count><?php echo esc_html((string) absint($initialData['total'] ?? 0)); ?></span>
                     </div>
 
                     <div class="dz-home2-categories" data-categories>

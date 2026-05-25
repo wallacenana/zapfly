@@ -190,7 +190,7 @@ if (!function_exists('dzhome2_fetch_directory_data')) {
             'limit' => min(max(absint($limit), 1), 48)
         ];
 
-        $cache_key = 'dzhome2_v2_' . md5(wp_json_encode($args));
+        $cache_key = 'dzhome2_v3_' . md5(wp_json_encode($args));
         $cached = get_transient($cache_key);
         if ($cached !== false) {
             return $cached;
@@ -253,6 +253,9 @@ if (!function_exists('dzhome2_render_featured_cards')) {
             $category = isset($store['category']) ? (string) $store['category'] : '';
             $logoUrl = !empty($store['logoUrl']) ? (string) $store['logoUrl'] : dzhome2_placeholder_logo($name, $store['accentColor'] ?? '#e11d48');
             $schedule = dzhome2_store_schedule_state($store);
+            $ratingCount = isset($store['ratingCount']) ? absint($store['ratingCount']) : 0;
+            $ratingLabel = isset($store['ratingLabel']) ? (string) $store['ratingLabel'] : '';
+            $ratingText = $ratingCount > 0 && $ratingLabel !== '' ? '★ ' . $ratingLabel . ' (' . $ratingCount . ')' : 'Sem avaliações';
 
             $html[] = sprintf(
                 '<a class="dz-home2-featured-card %s" href="%s">
@@ -260,6 +263,7 @@ if (!function_exists('dzhome2_render_featured_cards')) {
                     <span class="dz-home2-featured-copy">
                         <strong>%s</strong>
                         <small>%s</small>
+                        <span class="dz-home2-hero-rating">%s</span>
                         %s
                     </span>
                 </a>',
@@ -269,6 +273,7 @@ if (!function_exists('dzhome2_render_featured_cards')) {
                 esc_attr($name),
                 esc_html($name),
                 esc_html($category),
+                esc_html($ratingText),
                 $schedule['isOpenNow'] ? '' : sprintf(
                     '<span class="dz-home2-restaurant-status %s dz-home2-featured-status">%s</span>',
                     esc_attr($schedule['statusClass']),
@@ -300,6 +305,9 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
                 : 'Sem destaques cadastrados';
             $schedule = dzhome2_store_schedule_state($store);
             $count = isset($store['productsCount']) ? absint($store['productsCount']) : 0;
+            $ratingCount = isset($store['ratingCount']) ? absint($store['ratingCount']) : 0;
+            $ratingLabel = isset($store['ratingLabel']) ? (string) $store['ratingLabel'] : '';
+            $ratingText = $ratingCount > 0 && $ratingLabel !== '' ? '★ ' . $ratingLabel . ' (' . $ratingCount . ')' : 'Sem avaliações';
 
             $html[] = sprintf(
                 '<article class="dz-home2-restaurant-card %s">
@@ -312,7 +320,11 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
                             </span>
                             <span class="dz-home2-restaurant-category">%s</span>
                             <span class="dz-home2-restaurant-address">%s</span>
-                            <span class="dz-home2-restaurant-meta">%d item%s · %s</span>
+                            <span class="dz-home2-restaurant-meta">
+                                <span>%d item%s</span>
+                                <span class="dz-home2-rating-chip">%s</span>
+                                <span>%s</span>
+                            </span>
                         </span>
                     </a>
                 </article>',
@@ -328,6 +340,7 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
                 esc_html($address),
                 $count,
                 $count === 1 ? '' : 's',
+                esc_html($ratingText),
                 esc_html($featuredLine)
             );
         }

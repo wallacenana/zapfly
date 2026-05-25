@@ -96,6 +96,7 @@ const { upsertStoreProfile } = require('./lib/storeProfile');
 const { buildHomeDirectoryData, renderCategoryCards, renderHeroRestaurants, renderRestaurantCards, escapeHtml } = require('./lib/home');
 
 const { router: ordersRouter, setupCronJobs, checkAvailability, updateCalendarEvent } = require('./routes/orders');
+const reviewsRouter = require('./routes/reviews');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -122,6 +123,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/auth', require('./routes/auth'));
+app.use('/reviews', reviewsRouter);
 
 // --- SEO: Robots na Raiz ---
 app.get('/robots.txt', (req, res) => {

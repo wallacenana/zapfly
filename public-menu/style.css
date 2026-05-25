@@ -1191,8 +1191,9 @@ body.theme-order .delivery-fee-badge {
 
 .history-card-action {
     display: flex;
-    align-items: center;
-    gap: 4px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
     color: var(--primary-color);
     font-size: 0.85rem;
     font-weight: 700;
@@ -1201,6 +1202,83 @@ body.theme-order .delivery-fee-badge {
 .history-card-action i {
     width: 16px;
     height: 16px;
+}
+
+.history-review-btn {
+    border: 0;
+    border-radius: 999px;
+    padding: 6px 10px;
+    background: rgba(245, 158, 11, 0.10);
+    color: #9a5f00;
+    font-size: 0.72rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.history-reviewed-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(16, 185, 129, 0.10);
+    color: #0f8b5f;
+    font-size: 0.72rem;
+    font-weight: 800;
+}
+
+.review-modal-body {
+    display: grid;
+    gap: 14px;
+    padding: 0 20px 20px;
+}
+
+.review-target {
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgba(74, 44, 42, 0.06);
+    border: 1px solid rgba(74, 44, 42, 0.10);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.review-stars {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.review-star-btn {
+    width: 44px;
+    height: 44px;
+    border: 1px solid rgba(245, 158, 11, 0.18);
+    border-radius: 14px;
+    background: rgba(245, 158, 11, 0.06);
+    color: rgba(154, 95, 0, 0.45);
+    font-size: 1.15rem;
+    font-weight: 900;
+    cursor: pointer;
+}
+
+.review-star-btn.active {
+    background: rgba(245, 158, 11, 0.12);
+    color: #9a5f00;
+    border-color: rgba(245, 158, 11, 0.30);
+}
+
+.review-comment {
+    width: 100%;
+    min-height: 96px;
+    resize: vertical;
+}
+
+.review-modal-note {
+    font-size: 0.82rem;
+    color: var(--text-gray);
+    text-align: center;
 }
 
 /* Carousel Styles */

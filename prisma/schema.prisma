@@ -30,6 +30,7 @@ model User {
   customers         Customer[]
   settings          Setting?
   storeProfile      StoreProfile?
+  reviews           StoreReview[]
   marketingAssets   MarketingAsset[]
   instances         Instance[]
   stockItems        StockItem[]
@@ -269,6 +270,7 @@ model Order {
   calendarEventId String?
   instanceId      String?  @default("global")
   reminderSent    Boolean  @default(false)
+  storeReview     StoreReview?
   customerId      String?
   customer        Customer? @relation(fields: [customerId], references: [id])
   userId          String
@@ -277,6 +279,24 @@ model Order {
   updatedAt       DateTime @default(now()) @updatedAt
 
   @@map("order")
+}
+
+model StoreReview {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  orderId     String?  @unique
+  order       Order?   @relation(fields: [orderId], references: [id])
+  clientName  String?
+  clientPhone String?
+  rating      Int
+  comment     String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([userId, rating])
+  @@map("store_review")
 }
 
 model Flow {

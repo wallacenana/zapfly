@@ -99,6 +99,16 @@ try {
     $stmt->execute([$store['id']]);
     $addonGroups = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    $stmt = $pdo->prepare("SELECT ROUND(AVG(rating), 1) AS avgRating, COUNT(*) AS reviewCount FROM store_review WHERE userId = ?");
+    $stmt->execute([$store['id']]);
+    $reviewSummary = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['avgRating' => null, 'reviewCount' => 0];
+    $reviewAverage = $reviewSummary['avgRating'] !== null ? (float) $reviewSummary['avgRating'] : null;
+    $reviewCount = (int) ($reviewSummary['reviewCount'] ?? 0);
+
+    $stmt = $pdo->prepare("SELECT sr.id, sr.orderId, sr.clientName, sr.rating, sr.comment, sr.createdAt, o.product, o.variation FROM store_review sr LEFT JOIN `order` o ON o.id = sr.orderId WHERE sr.userId = ? ORDER BY sr.createdAt DESC LIMIT 6");
+    $stmt->execute([$store['id']]);
+    $recentReviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
     // Build SSR payload
     $ssrData = [
         'businessName' => $businessName,
@@ -122,7 +132,12 @@ try {
         'seoDescription' => $store['seoDescription'] ?? '',
         'products' => $products,
         'categories' => $categories,
-        'addonGroups' => $addonGroups
+        'addonGroups' => $addonGroups,
+        'reviewSummary' => [
+            'averageRating' => $reviewAverage,
+            'reviewCount' => $reviewCount
+        ],
+        'recentReviews' => $recentReviews
     ];
 
 ?>
@@ -144,7 +159,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="/cardapio/style.css?v=3.25">
+        <link rel="stylesheet" href="/cardapio/style.css?v=3.26">
         <style>
             :root {
                 --primary-color:
@@ -351,6 +366,34 @@ try {
                 background: #fef2f2;
                 color: #991b1b;
             }
+
+            .store-badges-row {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .rating-badge {
+                padding: 4px 10px;
+                border-radius: 999px;
+                font-size: 0.75rem;
+                font-weight: 800;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                white-space: nowrap;
+            }
+
+            .rating-badge.has-rating {
+                background: rgba(245, 158, 11, 0.10);
+                color: #9a5f00;
+            }
+
+            .rating-badge.no-rating {
+                background: rgba(107, 114, 128, 0.08);
+                color: #6b7280;
+            }
         </style>
     </head>
 
@@ -363,7 +406,16 @@ try {
                             decoding="async"></div>
                     <div class="store-details">
                         <h1 id="store-name"><?php echo $businessName; ?></h1>
-                        <div id="store-status-badge" class="status-badge open">● Aberto agora</div>
+                        <div class="store-badges-row">
+                            <div id="store-status-badge" class="status-badge open">● Aberto agora</div>
+                            <div id="store-rating-badge" class="rating-badge <?php echo $reviewCount > 0 ? 'has-rating' : 'no-rating'; ?>">
+                                <?php if ($reviewCount > 0 && $reviewAverage !== null): ?>
+                                    ★ <?php echo number_format($reviewAverage, 1, ',', '.'); ?> (<?php echo (int) $reviewCount; ?> <?php echo $reviewCount === 1 ? 'avaliação' : 'avaliações'; ?>)
+                                <?php else: ?>
+                                    Sem avaliações ainda
+                                <?php endif; ?>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <button class="icon-btn" id="history-toggle-btn" aria-label="Ver Histórico"><i
@@ -597,6 +649,23 @@ try {
             </div>
         </div>
 
+        <div id="review-modal" class="modal hidden">
+            <div class="modal-overlay"></div>
+            <div class="modal-content" style="max-width: 520px;">
+                <div class="history-modal-header">
+                    <h3>Avaliar pedido</h3>
+                    <button class="close-modal-btn" onclick="closeWithAnimation('review-modal')" aria-label="Fechar avaliação"><i data-lucide="x"></i></button>
+                </div>
+                <div class="review-modal-body">
+                    <div id="review-target" class="review-target">Selecione uma nota para continuar.</div>
+                    <div id="review-stars" class="review-stars"></div>
+                    <textarea id="review-comment" class="ifood-input review-comment" placeholder="Comentário opcional"></textarea>
+                    <div class="review-modal-note">Sua avaliação ajuda outras pessoas a escolherem melhor.</div>
+                    <button id="submit-review-btn" class="primary-btn" onclick="submitStoreReview()">Enviar avaliação</button>
+                </div>
+            </div>
+        </div>
+
         <!-- RODAPÉ CARRINHO -->
         <footer id="cart-footer" class="cart-footer hidden">
             <div class="container">
@@ -775,7 +844,11 @@ try {
                 isBodyScrollLocked: false,
                 currentCarouselIdx: 0,
                 previousOrders: [],
-                orderDetailsInfo: ''
+                orderDetailsInfo: '',
+                reviewModalOrderId: null,
+                reviewModalRating: 0,
+                storeReviewSummary: window.__SSR__?.reviewSummary || { averageRating: null, reviewCount: 0 },
+                storeRecentReviews: window.__SSR__?.recentReviews || []
             };
 
             function parseImages(imgField) {
@@ -1116,6 +1189,8 @@ try {
                     state.categories = data.categories || [];
                     state.availableSlots = data.availableSlots || [];
                     state.addonGroups = data.addonGroups || [];
+                    state.storeReviewSummary = data.reviewSummary || state.storeReviewSummary || { averageRating: null, reviewCount: 0 };
+                    state.storeRecentReviews = data.recentReviews || state.storeRecentReviews || [];
                     state.loading = false;
 
                     if (!isOrderEnabled() && state.activeTab === 'order') {
@@ -1186,6 +1261,8 @@ try {
                         checkStoreStatus();
                         setInterval(checkStoreStatus, 60000);
                     }
+
+                    updateStoreRatingBadge();
 
                     renderMenu();
                 } catch (err) {
@@ -1955,7 +2032,7 @@ try {
             function closeWithAnimation(modalId) {
                 const modal = document.getElementById(modalId);
                 modal.classList.add('hidden');
-                const anyVisibleModal = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal']
+                const anyVisibleModal = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal', 'review-modal']
                     .some(id => {
                         const el = document.getElementById(id);
                         return el && !el.classList.contains('hidden');
@@ -2241,7 +2318,7 @@ try {
             }
 
             function closeModal(modalId = null) {
-                const ids = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal'];
+                const ids = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal', 'review-modal'];
                 ids.forEach(id => {
                     const m = document.getElementById(id);
                     if (m && !m.classList.contains('hidden')) {
@@ -2252,7 +2329,7 @@ try {
             }
 
             function openModal(id) {
-                const ids = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal'];
+                const ids = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal', 'review-modal'];
                 lockBodyScroll();
                 ids.forEach(modalId => {
                     const m = document.getElementById(modalId);
@@ -3095,6 +3172,118 @@ try {
                 }
             }
 
+            function updateStoreRatingBadge() {
+                const badge = document.getElementById('store-rating-badge');
+                if (!badge) return;
+
+                const summary = state.storeReviewSummary || {};
+                const average = summary.averageRating !== null && summary.averageRating !== undefined
+                    ? Number(summary.averageRating)
+                    : null;
+                const count = Number(summary.reviewCount || 0);
+
+                badge.className = `rating-badge ${count > 0 ? 'has-rating' : 'no-rating'}`;
+
+                if (count > 0 && average !== null && Number.isFinite(average)) {
+                    const avgText = average.toFixed(1).replace('.', ',');
+                    badge.innerHTML = `★ ${avgText} (${count} ${count === 1 ? 'avaliação' : 'avaliações'})`;
+                } else {
+                    badge.innerText = 'Sem avaliações ainda';
+                }
+            }
+
+            function renderReviewStars() {
+                const stars = document.getElementById('review-stars');
+                if (!stars) return;
+
+                stars.innerHTML = [1, 2, 3, 4, 5].map((rating) => `
+                    <button type="button" class="review-star-btn ${state.reviewModalRating >= rating ? 'active' : ''}" aria-label="Nota ${rating}" onclick="setReviewRating(${rating})">${state.reviewModalRating >= rating ? '★' : '☆'}</button>
+                `).join('');
+            }
+
+            function openReviewModal(orderId) {
+                const order = state.previousOrders.find(o => o.id === orderId);
+                if (!order) {
+                    return showAlert('Avaliação', 'Não foi possível localizar este pedido.', 'error');
+                }
+
+                state.reviewModalOrderId = orderId;
+                state.reviewModalRating = 0;
+
+                const target = document.getElementById('review-target');
+                if (target) {
+                    const variationText = order.variation ? ` (${order.variation})` : '';
+                    target.innerText = `Avaliando: ${order.product}${variationText}`;
+                }
+
+                const comment = document.getElementById('review-comment');
+                if (comment) comment.value = '';
+
+                renderReviewStars();
+                lockBodyScroll();
+                const modal = document.getElementById('review-modal');
+                if (modal) modal.classList.remove('hidden', 'closing');
+            }
+
+            function setReviewRating(rating) {
+                state.reviewModalRating = rating;
+                renderReviewStars();
+            }
+
+            async function submitStoreReview() {
+                if (!state.reviewModalOrderId) {
+                    return showAlert('Avaliação', 'Selecione um pedido válido.', 'error');
+                }
+                if (!state.reviewModalRating) {
+                    return showAlert('Avaliação', 'Escolha uma nota para continuar.', 'error');
+                }
+
+                const btn = document.getElementById('submit-review-btn');
+                const commentEl = document.getElementById('review-comment');
+                const comment = commentEl ? commentEl.value.trim() : '';
+
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerText = 'Enviando...';
+                }
+
+                try {
+                    const order = state.previousOrders.find(o => o.id === state.reviewModalOrderId);
+                    const response = await fetch(`${API_BASE}/reviews/public/${STORE_SLUG}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            orderId: state.reviewModalOrderId,
+                            rating: state.reviewModalRating,
+                            comment,
+                            clientName: state.userInfo.name || order?.clientName || '',
+                            clientPhone: state.userInfo.phone || ''
+                        })
+                    });
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data?.error || 'Não foi possível enviar sua avaliação.');
+                    }
+
+                    if (data.summary) {
+                        state.storeReviewSummary = data.summary;
+                    }
+                    updateStoreRatingBadge();
+                    closeWithAnimation('review-modal');
+                    await fetchPreviousOrders();
+                    showAlert('Obrigado!', 'Sua avaliação foi enviada com sucesso.', 'success');
+                } catch (err) {
+                    showAlert('Erro', err.message || 'Não foi possível enviar a avaliação.', 'error');
+                } finally {
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerText = 'Enviar avaliação';
+                    }
+                }
+            }
+
             function renderPreviousOrders() {
                 const list = document.getElementById('history-modal-list');
                 if (!list) return;
@@ -3116,17 +3305,18 @@ try {
                 });
 
                 list.innerHTML = uniqueItems.slice(0, 6).map(o => `
-                                                                                                            <div class="history-card" onclick="reorderItem('${o.id}')">
-                                                                                                                <div class="history-card-info">
-                                                                                                                    <strong>${o.product}</strong>
-                                                                                                                    ${o.variation ? `<p>${o.variation}</p>` : ''}
-                                                                                                                </div>
-                                                                                                                <div class="history-card-action">
-                                                                                                                    <span>Pedir de novo</span>
-                                                                                                                    <i data-lucide="chevron-right"></i>
-                                                                                                                </div>
-                                                                                                            </div>
-                                                                                                        `).join('');
+                    <div class="history-card" onclick="reorderItem('${o.id}')">
+                        <div class="history-card-info">
+                            <strong>${o.product}</strong>
+                            ${o.variation ? `<p>${o.variation}</p>` : ''}
+                        </div>
+                        <div class="history-card-action">
+                            ${o.reviewed ? '<span class="history-reviewed-badge">Avaliado</span>' : (o.canReview ? `<button type="button" class="history-review-btn" onclick="event.stopPropagation(); openReviewModal('${o.id}')">Avaliar</button>` : '')}
+                            <span>Pedir de novo</span>
+                            <i data-lucide="chevron-right"></i>
+                        </div>
+                    </div>
+                `).join('');
                 lucide.createIcons();
             }
 

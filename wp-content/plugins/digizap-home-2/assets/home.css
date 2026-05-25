@@ -256,6 +256,19 @@
   line-height: 1.52;
 }
 
+.dz-home2-hero-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 179, 0, 0.10);
+  color: #9a5f00;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
 .dz-home2-address-form {
   display: flex;
   align-items: center;
@@ -762,7 +775,19 @@
   font-size: 0.76rem;
 }
 
-.dz-home2-restaurant-meta > span {
+.dz-home2-rating-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #9a5f00;
+  background: rgba(255, 179, 0, 0.10);
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.dz-home2-restaurant-meta>span {
   background: transparent;
   border: 0;
   padding: 0;
@@ -795,10 +820,12 @@
   flex: 1 1 auto;
   width: 100%;
   border: 0;
-  outline: none;
-  background: transparent;
+  outline: 0;
+  background: 0 0;
   font: inherit;
   color: var(--dz-home2-text);
+  padding: 10px 0 11px;
+  margin-top: -5px;
 }
 
 .dz-home2-search-icon {
