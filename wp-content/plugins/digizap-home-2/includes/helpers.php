@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 if (!defined('ABSPATH')) {
     exit;
@@ -50,9 +50,12 @@ if (!function_exists('dzhome2_enqueue_assets')) {
         wp_localize_script('digizap-home-2', 'dzHome2Config', [
             'apiBase' => dzhome2_api_base(),
             'homeUrl' => home_url('/'),
+            'restaurantsUrl' => dzhome2_restaurants_url(),
             'loginUrl' => wp_login_url(home_url('/')),
             'registerUrl' => wp_registration_url(),
             'blogUrl' => dzhome2_blog_url(),
+            'categoryImageBaseUrl' => dzhome2_asset_url('assets/img/'),
+            'categoryImageRules' => dzhome2_category_image_rules(),
             'storageKey' => 'dz_home2_address',
             'searchLabel' => 'Buscar loja ou item',
             'continueLabel' => 'Continuar',
@@ -78,6 +81,30 @@ if (!function_exists('dzhome2_normalize_text')) {
         $normalized = preg_replace('/\s+/', ' ', $normalized);
 
         return trim($normalized);
+    }
+}
+
+if (!function_exists('dzhome2_slugify_text')) {
+    function dzhome2_slugify_text($value)
+    {
+        $value = (string) $value;
+        if ($value === '') {
+            return '';
+        }
+
+        $normalized = function_exists('remove_accents') ? remove_accents($value) : $value;
+        $normalized = strtolower($normalized);
+        $normalized = preg_replace('/[^a-z0-9]+/i', '-', $normalized);
+        $normalized = preg_replace('/-+/', '-', $normalized);
+
+        return trim((string) $normalized, '-');
+    }
+}
+
+if (!function_exists('dzhome2_category_slug')) {
+    function dzhome2_category_slug($value)
+    {
+        return dzhome2_slugify_text($value);
     }
 }
 
@@ -113,11 +140,93 @@ if (!function_exists('dzhome2_placeholder_logo')) {
     }
 }
 
+if (!function_exists('dzhome2_category_image_rules')) {
+    function dzhome2_category_image_rules()
+    {
+        return [
+            ['match' => 'doces bolos', 'file' => 'bolos.png'],
+            ['match' => 'doces e bolos', 'file' => 'bolos.png'],
+            ['match' => 'acai', 'file' => 'açai.png'],
+            ['match' => 'bebidas', 'file' => 'bebidas.png'],
+            ['match' => 'bolos', 'file' => 'bolos.png'],
+            ['match' => 'doces', 'file' => 'doces.png'],
+            ['match' => 'japonesa', 'file' => 'japonesa.png'],
+            ['match' => 'massas', 'file' => 'massas.png'],
+            ['match' => 'pizzas', 'file' => 'pizzas.png'],
+            ['match' => 'saladas', 'file' => 'saladas.png'],
+            ['match' => 'hamburguer', 'file' => 'burgers.png'],
+            ['match' => 'hamburger', 'file' => 'burgers.png'],
+            ['match' => 'burguer', 'file' => 'burgers.png'],
+            ['match' => 'burger', 'file' => 'burgers.png'],
+            ['match' => 'burgers', 'file' => 'burgers.png'],
+            ['match' => 'lanches', 'file' => 'burgers.png'],
+            ['match' => 'lanche', 'file' => 'burgers.png'],
+            ['match' => 'hamburguers', 'file' => 'burgers.png']
+        ];
+    }
+}
+
+if (!function_exists('dzhome2_category_image_key')) {
+    function dzhome2_category_image_key($name)
+    {
+        $normalized = dzhome2_normalize_text($name);
+        $normalized = str_replace(['&', '/', '-', '_'], ' ', $normalized);
+        $normalized = preg_replace('/\s+/', ' ', $normalized);
+
+        return trim((string) $normalized);
+    }
+}
+
+if (!function_exists('dzhome2_category_image_filename')) {
+    function dzhome2_category_image_filename($name)
+    {
+        $key = dzhome2_category_image_key($name);
+        if ($key === '') {
+            return '';
+        }
+
+        foreach (dzhome2_category_image_rules() as $rule) {
+            $match = isset($rule['match']) ? trim((string) $rule['match']) : '';
+            $file = isset($rule['file']) ? trim((string) $rule['file']) : '';
+            if ($match === '' || $file === '') {
+                continue;
+            }
+            if (strpos($key, $match) !== false) {
+                return $file;
+            }
+        }
+
+        return '';
+    }
+}
+
+if (!function_exists('dzhome2_category_image_url')) {
+    function dzhome2_category_image_url($name)
+    {
+        $file = dzhome2_category_image_filename($name);
+        return $file !== '' ? dzhome2_asset_url('assets/img/' . rawurlencode($file)) : '';
+    }
+}
+
 if (!function_exists('dzhome2_store_url')) {
     function dzhome2_store_url($slug)
     {
         $slug = sanitize_title((string) $slug);
         return $slug !== '' ? home_url('/' . $slug . '/') : home_url('/');
+    }
+}
+
+if (!function_exists('dzhome2_restaurants_url')) {
+    function dzhome2_restaurants_url($category = '')
+    {
+        $url = home_url('/restaurantes/');
+        $category = dzhome2_category_slug($category);
+
+        if ($category !== '') {
+            $url = add_query_arg('cat', $category, $url);
+        }
+
+        return $url;
     }
 }
 

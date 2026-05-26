@@ -11,6 +11,7 @@
     --btn-bg: #ff4d6d;
     --btn-text: #ffffff;
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    --category-nav-top: 0px;
 }
 
 body.theme-order {
@@ -79,10 +80,25 @@ h3 {
     will-change: transform, opacity;
 }
 
+.category-tabs {
+    overflow: hidden;
+    max-height: 120px;
+    transition: transform 0.25s ease, opacity 0.25s ease, max-height 0.25s ease, padding 0.25s ease, border-color 0.25s ease;
+}
+
 .category-tabs.is-hidden {
     transform: translateY(-110%);
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-bottom-color: transparent;
     opacity: 0;
     pointer-events: none;
+}
+
+.category-tabs.is-hidden .tabs-scroll {
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
 .store-info {
@@ -1180,6 +1196,21 @@ body.theme-order .delivery-fee-badge {
         border-radius: 0;
     }
 
+    #history-modal .history-drawer {
+        width: 100vw;
+        max-width: none;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    #history-modal .history-modal-header,
+    #history-modal .store-info-panel,
+    #history-modal .store-info-section-title,
+    #history-modal .history-modal-list {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
     .checkout-content {
         height: 100vh;
         height: 100dvh;
@@ -1311,6 +1342,154 @@ body.theme-order .delivery-fee-badge {
     flex-direction: column;
     gap: 12px;
     padding-bottom: 24px;
+}
+
+#history-modal .history-drawer {
+    width: min(440px, 100vw);
+    max-width: 440px;
+    height: 100vh;
+    height: 100dvh;
+    max-height: 100vh;
+    max-height: 100dvh;
+    margin: 0 0 0 auto;
+    border-radius: 24px 0 0 24px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -18px 0 40px rgba(15, 23, 42, 0.18);
+}
+
+#history-modal .history-modal-header {
+    margin-bottom: 0;
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+    flex: 0 0 auto;
+}
+
+#history-modal .history-modal-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    line-height: 1.15;
+}
+
+#history-modal .store-info-panel {
+    padding: 18px 24px 20px;
+    border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+    background: linear-gradient(180deg, rgba(249, 249, 249, 0.92) 0%, rgba(255, 255, 255, 0.96) 100%);
+    display: grid;
+    gap: 14px;
+    flex: 0 0 auto;
+}
+
+#history-modal .store-info-panel-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+#history-modal .store-info-logo {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    object-fit: cover;
+    flex: 0 0 auto;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+#history-modal .store-info-copy {
+    min-width: 0;
+    display: grid;
+    gap: 6px;
+}
+
+#history-modal .store-info-copy strong {
+    font-size: 1.05rem;
+    line-height: 1.15;
+    color: var(--text-main);
+}
+
+#history-modal .store-info-rating {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #d97706;
+    font-size: 0.95rem;
+    font-weight: 800;
+}
+
+#history-modal .store-info-rating small {
+    color: var(--text-gray);
+    font-weight: 600;
+}
+
+#history-modal .store-info-description {
+    margin: 0;
+    color: var(--text-gray);
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+#history-modal .store-info-hours {
+    display: grid;
+    gap: 10px;
+    padding-top: 4px;
+}
+
+#history-modal .store-info-hours h4,
+#history-modal .store-info-section-title {
+    margin: 0;
+    font-size: 0.86rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-gray);
+    font-weight: 800;
+}
+
+#history-modal .store-info-hours-list {
+    display: grid;
+    gap: 8px;
+}
+
+#history-modal .store-info-hour-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(17, 24, 39, 0.035);
+    color: var(--text-main);
+    font-size: 0.92rem;
+}
+
+#history-modal .store-info-hour-row strong {
+    font-weight: 700;
+}
+
+#history-modal .store-info-section-title {
+    padding: 18px 24px 10px;
+    flex: 0 0 auto;
+}
+
+#history-modal .history-modal-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 0 24px 24px;
+}
+
+#history-modal .history-modal-list .history-card {
+    border-color: rgba(17, 24, 39, 0.08);
+}
+
+#history-modal .history-modal-list .history-card:hover {
+    border-color: rgba(45, 189, 48, 0.24);
+}
+
+#history-modal .history-drawer .close-modal-btn {
+    top: 14px;
+    right: 14px;
 }
 
 .history-card {
@@ -1559,8 +1738,7 @@ body.theme-order .delivery-fee-badge {
     padding-top: 10px;
     padding-bottom: 10px;
     position: sticky;
-    top: 48px;
-    /* Ajuste se o header tiver outra altura */
+    top: var(--category-nav-top, 0px);
     z-index: 90;
     border-bottom: 1px solid var(--border-color);
 }

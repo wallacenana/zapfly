@@ -5,9 +5,10 @@ const BASE_DOMAIN = 'digizap.com.br';
 const isHome = (window.location.hostname === BASE_DOMAIN || window.location.hostname === 'www.' + BASE_DOMAIN) &&
     (window.location.pathname === '/' || window.location.pathname === '');
 
-// Detecta o slug da URL (ex: domain.com/linda-cake -> linda-cake)
+// Detecta o slug da URL (query ?loja= tem prioridade quando o servidor reescreve a rota)
 const pathSegments = window.location.pathname.split('/').filter(p => p);
-const STORE_SLUG = isHome ? '' : (pathSegments[0] || '');
+const querySlug = new URLSearchParams(window.location.search).get('loja') || '';
+const STORE_SLUG = isHome ? '' : (querySlug || pathSegments[0] || '');
 
 // Função auxiliar para alertas bonitos
 const showAlert = (title, text, icon = 'warning') => {

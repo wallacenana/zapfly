@@ -16,5 +16,9 @@ define('DIGIZAP_HOME2_DIR', plugin_dir_path(__FILE__));
 define('DIGIZAP_HOME2_URL', plugin_dir_url(__FILE__));
 
 require_once DIGIZAP_HOME2_DIR . 'includes/helpers.php';
+require_once DIGIZAP_HOME2_DIR . 'includes/blog.php';
+require_once DIGIZAP_HOME2_DIR . 'includes/header.php';
+require_once DIGIZAP_HOME2_DIR . 'includes/footer-nav.php';
 require_once DIGIZAP_HOME2_DIR . 'shortcodes/home.php';
 require_once DIGIZAP_HOME2_DIR . 'shortcodes/restaurants.php';
+require_once DIGIZAP_HOME2_DIR . 'shortcodes/blog.php';

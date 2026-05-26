@@ -1,5 +1,7 @@
 ﻿(function () {
   const config = window.dzHome2Config || {};
+  const categoryImageBaseUrl = String(config.categoryImageBaseUrl || '');
+  const categoryImageRules = Array.isArray(config.categoryImageRules) ? config.categoryImageRules : [];
   const roots = new Set();
   const stateByRoot = new WeakMap();
   let googleLoaderPromise = null;
@@ -38,6 +40,17 @@
     return new URL(clean ? `${clean}/` : '', normalizedBase).toString();
   }
 
+  function restaurantsUrl(categorySlug = '') {
+    const base = String(config.restaurantsUrl || `${config.homeUrl || '/'}restaurantes/`);
+    const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+    const url = new URL(normalizedBase);
+    const clean = slugify(categorySlug);
+    if (clean) {
+      url.searchParams.set('cat', clean);
+    }
+    return url.toString();
+  }
+
   function normalizeText(value) {
     return String(value ?? '')
       .toLowerCase()
@@ -45,6 +58,20 @@
       .replace(/[\u0300-\u036f]/g, '')
       .replace(/\s+/g, ' ')
       .trim();
+  }
+
+  function normalizeCategoryKey(value) {
+    return normalizeText(value)
+      .replace(/[&/_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function categorySlug(value) {
+    return normalizeCategoryKey(value)
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
   }
 
   function placeholderLogo(name, accent = '#e11d48') {
@@ -69,6 +96,23 @@
       </svg>
     `;
     return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg.trim())}`;
+  }
+
+  function resolveCategoryImage(name) {
+    const key = normalizeCategoryKey(name);
+    if (!key) {
+      return '';
+    }
+
+    for (const rule of categoryImageRules) {
+      const match = normalizeCategoryKey(rule?.match || '');
+      const file = String(rule?.file || '').trim();
+      if (match && file && key.includes(match)) {
+        return categoryImageBaseUrl ? `${categoryImageBaseUrl}${encodeURIComponent(file)}` : '';
+      }
+    }
+
+    return '';
   }
 
   function formatAddress(address) {
@@ -269,6 +313,7 @@
     if (!stateByRoot.has(root)) {
       stateByRoot.set(root, {
         search: '',
+        categorySlug: String(root.dataset.categorySlug || ''),
         address: '',
         selectedAddress: null,
         addressSelected: false,
@@ -308,6 +353,32 @@
     if (landing) landing.hidden = mode !== 'landing';
     if (catalog) catalog.hidden = mode !== 'app';
     if (appActions) appActions.hidden = mode !== 'app';
+  }
+
+  function toNumber(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function formatCurrencyBRL(value) {
+    const amount = Number(value);
+    if (!Number.isFinite(amount)) {
+      return '';
+    }
+    return amount.toLocaleString('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    });
+  }
+
+  function haversineKm(lat1, lng1, lat2, lng2) {
+    const r = 6371;
+    const toRad = (deg) => (deg * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2
+      + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return 2 * r * Math.asin(Math.min(1, Math.sqrt(a)));
   }
 
   function bindHeaderScroll(root) {
@@ -382,10 +453,11 @@
     return categories.slice(0, 12).map((category) => {
       const name = String(category?.name || 'Categoria');
       const count = Number(category?.count || 0);
-      const image = category?.logoUrl || placeholderLogo(name, category?.accentColor || '#2dbd30');
+      const slug = String(category?.slug || categorySlug(name));
+      const image = resolveCategoryImage(name) || placeholderLogo(name, category?.accentColor || '#2dbd30');
 
       return `
-        <a class="dz-home2-category-card" href="#restaurantes" data-category="${escapeHtml(name)}">
+        <a class="dz-home2-category-card" href="${escapeHtml(restaurantsUrl(slug))}" data-category="${escapeHtml(slug)}">
           <span class="dz-home2-category-thumb">
             <img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async">
           </span>
@@ -446,7 +518,6 @@
               <span class="dz-home2-restaurant-meta">
                 <span>${count} item${count === 1 ? '' : 's'}</span>
                 ${ratingVisible ? `<span class="dz-home2-rating-chip">${ratingStarSvg(true)}<span class="dz-home2-rating-text">${escapeHtml(ratingText)}</span></span>` : ''}
-                <span>${escapeHtml(featuredLine)}</span>
               </span>
             </span>
           </a>
@@ -501,6 +572,9 @@
     const params = new URLSearchParams();
     params.set('search', search || '');
     params.set('location', location || '');
+    if (state.categorySlug) {
+      params.set('category', state.categorySlug);
+    }
     if (state.selectedAddress?.lat !== null && state.selectedAddress?.lat !== undefined) {
       params.set('locationLat', String(state.selectedAddress.lat));
     }
@@ -521,6 +595,7 @@
 
       const data = await response.json();
       updateView(root, data);
+
     } catch (error) {
       if (error.name === 'AbortError') {
         return;
@@ -533,9 +608,7 @@
     const address = readAddress(root);
     const state = stateFor(root);
     state.address = address.address || '';
-    state.selectedAddress = address.placeId || address.lat !== null || address.lng !== null
-      ? address
-      : null;
+    state.selectedAddress = address.address ? address : null;
     state.addressSelected = Boolean(state.selectedAddress);
 
     const [line1, line2] = formatAddress(address.address);
@@ -734,7 +807,7 @@
           target.select();
         }
         const state = stateFor(root);
-        state.addressSelected = Boolean(current.placeId || current.lat !== null || current.lng !== null);
+        state.addressSelected = Boolean(current.address);
         state.selectedAddress = state.addressSelected ? current : null;
         updateContinueState(root);
         setMode(root, 'landing');
@@ -762,6 +835,3 @@
     init();
   }
 })();
-
-
-

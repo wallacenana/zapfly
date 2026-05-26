@@ -1,7 +1,7 @@
-﻿<?php
+<?php
 
 /**
- * DigiZap - Cardápio All-in-One (VersÃ£o Checkout 2.0)
+ * DigiZap - Cardápio All-in-One (Versão Checkout 2.0)
  */
 
 if (php_sapi_name() === 'cli-server') {
@@ -12,6 +12,13 @@ if (php_sapi_name() === 'cli-server') {
 }
 
 require_once __DIR__ . '/config.php';
+
+if (!headers_sent()) {
+    header('Content-Type: text/html; charset=UTF-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
 
 try {
     $pdo = new PDO("mysql:host=$host;dbname=$db;charset=utf8", $user, $pass);
@@ -167,7 +174,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="/cardapio/style.css?v=3.28">
+        <link rel="stylesheet" href="https://digizap.com.br/cardapio/style.css?v=3.40">
         <style>
             :root {
                 --primary-color:
@@ -624,9 +631,9 @@ try {
                         <!-- Address Section -->
                         <div id="delivery-address-section">
                             <div class="form-group">
-                                <label class="field-label">EndereÃ§o de Entrega</label>
+                                <label class="field-label">Endereço de Entrega</label>
                                 <input type="text" id="user-address" class="ifood-input"
-                                    placeholder="Rua, nÃºmero, bairro...">
+                                    placeholder="Rua, número, bairro...">
                             </div>
                             <div id="delivery-map"
                                 style="height:200px; width:100%; border-radius:12px; background:#e8e8e8; margin-bottom:14px; overflow:hidden;">
@@ -684,7 +691,7 @@ try {
                 </div>
 
                 <div class="modal-footer-sticky">
-                    <button id="next-step-btn" class="primary-btn">PrÃ³ximo</button>
+                    <button id="next-step-btn" class="primary-btn">Próximo</button>
                     <button id="place-order-btn" class="primary-btn hidden">Confirmar e Pagar</button>
                 </div>
             </div>
@@ -692,12 +699,63 @@ try {
 
         <div id="history-modal" class="modal hidden">
             <div class="modal-overlay"></div>
-            <div class="modal-content">
+            <div class="modal-content history-drawer">
                 <div class="history-modal-header">
-                    <h3>Meus Pedidos</h3>
+                    <h3>Sobre a loja</h3>
                     <button class="close-modal-btn"><i data-lucide="x"></i></button>
                 </div>
-                <div id="history-list" class="history-modal-list"></div>
+                <div class="store-info-panel">
+                    <div class="store-info-panel-head">
+                        <?php if ($logoUrl): ?>
+                            <img src="<?php echo htmlspecialchars($logoUrl); ?>" alt="<?php echo htmlspecialchars($businessName); ?>" class="store-info-logo">
+                        <?php endif; ?>
+                        <div class="store-info-copy">
+                            <strong><?php echo htmlspecialchars($businessName); ?></strong>
+                            <?php if ($orderCount > 0): ?>
+                                <div class="store-info-rating">
+                                    <svg class="rating-star-icon filled" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="currentColor"></path>
+                                    </svg>
+                                    <span><?php echo number_format($reviewAverage, 1, ',', '.'); ?></span>
+                                    <small>(<?php echo (int) $reviewCount; ?>)</small>
+                                </div>
+                            <?php endif; ?>
+                            <div id="drawer-store-status" class="status-badge open">&#9679; Aberto agora</div>
+                        </div>
+                    </div>
+
+                    <?php if (!empty($store['seoDescription'])): ?>
+                        <p class="store-info-description"><?php echo htmlspecialchars($store['seoDescription']); ?></p>
+                    <?php endif; ?>
+
+                    <?php if (!empty($availableSlots)): ?>
+                        <div class="store-info-hours">
+                            <h4>Horários de abertura</h4>
+                            <div class="store-info-hours-list">
+                                <?php
+                                $dayNames = [
+                                    0 => 'Dom',
+                                    1 => 'Seg',
+                                    2 => 'Ter',
+                                    3 => 'Qua',
+                                    4 => 'Qui',
+                                    5 => 'Sex',
+                                    6 => 'Sab'
+                                ];
+                                foreach ($availableSlots as $slot):
+                                    $dayLabel = $dayNames[(int) ($slot['dayOfWeek'] ?? 0)] ?? 'Dia';
+                                ?>
+                                    <div class="store-info-hour-row">
+                                        <span><?php echo htmlspecialchars($dayLabel); ?></span>
+                                        <strong><?php echo htmlspecialchars(substr((string) ($slot['startTime'] ?? '00:00'), 0, 5) . ' - ' . substr((string) ($slot['endTime'] ?? '00:00'), 0, 5)); ?></strong>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <h4 class="store-info-section-title">Meus pedidos</h4>
+                <div id="history-modal-list" class="history-modal-list"></div>
             </div>
         </div>
 
@@ -706,19 +764,19 @@ try {
             <div class="modal-content" style="max-width: 520px;">
                 <div class="history-modal-header">
                     <h3>Avaliar pedido</h3>
-                    <button class="close-modal-btn" onclick="closeWithAnimation('review-modal')" aria-label="Fechar avaliaÃ§Ã£o"><i data-lucide="x"></i></button>
+                    <button class="close-modal-btn" onclick="closeWithAnimation('review-modal')" aria-label="Fechar avaliação"><i data-lucide="x"></i></button>
                 </div>
                 <div class="review-modal-body">
                     <div id="review-target" class="review-target">Selecione uma nota para continuar.</div>
                     <div id="review-stars" class="review-stars"></div>
                     <textarea id="review-comment" class="ifood-input review-comment" placeholder="Comentário opcional"></textarea>
-                    <div class="review-modal-note">Sua avaliaÃ§Ã£o ajuda outras pessoas a escolherem melhor.</div>
-                    <button id="submit-review-btn" class="primary-btn" onclick="submitStoreReview()">Enviar avaliaÃ§Ã£o</button>
+                    <div class="review-modal-note">Sua avaliação ajuda outras pessoas a escolherem melhor.</div>
+                    <button id="submit-review-btn" class="primary-btn" onclick="submitStoreReview()">Enviar avaliação</button>
                 </div>
             </div>
         </div>
 
-        <!-- RODAPÃ‰ CARRINHO -->
+        <!-- RODAPé CARRINHO -->
         <footer id="cart-footer" class="cart-footer hidden">
             <div class="container">
                 <button class="primary-btn cart-btn" id="view-cart-btn">
@@ -846,7 +904,7 @@ try {
             const pathSegments = window.location.pathname.split('/').filter(p => p);
             const STORE_SLUG = isHome ? '' : (pathSegments[0] || '');
 
-            // FunÃ§Ã£o auxiliar para alertas bonitos
+            // Função auxiliar para alertas bonitos
             const showAlert = (title, text, icon = 'warning') => {
                 Swal.fire({
                     title: title,
@@ -857,7 +915,7 @@ try {
                 });
             };
 
-            // Estado da AplicaÃ§Ã£o
+            // Estado da Aplicação
             let state = {
                 products: [],
                 activeTab: 'delivery',
@@ -914,13 +972,13 @@ try {
             }
 
             /**
-             * Seleciona a versÃ£o correta da imagem gerada pelo upload.php
+             * Seleciona a versão correta da imagem gerada pelo upload.php
              * @param {string} url - URL original
              * @param {'thumb'|'medium'|'full'} size - Tamanho desejado
              */
             function getImg(url, size = 'full') {
                 if (!url) return url;
-                if (!url.includes('files.digizap.com.br')) return url; // SÃ³ funciona para o nosso servidor
+                if (!url.includes('files.digizap.com.br')) return url; // Só funciona para o nosso servidor
 
                 if (size === 'thumb') return url.replace('.webp', '_550.webp');
                 if (size === 'medium') return url.replace('.webp', '_550.webp');
@@ -973,9 +1031,9 @@ try {
                 if (!state.orderSchedule?.date || !state.orderSchedule?.time) return 'Nenhum horário selecionado.';
                 try {
                     const dateText = new Date(`${state.orderSchedule.date}T12:00:00`).toLocaleDateString('pt-BR');
-                    return `${dateText} Ã s ${state.orderSchedule.time}`;
+                    return `${dateText} às ${state.orderSchedule.time}`;
                 } catch (e) {
-                    return `${state.orderSchedule.date} Ã s ${state.orderSchedule.time}`;
+                    return `${state.orderSchedule.date} às ${state.orderSchedule.time}`;
                 }
             }
 
@@ -1024,7 +1082,7 @@ try {
                 const selectedSlot = Array.isArray(availability?.times) ? availability.times.find(slot => slot.time === timeVal) : null;
                 if (!selectedSlot || !selectedSlot.available) {
                     if (timeSelect) timeSelect.value = '';
-                    return showAlert('Horário indisponÃ­vel', selectedSlot?.reason || availability?.reason || 'Escolha outro horário.');
+                    return showAlert('Horário indisponível', selectedSlot?.reason || availability?.reason || 'Escolha outro horário.');
                 }
 
                 state.orderSchedule = {
@@ -1141,16 +1199,16 @@ try {
 
                     const availableTimes = times.filter(slot => slot.available);
                     if (times.length > 0) {
-                        let html = `<option value="">${availableTimes.length > 0 ? 'Selecione um horário' : (data.reason || 'Nenhum horário disponÃ­vel')}</option>`;
+                        let html = `<option value="">${availableTimes.length > 0 ? 'Selecione um horário' : (data.reason || 'Nenhum horário disponível')}</option>`;
                         times.forEach(slot => {
-                            const label = slot.available ? slot.time : `${slot.time} - IndisponÃ­vel`;
+                            const label = slot.available ? slot.time : `${slot.time} - Indisponível`;
                             html += `<option value="${slot.time}" ${slot.available ? '' : 'disabled'}>${label}</option>`;
                         });
                         timeSelect.innerHTML = html;
                         timeSelect.disabled = false;
-                        if (noteEl) noteEl.innerText = data.reason || (availableTimes.length > 0 ? '' : 'Nenhum horário disponÃ­vel');
+                        if (noteEl) noteEl.innerText = data.reason || (availableTimes.length > 0 ? '' : 'Nenhum horário disponível');
                     } else {
-                        const reason = data.reason || 'Nenhum horário disponÃ­vel';
+                        const reason = data.reason || 'Nenhum horário disponível';
                         timeSelect.disabled = true;
                         timeSelect.innerHTML = `<option value="">${reason}</option>`;
                         if (noteEl) noteEl.innerText = reason;
@@ -1250,7 +1308,7 @@ try {
                         document.body.classList.remove('theme-order');
                     }
 
-                    // Remove Skeletons e mostra o conteÃºdo real instantaneamente
+                    // Remove Skeletons e mostra o conteúdo real instantaneamente
                     const loader = document.getElementById('skeleton-loader');
                     if (loader) loader.remove();
                     const historyContainer = document.getElementById('history-section');
@@ -1321,7 +1379,7 @@ try {
                     console.error('Erro no Hydrate:', err);
                     document.body.innerHTML = `
             <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
-                <h1>Loja nÃ£o encontrada</h1>
+                <h1>Loja não encontrada</h1>
                 <p>Verifique o link e tente novamente.</p>
             </div>
         `;
@@ -1346,6 +1404,12 @@ try {
                 if (statusEl) {
                     statusEl.innerText = state.isOpen ? 'Aberto agora' : (isOrderEnabled() ? 'Apenas encomendas' : 'Fechado agora');
                     statusEl.className = state.isOpen ? 'status-badge open' : 'status-badge closed';
+                }
+
+                const drawerStatusEl = document.getElementById('drawer-store-status');
+                if (drawerStatusEl) {
+                    drawerStatusEl.innerText = state.isOpen ? 'Aberto agora' : (isOrderEnabled() ? 'Apenas encomendas' : 'Fechado agora');
+                    drawerStatusEl.className = state.isOpen ? 'status-badge open' : 'status-badge closed';
                 }
             }
 
@@ -1475,7 +1539,7 @@ try {
                         state.allowCash = false;
                         if (display) {
                             display.style.display = 'block';
-                            display.innerHTML = `âš ï¸ ${data.error}`;
+                            display.innerHTML = `⚠️ ${data.error}`;
                             display.style.background = '#fef2f2';
                             display.style.color = '#991b1b';
                             display.style.border = '1px solid #fee2e2';
@@ -1636,7 +1700,7 @@ try {
                     if (p.active === false) return false;
                     if (p.category === 'Adicionais' || p.type === 'addon') return false;
 
-                    // Verificar se tem variações e se todas estÃ£o escondidas
+                    // Verificar se tem variações e se todas estão escondidas
                     const variations = JSON.parse(p.variations || '[]');
                     if (variations.length > 0) {
                         const hasVisibleVar = variations.some(v => !v.hidden);
@@ -1648,7 +1712,7 @@ try {
                     return matchesTab && matchesSearch;
                 });
 
-                // Separar destaques (apenas se nÃ£o houver busca ativa)
+                // Separar destaques (apenas se não houver busca ativa)
                 const featured = query ? [] : filtered.filter(p => p.featured).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
                 const nonFeatured = query ? filtered : filtered.filter(p => !p.featured);
 
@@ -1676,7 +1740,7 @@ try {
                 orderedCats.forEach(c => {
                     if (grouped[c.name]) sortedCategories.push(c.name);
                 });
-                // Adiciona categorias legadas ('Geral') que nÃ£o existem em state.categories
+                // Adiciona categorias legadas ('Geral') que não existem em state.categories
                 Object.keys(grouped).forEach(catName => {
                     if (!sortedCategories.includes(catName)) sortedCategories.push(catName);
                 });
@@ -1709,7 +1773,7 @@ try {
                 renderCategoryNav(sortedCategories);
                 lucide.createIcons();
 
-                // Troca a visibilidade SOMENTE APÃ“S o DOM estar completamente pronto
+                // Troca a visibilidade SOMENTE APOS o DOM estar completamente pronto
                 if (skeletonContainer) skeletonContainer.classList.add('hidden');
                 if (actualContainer) actualContainer.classList.remove('hidden');
             }
@@ -1755,6 +1819,7 @@ try {
                 navContainer.innerHTML = categories.map(cat => `
         <button class="nav-cat-btn" onclick="scrollToCategory('cat-${cat.replace(/\s+/g, '-')}')">${cat}</button>
     `).join('');
+                syncCategoryNavOffset();
             }
 
             function scrollToCategory(id) {
@@ -1923,7 +1988,7 @@ try {
                                     </div>
                                     ${images.length > 1 ? `
                                         <button class="carousel-btn carousel-prev" onclick="moveCarousel(-1)" aria-label="Imagem Anterior"><i data-lucide="chevron-left"></i></button>
-                                        <button class="carousel-btn carousel-next" onclick="moveCarousel(1)" aria-label="PrÃ³xima Imagem"><i data-lucide="chevron-right"></i></button>
+                                        <button class="carousel-btn carousel-next" onclick="moveCarousel(1)" aria-label="Próxima Imagem"><i data-lucide="chevron-right"></i></button>
                                         <div class="carousel-dots">
                                             ${images.map((_, i) => `<div class="carousel-dot ${i === 0 ? 'active' : ''}"></div>`).join('')}
                                         </div>
@@ -1949,7 +2014,7 @@ try {
                     `;
 
                         const variationsHtml = variations.length > 0 ?
-                            `<div class="variation-section"><div class="addon-group-header"><h4>Escolha uma opÃ§Ã£o</h4></div>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price || 0})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price || 0).toFixed(2)}</div></div>`).join('')}</div>` :
+                            `<div class="variation-section"><div class="addon-group-header"><h4>Escolha uma opção</h4></div>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price || 0})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price || 0).toFixed(2)}</div></div>`).join('')}</div>` :
                             '';
 
                         const customFieldsHtml = state.activeTab === 'order' ? '' : (() => {
@@ -2024,7 +2089,7 @@ try {
                             return `<div class="variation-section addon-group-section" data-group-id="${g.id}" data-min="${g.min}" data-max="${g.max}">
                                         <div class="addon-group-header">
                                             <h4>${g.name}</h4>
-                                            <span class="addon-group-badge ${g.min > 0 ? 'required' : 'optional'}">${g.min > 0 ? 'ObrigatÃ³rio' : 'Opcional'} â€¢ Máx ${g.max}</span>
+                                            <span class="addon-group-badge ${g.min > 0 ? 'required' : 'optional'}">${g.min > 0 ? 'Obrigatório' : 'Opcional'} • Máx ${g.max}</span>
                                         </div>
                                         <div class="addon-options">
                                         ${gItems.map((gItem, ii) => {
@@ -2234,7 +2299,7 @@ try {
                 const variation = state.currentVariation;
                 const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
                 if (variations.length > 0 && !variation) {
-                    return { ok: false, message: 'Por favor, selecione uma opÃ§Ã£o para continuar.' };
+                    return { ok: false, message: 'Por favor, selecione uma opção para continuar.' };
                 }
 
                 const groupIds = JSON.parse(item.addonGroups || '[]');
@@ -2243,10 +2308,10 @@ try {
                     const maxAllowed = Math.max(parseInt(g.max, 10) || 1, 1);
                     const checked = document.querySelectorAll(`.addon-input[data-group-id="${g.id}"]:checked`).length;
                     if (g.min > 0 && checked < g.min) {
-                        return { ok: false, message: `Selecione pelo menos ${g.min} opÃ§Ã£o em "${g.name}".` };
+                        return { ok: false, message: `Selecione pelo menos ${g.min} opção em "${g.name}".` };
                     }
                     if (checked > maxAllowed) {
-                        return { ok: false, message: `O grupo "${g.name}" permite no máximo ${maxAllowed} opÃ§Ã£o(Ãµes).` };
+                        return { ok: false, message: `O grupo "${g.name}" permite no máximo ${maxAllowed} opção(ões).` };
                     }
                 }
 
@@ -2394,6 +2459,16 @@ try {
             let tabsNavScrollY = window.scrollY || window.pageYOffset || 0;
             let tabsNavScrollTicking = false;
 
+            function syncCategoryNavOffset() {
+                const categoryNav = document.querySelector('.category-nav');
+                const orderNav = document.getElementById('order-tabs-nav');
+                if (!categoryNav) return;
+
+                const shouldOffset = !!orderNav && !orderNav.classList.contains('hidden') && !orderNav.classList.contains('is-hidden');
+                const offset = shouldOffset ? `${orderNav.offsetHeight || 0}px` : '0px';
+                categoryNav.style.setProperty('--category-nav-top', offset);
+            }
+
             function updateOrderTabsVisibility(forceSync = false) {
                 const nav = document.getElementById('order-tabs-nav');
                 if (!nav || nav.classList.contains('hidden')) return;
@@ -2402,6 +2477,7 @@ try {
                 if (forceSync) {
                     nav.classList.remove('is-hidden');
                     tabsNavScrollY = currentY;
+                    syncCategoryNavOffset();
                     return;
                 }
 
@@ -2412,6 +2488,7 @@ try {
                     nav.classList.add('is-hidden');
                 }
                 tabsNavScrollY = currentY;
+                syncCategoryNavOffset();
             }
 
             function initEventListeners() {
@@ -2482,6 +2559,12 @@ try {
                     passive: true
                 });
 
+                window.addEventListener('resize', () => {
+                    syncCategoryNavOffset();
+                }, {
+                    passive: true
+                });
+
                 const scheduleDateInput = document.getElementById('schedule-date');
                 if (scheduleDateInput) {
                     const handleScheduleDateChange = async (e) => {
@@ -2548,7 +2631,7 @@ try {
                 // Persist checkout progress
                 saveCheckoutState();
 
-                // Esconde todos os passos explicitamente por ID para nÃ£o ter erro
+                // Esconde todos os passos explicitamente por ID para não ter erro
                 document.getElementById('step-1')?.classList.add('hidden');
                 document.getElementById('step-2')?.classList.add('hidden');
                 document.getElementById('step-3')?.classList.add('hidden');
@@ -2736,7 +2819,7 @@ try {
 
                 const isCashAllowed = (state.deliveryType === 'pickup') || state.allowCash;
 
-                // fallback dinÃ¢mico:
+                // fallback dinamico:
                 if (!isCashAllowed && state.paymentMethod === 'dinheiro') {
                     state.paymentMethod = 'mercadopago';
                 }
@@ -2747,7 +2830,7 @@ try {
                                                     <i data-lucide="credit-card"></i>
                                                 </div>
                                                 <div class="payment-info" style="flex:1;">
-                                                    <h4 style="margin:0; font-size:1rem;">Pix ou CrÃ©dito</h4>
+                                                    <h4 style="margin:0; font-size:1rem;">Pix ou Crédito</h4>
                                                     <p style="margin:0; font-size:0.8rem; color:#6b7280;">Pagamento online 100% seguro via Mercado Pago.</p>
                                                 </div>
                                                 <div class="payment-check-icon" style="color:#ccc;">
@@ -2779,7 +2862,7 @@ try {
                                                     </div>
                                                     <div class="payment-info" style="flex:1;">
                                                         <h4 style="margin:0; font-size:1rem; color:#9ca3af;">Dinheiro</h4>
-                                                        <p style="margin:0; font-size:0.8rem; color:#ef4444; font-weight:600;">âš ï¸ NÃ£o disponÃ­vel para este endereÃ§o de entrega.</p>
+                                                        <p style="margin:0; font-size:0.8rem; color:#ef4444; font-weight:600;">⚠️ Não disponível para este endereço de entrega.</p>
                                                     </div>
                                                 </div>
                                             `;
@@ -2906,16 +2989,16 @@ try {
                     goToStep(2);
                 } else if (state.currentStep === 2) {
                     if (state.activeTab === 'delivery') {
-                        if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('EndereÃ§o Ausente', 'Por favor, selecione seu endereÃ§o no mapa.');
+                        if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
                         if (state.deliveryFee === 0 && state.deliveryType === 'delivery' && state.userInfo.address) {
-                            return showAlert('Taxa IndisponÃ­vel', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereÃ§o está no raio de entrega.');
+                            return showAlert('Taxa Indisponível', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereço está no raio de entrega.');
                         }
                     } else if (state.activeTab === 'order') {
-                        if (!isOrderEnabled()) return showAlert('Encomendas desativadas', 'No momento nÃ£o estamos aceitando encomendas.');
+                        if (!isOrderEnabled()) return showAlert('Encomendas desativadas', 'No momento não estamos aceitando encomendas.');
                         if (hasCheckoutExtras()) {
                             const extrasResult = collectCheckoutExtraStep();
                             if (!extrasResult.ok) {
-                                return showAlert('AtenÃ§Ã£o', extrasResult.message || 'Preencha os campos extras antes de continuar.');
+                                return showAlert('Atenção', extrasResult.message || 'Preencha os campos extras antes de continuar.');
                             }
                         }
                         goToStep(3);
@@ -2923,7 +3006,7 @@ try {
                     }
                     goToStep(3);
                 } else if (state.currentStep === 3) {
-                    if (!state.paymentMethod) return showAlert('AtenÃ§Ã£o', 'Selecione uma forma de pagamento.');
+                    if (!state.paymentMethod) return showAlert('Atenção', 'Selecione uma forma de pagamento.');
                     goToStep(4);
                 }
             }
@@ -2949,7 +3032,7 @@ try {
                         paymentSummaryEl.style.background = '#fef3c7';
                         paymentSummaryEl.style.color = '#d97706';
                     } else {
-                        paymentSummaryEl.innerHTML = '<i data-lucide="credit-card" style="vertical-align: middle; margin-right: 5px;"></i> Pix ou CrÃ©dito (Online)';
+                        paymentSummaryEl.innerHTML = '<i data-lucide="credit-card" style="vertical-align: middle; margin-right: 5px;"></i> Pix ou Crédito (Online)';
                         paymentSummaryEl.style.background = '#f0fdf4';
                         paymentSummaryEl.style.color = '#166534';
                     }
@@ -2982,7 +3065,7 @@ try {
                 if (state.activeTab === 'order') {
                     const precheck = validateCurrentItemSelections();
                     if (!precheck.ok) {
-                        return showAlert('AtenÃ§Ã£o', precheck.message);
+                        return showAlert('Atenção', precheck.message);
                     }
                 }
 
@@ -3002,7 +3085,7 @@ try {
                 }
                 const variation = state.currentVariation;
                 const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
-                if (variations.length > 0 && !variation) return showAlert('Quase lá...', 'Por favor, selecione uma opÃ§Ã£o para continuar.');
+                if (variations.length > 0 && !variation) return showAlert('Quase lá...', 'Por favor, selecione uma opção para continuar.');
 
                 // Coleta custom fields (texto/imagem)
                 let customAnswers = {};
@@ -3016,10 +3099,10 @@ try {
                             if (val) customAnswers[cf.name] = val;
                         });
                     } catch (e) {}
-                    if (missingRequired) return showAlert('AtenÃ§Ã£o', 'Por favor, preencha todos os campos obrigatÃ³rios (marcados com *).');
+                    if (missingRequired) return showAlert('Atenção', 'Por favor, preencha todos os campos obrigatórios (marcados com *).');
                 }
 
-                // Valida grupos de adicionais obrigatÃ³rios
+                // Valida grupos de adicionais obrigatórios
                 const groupIds = JSON.parse(item.addonGroups || '[]');
                 const groups = (state.addonGroups || []).filter(g => groupIds.includes(g.id));
                 for (const g of groups) {
@@ -3027,12 +3110,12 @@ try {
                     if (g.min > 0) {
                         const checked = document.querySelectorAll(`.addon-input[data-group-id="${g.id}"]:checked`).length;
                         if (checked < g.min) {
-                            return showAlert('AtenÃ§Ã£o', `Selecione pelo menos ${g.min} opÃ§Ã£o em "${g.name}".`);
+                            return showAlert('Atenção', `Selecione pelo menos ${g.min} opção em "${g.name}".`);
                         }
                     }
                     const checked = document.querySelectorAll(`.addon-input[data-group-id="${g.id}"]:checked`).length;
                     if (checked > maxAllowed) {
-                        return showAlert('AtenÃ§Ã£o', `O grupo "${g.name}" permite no máximo ${maxAllowed} opÃ§Ã£o(Ãµes).`);
+                        return showAlert('Atenção', `O grupo "${g.name}" permite no máximo ${maxAllowed} opção(ões).`);
                     }
                 }
 
@@ -3221,7 +3304,7 @@ try {
                         if (state.paymentMethod === 'dinheiro') {
                             Swal.fire({
                                 title: 'Pedido Recebido!',
-                                text: 'Seu pedido foi registrado e está aguardando confirmaÃ§Ã£o.',
+                                text: 'Seu pedido foi registrado e está aguardando confirmação.',
                                 icon: 'success',
                                 confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#ff4d6d',
                                 confirmButtonText: 'Ver meus pedidos'
@@ -3309,7 +3392,7 @@ try {
             function openReviewModal(orderId) {
                 const order = state.previousOrders.find(o => o.id === orderId);
                 if (!order) {
-                    return showAlert('AvaliaÃ§Ã£o', 'NÃ£o foi possÃ­vel localizar este pedido.', 'error');
+                    return showAlert('Avaliação', 'Não foi possível localizar este pedido.', 'error');
                 }
 
                 state.reviewModalOrderId = orderId;
@@ -3337,10 +3420,10 @@ try {
 
             async function submitStoreReview() {
                 if (!state.reviewModalOrderId) {
-                    return showAlert('AvaliaÃ§Ã£o', 'Selecione um pedido válido.', 'error');
+                    return showAlert('Avaliação', 'Selecione um pedido válido.', 'error');
                 }
                 if (!state.reviewModalRating) {
-                    return showAlert('AvaliaÃ§Ã£o', 'Escolha uma nota para continuar.', 'error');
+                    return showAlert('Avaliação', 'Escolha uma nota para continuar.', 'error');
                 }
 
                 const btn = document.getElementById('submit-review-btn');
@@ -3369,7 +3452,7 @@ try {
                     });
                     const data = await response.json();
                     if (!response.ok) {
-                        throw new Error(data?.error || 'NÃ£o foi possÃ­vel enviar sua avaliaÃ§Ã£o.');
+                        throw new Error(data?.error || 'Não foi possível enviar sua avaliação.');
                     }
 
                     if (data.summary) {
@@ -3378,13 +3461,13 @@ try {
                     updateStoreRatingBadge();
                     closeWithAnimation('review-modal');
                     await fetchPreviousOrders();
-                    showAlert('Obrigado!', 'Sua avaliaÃ§Ã£o foi enviada com sucesso.', 'success');
+                    showAlert('Obrigado!', 'Sua avaliação foi enviada com sucesso.', 'success');
                 } catch (err) {
-                    showAlert('Erro', err.message || 'NÃ£o foi possÃ­vel enviar a avaliaÃ§Ã£o.', 'error');
+                    showAlert('Erro', err.message || 'Não foi possível enviar a avaliação.', 'error');
                 } finally {
                     if (btn) {
                         btn.disabled = false;
-                        btn.innerText = 'Enviar avaliaÃ§Ã£o';
+                        btn.innerText = 'Enviar avaliação';
                     }
                 }
             }
@@ -3394,11 +3477,11 @@ try {
                 if (!list) return;
 
                 if (!Array.isArray(state.previousOrders) || state.previousOrders.length === 0) {
-                    list.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-gray);">VocÃª ainda nÃ£o possui pedidos anteriores.</p>`;
+                    list.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-gray);">Você ainda não possui pedidos anteriores.</p>`;
                     return;
                 }
 
-                // Pegar apenas itens Ãºnicos para nÃ£o repetir
+                // Pegar apenas itens únicos para não repetir
                 const uniqueItems = [];
                 const seen = new Set();
                 state.previousOrders.forEach(o => {
@@ -3444,7 +3527,7 @@ try {
                     closeWithAnimation('history-modal');
                     goToStep(1);
                 } else {
-                    showAlert('Produto IndisponÃ­vel', 'Este produto nÃ£o está mais disponÃ­vel no cardápio no momento.', 'error');
+                    showAlert('Produto Indisponível', 'Este produto não está mais disponível no cardápio no momento.', 'error');
                 }
             }
 
@@ -3471,7 +3554,7 @@ try {
                 root.style.setProperty('--text-gray', `${data.textColor || '#333333'}99`);
             }
 
-            // InicializaÃ§Ã£o imediata de elementos visuais sÃ­ncronos
+            // Inicialização imediata de elementos visuais
             renderMenu(); // Mostra o skeleton imediatamente
             updateUI();
         </script>
