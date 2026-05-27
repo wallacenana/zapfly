@@ -76,8 +76,8 @@ if (!function_exists('dzhome2_render_restaurants_shortcode')) {
             data-api-base="<?php echo esc_attr(dzhome2_api_base()); ?>"
             data-home-url="<?php echo esc_attr(home_url('/')); ?>"
             data-restaurants-url="<?php echo esc_attr(dzhome2_restaurants_url()); ?>"
-            data-login-url="<?php echo esc_attr(wp_login_url(home_url('/'))); ?>"
-            data-register-url="<?php echo esc_attr(wp_registration_url()); ?>"
+            data-login-url="<?php echo esc_attr('https://dash.digizap.com.br/login'); ?>"
+            data-register-url="<?php echo esc_attr(home_url('/comprar/')); ?>"
             data-blog-url="<?php echo esc_attr(dzhome2_blog_url()); ?>"
             data-storage-key="dz_home2_address"
             data-limit="<?php echo esc_attr($limit); ?>"
@@ -87,8 +87,8 @@ if (!function_exists('dzhome2_render_restaurants_shortcode')) {
                 'homeUrl' => home_url('/'),
                 'restaurantsUrl' => dzhome2_restaurants_url(),
                 'blogUrl' => dzhome2_blog_url(),
-                'loginUrl' => wp_login_url(home_url('/')),
-                'registerUrl' => wp_registration_url(),
+                'loginUrl' => 'https://dash.digizap.com.br/login',
+                'registerUrl' => home_url('/comprar/'),
                 'hasSelectedAddress' => $hasSelectedAddress,
                 'initialAddressLabel' => $initialAddressLabel,
                 'showBack' => true,
@@ -97,6 +97,8 @@ if (!function_exists('dzhome2_render_restaurants_shortcode')) {
             ]); ?>
 
             <main class="dz-home2-main">
+                <?php echo dzhome2_render_directory_skeleton('restaurants'); ?>
+
                 <section class="dz-home2-landing" id="inicio" data-landing <?php echo $hasSelectedAddress ? 'hidden' : ''; ?>>
                     <div class="dz-home2-landing-grid">
                         <div class="dz-home2-landing-copy">
@@ -120,12 +122,16 @@ if (!function_exists('dzhome2_render_restaurants_shortcode')) {
                             </form>
                         </div>
 
-                        <div class="dz-home2-landing-visual" aria-hidden="true">
-                            <span class="dz-home2-visual-card dz-home2-visual-card-a"></span>
-                            <span class="dz-home2-visual-card dz-home2-visual-card-b"></span>
-                            <span class="dz-home2-visual-card dz-home2-visual-card-c"></span>
-                            <span class="dz-home2-visual-badge"></span>
-                            <span class="dz-home2-visual-ring"></span>
+                        <div class="dz-home2-landing-visual dz-home2-landing-visual--restaurants" aria-hidden="true">
+                            <div class="dz-home2-landing-art dz-home2-landing-art--restaurants">
+                                <img
+                                    class="dz-home2-landing-art-img dz-home2-landing-art-img--restaurants"
+                                    src="<?php echo esc_url(dzhome2_restaurants_hero_artwork_url()); ?>"
+                                    alt=""
+                                    loading="eager"
+                                    fetchpriority="high"
+                                    decoding="async">
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -141,11 +147,15 @@ if (!function_exists('dzhome2_render_restaurants_shortcode')) {
                 </section>
             </main>
 
+            <?php echo dzhome2_render_search_modal(); ?>
+
             <?php echo dzhome2_render_directory_footer_nav([
                 'active' => 'restaurants',
                 'homeUrl' => home_url('/'),
                 'restaurantsUrl' => dzhome2_restaurants_url(),
                 'blogUrl' => dzhome2_blog_url(),
+                'loginUrl' => 'https://dash.digizap.com.br/login',
+                'registerUrl' => home_url('/comprar/'),
             ]); ?>
         </div>
         <?php

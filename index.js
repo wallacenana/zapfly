@@ -244,6 +244,7 @@ app.get('/', async (req, res) => {
     }
     try {
         const homeData = await buildHomeDirectoryData({ limit: 24 });
+        console.log(homeData);
         const template = fs.readFileSync(path.join(__dirname, 'public', 'home.html'), 'utf8');
         const title = 'DigiZap | Restaurantes, entregas e encomendas';
         const description = 'Descubra restaurantes, encomendas e ofertas perto de vocÃª com a experiÃªncia iFood da DigiZap.';

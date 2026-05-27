@@ -355,6 +355,14 @@
     if (appActions) appActions.hidden = mode !== 'app';
   }
 
+  function setLoading(root, isLoading) {
+    if (isLoading) {
+      root.dataset.loading = '1';
+    } else {
+      delete root.dataset.loading;
+    }
+  }
+
   function toNumber(value) {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : null;
@@ -411,6 +419,99 @@
         state.scrollTicking = false;
       });
     }, { passive: true });
+  }
+
+  function bindFooterNav(root) {
+    const searchButton = root.querySelector('[data-dz-home2-nav-search]');
+    const searchModal = root.querySelector('[data-search-modal]');
+    const searchModalInput = root.querySelector('[data-search-modal-input]');
+    const closeButtons = root.querySelectorAll('[data-search-modal-close]');
+    const state = stateFor(root);
+
+    if (!searchButton) {
+      return;
+    }
+
+    const openSearchModal = () => {
+      if (!searchModal || !searchModalInput) {
+        return;
+      }
+
+      const currentValue = root.dataset.mode === 'app'
+        ? (root.querySelector('[data-search-input]')?.value || state.search || '')
+        : (root.querySelector('[data-address-input]')?.value || state.address || '');
+
+      searchModal.hidden = false;
+      root.dataset.searchModalOpen = '1';
+      searchModalInput.value = currentValue;
+      window.requestAnimationFrame(() => {
+        searchModalInput.focus({ preventScroll: true });
+        searchModalInput.select();
+      });
+    };
+
+    const closeSearchModal = () => {
+      if (!searchModal || !searchModalInput) {
+        return;
+      }
+
+      searchModal.hidden = true;
+      delete root.dataset.searchModalOpen;
+    };
+
+    searchButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      if (!searchModal || !searchModalInput) {
+        const searchInput = root.querySelector('[data-search-input]');
+        const addressInput = root.querySelector('[data-address-input]');
+        const target = root.dataset.mode === 'app' ? searchInput : addressInput;
+        if (target) {
+          target.focus({ preventScroll: true });
+          target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+
+      if (searchModal.hidden) {
+        openSearchModal();
+      } else {
+        closeSearchModal();
+      }
+    });
+
+    closeButtons.forEach((button) => {
+      button.addEventListener('click', closeSearchModal);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && root.dataset.searchModalOpen === '1') {
+        closeSearchModal();
+      }
+    });
+
+    searchModalInput?.addEventListener('input', () => {
+      const value = searchModalInput.value.trim();
+      state.search = value;
+      window.clearTimeout(state.timer);
+      state.timer = window.setTimeout(() => {
+        if (root.dataset.mode === 'app') {
+          fetchDirectory(root, value, state.address || '');
+        }
+      }, 220);
+    });
+
+    searchModalInput?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        closeSearchModal();
+      }
+    });
+
+    root.addEventListener('click', (event) => {
+      if (event.target?.matches?.('[data-search-modal-close]')) {
+        closeSearchModal();
+      }
+    });
   }
 
   function renderFeaturedCards(restaurants) {
@@ -556,11 +657,14 @@
     if (catalog && root.dataset.mode !== 'app') {
       catalog.hidden = true;
     }
+
+    setLoading(root, false);
   }
 
   async function fetchDirectory(root, search = '', location = '') {
     const state = stateFor(root);
     state.search = search;
+    setLoading(root, true);
 
     if (state.abortController) {
       state.abortController.abort();
@@ -600,6 +704,7 @@
       if (error.name === 'AbortError') {
         return;
       }
+      setLoading(root, false);
       updateView(root, { total: 0, featuredStores: [], restaurants: [] });
     }
   }
@@ -753,6 +858,7 @@
 
     syncAddressUI(root);
     bindHeaderScroll(root);
+    bindFooterNav(root);
 
     if (form && input) {
       input.addEventListener('focus', () => {

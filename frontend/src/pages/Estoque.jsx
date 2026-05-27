@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box, Copy, Pencil, Gift, Clock, AlertTriangle, Upload, ArrowUp, ArrowDown } from 'lucide-react';
@@ -41,7 +41,7 @@ const Estoque = () => {
   const [addonGroups, setAddonGroups] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [isComboMode, setIsComboMode] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: '', image: '', bannerUrl: '', price: 0, stock: 0, trackStock: false, capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [], customFields: [] });
+  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: '', image: '', bannerUrl: '', price: 0, promoPrice: '', stock: 0, trackStock: false, capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [], customFields: [] });
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState(null);
 
@@ -126,7 +126,7 @@ const Estoque = () => {
         try {
           vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
         } catch (e) {
-          console.error("Erro ao parsear variações do produto:", p.id, e);
+          console.error("Erro ao parsear variaÃ§Ãµes do produto:", p.id, e);
           vars = [];
         }
         try {
@@ -201,7 +201,7 @@ const Estoque = () => {
       setAcceptOrders(!nextValue);
       Swal.fire({
         title: 'Erro',
-        text: 'Não foi possível salvar a configuração de encomendas.',
+        text: 'NÃ£o foi possÃ­vel salvar a configuraÃ§Ã£o de encomendas.',
         icon: 'error',
         confirmButtonColor: '#3b82f6'
       });
@@ -258,7 +258,7 @@ const Estoque = () => {
     // Mostra um loading enquanto comprime/envia
     Swal.fire({
       title: 'Otimizando Imagem...',
-      text: 'Preparando para o cardápio rápido',
+      text: 'Preparando para o cardÃ¡pio rÃ¡pido',
       allowOutsideClick: false,
       didOpen: () => { Swal.showLoading() }
     });
@@ -292,7 +292,7 @@ const Estoque = () => {
   const openAdd = (asCombo = false) => {
     setEditing(null);
     setIsComboMode(asCombo);
-    setForm({ name: '', description: '', type: tab, category: '', image: '', bannerUrl: '', price: 0, stock: 0, trackStock: tab === 'delivery', capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [], customFields: [] });
+    setForm({ name: '', description: '', type: tab, category: '', image: '', bannerUrl: '', price: 0, promoPrice: '', stock: 0, trackStock: tab === 'delivery', capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [], customFields: [] });
     setShowModal(true);
   };
 
@@ -318,7 +318,7 @@ const Estoque = () => {
 
   const saveProduct = async () => {
     if (!form.name || form.name.trim() === '') {
-      Swal.fire({ title: 'Campo Obrigatório', text: 'Por favor, insira o nome do item.', icon: 'warning', confirmButtonColor: '#3b82f6' });
+      Swal.fire({ title: 'Campo ObrigatÃ³rio', text: 'Por favor, insira o nome do item.', icon: 'warning', confirmButtonColor: '#3b82f6' });
       return;
     }
 
@@ -336,7 +336,7 @@ const Estoque = () => {
     if (invalidCustomField) {
       Swal.fire({
         title: 'Campo extra incompleto',
-        text: 'Preencha o nome do campo e as opções quando o tipo for lista.',
+        text: 'Preencha o nome do campo e as opÃ§Ãµes quando o tipo for lista.',
         icon: 'warning',
         confirmButtonColor: '#f59e0b'
       });
@@ -361,7 +361,7 @@ const Estoque = () => {
     } catch (err) { Swal.fire('Erro', 'Falha ao salvar.', 'error'); }
   };
 
-  const addVar = () => setForm(f => ({ ...f, variations: [...f.variations, { name: '', price: 0, stock: 0, description: '', subItems: [] }] }));
+  const addVar = () => setForm(f => ({ ...f, variations: [...f.variations, { name: '', price: 0, promoPrice: '', stock: 0, description: '', subItems: [] }] }));
   const addCustomFieldRow = () => setForm(f => ({ ...f, customFields: [...(f.customFields || []), createCustomField()] }));
   const updateCustomFieldRow = (idx, key, value) => {
     setForm(f => {
@@ -396,7 +396,7 @@ const Estoque = () => {
 
   const saveSeasonal = async () => {
     if (!seasonalForm.name || !seasonalForm.eventDate) {
-      Swal.fire({ title: 'Atenção', text: 'Nome e Data do Evento são obrigatórios.', icon: 'warning' });
+      Swal.fire({ title: 'AtenÃ§Ã£o', text: 'Nome e Data do Evento sÃ£o obrigatÃ³rios.', icon: 'warning' });
       return;
     }
     try {
@@ -405,7 +405,7 @@ const Estoque = () => {
       setShowSeasonalModal(false);
       fetchSeasonal();
       Swal.fire({ title: 'Salvo!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
-    } catch (err) { Swal.fire('Erro', 'Falha ao salvar catálogo sazonal.', 'error'); }
+    } catch (err) { Swal.fire('Erro', 'Falha ao salvar catÃ¡logo sazonal.', 'error'); }
   };
 
   const openAddSeasonal = () => {
@@ -465,7 +465,7 @@ const Estoque = () => {
     <div style={{ padding: '30px' }}>
       <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#fff' }}>Catálogo & Estoque</h2>
+          <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#fff' }}>CatÃ¡logo & Estoque</h2>
           <p style={{ color: 'var(--text-secondary)' }}>Gerencie seus produtos e combos de {tab === 'delivery' ? 'Pronta Entrega' : 'Agendamento'}</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -475,7 +475,7 @@ const Estoque = () => {
             </button>
           ) : tab === 'addon' ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 18px', backgroundColor: 'rgba(245, 158, 11, 0.08)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.18)', borderRadius: '12px', fontWeight: 700 }}>
-              <Layers size={18} /> Os grupos são gerenciados na lista abaixo
+              <Layers size={18} /> Os grupos sÃ£o gerenciados na lista abaixo
             </div>
           ) : (
             <>
@@ -528,7 +528,7 @@ const Estoque = () => {
                {savingAcceptOrders ? 'Salvando...' : 'Aceitar encomendas'}
              </div>
              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-               {acceptOrders ? 'Mostra a aba de encomendas no cardápio público.' : 'Cardápio de encomendas oculto para clientes.'}
+               {acceptOrders ? 'Mostra a aba de encomendas no cardÃ¡pio pÃºblico.' : 'CardÃ¡pio de encomendas oculto para clientes.'}
              </div>
            </div>
         </div>
@@ -546,7 +546,7 @@ const Estoque = () => {
                   <div style={{ fontWeight: 800, fontSize: '16px', color: '#fff' }}>{s.name}</div>
                   <div style={{ fontSize: '13px', color: 'var(--text-secondary)', display: 'flex', gap: '10px', marginTop: '4px' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={14} /> {new Date(s.eventDate + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> Antecedência: {s.preStartDays} dias</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> AntecedÃªncia: {s.preStartDays} dias</span>
                   </div>
                 </div>
               </div>
@@ -554,7 +554,7 @@ const Estoque = () => {
                 {s.maxOrders > 0 && <span style={{ fontSize: '10px', backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', padding: '4px 10px', borderRadius: '20px', fontWeight: 800 }}>Limite: {s.maxOrders} pedidos</span>}
                 <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '8px' }} onClick={() => openEditSeasonal(s)}><Pencil size={16} /></button>
                 <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px' }} onClick={() => {
-                  Swal.fire({ title: 'Excluir?', text: "Deseja remover este catálogo?", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' }).then(r => {
+                  Swal.fire({ title: 'Excluir?', text: "Deseja remover este catÃ¡logo?", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' }).then(r => {
                     if (r.isConfirmed) api.delete(`/orders/seasonal/${s.id}`).then(() => fetchSeasonal());
                   });
                 }}><Trash2 size={16} /></button>
@@ -596,7 +596,7 @@ const Estoque = () => {
                         {Array.isArray(p.customFields) && p.customFields.length > 0 && <span style={{ fontSize: '10px', backgroundColor: 'rgba(245, 158, 11, 0.16)', color: '#f59e0b', padding: '2px 8px', borderRadius: '999px', fontWeight: 900 }}>EXTRAS</span>}
                       </div>
                       {p.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{p.description}</div>}
-                      {!p.variations.length && !isCombo && <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.trackStock && `| Estoque: ${p.stock}`} {!p.trackStock && '| Estoque: ∞'}</div>}
+                      {!p.variations.length && !isCombo && <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.trackStock && `| Estoque: ${p.stock}`} {!p.trackStock && '| Estoque: âˆž'}</div>}
                       {isCombo && <div style={{ fontSize: '13px', color: '#8b5cf6', marginTop: '4px', fontWeight: 700 }}>R$ {p.price.toFixed(2)} | {p.comboItems.length} itens inclusos</div>}
                       {!isCombo && Array.isArray(p.addonGroups) && p.addonGroups.length > 0 && (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
@@ -651,7 +651,7 @@ const Estoque = () => {
                       e.stopPropagation(); 
                       Swal.fire({
                         title: 'Tem certeza?',
-                        text: "Você não poderá reverter isso!",
+                        text: "VocÃª nÃ£o poderÃ¡ reverter isso!",
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonColor: '#ef4444',
@@ -662,7 +662,7 @@ const Estoque = () => {
                         if (result.isConfirmed) {
                           api.delete(`/orders/products/${p.id}`).then(() => {
                             fetchProducts();
-                            Swal.fire('Excluído!', 'O item foi removido com sucesso.', 'success');
+                            Swal.fire('ExcluÃ­do!', 'O item foi removido com sucesso.', 'success');
                           });
                         }
                       });
@@ -677,7 +677,7 @@ const Estoque = () => {
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                          {p.comboItems.map((item, i) => (
                            <div key={i} style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#a78bfa', padding: '6px 15px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                             📦 {item}
+                             ðŸ“¦ {item}
                            </div>
                          ))}
                       </div>
@@ -687,7 +687,7 @@ const Estoque = () => {
                           <div key={i} style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
                             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontWeight:800, color: p.type === 'delivery' ? '#60a5fa' : '#34d399', fontSize:'13px' }}>{v.name.toUpperCase()} {v.hidden && <span style={{ color: '#fbbf24', fontSize: '10px', marginLeft: '5px' }}>(INVISÍVEL)</span>}</span>
+                                <span style={{ fontWeight:800, color: p.type === 'delivery' ? '#60a5fa' : '#34d399', fontSize:'13px' }}>{v.name.toUpperCase()} {v.hidden && <span style={{ color: '#fbbf24', fontSize: '10px', marginLeft: '5px' }}>(INVISÃVEL)</span>}</span>
                                 {v.description && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{v.description}</span>}
                               </div>
                               <span style={{ fontWeight:700, fontSize:'13px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', color: '#fff' }}>R$ {v.price}</span>
@@ -699,7 +699,7 @@ const Estoque = () => {
                                   {p.trackStock ? (
                                     <span style={{ color: si.stock > 0 ? '#10b981' : '#ef4444', fontWeight:800, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '6px' }}>{si.stock}</span>
                                   ) : (
-                                    <span style={{ color: '#60a5fa', fontWeight:800, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '6px' }}>∞</span>
+                                    <span style={{ color: '#60a5fa', fontWeight:800, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '6px' }}>âˆž</span>
                                   )}
                                 </div>
                               ))}
@@ -720,7 +720,7 @@ const Estoque = () => {
         <div style={modalOverlay}>
           <div className="card" style={modalContent}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-              <h3 style={{ fontWeight: 800 }}>{editingSeasonal ? 'Editar' : 'Novo'} Catálogo de Evento</h3>
+              <h3 style={{ fontWeight: 800 }}>{editingSeasonal ? 'Editar' : 'Novo'} CatÃ¡logo de Evento</h3>
               <button onClick={() => setShowSeasonalModal(false)} style={closeBtn}><X size={24} /></button>
             </div>
 
@@ -728,7 +728,7 @@ const Estoque = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr', gap: '15px', marginBottom: '20px' }}>
                 <div>
                   <label style={labelStyle}>Nome do Evento</label>
-                  <input {...inp} placeholder="Ex: Dia das Mães, Páscoa..." value={seasonalForm.name} onChange={e => setSeasonalForm(f => ({ ...f, name: e.target.value }))} />
+                  <input {...inp} placeholder="Ex: Dia das MÃ£es, PÃ¡scoa..." value={seasonalForm.name} onChange={e => setSeasonalForm(f => ({ ...f, name: e.target.value }))} />
                 </div>
                 <div>
                   <label style={labelStyle}>Data do Evento</label>
@@ -738,32 +738,32 @@ const Estoque = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
                 <div>
-                  <label style={labelStyle}><Clock size={10} /> Antecedência (Exibir X dias antes)</label>
+                  <label style={labelStyle}><Clock size={10} /> AntecedÃªncia (Exibir X dias antes)</label>
                   <input {...inp} type="number" value={seasonalForm.preStartDays} onChange={e => setSeasonalForm(f => ({ ...f, preStartDays: parseInt(e.target.value) }))} />
                 </div>
                 <div>
-                  <label style={labelStyle}><Clock size={10} /> Permanência (Exibir Y dias depois)</label>
+                  <label style={labelStyle}><Clock size={10} /> PermanÃªncia (Exibir Y dias depois)</label>
                   <input {...inp} type="number" value={seasonalForm.postEndDays} onChange={e => setSeasonalForm(f => ({ ...f, postEndDays: parseInt(e.target.value) }))} />
                 </div>
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                <label style={labelStyle}>Descrição / Chamada Especial</label>
+                <label style={labelStyle}>DescriÃ§Ã£o / Chamada Especial</label>
                 <textarea {...inp} style={{ ...inp.style, minHeight: '60px' }} placeholder="Ex: Prepare-se para o dia mais especial do ano!" value={seasonalForm.description || ''} onChange={e => setSeasonalForm(f => ({ ...f, description: e.target.value }))} />
               </div>
 
               <div style={sectionBox}>
-                <h5 style={sectionTitle}>⚙️ REGRAS OPERACIONAIS</h5>
+                <h5 style={sectionTitle}>âš™ï¸ REGRAS OPERACIONAIS</h5>
                 <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                   <div>
-                    <label style={microLabel}>Limite Máximo de Pedidos para o Dia (0 = Ilimitado)</label>
+                    <label style={microLabel}>Limite MÃ¡ximo de Pedidos para o Dia (0 = Ilimitado)</label>
                     <input {...inp} type="number" value={seasonalForm.maxOrders} onChange={e => setSeasonalForm(f => ({ ...f, maxOrders: parseInt(e.target.value) }))} />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(236, 72, 153, 0.05)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(236, 72, 153, 0.1)' }}>
                     <input type="checkbox" id="onlySeasonal" checked={seasonalForm.onlySeasonalOnEventDay} onChange={e => setSeasonalForm(f => ({ ...f, onlySeasonalOnEventDay: e.target.checked }))} style={{ width: '18px', height: '18px' }} />
                     <label htmlFor="onlySeasonal" style={{ cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#ec4899' }}>
                       Aceitar APENAS itens sazonais para a data do evento?
-                      <p style={{ fontWeight: 400, fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Lily recusará encomendas do cardápio regular se o cliente escolher o dia do evento para entrega.</p>
+                      <p style={{ fontWeight: 400, fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Lily recusarÃ¡ encomendas do cardÃ¡pio regular se o cliente escolher o dia do evento para entrega.</p>
                     </label>
                   </div>
                 </div>
@@ -771,7 +771,7 @@ const Estoque = () => {
 
               <div style={{ marginTop: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <label style={labelStyle}>ITENS DO CATÁLOGO ESPECIAL</label>
+                  <label style={labelStyle}>ITENS DO CATÃLOGO ESPECIAL</label>
                   <button className="btn btn-secondary" style={{ fontSize: '10px' }} onClick={() => setSeasonalForm(f => ({ ...f, items: [...f.items, { name: '', price: 0, description: '' }] }))}>+ Add Item</button>
                 </div>
                 {seasonalForm.items.map((item, idx) => (
@@ -802,7 +802,7 @@ const Estoque = () => {
                       </div>
                       <button className="btn-icon" style={{ color: '#ef4444' }} onClick={() => { const i = seasonalForm.items.filter((_, k) => k !== idx); setSeasonalForm(f => ({ ...f, items: i })) }}><Trash2 size={16} /></button>
                     </div>
-                    <input {...inp} style={{ ...inp.style, fontSize: '12px', padding: '6px 10px' }} placeholder="Breve descrição do item..." value={item.description} onChange={e => { const i = [...seasonalForm.items]; i[idx].description = e.target.value; setSeasonalForm(f => ({ ...f, items: i })) }} />
+                    <input {...inp} style={{ ...inp.style, fontSize: '12px', padding: '6px 10px' }} placeholder="Breve descriÃ§Ã£o do item..." value={item.description} onChange={e => { const i = [...seasonalForm.items]; i[idx].description = e.target.value; setSeasonalForm(f => ({ ...f, items: i })) }} />
                   </div>
                 ))}
               </div>
@@ -810,7 +810,7 @@ const Estoque = () => {
 
             <div style={{ marginTop: '25px', display: 'flex', gap: '10px' }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowSeasonalModal(false)}>Cancelar</button>
-              <button className="btn btn-primary" style={{ flex: 2, backgroundColor: '#ec4899' }} onClick={saveSeasonal}>Salvar Catálogo</button>
+              <button className="btn btn-primary" style={{ flex: 2, backgroundColor: '#ec4899' }} onClick={saveSeasonal}>Salvar CatÃ¡logo</button>
             </div>
           </div>
         </div>,
@@ -827,16 +827,16 @@ const Estoque = () => {
 
             <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '10px' }}>
                 <div style={{ marginBottom:'20px' }}>
-                    <label style={labelStyle}>Identificação do {isComboMode ? 'Combo' : 'Item'}</label>
+                    <label style={labelStyle}>IdentificaÃ§Ã£o do {isComboMode ? 'Combo' : 'Item'}</label>
                     <input {...inp} placeholder={isComboMode ? "Ex: Combo Casal, Kit Festa..." : "Ex: Nome do Produto"} value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} />
                 </div>
                 <div style={{ marginBottom:'20px' }}>
-                    <label style={labelStyle}>Descrição (Opcional)</label>
+                    <label style={labelStyle}>DescriÃ§Ã£o (Opcional)</label>
                     <textarea {...inp} style={{ ...inp.style, minHeight: '60px', resize: 'vertical' }} placeholder="Detalhes que o cliente deve saber." value={form.description || ''} onChange={e => setForm(f => ({...f, description: e.target.value}))} />
                 </div>
                 
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={labelStyle}>Imagens do Produto (Múltiplas fotos)</label>
+                    <label style={labelStyle}>Imagens do Produto (MÃºltiplas fotos)</label>
                     <div style={{ 
                         border: '2px dashed var(--border-color)', 
                         borderRadius: '12px', 
@@ -849,7 +849,7 @@ const Estoque = () => {
                         <div style={{ color: 'var(--text-secondary)' }}>
                             <Upload size={32} style={{ marginBottom: '10px', color: 'var(--active-color)' }} />
                             <p style={{ fontSize: '14px', fontWeight: 600 }}>Clique para adicionar fotos</p>
-                            <p style={{ fontSize: '12px', opacity: 0.6 }}>Você pode selecionar várias imagens de uma vez</p>
+                            <p style={{ fontSize: '12px', opacity: 0.6 }}>VocÃª pode selecionar vÃ¡rias imagens de uma vez</p>
                         </div>
                         <input 
                             id="main-image-upload"
@@ -921,6 +921,32 @@ const Estoque = () => {
                   </div>
                 </div>
 
+                {!isComboMode && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                    <div>
+                      <label style={labelStyle}>PreÃ§o normal (R$)</label>
+                      <input
+                        {...inp}
+                        type="number"
+                        step="0.01"
+                        value={form.price}
+                        onChange={e => setForm(f => ({ ...f, price: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                      />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>PreÃ§o promocional (R$)</label>
+                      <input
+                        {...inp}
+                        type="number"
+                        step="0.01"
+                        placeholder="Opcional"
+                        value={form.promoPrice}
+                        onChange={e => setForm(f => ({ ...f, promoPrice: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 
                 <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -954,7 +980,7 @@ const Estoque = () => {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                         <div>
                           <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>Banner do destaque</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Se tiver banner, ele aparece no topo como promoção. Sem banner, o produto aparece normalmente.</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Se tiver banner, ele aparece no topo como destaque. Sem banner, o produto aparece normalmente.</div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <input
@@ -999,11 +1025,195 @@ const Estoque = () => {
                     </div>
                   )}
 
+                  {!isComboMode && (
+                    <div style={{ backgroundColor: 'rgba(96, 165, 250, 0.05)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(96, 165, 250, 0.16)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>VariaÃ§Ãµes do Produto</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Use quando o item tiver opÃ§Ãµes diferentes, como tamanhos, sabores ou versÃµes.</div>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn"
+                          onClick={addVar}
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'rgba(96, 165, 250, 0.10)', color: '#60a5fa', border: '1px solid rgba(96, 165, 250, 0.18)', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}
+                        >
+                          <Plus size={16} /> Add VariaÃ§Ã£o
+                        </button>
+                      </div>
+
+                      {(form.variations || []).length === 0 ? (
+                        <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '12px' }}>
+                          Nenhuma variaÃ§Ã£o cadastrada. Se o produto tiver opÃ§Ãµes, cadastre aqui.
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          {(form.variations || []).map((variation, idx) => (
+                            <div key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 0.75fr 0.75fr 0.75fr auto', gap: '10px', alignItems: 'start' }}>
+                                <div>
+                                  <label style={{ ...labelStyle, marginBottom: '6px' }}>Nome</label>
+                                  <input
+                                    {...inp}
+                                    placeholder="Ex: 1kg, Chocolate, Tradicional"
+                                    value={variation.name || ''}
+                                    onChange={e => {
+                                      const next = [...(form.variations || [])];
+                                      next[idx] = { ...(next[idx] || {}), name: e.target.value };
+                                      setForm(f => ({ ...f, variations: next }));
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ ...labelStyle, marginBottom: '6px' }}>PreÃ§o (R$)</label>
+                                  <input
+                                    {...inp}
+                                    type="number"
+                                    step="0.01"
+                                    value={variation.price ?? 0}
+                                    onChange={e => {
+                                      const next = [...(form.variations || [])];
+                                      next[idx] = { ...(next[idx] || {}), price: e.target.value === '' ? 0 : parseFloat(e.target.value) };
+                                      setForm(f => ({ ...f, variations: next }));
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ ...labelStyle, marginBottom: '6px' }}>Preço promocional (R$)</label>
+                                  <input
+                                    {...inp}
+                                    type="number"
+                                    step="0.01"
+                                    value={variation.promoPrice ?? ''}
+                                    onChange={e => {
+                                      const next = [...(form.variations || [])];
+                                      next[idx] = { ...(next[idx] || {}), promoPrice: e.target.value === '' ? '' : parseFloat(e.target.value) };
+                                      setForm(f => ({ ...f, variations: next }));
+                                    }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ ...labelStyle, marginBottom: '6px' }}>Estoque</label>
+                                  <input
+                                    {...inp}
+                                    type="number"
+                                    value={variation.stock ?? 0}
+                                    onChange={e => {
+                                      const next = [...(form.variations || [])];
+                                      next[idx] = { ...(next[idx] || {}), stock: e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0 };
+                                      setForm(f => ({ ...f, variations: next }));
+                                    }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingTop: '27px' }}>
+                                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#fff', cursor: 'pointer' }}>
+                                    <input
+                                      type="checkbox"
+                                      checked={!!variation.hidden}
+                                      onChange={e => {
+                                        const next = [...(form.variations || [])];
+                                        next[idx] = { ...(next[idx] || {}), hidden: e.target.checked };
+                                        setForm(f => ({ ...f, variations: next }));
+                                      }}
+                                      style={{ width: '16px', height: '16px', accentColor: '#60a5fa', cursor: 'pointer' }}
+                                    />
+                                    InvisÃ­vel
+                                  </label>
+                                  <button
+                                    type="button"
+                                    className="btn-icon"
+                                    onClick={() => setForm(f => ({ ...f, variations: (f.variations || []).filter((_, i) => i !== idx) }))}
+                                    style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.10)', borderRadius: '8px', padding: '8px' }}
+                                    title="Remover variaÃ§Ã£o"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              <div style={{ marginTop: '10px' }}>
+                                <label style={{ ...labelStyle, marginBottom: '6px' }}>DescriÃ§Ã£o</label>
+                                <input
+                                  {...inp}
+                                  placeholder="Breve descriÃ§Ã£o da variaÃ§Ã£o"
+                                  value={variation.description || ''}
+                                  onChange={e => {
+                                    const next = [...(form.variations || [])];
+                                    next[idx] = { ...(next[idx] || {}), description: e.target.value };
+                                    setForm(f => ({ ...f, variations: next }));
+                                  }}
+                                />
+                              </div>
+
+                              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#94a3b8' }}>Subitens / Estoque interno</div>
+                                  <button
+                                    type="button"
+                                    className="btn"
+                                    onClick={() => addSub(idx)}
+                                    style={{ padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}
+                                  >
+                                    + Add Subitem
+                                  </button>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  {(variation.subItems || []).length === 0 ? (
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Nenhum subitem adicionado.</div>
+                                  ) : (
+                                    (variation.subItems || []).map((subItem, subIdx) => (
+                                      <div key={subIdx} style={{ display: 'grid', gridTemplateColumns: '1fr 120px auto', gap: '10px', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '10px' }}>
+                                        <input
+                                          {...inp}
+                                          placeholder="Nome do subitem"
+                                          value={subItem.name || ''}
+                                          onChange={e => {
+                                            const next = JSON.parse(JSON.stringify(form.variations));
+                                            next[idx].subItems[subIdx].name = e.target.value;
+                                            setForm(f => ({ ...f, variations: next }));
+                                          }}
+                                        />
+                                        <input
+                                          {...inp}
+                                          type="number"
+                                          placeholder="Estoque"
+                                          value={subItem.stock ?? 0}
+                                          onChange={e => {
+                                            const next = JSON.parse(JSON.stringify(form.variations));
+                                            next[idx].subItems[subIdx].stock = e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0;
+                                            setForm(f => ({ ...f, variations: next }));
+                                          }}
+                                        />
+                                        <button
+                                          type="button"
+                                          className="btn-icon"
+                                          onClick={() => {
+                                            const next = JSON.parse(JSON.stringify(form.variations));
+                                            next[idx].subItems.splice(subIdx, 1);
+                                            setForm(f => ({ ...f, variations: next }));
+                                          }}
+                                          style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.10)', borderRadius: '8px', padding: '8px' }}
+                                          title="Remover subitem"
+                                        >
+                                          <Trash2 size={16} />
+                                        </button>
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.06)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.16)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
                       <div>
                         <div style={{ fontSize: '13px', fontWeight: 800, color: '#f59e0b' }}>Campos Extras do Item</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Crie perguntas obrigatórias ou opcionais que aparecem na hora de montar o pedido.</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Crie perguntas obrigatÃ³rias ou opcionais que aparecem na hora de montar o pedido.</div>
                       </div>
                       <button
                         type="button"
@@ -1017,7 +1227,7 @@ const Estoque = () => {
 
                     {(form.customFields || []).length === 0 ? (
                       <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '12px' }}>
-                        Nenhum campo extra configurado. Use isso para coletar referência, cor, topo, observações ou qualquer outro dado.
+                        Nenhum campo extra configurado. Use isso para coletar referÃªncia, cor, topo, observaÃ§Ãµes ou qualquer outro dado.
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1028,7 +1238,7 @@ const Estoque = () => {
                                 <label style={{ ...labelStyle, marginBottom: '6px' }}>Nome do Campo</label>
                                 <input
                                   {...inp}
-                                  placeholder="Ex: Cor, Tema, Referência"
+                                  placeholder="Ex: Cor, Tema, ReferÃªncia"
                                   value={field.name || ''}
                                   onChange={e => updateCustomFieldRow(idx, 'name', e.target.value)}
                                 />
@@ -1053,7 +1263,7 @@ const Estoque = () => {
                                     onChange={e => updateCustomFieldRow(idx, 'required', e.target.checked)}
                                     style={{ width: '16px', height: '16px', accentColor: '#f59e0b', cursor: 'pointer' }}
                                   />
-                                  Obrigatório
+                                  ObrigatÃ³rio
                                 </label>
                               </div>
                               <button
@@ -1069,7 +1279,7 @@ const Estoque = () => {
 
                             {String(field.type || 'text').toLowerCase() === 'dropdown' && (
                               <div style={{ marginTop: '10px' }}>
-                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Opções da Lista</label>
+                                <label style={{ ...labelStyle, marginBottom: '6px' }}>OpÃ§Ãµes da Lista</label>
                                 <input
                                   {...inp}
                                   placeholder="Ex: Chocolate, Morango, Ninho"
@@ -1077,7 +1287,7 @@ const Estoque = () => {
                                   onChange={e => updateCustomFieldRow(idx, 'options', e.target.value)}
                                 />
                                 <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                                  Separe as opções por vírgula.
+                                  Separe as opÃ§Ãµes por vÃ­rgula.
                                 </div>
                               </div>
                             )}
@@ -1089,7 +1299,7 @@ const Estoque = () => {
                 </div>
                 {isComboMode ? (
                   <div style={sectionBox}>
-                    <h5 style={sectionTitle}>🎁 ITENS DISPONÍVEIS PARA O COMBO</h5>
+                    <h5 style={sectionTitle}>ðŸŽ ITENS DISPONÃVEIS PARA O COMBO</h5>
                     <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '15px' }}>Selecione apenas os produtos de <b>{tab === 'delivery' ? 'Pronta Entrega' : 'Agendamento'}</b>.</p>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '300px', overflowY: 'auto', paddingRight: '5px' }}>
@@ -1146,7 +1356,7 @@ const Estoque = () => {
 
                     {addonGroups.length === 0 ? (
                         <div style={{ padding: '14px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                            Nenhum grupo foi criado ainda. Use a aba <b>Adicionais</b> para cadastrar recheios, coberturas e complementos reutilizáveis.
+                            Nenhum grupo foi criado ainda. Use a aba <b>Adicionais</b> para cadastrar recheios, coberturas e complementos reutilizÃ¡veis.
                         </div>
                     ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
@@ -1184,11 +1394,11 @@ const Estoque = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                                 <span style={{ fontWeight: 800, color: '#fff' }}>{group.name}</span>
                                                 <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '999px', backgroundColor: group.min > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(255,255,255,0.08)', color: group.min > 0 ? '#fca5a5' : 'var(--text-secondary)', fontWeight: 800 }}>
-                                                    {group.min > 0 ? 'Obrigatório' : 'Opcional'}
+                                                    {group.min > 0 ? 'ObrigatÃ³rio' : 'Opcional'}
                                                 </span>
                                             </div>
                                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                                Min {group.min} / Max {group.max} · {items.length} item(ns)
+                                                Min {group.min} / Max {group.max} Â· {items.length} item(ns)
                                             </div>
                                         </div>
                                     </label>
@@ -1201,7 +1411,7 @@ const Estoque = () => {
 
                 {isComboMode && (
                    <div style={{ marginTop: '20px' }}>
-                      <label style={labelStyle}>Preço Final do Combo (R$)</label>
+                      <label style={labelStyle}>PreÃ§o Final do Combo (R$)</label>
                       <input {...inp} type="number" value={form.price} onChange={e=>setForm(f=>({...f, price:parseFloat(e.target.value)}))} />
                    </div>
                 )}
@@ -1209,7 +1419,7 @@ const Estoque = () => {
 
             <div style={{ marginTop:'25px', display:'flex', gap:'10px' }}>
                 <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancelar</button>
-                <button className="btn btn-primary" style={{ flex: 2 }} onClick={saveProduct}>Salvar Informações</button>
+                <button className="btn btn-primary" style={{ flex: 2 }} onClick={saveProduct}>Salvar InformaÃ§Ãµes</button>
             </div>
           </div>
         </div>,
@@ -1260,7 +1470,7 @@ const Estoque = () => {
                           fetchCategories();
                           Swal.fire({ title: 'Atualizado!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
                         } catch (err) { Swal.fire('Erro', 'Falha ao atualizar.', 'error'); }
-                      }}>Salvar Alterações</button>
+                      }}>Salvar AlteraÃ§Ãµes</button>
                     </>
                   ) : (
                     <button className="btn btn-primary" style={{ width: '100%' }} onClick={async () => {
@@ -1339,7 +1549,7 @@ const Estoque = () => {
 
 const tabBtn = { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', border: 'none', fontWeight: 700, fontSize: '14px', cursor: 'pointer' };
 const modalOverlay = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, backdropFilter: 'blur(8px)', padding: '20px' };
-const modalContent = { width: '100%', maxWidth: '600px', maxHeight: '90vh', padding: '30px', position: 'relative', overflowY: 'auto', backgroundColor: '#18181b', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' };
+const modalContent = { width: '100%', maxWidth: '760px', maxHeight: '90vh', padding: '30px', position: 'relative', overflowY: 'auto', backgroundColor: '#18181b', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' };
 const closeBtn = { background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' };
 const labelStyle = { display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 800, textTransform: 'uppercase' };
 const microLabel = { display: 'block', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 700, textTransform: 'uppercase' };

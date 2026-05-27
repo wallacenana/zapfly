@@ -19,6 +19,7 @@ require_once DIGIZAP_HOME2_DIR . 'includes/helpers.php';
 require_once DIGIZAP_HOME2_DIR . 'includes/blog.php';
 require_once DIGIZAP_HOME2_DIR . 'includes/header.php';
 require_once DIGIZAP_HOME2_DIR . 'includes/footer-nav.php';
+require_once DIGIZAP_HOME2_DIR . 'includes/search-modal.php';
 require_once DIGIZAP_HOME2_DIR . 'shortcodes/home.php';
 require_once DIGIZAP_HOME2_DIR . 'shortcodes/restaurants.php';
 require_once DIGIZAP_HOME2_DIR . 'shortcodes/blog.php';

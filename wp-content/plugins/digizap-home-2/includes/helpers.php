@@ -51,8 +51,8 @@ if (!function_exists('dzhome2_enqueue_assets')) {
             'apiBase' => dzhome2_api_base(),
             'homeUrl' => home_url('/'),
             'restaurantsUrl' => dzhome2_restaurants_url(),
-            'loginUrl' => wp_login_url(home_url('/')),
-            'registerUrl' => wp_registration_url(),
+            'loginUrl' => 'https://dash.digizap.com.br/login',
+            'registerUrl' => home_url('/comprar/'),
             'blogUrl' => dzhome2_blog_url(),
             'categoryImageBaseUrl' => dzhome2_asset_url('assets/img/'),
             'categoryImageRules' => dzhome2_category_image_rules(),
@@ -432,11 +432,11 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
                                 <span class="dz-home2-restaurant-status %s">%s</span>
                             </span>
                             <span class="dz-home2-restaurant-category">%s</span>
-                            <span class="dz-home2-restaurant-address">%s</span>
+                            <span class="dz-home2-restaurant-address" style="display:none">%s</span>
                             <span class="dz-home2-restaurant-meta">
                                 <span>%d item%s</span>
                                 %s
-                                <span>%s</span>
+                                <span style="display:none">%s</span>
                             </span>
                         </span>
                     </a>
@@ -541,6 +541,76 @@ if (!function_exists('dzhome2_render_item_list_schema')) {
             '@type' => 'ItemList',
             'itemListElement' => $items
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+}
+
+if (!function_exists('dzhome2_render_directory_skeleton')) {
+    function dzhome2_render_directory_skeleton($context = 'home')
+    {
+        $context = in_array($context, ['home', 'restaurants'], true) ? $context : 'home';
+
+        ob_start();
+        ?>
+        <div class="dz-home2-skeleton" data-home2-skeleton aria-hidden="true">
+            <div class="dz-home2-skeleton-inner">
+                <div class="dz-home2-skeleton-hero">
+                    <?php if ($context === 'restaurants') : ?>
+                        <div class="dz-home2-skeleton-back"></div>
+                        <div class="dz-home2-skeleton-title"></div>
+                        <div class="dz-home2-skeleton-line dz-home2-skeleton-line-sm"></div>
+                    <?php else : ?>
+                        <div class="dz-home2-skeleton-pill"></div>
+                        <div class="dz-home2-skeleton-title dz-home2-skeleton-title-lg"></div>
+                        <div class="dz-home2-skeleton-line"></div>
+                    <?php endif; ?>
+
+                    <div class="dz-home2-skeleton-search">
+                        <div class="dz-home2-skeleton-search-input"></div>
+                        <div class="dz-home2-skeleton-search-button"></div>
+                    </div>
+                </div>
+
+                <?php if ($context === 'home') : ?>
+                    <div class="dz-home2-skeleton-row dz-home2-skeleton-chips">
+                        <?php for ($i = 0; $i < 4; $i++) : ?>
+                            <div class="dz-home2-skeleton-chip"></div>
+                        <?php endfor; ?>
+                    </div>
+                <?php endif; ?>
+
+                <div class="dz-home2-skeleton-section">
+                    <div class="dz-home2-skeleton-section-head"></div>
+                    <div class="dz-home2-skeleton-cards">
+                        <?php for ($i = 0; $i < ($context === 'restaurants' ? 3 : 4); $i++) : ?>
+                            <div class="dz-home2-skeleton-card">
+                                <div class="dz-home2-skeleton-card-media"></div>
+                                <div class="dz-home2-skeleton-card-copy">
+                                    <div class="dz-home2-skeleton-line dz-home2-skeleton-line-md"></div>
+                                    <div class="dz-home2-skeleton-line dz-home2-skeleton-line-sm"></div>
+                                    <div class="dz-home2-skeleton-line dz-home2-skeleton-line-xs"></div>
+                                </div>
+                            </div>
+                        <?php endfor; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php
+        return trim((string) ob_get_clean());
+    }
+}
+
+if (!function_exists('dzhome2_hero_artwork_url')) {
+    function dzhome2_hero_artwork_url()
+    {
+        return 'https://digizap.com.br/wp-content/uploads/2026/05/mockup-digizap.png';
+    }
+}
+
+if (!function_exists('dzhome2_restaurants_hero_artwork_url')) {
+    function dzhome2_restaurants_hero_artwork_url()
+    {
+        return 'https://digizap.com.br/wp-content/uploads/2026/05/ChatGPT-Image-27-de-mai.-de-2026-09_27_58-768x512.png';
     }
 }
 
@@ -670,7 +740,4 @@ if (!function_exists('dzhome2_blog_url')) {
         return home_url('/blog/');
     }
 }
-
-
-
 

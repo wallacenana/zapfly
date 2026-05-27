@@ -13,7 +13,7 @@
   --dz-home2-surface: #ffffff;
   --dz-home2-soft: rgba(45, 189, 48, 0.08);
   width: 100%;
-  color: var(--dz-home2-text);
+  color: var(--dz-home2-secondary);
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   background:
     radial-gradient(circle at 85% 15%, rgba(45, 189, 48, 0.06), transparent 24%),
@@ -105,7 +105,7 @@
 }
 
 .dz-home2-brand-logo {
-  width: auto;
+  width: 100%;
   height: 46px;
   display: block;
   object-fit: contain;
@@ -174,17 +174,21 @@
 
 .dz-home2-footer-nav-inner {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid rgba(17, 24, 39, 0.08);
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 -14px 34px rgba(17, 24, 39, 0.08);
-  border-radius: 22px 22px 0 0;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 -10px 24px rgba(17, 24, 39, 0.06);
+  border-radius: 20px 20px 0 0;
 }
 
 .dz-home2-footer-nav-link {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  background: transparent;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -196,18 +200,27 @@
   color: var(--dz-home2-muted);
   font-size: 0.82rem;
   font-weight: 700;
-  transition: transform 0.18s ease, color 0.18s ease, background-color 0.18s ease;
+  transition: transform 0.18s ease, color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: #fff;
+}
+
+.dz-home2-footer-nav-label {
+  display: block;
+  line-height: 1;
 }
 
 .dz-home2-footer-nav-link:hover {
   transform: translateY(-1px);
-  color: var(--dz-home2-primary);
-  background: rgba(45, 189, 48, 0.06);
+  color: var(--dz-home2-muted);
+  background: #fff;
+  border-color: rgba(17, 24, 39, 0.12);
 }
 
 .dz-home2-footer-nav-link.is-active {
-  color: var(--dz-home2-primary);
-  background: rgba(45, 189, 48, 0.08);
+  color: var(--dz-home2-muted);
+  background: rgba(17, 24, 39, 0.03);
+  border-color: rgba(17, 24, 39, 0.12);
 }
 
 .dz-home2-footer-nav-icon {
@@ -216,12 +229,18 @@
   justify-content: center;
   width: 24px;
   height: 24px;
+  color: var(--dz-home2-muted);
 }
 
 .dz-home2-footer-nav-icon svg {
   width: 22px;
   height: 22px;
   display: block;
+}
+
+.dz-home2-footer-nav-link.is-active .dz-home2-footer-nav-icon,
+.dz-home2-footer-nav-link:hover .dz-home2-footer-nav-icon {
+  color: var(--dz-home2-primary);
 }
 
 .dz-home2-header-actions {
@@ -256,6 +275,7 @@
   background: var(--dz-home2-primary) !important;
   color: var(--dz-home2-surface) !important;
   box-shadow: none !important;
+  font-size: 1rem;
 }
 
 .dz-home2-button-primary:hover {
@@ -287,11 +307,170 @@
   width: min(1240px, calc(100% - 32px));
   margin: 0 auto;
   padding: 26px 0 32px;
+  position: relative;
 }
 
 .dz-home2-landing,
 .dz-home2-catalog {
   width: 100%;
+}
+
+.dz-home2-skeleton {
+  display: none;
+  position: relative;
+  z-index: 2;
+  pointer-events: none;
+  padding: 8px 0 28px;
+}
+
+.dz-home2[data-loading="1"] .dz-home2-skeleton {
+  display: block;
+}
+
+.dz-home2[data-loading="1"] .dz-home2-landing,
+.dz-home2[data-loading="1"] .dz-home2-catalog {
+  display: none !important;
+}
+
+.dz-home2-skeleton-inner {
+  display: grid;
+  gap: 18px;
+}
+
+.dz-home2-skeleton-hero,
+.dz-home2-skeleton-section {
+  border-radius: 28px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 14px 36px rgba(17, 24, 39, 0.06);
+  padding: 22px;
+}
+
+.dz-home2-skeleton-hero {
+  display: grid;
+  gap: 14px;
+}
+
+.dz-home2-skeleton-row,
+.dz-home2-skeleton-cards {
+  display: grid;
+  gap: 14px;
+}
+
+.dz-home2-skeleton-chips {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.dz-home2-skeleton-card,
+.dz-home2-skeleton-chip,
+.dz-home2-skeleton-line,
+.dz-home2-skeleton-pill,
+.dz-home2-skeleton-title,
+.dz-home2-skeleton-back,
+.dz-home2-skeleton-search-input,
+.dz-home2-skeleton-search-button,
+.dz-home2-skeleton-section-head,
+.dz-home2-skeleton-card-media {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, rgba(237, 240, 242, 0.86) 25%, rgba(222, 228, 231, 0.94) 50%, rgba(237, 240, 242, 0.86) 75%);
+  background-size: 200% 100%;
+  animation: dz-home2-shimmer 1.35s ease-in-out infinite;
+}
+
+.dz-home2-skeleton-pill {
+  width: 132px;
+  height: 26px;
+  border-radius: 999px;
+}
+
+.dz-home2-skeleton-title {
+  width: min(520px, 68%);
+  height: 44px;
+  border-radius: 16px;
+}
+
+.dz-home2-skeleton-title-lg {
+  width: min(720px, 82%);
+  height: 62px;
+}
+
+.dz-home2-skeleton-line {
+  width: min(460px, 58%);
+  height: 18px;
+  border-radius: 999px;
+}
+
+.dz-home2-skeleton-line-sm {
+  width: min(360px, 44%);
+}
+
+.dz-home2-skeleton-line-md {
+  width: min(240px, 72%);
+}
+
+.dz-home2-skeleton-line-xs {
+  width: min(180px, 52%);
+}
+
+.dz-home2-skeleton-search {
+  display: grid;
+  grid-template-columns: 1fr 132px;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.dz-home2-skeleton-search-input {
+  height: 52px;
+  border-radius: 16px;
+}
+
+.dz-home2-skeleton-search-button {
+  height: 52px;
+  border-radius: 16px;
+}
+
+.dz-home2-skeleton-chip {
+  height: 86px;
+  border-radius: 18px;
+}
+
+.dz-home2-skeleton-section-head {
+  width: min(320px, 40%);
+  height: 28px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+}
+
+.dz-home2-skeleton-card {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 14px;
+  border-radius: 22px;
+  border: 1px solid rgba(17, 24, 39, 0.06);
+}
+
+.dz-home2-skeleton-card-media {
+  width: 92px;
+  height: 92px;
+  border-radius: 20px;
+}
+
+.dz-home2-skeleton-card-copy {
+  display: grid;
+  gap: 10px;
+}
+
+@keyframes dz-home2-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .dz-home2-landing-grid {
@@ -408,6 +587,48 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+}
+
+.dz-home2-landing-art {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  pointer-events: none;
+}
+
+.dz-home2-landing-art-img {
+  width: min(520px, 86%);
+  max-width: none;
+  max-height: 610px;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+  filter: drop-shadow(0 26px 20px rgba(17, 24, 39, 0.18));
+}
+
+.dz-home2-landing-visual--restaurants {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(246, 249, 247, 0.94));
+}
+
+.dz-home2-landing-visual--restaurants::before,
+.dz-home2-landing-visual--restaurants::after,
+.dz-home2-landing-visual--restaurants .dz-home2-visual-badge,
+.dz-home2-landing-visual--restaurants .dz-home2-visual-ring {
+  display: none;
+}
+
+.dz-home2-landing-art--restaurants {
+  position: relative;
+  inset: auto;
+}
+
+.dz-home2-landing-art-img--restaurants {
+  width: min(620px, 96%);
+  max-height: 470px;
+  filter: none;
 }
 
 .dz-home2-landing-visual::before {
@@ -1043,6 +1264,106 @@
   margin-left: auto;
 }
 
+.dz-home2-search-modal[hidden] {
+  display: none !important;
+}
+
+.dz-home2-search-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: end center;
+}
+
+.dz-home2-search-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.44);
+}
+
+.dz-home2-search-modal-panel {
+  position: relative;
+  width: min(720px, calc(100% - 24px));
+  margin: 12px;
+  background: #fff;
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 20px 60px rgba(17, 24, 39, 0.28);
+  overflow: hidden;
+}
+
+.dz-home2-search-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 18px 14px;
+  border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+}
+
+.dz-home2-search-modal-head strong {
+  font-size: 1.02rem;
+  line-height: 1.2;
+  color: var(--dz-home2-text);
+}
+
+.dz-home2-search-modal-close {
+  appearance: none;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: #fff;
+  color: var(--dz-home2-muted);
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.dz-home2-search-modal-close svg {
+  width: 18px;
+  height: 18px;
+}
+
+.dz-home2-search-modal-body {
+  padding: 18px;
+}
+
+.dz-home2-search-modal-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 0 14px;
+  border: 1px solid rgba(17, 24, 39, 0.10);
+  border-radius: 18px;
+  background: #fff;
+}
+
+.dz-home2-search-modal-icon {
+  color: var(--dz-home2-primary);
+  flex: 0 0 auto;
+}
+
+.dz-home2-search-modal-field input {
+  flex: 1 1 auto;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--dz-home2-text);
+  min-height: 52px;
+}
+
+.dz-home2-search-modal-note {
+  margin: 12px 2px 0;
+  color: var(--dz-home2-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
 .pac-container {
   margin-top: 10px !important;
   border: 1px solid rgba(17, 24, 39, 0.08) !important;
@@ -1158,38 +1479,74 @@
   .dz-home2-landing-visual {
     min-height: 520px;
   }
+
+  .dz-home2-landing-art-img {
+    width: min(430px, 84%);
+    max-height: 430px;
+  }
 }
 
 @media (max-width: 720px) {
 
   .dz-home2-main,
   .dz-home2-catalog-standalone {
-    width: min(100%, calc(100% - 18px));
+    width: min(100%, calc(100% - 40px));
   }
 
   .dz-home2-header {
-    padding: 14px 12px;
-    gap: 14px;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "brand location"
+      "nav nav";
+    gap: 12px 10px;
+    padding: 14px 12px 10px;
   }
 
-  .dz-left {
-    gap: 10px 14px;
+  .dz-left,
+  .dz-center,
+  .dz-right {
+    display: contents;
+  }
+
+  .dz-home2-header-actions-app {
+    display: none !important;
   }
 
   .dz-home2-nav {
+    grid-area: nav;
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 2px 2px 0;
+    overflow-x: auto;
+  }
+
+  .dz-home2-nav a {
+    flex: 1 1 0;
+    justify-content: center;
+    padding: 10px 0 12px;
+  }
+
+  .dz-home2-back-link {
     display: none;
   }
 
-  .dz-home2-header-actions {
-    width: 100%;
+  .dz-home2-brand {
+    grid-area: brand;
+    max-width: 128px;
+  }
+
+  .dz-home2-location-pill {
+    grid-area: location;
+    justify-self: end;
+    width: auto;
+    min-width: 0;
+    padding-inline: 12px;
   }
 
   .dz-home2-header-actions-guest {
-    width: 100%;
-  }
-
-  .dz-home2-header-actions .dz-home2-button {
-    flex: 1 1 0;
+    display: none !important;
   }
 
   .dz-home2-landing-grid {
@@ -1257,8 +1614,51 @@
     flex-basis: min(320px, 86vw);
   }
 
+  .dz-home2-skeleton {
+    padding-top: 2px;
+  }
+
+  .dz-home2-skeleton-hero,
+  .dz-home2-skeleton-section {
+    border-radius: 22px;
+    padding: 16px;
+  }
+
+  .dz-home2-skeleton-search {
+    grid-template-columns: 1fr;
+  }
+
+  .dz-home2-skeleton-chips {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dz-home2-skeleton-card {
+    grid-template-columns: 76px 1fr;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .dz-home2-skeleton-card-media {
+    width: 76px;
+    height: 76px;
+  }
+
   .dz-home2-landing-visual {
     min-height: 420px;
+  }
+
+  .dz-home2-landing-art-img {
+    width: min(360px, 90%);
+    max-height: 380px;
+  }
+
+  .dz-home2-landing-visual--restaurants {
+    min-height: 360px;
+  }
+
+  .dz-home2-landing-art-img--restaurants {
+    width: min(560px, 96%);
+    max-height: 320px;
   }
 
   .dz-home2-visual-card-a {
@@ -1286,5 +1686,19 @@
 
   .dz-home2-main {
     padding-bottom: 20px;
+  }
+
+  .dz-home2-footer-nav-inner {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .dz-home2-footer-nav-link {
+    min-height: 60px;
+    font-size: 0.78rem;
+  }
+
+  .dz-home2-footer-nav-link.is-active {
+    background: rgba(17, 24, 39, 0.02);
   }
 }
