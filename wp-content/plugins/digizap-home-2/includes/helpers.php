@@ -410,7 +410,7 @@ if (!function_exists('dzhome2_render_store_rail_section')) {
         }
 
         ob_start();
-        ?>
+?>
         <section class="dz-home2-store-rail" data-store-rail data-rail-key="<?php echo esc_attr($railKey); ?>" <?php echo $isHidden ? 'hidden' : ''; ?>>
             <div class="dz-home2-catalog-head dz-home2-store-rail-head">
                 <div>
@@ -425,7 +425,7 @@ if (!function_exists('dzhome2_render_store_rail_section')) {
                 <?php echo dzhome2_render_featured_cards($stores); ?>
             </div>
         </section>
-        <?php
+    <?php
         return trim(ob_get_clean());
     }
 }
@@ -505,7 +505,7 @@ if (!function_exists('dzhome2_render_restaurants_block')) {
         $total = isset($data['total']) ? absint($data['total']) : count($restaurants);
 
         ob_start();
-        ?>
+    ?>
         <section class="dz-home2-catalog dz-home2-catalog-standalone" data-dz-home2-restaurants>
             <div class="dz-home2-catalog-head">
                 <div>
@@ -523,7 +523,7 @@ if (!function_exists('dzhome2_render_restaurants_block')) {
                 <?php echo dzhome2_render_restaurant_cards($restaurants); ?>
             </div>
         </section>
-        <?php
+    <?php
         return trim(ob_get_clean());
     }
 }
@@ -585,7 +585,7 @@ if (!function_exists('dzhome2_render_directory_skeleton')) {
         $context = in_array($context, ['home', 'restaurants'], true) ? $context : 'home';
 
         ob_start();
-        ?>
+    ?>
         <div class="dz-home2-skeleton" data-home2-skeleton aria-hidden="true">
             <div class="dz-home2-skeleton-inner">
                 <div class="dz-home2-skeleton-hero">
@@ -630,7 +630,7 @@ if (!function_exists('dzhome2_render_directory_skeleton')) {
                 </div>
             </div>
         </div>
-        <?php
+<?php
         return trim((string) ob_get_clean());
     }
 }
@@ -775,3 +775,36 @@ if (!function_exists('dzhome2_blog_url')) {
         return home_url('/blog/');
     }
 }
+
+add_action('elementor/query/jornada_vender_mais', function ($query) {
+
+    $query->set('meta_query', [
+        [
+            'key'     => 'nivel_da_jornada',
+            'value'   => 'Vender mais',
+            'compare' => '=',
+        ],
+    ]);
+});
+
+add_action('elementor/query/jornada_automatizar_atendimento', function ($query) {
+
+    $query->set('meta_query', [
+        [
+            'key'     => 'nivel_da_jornada',
+            'value'   => 'Automatizar atendimento',
+            'compare' => '=',
+        ],
+    ]);
+});
+
+add_action('elementor/query/jornada_conhecer_ferramentas', function ($query) {
+
+    $query->set('meta_query', [
+        [
+            'key'     => 'nivel_da_jornada',
+            'value'   => 'Conhecer ferramentas',
+            'compare' => '=',
+        ],
+    ]);
+});
