@@ -24,7 +24,9 @@ const SiteSettings = () => {
         seoDescription: '',
         pixelId: '',
         googleAnalyticsId: '',
-        microsoftClarityId: ''
+        microsoftClarityId: '',
+        freeDeliveryEnabled: false,
+        freeDeliveryKm: 0
     });
 
     useEffect(() => {
@@ -34,9 +36,15 @@ const SiteSettings = () => {
     const loadSettings = async () => {
         try {
             const res = await api.get('/settings');
-        if (res.data) {
-            setSettings(prev => ({ ...prev, ...res.data, active: res.data.active ?? true }));
-        }
+            if (res.data) {
+                setSettings(prev => ({
+                    ...prev,
+                    ...res.data,
+                    active: res.data.active ?? true,
+                    freeDeliveryEnabled: res.data.freeDeliveryEnabled ?? false,
+                    freeDeliveryKm: res.data.freeDeliveryKm ?? 0
+                }));
+            }
         } catch (err) {
             console.error('Erro ao carregar configurações:', err);
             toast.error('Erro ao carregar as configurações do site.');
@@ -64,7 +72,9 @@ const SiteSettings = () => {
                 seoDescription: settings.seoDescription,
                 pixelId: settings.pixelId,
                 googleAnalyticsId: settings.googleAnalyticsId,
-                microsoftClarityId: settings.microsoftClarityId
+                microsoftClarityId: settings.microsoftClarityId,
+                freeDeliveryEnabled: settings.freeDeliveryEnabled,
+                freeDeliveryKm: settings.freeDeliveryKm
             };
             await api.post('/settings', payload);
             toast.success('Identidade visual salva com sucesso!');
@@ -257,6 +267,37 @@ const SiteSettings = () => {
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
                             Se desativar, a loja sai da home e da lista pública.
                         </p>
+
+                        <div style={{ marginTop: '22px', padding: '18px', borderRadius: '14px', border: '1px solid rgba(34,197,94,0.18)', background: 'rgba(34,197,94,0.06)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                                <CheckCircle size={18} color="#22c55e" />
+                                <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Frete grátis por distância</span>
+                            </div>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '12px' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={!!settings.freeDeliveryEnabled}
+                                    onChange={(e) => setSettings({ ...settings, freeDeliveryEnabled: e.target.checked })}
+                                    style={{ width: '16px', height: '16px', accentColor: '#22c55e' }}
+                                />
+                                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Liberar frete grátis até uma distância</span>
+                            </label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px', alignItems: 'center' }}>
+                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>KM grátis</span>
+                                <input
+                                    {...inp}
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    value={settings.freeDeliveryKm}
+                                    onChange={e => setSettings({ ...settings, freeDeliveryKm: parseFloat(e.target.value) || 0 })}
+                                    placeholder="Ex: 3"
+                                />
+                            </div>
+                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                                Se estiver ativado, pedidos dentro da distância informada ficam com frete zerado.
+                            </p>
+                        </div>
                     </section>
 
                     {/* Sessão de Imagens */}

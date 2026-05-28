@@ -626,6 +626,9 @@ try {
                             <button type="button" class="ifood-btn type-tab"
                                 style="flex: 1; background: var(--bg-gray); color: var(--text-main); padding: 10px;"
                                 onclick="setDeliveryType('pickup')">Retirada na Loja</button>
+                            <button type="button" class="ifood-btn type-tab"
+                                style="flex: 1; background: var(--bg-gray); color: var(--text-main); padding: 10px;"
+                                onclick="setDeliveryType('local')">Consumir no Local</button>
                         </div>
 
                         <!-- Address Section -->
@@ -935,6 +938,7 @@ try {
                 },
                 currentStep: 1,
                 deliveryFee: 0,
+                deliveryFeeLabel: '',
                 googleMap: null,
                 mapMarker: null,
                 geocoder: null,
@@ -1526,16 +1530,26 @@ try {
                     const display = document.getElementById('delivery-fee-display');
                     if (data.fee !== undefined) {
                         state.deliveryFee = data.fee;
+                        state.deliveryFeeLabel = data.type === 'free'
+                            ? (data.label || 'Frete grátis')
+                            : 'Taxa de entrega';
                         state.allowCash = data.type === 'estimated' ? false : (data.allowCash !== false);
                         if (display) {
                             display.style.display = 'block';
-                            display.innerHTML = `Taxa de entrega: <strong style="color:var(--primary-color)">R$ ${data.fee.toFixed(2)}</strong>`;
-                            display.style.background = '#f0fdf4';
-                            display.style.color = '#166534';
+                            if (data.type === 'free' || Number(data.fee) === 0) {
+                                display.innerHTML = `Frete grátis${data.label ? `: <strong style="color:var(--primary-color)">${data.label}</strong>` : ''}`;
+                                display.style.background = '#f0fdf4';
+                                display.style.color = '#166534';
+                            } else {
+                                display.innerHTML = `Taxa de entrega: <strong style="color:var(--primary-color)">R$ ${data.fee.toFixed(2)}</strong>`;
+                                display.style.background = '#f0fdf4';
+                                display.style.color = '#166534';
+                            }
                         }
                         updateStep4Summary();
                     } else if (data.error) {
                         state.deliveryFee = 0;
+                        state.deliveryFeeLabel = '';
                         state.allowCash = false;
                         if (display) {
                             display.style.display = 'block';
@@ -1545,6 +1559,7 @@ try {
                             display.style.border = '1px solid #fee2e2';
                         }
                     } else {
+                        state.deliveryFeeLabel = '';
                         if (display) display.style.display = 'none';
                     }
                 } catch (err) {
@@ -2849,7 +2864,7 @@ try {
                 const opts = document.getElementById('payment-options');
                 if (!opts) return;
 
-                const isCashAllowed = (state.deliveryType === 'pickup') || state.allowCash;
+                const isCashAllowed = (state.deliveryType !== 'delivery') || state.allowCash;
 
                 // fallback dinamico:
                 if (!isCashAllowed && state.paymentMethod === 'dinheiro') {
@@ -2912,7 +2927,7 @@ try {
                 if (typeTabs) typeTabs.style.display = isDelivery ? 'flex' : 'none';
 
                 // Enforce pickup if it's an order
-                if (!isDelivery && state.deliveryType !== 'pickup') {
+                if (!isDelivery && state.deliveryType === 'delivery') {
                     setDeliveryType('pickup');
                 } else {
                     setDeliveryType(state.deliveryType); // Ensure UI is completely updated based on current state
@@ -2969,28 +2984,32 @@ try {
                 const btns = document.querySelectorAll('.type-tab');
 
                 const isDelivery = type === 'delivery';
-                btns[0].classList.toggle('active', isDelivery);
-                btns[0].style.background = isDelivery ? '#fff' : '#f9fafb';
-                btns[0].style.color = isDelivery ? 'var(--primary-color)' : '#6b7280';
-                btns[0].style.border = isDelivery ? '2px solid var(--primary-color)' : '2px solid #e5e7eb';
-                btns[0].style.fontWeight = isDelivery ? '700' : '500';
-                btns[0].innerHTML = isDelivery ? '<i data-lucide="check-circle-2" style="margin-right:6px; display:inline-block; vertical-align:middle; width:18px; height:18px;"></i> Entrega' : 'Entrega';
-
                 const isPickup = type === 'pickup';
-                btns[1].classList.toggle('active', isPickup);
-                btns[1].style.background = isPickup ? '#fff' : '#f9fafb';
-                btns[1].style.color = isPickup ? 'var(--primary-color)' : '#6b7280';
-                btns[1].style.border = isPickup ? '2px solid var(--primary-color)' : '2px solid #e5e7eb';
-                btns[1].style.fontWeight = isPickup ? '700' : '500';
-                btns[1].innerHTML = isPickup ? '<i data-lucide="check-circle-2" style="margin-right:6px; display:inline-block; vertical-align:middle; width:18px; height:18px;"></i> Retirada na Loja' : 'Retirada na Loja';
+                const isLocal = type === 'local';
+                const states = [
+                    { el: btns[0], active: isDelivery, label: 'Entrega' },
+                    { el: btns[1], active: isPickup, label: 'Retirada na Loja' },
+                    { el: btns[2], active: isLocal, label: 'Consumir no Local' }
+                ];
+
+                states.forEach(({ el, active, label }) => {
+                    if (!el) return;
+                    el.classList.toggle('active', active);
+                    el.style.background = active ? '#fff' : '#f9fafb';
+                    el.style.color = active ? 'var(--primary-color)' : '#6b7280';
+                    el.style.border = active ? '2px solid var(--primary-color)' : '2px solid #e5e7eb';
+                    el.style.fontWeight = active ? '700' : '500';
+                    el.innerHTML = active ? `<i data-lucide="check-circle-2" style="margin-right:6px; display:inline-block; vertical-align:middle; width:18px; height:18px;"></i> ${label}` : label;
+                });
 
                 lucide.createIcons();
 
                 const addressSection = document.getElementById('delivery-address-section');
-                if (addressSection) addressSection.classList.toggle('hidden', type === 'pickup');
+                if (addressSection) addressSection.classList.toggle('hidden', type !== 'delivery');
 
-                if (type === 'pickup') {
+                if (type !== 'delivery') {
                     state.deliveryFee = 0;
+                    state.deliveryFeeLabel = '';
                     updateStep4Summary();
                 } else {
                     if (state.userInfo.address) calculateDeliveryFee(state.userInfo.address);
@@ -3022,7 +3041,7 @@ try {
                 } else if (state.currentStep === 2) {
                     if (state.activeTab === 'delivery') {
                         if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('EndereÃ§o Ausente', 'Por favor, selecione seu endereÃ§o no mapa.');
-                        if (state.deliveryFee === 0 && state.deliveryType === 'delivery' && state.userInfo.address) {
+                        if (state.deliveryFee === 0 && state.deliveryType === 'delivery' && state.userInfo.address && !state.deliveryFeeLabel) {
                             return showAlert('Taxa IndisponÃ­vel', 'Por favor, aguarde o cÃ¡lculo da taxa de entrega ou verifique se o endereÃ§o estÃ¡ no raio de entrega.');
                         }
                     } else if (state.activeTab === 'order') {
@@ -3053,6 +3072,7 @@ try {
                 const feeEl = document.getElementById('summary-fee');
                 const totalEl = document.getElementById('summary-total');
                 const lineEl = document.getElementById('delivery-fee-line');
+                const lineLabelEl = lineEl?.querySelector('span:first-child');
                 const listEl = document.getElementById('review-items-list');
                 const paymentSummaryEl = document.getElementById('payment-method-summary');
                 const scheduleReviewEl = document.getElementById('order-schedule-review');
@@ -3081,6 +3101,11 @@ try {
                 if (feeEl) feeEl.innerText = `R$ ${fee.toFixed(2)}`;
                 if (totalEl) totalEl.innerText = `R$ ${total.toFixed(2)}`;
                 if (lineEl) lineEl.classList.toggle('hidden', state.deliveryType !== 'delivery');
+                if (lineLabelEl) {
+                    lineLabelEl.innerText = state.deliveryFee === 0 && state.deliveryType === 'delivery'
+                        ? (state.deliveryFeeLabel || 'Frete grátis')
+                        : 'Taxa de entrega';
+                }
 
                 if (listEl) {
                     listEl.innerHTML = cart.map(item => `
@@ -3281,7 +3306,9 @@ try {
                     variation: cart[0].variation,
                     quantity: cart[0].quantity,
                     type: state.activeTab,
-                    deliveryAddress: state.deliveryType === 'delivery' ? state.userInfo.address : 'Retirada na Loja',
+                    deliveryAddress: state.deliveryType === 'delivery'
+                        ? state.userInfo.address
+                        : (state.deliveryType === 'local' ? 'Consumir no local' : 'Retirada na Loja'),
                     scheduledDate: state.activeTab === 'order' ? state.orderSchedule?.date || null : null,
                     scheduledTime: state.activeTab === 'order' ? state.orderSchedule?.time || null : null,
                     deliveryFee: state.deliveryType === 'delivery' ? state.deliveryFee : 0,

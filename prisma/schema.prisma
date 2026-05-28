@@ -70,6 +70,8 @@ model StoreProfile {
   acceptOrders         Boolean  @default(true)
   active               Boolean  @default(true)
   maxDeliveryKm        Float    @default(15.0)
+  freeDeliveryEnabled  Boolean  @default(false)
+  freeDeliveryKm       Float?  
   deliveryMode         String   @default("hibrido")
   allowCashOnDelivery  Boolean  @default(true)
   createdAt            DateTime @default(now())

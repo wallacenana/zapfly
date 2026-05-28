@@ -32,6 +32,8 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
             'total' => 0,
             'categories' => [],
             'featuredStores' => [],
+            'freeDeliveryStores' => [],
+            'promoStores' => [],
             'restaurants' => []
         ];
 
@@ -132,6 +134,10 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
                             <?php endforeach; ?>
                         </div>
                     </div>
+
+                    <?php echo dzhome2_render_store_rail_section('Destaques', $initialData['featuredStores'] ?? [], dzhome2_restaurants_url(), 'featured', empty($initialData['featuredStores'])); ?>
+                    <?php echo dzhome2_render_store_rail_section('Frete grátis', $initialData['freeDeliveryStores'] ?? [], dzhome2_restaurants_url(), 'freeDelivery', empty($initialData['freeDeliveryStores'])); ?>
+                    <?php echo dzhome2_render_store_rail_section('Em promoção', $initialData['promoStores'] ?? [], dzhome2_restaurants_url(), 'promo', empty($initialData['promoStores'])); ?>
 
                     <div class="dz-home2-catalog-head">
                         <div>

@@ -210,66 +210,6 @@ const Prompts = () => {
               </div>
             </div>
 
-            <div className="card" style={{ backgroundColor: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.1)', marginBottom: '30px', padding: '25px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-                <div style={{ padding: '8px', backgroundColor: 'var(--accent-primary)', color: '#fff', borderRadius: '8px' }}>
-                  <MessageSquare size={20} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: 700 }}>Simulador e Treinamento</h3>
-                  <p style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Teste perguntas e ensine a IA como ela deve responder.</p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Pergunta de Teste</label>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    <input
-                      style={{ flex: 1, padding: '12px', borderRadius: '10px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: '#fff', outline: 'none' }}
-                      placeholder="Ex: Qual o valor do frete para o centro?"
-                      value={testQuestion}
-                      onChange={(e) => setTestQuestion(e.target.value)}
-                    />
-                    <button
-                      className="btn btn-secondary"
-                      onClick={handleSimulate}
-                      disabled={isSimulating}
-                      style={{ width: '150px' }}
-                    >
-                      {isSimulating ? <Loader2 className="animate-spin" size={18} /> : 'Simular Resposta'}
-                    </button>
-                  </div>
-                </div>
-
-                {aiResponse && (
-                  <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-                    <div style={{ marginBottom: '15px', padding: '15px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', borderLeft: '4px solid var(--accent-primary)' }}>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: 'var(--accent-primary)', marginBottom: '5px' }}>RESPOSTA ATUAL DA IA:</label>
-                      <p style={{ fontSize: '13px', color: 'var(--text-primary)', whiteSpace: 'pre-wrap' }}>{aiResponse}</p>
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Sua Correção (Ensinar):</label>
-                      <textarea
-                        style={{ width: '100%', height: '80px', padding: '12px', borderRadius: '10px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: '#fff', outline: 'none', resize: 'none', fontSize: '13px' }}
-                        placeholder="Como você prefere que ela responda?"
-                        value={correctedResponse}
-                        onChange={(e) => setCorrectedResponse(e.target.value)}
-                      />
-                      <button
-                        className="btn btn-primary"
-                        style={{ marginTop: '10px', width: '100%', backgroundColor: 'var(--success)', borderColor: 'var(--success)' }}
-                        onClick={handleAddToKnowledge}
-                      >
-                        <Plus size={18} /> Ensinar este padrão à IA
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
             <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
               {/* System Prompt Section */}
               <section>

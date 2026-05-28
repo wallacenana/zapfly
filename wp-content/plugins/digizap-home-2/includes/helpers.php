@@ -322,6 +322,8 @@ if (!function_exists('dzhome2_fetch_directory_data')) {
                 'locationLng' => $args['locationLng'],
                 'total' => 0,
                 'featuredStores' => [],
+                'freeDeliveryStores' => [],
+                'promoStores' => [],
                 'restaurants' => []
             ];
         }
@@ -339,6 +341,8 @@ if (!function_exists('dzhome2_fetch_directory_data')) {
                 'locationLng' => $args['locationLng'],
                 'total' => 0,
                 'featuredStores' => [],
+                'freeDeliveryStores' => [],
+                'promoStores' => [],
                 'restaurants' => []
             ];
         }
@@ -356,7 +360,7 @@ if (!function_exists('dzhome2_render_featured_cards')) {
         }
 
         $html = [];
-        foreach (array_slice($restaurants, 0, 8) as $store) {
+        foreach (array_slice($restaurants, 0, 10) as $store) {
             $name = isset($store['name']) ? (string) $store['name'] : 'Restaurante';
             $slug = isset($store['slug']) ? (string) $store['slug'] : '';
             $category = isset($store['category']) ? (string) $store['category'] : '';
@@ -394,6 +398,35 @@ if (!function_exists('dzhome2_render_featured_cards')) {
         }
 
         return implode('', $html);
+    }
+}
+
+if (!function_exists('dzhome2_render_store_rail_section')) {
+    function dzhome2_render_store_rail_section($title, $stores = [], $actionUrl = '', $railKey = 'featured', $isHidden = false)
+    {
+        $stores = is_array($stores) ? $stores : [];
+        if (empty($stores) && !$isHidden) {
+            return '';
+        }
+
+        ob_start();
+        ?>
+        <section class="dz-home2-store-rail" data-store-rail data-rail-key="<?php echo esc_attr($railKey); ?>" <?php echo $isHidden ? 'hidden' : ''; ?>>
+            <div class="dz-home2-catalog-head dz-home2-store-rail-head">
+                <div>
+                    <h2><?php echo esc_html($title); ?></h2>
+                    <p data-rail-summary><?php echo esc_html(count($stores) === 1 ? '1 restaurante encontrado' : sprintf('%d restaurantes encontrados', count($stores))); ?></p>
+                </div>
+                <?php if ($actionUrl !== '') : ?>
+                    <a class="dz-home2-catalog-action" href="<?php echo esc_url($actionUrl); ?>">Ver mais</a>
+                <?php endif; ?>
+            </div>
+            <div class="dz-home2-featured-track dz-home2-store-rail-track" data-rail-track>
+                <?php echo dzhome2_render_featured_cards($stores); ?>
+            </div>
+        </section>
+        <?php
+        return trim(ob_get_clean());
     }
 }
 
@@ -466,6 +499,8 @@ if (!function_exists('dzhome2_render_restaurants_block')) {
     function dzhome2_render_restaurants_block($data = [])
     {
         $featured = isset($data['featuredStores']) && is_array($data['featuredStores']) ? $data['featuredStores'] : [];
+        $freeDelivery = isset($data['freeDeliveryStores']) && is_array($data['freeDeliveryStores']) ? $data['freeDeliveryStores'] : [];
+        $promo = isset($data['promoStores']) && is_array($data['promoStores']) ? $data['promoStores'] : [];
         $restaurants = isset($data['restaurants']) && is_array($data['restaurants']) ? $data['restaurants'] : [];
         $total = isset($data['total']) ? absint($data['total']) : count($restaurants);
 
@@ -480,9 +515,9 @@ if (!function_exists('dzhome2_render_restaurants_block')) {
                 <span class="dz-home2-catalog-count"><?php echo esc_html((string) $total); ?></span>
             </div>
 
-            <div class="dz-home2-featured-track">
-                <?php echo dzhome2_render_featured_cards($featured); ?>
-            </div>
+            <?php echo dzhome2_render_store_rail_section('Destaques', $featured, '', 'featured', empty($featured)); ?>
+            <?php echo dzhome2_render_store_rail_section('Frete grátis', $freeDelivery, '', 'freeDelivery', empty($freeDelivery)); ?>
+            <?php echo dzhome2_render_store_rail_section('Em promoção', $promo, '', 'promo', empty($promo)); ?>
 
             <div class="dz-home2-restaurants-grid">
                 <?php echo dzhome2_render_restaurant_cards($restaurants); ?>
@@ -740,4 +775,3 @@ if (!function_exists('dzhome2_blog_url')) {
         return home_url('/blog/');
     }
 }
-

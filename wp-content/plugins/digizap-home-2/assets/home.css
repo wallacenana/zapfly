@@ -795,6 +795,19 @@
   gap: 18px;
 }
 
+.dz-home2-store-rail {
+  display: grid;
+  gap: 12px;
+}
+
+.dz-home2-store-rail + .dz-home2-store-rail {
+  margin-top: 2px;
+}
+
+.dz-home2-store-rail-track {
+  padding-bottom: 10px;
+}
+
 .dz-home2-catalog-standalone {
   width: min(1240px, calc(100% - 32px));
   margin: 0 auto;

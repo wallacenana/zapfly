@@ -519,7 +519,7 @@
       return '';
     }
 
-    return restaurants.slice(0, 8).map((store) => {
+    return restaurants.slice(0, 10).map((store) => {
       const name = String(store?.name || 'Restaurante');
       const slug = String(store?.slug || '');
       const category = String(store?.category || '');
@@ -542,8 +542,12 @@
             ${schedule.isOpenNow ? '' : `<span class="dz-home2-restaurant-status ${schedule.statusClass} dz-home2-featured-status">${escapeHtml(schedule.statusLabel)}</span>`}
           </span>
         </a>
-      `;
+      `; 
     }).join('');
+  }
+
+  function renderStoreRailCards(restaurants) {
+    return renderFeaturedCards(restaurants);
   }
 
   function renderCategoryCards(categories) {
@@ -630,7 +634,6 @@
   function updateView(root, data) {
     const catalog = root.querySelector('[data-catalog]');
     const categoriesTrack = root.querySelector('[data-categories-track]');
-    const featuredTrack = root.querySelector('[data-featured-track]');
     const restaurantsGrid = root.querySelector('[data-restaurants-grid]');
     const emptyResults = root.querySelector('[data-empty-results]');
     const catalogSummary = root.querySelector('[data-catalog-summary]');
@@ -640,9 +643,29 @@
     if (categoriesTrack) {
       categoriesTrack.innerHTML = renderCategoryCards(data?.categories || []);
     }
-    if (featuredTrack) {
-      featuredTrack.innerHTML = renderFeaturedCards(data?.featuredStores || []);
-    }
+    [
+      { key: 'featured', title: 'Destaques', stores: data?.featuredStores || [] },
+      { key: 'freeDelivery', title: 'Frete grátis', stores: data?.freeDeliveryStores || [] },
+      { key: 'promo', title: 'Em promoção', stores: data?.promoStores || [] }
+    ].forEach(({ key, stores, title }) => {
+      const section = root.querySelector(`[data-rail-key="${key}"]`);
+      const track = section?.querySelector('[data-rail-track]');
+      const summary = section?.querySelector('[data-rail-summary]');
+      const items = Array.isArray(stores) ? stores : [];
+
+      if (!section || !track) {
+        return;
+      }
+
+      track.innerHTML = items.length ? renderStoreRailCards(items) : '';
+      if (summary) {
+        summary.textContent = items.length === 1
+          ? '1 restaurante encontrado'
+          : `${items.length} restaurantes encontrados`;
+      }
+      section.hidden = items.length === 0;
+      section.dataset.sectionTitle = title;
+    });
     if (restaurantsGrid) {
       restaurantsGrid.innerHTML = renderRestaurantCards(data?.restaurants || []);
     }
@@ -705,7 +728,7 @@
         return;
       }
       setLoading(root, false);
-      updateView(root, { total: 0, featuredStores: [], restaurants: [] });
+      updateView(root, { total: 0, featuredStores: [], freeDeliveryStores: [], promoStores: [], restaurants: [] });
     }
   }
 

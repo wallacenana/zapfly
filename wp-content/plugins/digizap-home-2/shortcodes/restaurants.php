@@ -41,6 +41,8 @@ if (!function_exists('dzhome2_render_restaurants_shortcode')) {
             'total' => 0,
             'categories' => [],
             'featuredStores' => [],
+            'freeDeliveryStores' => [],
+            'promoStores' => [],
             'restaurants' => []
         ];
 
@@ -137,6 +139,10 @@ if (!function_exists('dzhome2_render_restaurants_shortcode')) {
                 </section>
 
                 <section class="dz-home2-catalog" id="restaurantes" data-catalog <?php echo $hasSelectedAddress ? '' : 'hidden'; ?>>
+                    <?php echo dzhome2_render_store_rail_section('Destaques', $initialData['featuredStores'] ?? [], dzhome2_restaurants_url($queryCategory), 'featured', empty($initialData['featuredStores'])); ?>
+                    <?php echo dzhome2_render_store_rail_section('Frete grátis', $initialData['freeDeliveryStores'] ?? [], dzhome2_restaurants_url($queryCategory), 'freeDelivery', empty($initialData['freeDeliveryStores'])); ?>
+                    <?php echo dzhome2_render_store_rail_section('Em promoção', $initialData['promoStores'] ?? [], dzhome2_restaurants_url($queryCategory), 'promo', empty($initialData['promoStores'])); ?>
+
                     <div class="dz-home2-restaurants-grid" data-restaurants-grid>
                         <?php echo $hasSelectedAddress ? dzhome2_render_restaurant_cards($initialData['restaurants'] ?? []) : ''; ?>
                     </div>
