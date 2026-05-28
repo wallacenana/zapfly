@@ -126,7 +126,7 @@ const Estoque = () => {
         try {
           vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
         } catch (e) {
-          console.error("Erro ao parsear variaÃ§Ãµes do produto:", p.id, e);
+          console.error("Erro ao parsear variações do produto:", p.id, e);
           vars = [];
         }
         try {
@@ -201,7 +201,7 @@ const Estoque = () => {
       setAcceptOrders(!nextValue);
       Swal.fire({
         title: 'Erro',
-        text: 'NÃ£o foi possÃ­vel salvar a configuraÃ§Ã£o de encomendas.',
+        text: 'NÃ£o foi possível salvar a configuração de encomendas.',
         icon: 'error',
         confirmButtonColor: '#3b82f6'
       });
@@ -258,7 +258,7 @@ const Estoque = () => {
     // Mostra um loading enquanto comprime/envia
     Swal.fire({
       title: 'Otimizando Imagem...',
-      text: 'Preparando para o cardÃ¡pio rÃ¡pido',
+      text: 'Preparando para o cardápio rápido',
       allowOutsideClick: false,
       didOpen: () => { Swal.showLoading() }
     });
@@ -336,7 +336,7 @@ const Estoque = () => {
     if (invalidCustomField) {
       Swal.fire({
         title: 'Campo extra incompleto',
-        text: 'Preencha o nome do campo e as opÃ§Ãµes quando o tipo for lista.',
+        text: 'Preencha o nome do campo e as opções quando o tipo for lista.',
         icon: 'warning',
         confirmButtonColor: '#f59e0b'
       });
@@ -396,7 +396,7 @@ const Estoque = () => {
 
   const saveSeasonal = async () => {
     if (!seasonalForm.name || !seasonalForm.eventDate) {
-      Swal.fire({ title: 'AtenÃ§Ã£o', text: 'Nome e Data do Evento sÃ£o obrigatÃ³rios.', icon: 'warning' });
+      Swal.fire({ title: 'Atenção', text: 'Nome e Data do Evento sÃ£o obrigatÃ³rios.', icon: 'warning' });
       return;
     }
     try {
@@ -405,7 +405,7 @@ const Estoque = () => {
       setShowSeasonalModal(false);
       fetchSeasonal();
       Swal.fire({ title: 'Salvo!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
-    } catch (err) { Swal.fire('Erro', 'Falha ao salvar catÃ¡logo sazonal.', 'error'); }
+    } catch (err) { Swal.fire('Erro', 'Falha ao salvar catálogo sazonal.', 'error'); }
   };
 
   const openAddSeasonal = () => {
@@ -465,7 +465,7 @@ const Estoque = () => {
     <div style={{ padding: '30px' }}>
       <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#fff' }}>CatÃ¡logo & Estoque</h2>
+          <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#fff' }}>Catálogo & Estoque</h2>
           <p style={{ color: 'var(--text-secondary)' }}>Gerencie seus produtos e combos de {tab === 'delivery' ? 'Pronta Entrega' : 'Agendamento'}</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -528,7 +528,7 @@ const Estoque = () => {
                {savingAcceptOrders ? 'Salvando...' : 'Aceitar encomendas'}
              </div>
              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-               {acceptOrders ? 'Mostra a aba de encomendas no cardÃ¡pio pÃºblico.' : 'CardÃ¡pio de encomendas oculto para clientes.'}
+               {acceptOrders ? 'Mostra a aba de encomendas no cardápio público.' : 'Cardápio de encomendas oculto para clientes.'}
              </div>
            </div>
         </div>
@@ -546,7 +546,7 @@ const Estoque = () => {
                   <div style={{ fontWeight: 800, fontSize: '16px', color: '#fff' }}>{s.name}</div>
                   <div style={{ fontSize: '13px', color: 'var(--text-secondary)', display: 'flex', gap: '10px', marginTop: '4px' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={14} /> {new Date(s.eventDate + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> AntecedÃªncia: {s.preStartDays} dias</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> Antecedência: {s.preStartDays} dias</span>
                   </div>
                 </div>
               </div>
@@ -554,7 +554,7 @@ const Estoque = () => {
                 {s.maxOrders > 0 && <span style={{ fontSize: '10px', backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b', padding: '4px 10px', borderRadius: '20px', fontWeight: 800 }}>Limite: {s.maxOrders} pedidos</span>}
                 <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '8px' }} onClick={() => openEditSeasonal(s)}><Pencil size={16} /></button>
                 <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px' }} onClick={() => {
-                  Swal.fire({ title: 'Excluir?', text: "Deseja remover este catÃ¡logo?", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' }).then(r => {
+                  Swal.fire({ title: 'Excluir?', text: "Deseja remover este catálogo?", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444' }).then(r => {
                     if (r.isConfirmed) api.delete(`/orders/seasonal/${s.id}`).then(() => fetchSeasonal());
                   });
                 }}><Trash2 size={16} /></button>
@@ -651,7 +651,7 @@ const Estoque = () => {
                       e.stopPropagation(); 
                       Swal.fire({
                         title: 'Tem certeza?',
-                        text: "VocÃª nÃ£o poderÃ¡ reverter isso!",
+                        text: "Você nÃ£o poderá reverter isso!",
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonColor: '#ef4444',
@@ -687,7 +687,7 @@ const Estoque = () => {
                           <div key={i} style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
                             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontWeight:800, color: p.type === 'delivery' ? '#60a5fa' : '#34d399', fontSize:'13px' }}>{v.name.toUpperCase()} {v.hidden && <span style={{ color: '#fbbf24', fontSize: '10px', marginLeft: '5px' }}>(INVISÃVEL)</span>}</span>
+                                <span style={{ fontWeight:800, color: p.type === 'delivery' ? '#60a5fa' : '#34d399', fontSize:'13px' }}>{v.name.toUpperCase()} {v.hidden && <span style={{ color: '#fbbf24', fontSize: '10px', marginLeft: '5px' }}>(INVISÍVEL)</span>}</span>
                                 {v.description && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{v.description}</span>}
                               </div>
                               <span style={{ fontWeight:700, fontSize:'13px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', color: '#fff' }}>R$ {v.price}</span>
@@ -720,7 +720,7 @@ const Estoque = () => {
         <div style={modalOverlay}>
           <div className="card" style={modalContent}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
-              <h3 style={{ fontWeight: 800 }}>{editingSeasonal ? 'Editar' : 'Novo'} CatÃ¡logo de Evento</h3>
+              <h3 style={{ fontWeight: 800 }}>{editingSeasonal ? 'Editar' : 'Novo'} Catálogo de Evento</h3>
               <button onClick={() => setShowSeasonalModal(false)} style={closeBtn}><X size={24} /></button>
             </div>
 
@@ -728,7 +728,7 @@ const Estoque = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr', gap: '15px', marginBottom: '20px' }}>
                 <div>
                   <label style={labelStyle}>Nome do Evento</label>
-                  <input {...inp} placeholder="Ex: Dia das MÃ£es, PÃ¡scoa..." value={seasonalForm.name} onChange={e => setSeasonalForm(f => ({ ...f, name: e.target.value }))} />
+                  <input {...inp} placeholder="Ex: Dia das MÃ£es, Páscoa..." value={seasonalForm.name} onChange={e => setSeasonalForm(f => ({ ...f, name: e.target.value }))} />
                 </div>
                 <div>
                   <label style={labelStyle}>Data do Evento</label>
@@ -738,17 +738,17 @@ const Estoque = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
                 <div>
-                  <label style={labelStyle}><Clock size={10} /> AntecedÃªncia (Exibir X dias antes)</label>
+                  <label style={labelStyle}><Clock size={10} /> Antecedência (Exibir X dias antes)</label>
                   <input {...inp} type="number" value={seasonalForm.preStartDays} onChange={e => setSeasonalForm(f => ({ ...f, preStartDays: parseInt(e.target.value) }))} />
                 </div>
                 <div>
-                  <label style={labelStyle}><Clock size={10} /> PermanÃªncia (Exibir Y dias depois)</label>
+                  <label style={labelStyle}><Clock size={10} /> Permanência (Exibir Y dias depois)</label>
                   <input {...inp} type="number" value={seasonalForm.postEndDays} onChange={e => setSeasonalForm(f => ({ ...f, postEndDays: parseInt(e.target.value) }))} />
                 </div>
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                <label style={labelStyle}>DescriÃ§Ã£o / Chamada Especial</label>
+                <label style={labelStyle}>Descrição / Chamada Especial</label>
                 <textarea {...inp} style={{ ...inp.style, minHeight: '60px' }} placeholder="Ex: Prepare-se para o dia mais especial do ano!" value={seasonalForm.description || ''} onChange={e => setSeasonalForm(f => ({ ...f, description: e.target.value }))} />
               </div>
 
@@ -756,14 +756,14 @@ const Estoque = () => {
                 <h5 style={sectionTitle}>âš™ï¸ REGRAS OPERACIONAIS</h5>
                 <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                   <div>
-                    <label style={microLabel}>Limite MÃ¡ximo de Pedidos para o Dia (0 = Ilimitado)</label>
+                    <label style={microLabel}>Limite Máximo de Pedidos para o Dia (0 = Ilimitado)</label>
                     <input {...inp} type="number" value={seasonalForm.maxOrders} onChange={e => setSeasonalForm(f => ({ ...f, maxOrders: parseInt(e.target.value) }))} />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(236, 72, 153, 0.05)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(236, 72, 153, 0.1)' }}>
                     <input type="checkbox" id="onlySeasonal" checked={seasonalForm.onlySeasonalOnEventDay} onChange={e => setSeasonalForm(f => ({ ...f, onlySeasonalOnEventDay: e.target.checked }))} style={{ width: '18px', height: '18px' }} />
                     <label htmlFor="onlySeasonal" style={{ cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#ec4899' }}>
                       Aceitar APENAS itens sazonais para a data do evento?
-                      <p style={{ fontWeight: 400, fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Lily recusarÃ¡ encomendas do cardÃ¡pio regular se o cliente escolher o dia do evento para entrega.</p>
+                      <p style={{ fontWeight: 400, fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Lily recusará encomendas do cardápio regular se o cliente escolher o dia do evento para entrega.</p>
                     </label>
                   </div>
                 </div>
@@ -802,7 +802,7 @@ const Estoque = () => {
                       </div>
                       <button className="btn-icon" style={{ color: '#ef4444' }} onClick={() => { const i = seasonalForm.items.filter((_, k) => k !== idx); setSeasonalForm(f => ({ ...f, items: i })) }}><Trash2 size={16} /></button>
                     </div>
-                    <input {...inp} style={{ ...inp.style, fontSize: '12px', padding: '6px 10px' }} placeholder="Breve descriÃ§Ã£o do item..." value={item.description} onChange={e => { const i = [...seasonalForm.items]; i[idx].description = e.target.value; setSeasonalForm(f => ({ ...f, items: i })) }} />
+                    <input {...inp} style={{ ...inp.style, fontSize: '12px', padding: '6px 10px' }} placeholder="Breve descrição do item..." value={item.description} onChange={e => { const i = [...seasonalForm.items]; i[idx].description = e.target.value; setSeasonalForm(f => ({ ...f, items: i })) }} />
                   </div>
                 ))}
               </div>
@@ -810,7 +810,7 @@ const Estoque = () => {
 
             <div style={{ marginTop: '25px', display: 'flex', gap: '10px' }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowSeasonalModal(false)}>Cancelar</button>
-              <button className="btn btn-primary" style={{ flex: 2, backgroundColor: '#ec4899' }} onClick={saveSeasonal}>Salvar CatÃ¡logo</button>
+              <button className="btn btn-primary" style={{ flex: 2, backgroundColor: '#ec4899' }} onClick={saveSeasonal}>Salvar Catálogo</button>
             </div>
           </div>
         </div>,
@@ -827,16 +827,16 @@ const Estoque = () => {
 
             <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '10px' }}>
                 <div style={{ marginBottom:'20px' }}>
-                    <label style={labelStyle}>IdentificaÃ§Ã£o do {isComboMode ? 'Combo' : 'Item'}</label>
+                    <label style={labelStyle}>Identificação do {isComboMode ? 'Combo' : 'Item'}</label>
                     <input {...inp} placeholder={isComboMode ? "Ex: Combo Casal, Kit Festa..." : "Ex: Nome do Produto"} value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} />
                 </div>
                 <div style={{ marginBottom:'20px' }}>
-                    <label style={labelStyle}>DescriÃ§Ã£o (Opcional)</label>
+                    <label style={labelStyle}>Descrição (Opcional)</label>
                     <textarea {...inp} style={{ ...inp.style, minHeight: '60px', resize: 'vertical' }} placeholder="Detalhes que o cliente deve saber." value={form.description || ''} onChange={e => setForm(f => ({...f, description: e.target.value}))} />
                 </div>
                 
                 <div style={{ marginBottom: '20px' }}>
-                    <label style={labelStyle}>Imagens do Produto (MÃºltiplas fotos)</label>
+                    <label style={labelStyle}>Imagens do Produto (Múltiplas fotos)</label>
                     <div style={{ 
                         border: '2px dashed var(--border-color)', 
                         borderRadius: '12px', 
@@ -849,7 +849,7 @@ const Estoque = () => {
                         <div style={{ color: 'var(--text-secondary)' }}>
                             <Upload size={32} style={{ marginBottom: '10px', color: 'var(--active-color)' }} />
                             <p style={{ fontSize: '14px', fontWeight: 600 }}>Clique para adicionar fotos</p>
-                            <p style={{ fontSize: '12px', opacity: 0.6 }}>VocÃª pode selecionar vÃ¡rias imagens de uma vez</p>
+                            <p style={{ fontSize: '12px', opacity: 0.6 }}>Você pode selecionar várias imagens de uma vez</p>
                         </div>
                         <input 
                             id="main-image-upload"
@@ -924,7 +924,7 @@ const Estoque = () => {
                 {!isComboMode && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
                     <div>
-                      <label style={labelStyle}>PreÃ§o normal (R$)</label>
+                      <label style={labelStyle}>Preço normal (R$)</label>
                       <input
                         {...inp}
                         type="number"
@@ -934,7 +934,7 @@ const Estoque = () => {
                       />
                     </div>
                     <div>
-                      <label style={labelStyle}>PreÃ§o promocional (R$)</label>
+                      <label style={labelStyle}>Preço promocional (R$)</label>
                       <input
                         {...inp}
                         type="number"
@@ -1029,8 +1029,8 @@ const Estoque = () => {
                     <div style={{ backgroundColor: 'rgba(96, 165, 250, 0.05)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(96, 165, 250, 0.16)' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
                         <div>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>VariaÃ§Ãµes do Produto</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Use quando o item tiver opÃ§Ãµes diferentes, como tamanhos, sabores ou versÃµes.</div>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>Variações do Produto</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Use quando o item tiver opções diferentes, como tamanhos, sabores ou versões.</div>
                         </div>
                         <button
                           type="button"
@@ -1038,13 +1038,13 @@ const Estoque = () => {
                           onClick={addVar}
                           style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'rgba(96, 165, 250, 0.10)', color: '#60a5fa', border: '1px solid rgba(96, 165, 250, 0.18)', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}
                         >
-                          <Plus size={16} /> Add VariaÃ§Ã£o
+                          <Plus size={16} /> Add Variação
                         </button>
                       </div>
 
                       {(form.variations || []).length === 0 ? (
                         <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '12px' }}>
-                          Nenhuma variaÃ§Ã£o cadastrada. Se o produto tiver opÃ§Ãµes, cadastre aqui.
+                          Nenhuma variação cadastrada. Se o produto tiver opções, cadastre aqui.
                         </div>
                       ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1065,7 +1065,7 @@ const Estoque = () => {
                                   />
                                 </div>
                                 <div>
-                                  <label style={{ ...labelStyle, marginBottom: '6px' }}>PreÃ§o (R$)</label>
+                                  <label style={{ ...labelStyle, marginBottom: '6px' }}>Preço (R$)</label>
                                   <input
                                     {...inp}
                                     type="number"
@@ -1117,14 +1117,14 @@ const Estoque = () => {
                                       }}
                                       style={{ width: '16px', height: '16px', accentColor: '#60a5fa', cursor: 'pointer' }}
                                     />
-                                    InvisÃ­vel
+                                    Invisível
                                   </label>
                                   <button
                                     type="button"
                                     className="btn-icon"
                                     onClick={() => setForm(f => ({ ...f, variations: (f.variations || []).filter((_, i) => i !== idx) }))}
                                     style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.10)', borderRadius: '8px', padding: '8px' }}
-                                    title="Remover variaÃ§Ã£o"
+                                    title="Remover variação"
                                   >
                                     <Trash2 size={16} />
                                   </button>
@@ -1132,17 +1132,17 @@ const Estoque = () => {
                               </div>
 
                               <div style={{ marginTop: '10px' }}>
-                                <label style={{ ...labelStyle, marginBottom: '6px' }}>DescriÃ§Ã£o</label>
-                                <input
+                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Descrição</label>
+                                <textarea
                                   {...inp}
-                                  placeholder="Breve descriÃ§Ã£o da variaÃ§Ã£o"
+                                  placeholder="Breve descrição da variação"
                                   value={variation.description || ''}
                                   onChange={e => {
                                     const next = [...(form.variations || [])];
                                     next[idx] = { ...(next[idx] || {}), description: e.target.value };
                                     setForm(f => ({ ...f, variations: next }));
                                   }}
-                                />
+                                ></textarea>
                               </div>
 
                               <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
@@ -1227,7 +1227,7 @@ const Estoque = () => {
 
                     {(form.customFields || []).length === 0 ? (
                       <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '12px' }}>
-                        Nenhum campo extra configurado. Use isso para coletar referÃªncia, cor, topo, observaÃ§Ãµes ou qualquer outro dado.
+                        Nenhum campo extra configurado. Use isso para coletar referência, cor, topo, observações ou qualquer outro dado.
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1238,7 +1238,7 @@ const Estoque = () => {
                                 <label style={{ ...labelStyle, marginBottom: '6px' }}>Nome do Campo</label>
                                 <input
                                   {...inp}
-                                  placeholder="Ex: Cor, Tema, ReferÃªncia"
+                                  placeholder="Ex: Cor, Tema, Referência"
                                   value={field.name || ''}
                                   onChange={e => updateCustomFieldRow(idx, 'name', e.target.value)}
                                 />
@@ -1279,7 +1279,7 @@ const Estoque = () => {
 
                             {String(field.type || 'text').toLowerCase() === 'dropdown' && (
                               <div style={{ marginTop: '10px' }}>
-                                <label style={{ ...labelStyle, marginBottom: '6px' }}>OpÃ§Ãµes da Lista</label>
+                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Opções da Lista</label>
                                 <input
                                   {...inp}
                                   placeholder="Ex: Chocolate, Morango, Ninho"
@@ -1287,7 +1287,7 @@ const Estoque = () => {
                                   onChange={e => updateCustomFieldRow(idx, 'options', e.target.value)}
                                 />
                                 <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                                  Separe as opÃ§Ãµes por vÃ­rgula.
+                                  Separe as opções por vÃ­rgula.
                                 </div>
                               </div>
                             )}
@@ -1299,7 +1299,7 @@ const Estoque = () => {
                 </div>
                 {isComboMode ? (
                   <div style={sectionBox}>
-                    <h5 style={sectionTitle}>ðŸŽ ITENS DISPONÃVEIS PARA O COMBO</h5>
+                    <h5 style={sectionTitle}>ITENS DISPONÍVEIS PARA O COMBO</h5>
                     <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '15px' }}>Selecione apenas os produtos de <b>{tab === 'delivery' ? 'Pronta Entrega' : 'Agendamento'}</b>.</p>
                     
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '300px', overflowY: 'auto', paddingRight: '5px' }}>
@@ -1356,7 +1356,7 @@ const Estoque = () => {
 
                     {addonGroups.length === 0 ? (
                         <div style={{ padding: '14px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                            Nenhum grupo foi criado ainda. Use a aba <b>Adicionais</b> para cadastrar recheios, coberturas e complementos reutilizÃ¡veis.
+                            Nenhum grupo foi criado ainda. Use a aba <b>Adicionais</b> para cadastrar recheios, coberturas e complementos reutilizáveis.
                         </div>
                     ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
@@ -1411,7 +1411,7 @@ const Estoque = () => {
 
                 {isComboMode && (
                    <div style={{ marginTop: '20px' }}>
-                      <label style={labelStyle}>PreÃ§o Final do Combo (R$)</label>
+                      <label style={labelStyle}>Preço Final do Combo (R$)</label>
                       <input {...inp} type="number" value={form.price} onChange={e=>setForm(f=>({...f, price:parseFloat(e.target.value)}))} />
                    </div>
                 )}
@@ -1419,7 +1419,7 @@ const Estoque = () => {
 
             <div style={{ marginTop:'25px', display:'flex', gap:'10px' }}>
                 <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancelar</button>
-                <button className="btn btn-primary" style={{ flex: 2 }} onClick={saveProduct}>Salvar InformaÃ§Ãµes</button>
+                <button className="btn btn-primary" style={{ flex: 2 }} onClick={saveProduct}>Salvar Informações</button>
             </div>
           </div>
         </div>,
@@ -1470,7 +1470,7 @@ const Estoque = () => {
                           fetchCategories();
                           Swal.fire({ title: 'Atualizado!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
                         } catch (err) { Swal.fire('Erro', 'Falha ao atualizar.', 'error'); }
-                      }}>Salvar AlteraÃ§Ãµes</button>
+                      }}>Salvar Alterações</button>
                     </>
                   ) : (
                     <button className="btn btn-primary" style={{ width: '100%' }} onClick={async () => {
@@ -1549,7 +1549,7 @@ const Estoque = () => {
 
 const tabBtn = { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', border: 'none', fontWeight: 700, fontSize: '14px', cursor: 'pointer' };
 const modalOverlay = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, backdropFilter: 'blur(8px)', padding: '20px' };
-const modalContent = { width: '100%', maxWidth: '760px', maxHeight: '90vh', padding: '30px', position: 'relative', overflowY: 'auto', backgroundColor: '#18181b', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' };
+const modalContent = { width: '100%', maxWidth: '960px', maxHeight: '90vh', padding: '30px', position: 'relative', overflowY: 'auto', backgroundColor: '#18181b', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' };
 const closeBtn = { background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' };
 const labelStyle = { display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 800, textTransform: 'uppercase' };
 const microLabel = { display: 'block', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 700, textTransform: 'uppercase' };
