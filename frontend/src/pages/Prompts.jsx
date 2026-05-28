@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Bot, Save, Plus, Trash2, Copy, Check, MessageSquare, Edit3, Loader2 } from 'lucide-react';
 import { api } from '../api';
 import Swal from 'sweetalert2';
@@ -10,6 +10,13 @@ const Toast = Swal.mixin({
   timer: 3000,
   timerProgressBar: true
 });
+
+const DEFAULT_FAQ = [
+  { q: 'Qual o horario de atendimento?', a: 'Atendemos conforme o horario configurado pela loja.' },
+  { q: 'Qual o valor da entrega?', a: 'A taxa e calculada automaticamente conforme o endereco informado.' },
+  { q: 'Como acompanhar o pedido?', a: 'Assim que o pedido for confirmado, a equipe da loja segue o atendimento.' },
+  { q: 'Vocês aceitam encomendas?', a: 'Se a loja estiver com encomendas ativas, a equipe confirma os detalhes e a disponibilidade.' }
+];
 
 const Prompts = () => {
   const [instances, setInstances] = useState([]);
@@ -109,6 +116,19 @@ const Prompts = () => {
     setAiResponse('');
     setCorrectedResponse('');
     Toast.fire({ icon: 'success', title: 'Adicionado à base de conhecimento!' });
+  };
+
+  const handleLoadDefaultFaq = () => {
+    setFormKnowledge(prev => {
+      const existing = new Set(prev.map(item => `${item.q || ''}::${item.a || ''}`));
+      const merged = [...prev];
+      DEFAULT_FAQ.forEach(item => {
+        const key = `${item.q}::${item.a}`;
+        if (!existing.has(key)) merged.push(item);
+      });
+      return merged;
+    });
+    Toast.fire({ icon: 'success', title: 'FAQ padrão carregada.' });
   };
 
   if (loading) {
@@ -314,6 +334,25 @@ const Prompts = () => {
                     }}
                   >
                     <Plus size={16} /> Adicionar Item
+                  </button>
+                  <button
+                    onClick={handleLoadDefaultFaq}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '8px',
+                      backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                      color: '#3b82f6',
+                      border: '1px solid rgba(59, 130, 246, 0.2)',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      marginLeft: '10px'
+                    }}
+                  >
+                    <MessageSquare size={16} /> FAQ padrão
                   </button>
                 </div>
 

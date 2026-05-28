@@ -212,6 +212,7 @@ model Product {
   stock           Int       @default(0)
   capacityCost    Int       @default(1)
   featured        Boolean   @default(false)
+  promotion       Boolean   @default(false)
   displayOrder    Int       @default(0)
   bannerUrl       String?   @db.Text
   addonGroups     String?   @db.Text
@@ -344,6 +345,8 @@ model Setting {
   deliveryMode         String  @default("hibrido")
   acceptOrders         Boolean @default(true)
   allowCashOnDelivery  Boolean @default(true)
+  featuredCountDesktop Int     @default(4)
+  featuredCountMobile  Int     @default(1)
   dailyDeliveryItems   String? @db.Text
   reportEnabled        Boolean @default(false)
   reportHour           Int     @default(7)
