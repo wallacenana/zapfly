@@ -201,7 +201,7 @@ const Estoque = () => {
       setAcceptOrders(!nextValue);
       Swal.fire({
         title: 'Erro',
-        text: 'NÃ£o foi possível salvar a configuração de encomendas.',
+        text: 'Não foi possível salvar a configuração de encomendas.',
         icon: 'error',
         confirmButtonColor: '#3b82f6'
       });
@@ -318,7 +318,7 @@ const Estoque = () => {
 
   const saveProduct = async () => {
     if (!form.name || form.name.trim() === '') {
-      Swal.fire({ title: 'Campo ObrigatÃ³rio', text: 'Por favor, insira o nome do item.', icon: 'warning', confirmButtonColor: '#3b82f6' });
+      Swal.fire({ title: 'Campo Obrigatório', text: 'Por favor, insira o nome do item.', icon: 'warning', confirmButtonColor: '#3b82f6' });
       return;
     }
 
@@ -396,7 +396,7 @@ const Estoque = () => {
 
   const saveSeasonal = async () => {
     if (!seasonalForm.name || !seasonalForm.eventDate) {
-      Swal.fire({ title: 'Atenção', text: 'Nome e Data do Evento sÃ£o obrigatÃ³rios.', icon: 'warning' });
+      Swal.fire({ title: 'Atenção', text: 'Nome e Data do Evento são obrigatórios.', icon: 'warning' });
       return;
     }
     try {
@@ -475,7 +475,7 @@ const Estoque = () => {
             </button>
           ) : tab === 'addon' ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 18px', backgroundColor: 'rgba(245, 158, 11, 0.08)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.18)', borderRadius: '12px', fontWeight: 700 }}>
-              <Layers size={18} /> Os grupos sÃ£o gerenciados na lista abaixo
+              <Layers size={18} /> Os grupos são gerenciados na lista abaixo
             </div>
           ) : (
             <>
@@ -651,7 +651,7 @@ const Estoque = () => {
                       e.stopPropagation(); 
                       Swal.fire({
                         title: 'Tem certeza?',
-                        text: "Você nÃ£o poderá reverter isso!",
+                        text: "Você não poderá reverter isso!",
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonColor: '#ef4444',
@@ -728,7 +728,7 @@ const Estoque = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr', gap: '15px', marginBottom: '20px' }}>
                 <div>
                   <label style={labelStyle}>Nome do Evento</label>
-                  <input {...inp} placeholder="Ex: Dia das MÃ£es, Páscoa..." value={seasonalForm.name} onChange={e => setSeasonalForm(f => ({ ...f, name: e.target.value }))} />
+                  <input {...inp} placeholder="Ex: Dia das Mães, Páscoa..." value={seasonalForm.name} onChange={e => setSeasonalForm(f => ({ ...f, name: e.target.value }))} />
                 </div>
                 <div>
                   <label style={labelStyle}>Data do Evento</label>
@@ -1213,7 +1213,7 @@ const Estoque = () => {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
                       <div>
                         <div style={{ fontSize: '13px', fontWeight: 800, color: '#f59e0b' }}>Campos Extras do Item</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Crie perguntas obrigatÃ³rias ou opcionais que aparecem na hora de montar o pedido.</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Crie perguntas obrigatórias ou opcionais que aparecem na hora de montar o pedido.</div>
                       </div>
                       <button
                         type="button"
@@ -1263,7 +1263,7 @@ const Estoque = () => {
                                     onChange={e => updateCustomFieldRow(idx, 'required', e.target.checked)}
                                     style={{ width: '16px', height: '16px', accentColor: '#f59e0b', cursor: 'pointer' }}
                                   />
-                                  ObrigatÃ³rio
+                                  Obrigatório
                                 </label>
                               </div>
                               <button
@@ -1394,7 +1394,7 @@ const Estoque = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                                 <span style={{ fontWeight: 800, color: '#fff' }}>{group.name}</span>
                                                 <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '999px', backgroundColor: group.min > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(255,255,255,0.08)', color: group.min > 0 ? '#fca5a5' : 'var(--text-secondary)', fontWeight: 800 }}>
-                                                    {group.min > 0 ? 'ObrigatÃ³rio' : 'Opcional'}
+                                                    {group.min > 0 ? 'Obrigatório' : 'Opcional'}
                                                 </span>
                                             </div>
                                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
