@@ -72,7 +72,7 @@ try {
 
     ob_start();
 
-    $stmt = $pdo->prepare("SELECT u.*, COALESCE(sp.businessName, s.businessName) AS businessName, COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl, COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl, COALESCE(sp.accentColor, s.accentColor) AS accentColor, COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor, COALESCE(sp.textColor, s.textColor) AS textColor, COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor, COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor, COALESCE(sp.seoDescription, s.seoDescription) AS seoDescription, COALESCE(sp.googleApiKey, s.googleApiKey) AS googleApiKey, COALESCE(sp.deliveryRules, s.deliveryRules) AS deliveryRules, COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm, COALESCE(sp.pixelId, s.pixelId) AS pixelId, COALESCE(sp.microsoftClarityId, s.microsoftClarityId) AS microsoftClarityId, COALESCE(sp.googleAnalyticsId, s.googleAnalyticsId) AS googleAnalyticsId, COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders, COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders, COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders, COALESCE(sp.freeDeliveryEnabled, s.freeDeliveryEnabled) AS freeDeliveryEnabled, COALESCE(sp.freeDeliveryKm, s.freeDeliveryKm) AS freeDeliveryKm, COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode, COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery FROM user u LEFT JOIN setting s ON u.id = s.userId LEFT JOIN store_profile sp ON u.id = sp.userId WHERE u.slug = ?");
+    $stmt = $pdo->prepare("SELECT u.*, COALESCE(sp.businessName, s.businessName) AS businessName, COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl, COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl, COALESCE(sp.accentColor, s.accentColor) AS accentColor, COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor, COALESCE(sp.textColor, s.textColor) AS textColor, COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor, COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor, COALESCE(sp.seoDescription, s.seoDescription) AS seoDescription, COALESCE(s.googleApiKey, '') AS googleApiKey, COALESCE(s.deliveryRules, '[]') AS deliveryRules, COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm, COALESCE(sp.pixelId, s.pixelId) AS pixelId, COALESCE(sp.microsoftClarityId, s.microsoftClarityId) AS microsoftClarityId, COALESCE(sp.googleAnalyticsId, s.googleAnalyticsId) AS googleAnalyticsId, COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders, COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders, COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders, COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled, COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm, COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode, COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery FROM user u LEFT JOIN setting s ON u.id = s.userId LEFT JOIN store_profile sp ON u.id = sp.userId WHERE u.slug = ?");
     $stmt->execute([$slug]);
     $store = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -521,7 +521,18 @@ try {
                                         <div class="product-info">
                                             <h3><?php echo $p['name']; ?></h3>
                                             <p><?php echo $p['description']; ?></p>
-                                            <div class="product-price">R$ <?php echo number_format($p['price'], 2, ',', '.'); ?>
+                                            <?php
+                                                $basePrice = isset($p['price']) ? (float) $p['price'] : 0;
+                                                $promoPrice = isset($p['promoPrice']) ? (float) $p['promoPrice'] : 0;
+                                                $hasPromo = $promoPrice > 0 && $promoPrice < $basePrice;
+                                            ?>
+                                            <div class="product-price">
+                                                <?php if ($hasPromo): ?>
+                                                    <span style="text-decoration:line-through;opacity:.65;margin-right:6px;">R$ <?php echo number_format($basePrice, 2, ',', '.'); ?></span>
+                                                    <span>R$ <?php echo number_format($promoPrice, 2, ',', '.'); ?></span>
+                                                <?php else: ?>
+                                                    R$ <?php echo number_format($basePrice, 2, ',', '.'); ?>
+                                                <?php endif; ?>
                                             </div>
                                         </div>
                                         <?php if ($p['image']): ?>
@@ -969,6 +980,23 @@ try {
                 } catch (e) {
                     return [imgField];
                 }
+            }
+
+            function formatProductPriceText(product) {
+                const basePrice = parseFloat(product?.price || 0) || 0;
+                const promoPrice = parseFloat(product?.promoPrice || 0) || 0;
+                if (promoPrice > 0 && promoPrice < basePrice) {
+                    return `de R$ ${basePrice.toFixed(2)} por R$ ${promoPrice.toFixed(2)}`;
+                }
+                return `R$ ${basePrice.toFixed(2)}`;
+            }
+
+            function minPositiveNumber(values = []) {
+                const valid = values
+                    .map((value) => parseFloat(value || 0))
+                    .filter((value) => Number.isFinite(value) && value > 0);
+                if (!valid.length) return 0;
+                return Math.min(...valid);
             }
 
             /**
@@ -1780,7 +1808,7 @@ try {
 
             function renderFeaturedCard(product, isPriority = false) {
                 const variations = JSON.parse(product.variations || '[]').filter(v => !v.hidden);
-                const priceText = variations.length > 0 ? `A partir de R$ ${Math.min(...variations.map(v => v.price)).toFixed(2)}` : `R$ ${parseFloat(product.price).toFixed(2)}`;
+                const priceText = variations.length > 0 ? `A partir de ${formatProductPriceText({ price: minPositiveNumber(variations.map(v => v.price)), promoPrice: minPositiveNumber(variations.map(v => v.promoPrice)) })}` : formatProductPriceText(product);
                 const images = parseImages(product.image);
                 const imgAttr = isPriority ? 'fetchpriority="high" loading="eager" decoding="async"' : 'loading="lazy" decoding="async"';
 
@@ -1840,7 +1868,7 @@ try {
 
             function renderProductCard(product, isPriority = false) {
                 const variations = JSON.parse(product.variations || '[]').filter(v => !v.hidden);
-                const priceText = variations.length > 0 ? `A partir de R$ ${Math.min(...variations.map(v => v.price)).toFixed(2)}` : `R$ ${parseFloat(product.price).toFixed(2)}`;
+                const priceText = variations.length > 0 ? `A partir de ${formatProductPriceText({ price: minPositiveNumber(variations.map(v => v.price)), promoPrice: minPositiveNumber(variations.map(v => v.promoPrice)) })}` : formatProductPriceText(product);
                 const imgAttr = isPriority ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"';
                 return `
         <div class="product-card" onclick="openItemDetail('${product.id}')">

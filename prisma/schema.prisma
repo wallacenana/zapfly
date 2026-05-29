@@ -199,6 +199,7 @@ model Product {
   name            String
   description     String?   @db.Text
   price           Float     @default(0)
+  promoPrice      Float?    @default(0)
   imageUrl        String?   @db.Text
   image           String?   @db.Text
   category        String?

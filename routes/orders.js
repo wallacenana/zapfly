@@ -1257,7 +1257,7 @@ router.get('/products', authenticate, async (req, res) => {
 });
 
 router.post('/products', authenticate, async (req, res) => {
-  const { name, description, price, image, category, type, variations, comboItems, customFields, stock, trackStock, featured, capacityCost, bannerUrl, displayOrder } = req.body;
+  const { name, description, price, promoPrice, image, category, type, variations, comboItems, customFields, stock, trackStock, featured, capacityCost, bannerUrl, displayOrder } = req.body;
   const addonGroups = await normalizeProductAddonGroups(req.body.addonGroups, req.user.id);
   const currentMaxOrder = await prisma.product.aggregate({
     where: { userId: req.user.id },
@@ -1269,6 +1269,9 @@ router.post('/products', authenticate, async (req, res) => {
       name,
       description,
       price: parseFloat(price) || 0,
+      promoPrice: promoPrice !== undefined && promoPrice !== null && promoPrice !== ''
+        ? (parseFloat(promoPrice) || 0)
+        : 0,
       image,
       category,
       type: type || 'delivery',
@@ -1532,6 +1535,11 @@ router.patch('/products/:id', authenticate, async (req, res) => {
 
     if (Object.prototype.hasOwnProperty.call(updateData, 'price')) {
       updateData.price = parseFloat(updateData.price) || 0;
+    }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'promoPrice')) {
+      updateData.promoPrice = updateData.promoPrice !== undefined && updateData.promoPrice !== null && updateData.promoPrice !== ''
+        ? (parseFloat(updateData.promoPrice) || 0)
+        : 0;
     }
     if (Object.prototype.hasOwnProperty.call(updateData, 'stock')) {
       updateData.stock = parseInt(updateData.stock, 10) || 0;
