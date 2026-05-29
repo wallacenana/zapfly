@@ -506,15 +506,37 @@ try {
                 <div id="actual-menu-content">
                     <?php
                     $imgCounter = 0;
-                    foreach ($categories as $cat):
-                        $catProducts = array_filter($products, function ($p) use ($cat) {
-                            return $p['categoryId'] == $cat['id'];
-                        });
+                    $groupedProducts = [];
+                    $orderedSectionKeys = [];
+
+                    foreach ($products as $p) {
+                        $catName = 'Geral';
+                        if (!empty($p['categoryId'])) {
+                            foreach ($categories as $cat) {
+                                if ((string) $cat['id'] === (string) $p['categoryId']) {
+                                    $catName = $cat['name'];
+                                    break;
+                                }
+                            }
+                        } elseif (!empty($p['category'])) {
+                            $catName = $p['category'];
+                        }
+
+                        if (!isset($groupedProducts[$catName])) {
+                            $groupedProducts[$catName] = [];
+                            $orderedSectionKeys[] = $catName;
+                        }
+
+                        $groupedProducts[$catName][] = $p;
+                    }
+
+                    foreach ($orderedSectionKeys as $sectionName):
+                        $catProducts = $groupedProducts[$sectionName] ?? [];
                         if (empty($catProducts))
                             continue;
                     ?>
                         <section class="menu-section">
-                            <h2 class="section-title"><?php echo $cat['name']; ?></h2>
+                            <h2 class="section-title"><?php echo htmlspecialchars($sectionName, ENT_QUOTES, 'UTF-8'); ?></h2>
                             <div class="products-grid">
                                 <?php foreach ($catProducts as $p): ?>
                                     <div class="product-card" onclick="openItemDetail('<?php echo $p['id']; ?>')">
@@ -1744,33 +1766,22 @@ try {
                 const featured = query ? [] : filtered.filter(p => p.featured).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
                 const nonFeatured = query ? filtered : filtered.filter(p => !p.featured);
 
-                const grouped = nonFeatured.reduce((acc, p) => {
+                const grouped = {};
+                const sortedCategories = [];
+                nonFeatured.forEach(p => {
                     let cat = 'Geral';
                     if (p.categoryId && state.categories && state.categories.length > 0) {
-                        const foundCat = state.categories.find(c => c.id === p.categoryId);
+                        const foundCat = state.categories.find(c => String(c.id) === String(p.categoryId));
                         if (foundCat) cat = foundCat.name;
                     } else if (p.category) {
                         cat = p.category; // fallback para produtos antigos
                     }
-                    if (!acc[cat]) acc[cat] = [];
-                    acc[cat].push(p);
-                    return acc;
-                }, {});
 
-                // Ordenar itens dentro de cada categoria pelo campo 'displayOrder'
-                Object.keys(grouped).forEach(cat => {
-                    grouped[cat].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-                });
-
-                // Ordenar pela propriedade 'order' que já vem do banco de dados
-                const sortedCategories = [];
-                const orderedCats = [...(state.categories || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
-                orderedCats.forEach(c => {
-                    if (grouped[c.name]) sortedCategories.push(c.name);
-                });
-                // Adiciona categorias legadas ('Geral') que não existem em state.categories
-                Object.keys(grouped).forEach(catName => {
-                    if (!sortedCategories.includes(catName)) sortedCategories.push(catName);
+                    if (!grouped[cat]) {
+                        grouped[cat] = [];
+                        sortedCategories.push(cat);
+                    }
+                    grouped[cat].push(p);
                 });
 
                 let html = '';

@@ -187,7 +187,7 @@ const Estoque = () => {
           customFields: parseJsonArray(p.customFields, []).map(normalizeCustomField)
         };
       });
-      setProducts(data);
+      setProducts(data.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0)));
     } catch (err) { console.error(err); }
   }, []);
 
@@ -544,7 +544,9 @@ const Estoque = () => {
     setShowSeasonalModal(true);
   };
 
-  const filtered = products.filter(p => {
+  const filtered = [...products]
+    .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+    .filter(p => {
     const matchesTab = p.type === tab || p.type === `combo_${tab}`;
     if (!matchesTab) return false;
 
