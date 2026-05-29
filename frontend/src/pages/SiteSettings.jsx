@@ -91,9 +91,15 @@ const SiteSettings = () => {
 
     const checkSlugAvailability = async (val) => {
         if (!val || val.length < 3) return;
+        if (String(val || '').trim().toLowerCase() === String(settings.slug || '').trim().toLowerCase()) {
+            setSlugStatus({ available: true, suggestion: '' });
+            return;
+        }
         setCheckingSlug(true);
         try {
-            const res = await api.get(`/public/check-slug/${val}`);
+            const res = await api.get(`/public/check-slug/${val}`, {
+                params: { currentSlug: settings.slug || '' }
+            });
             setSlugStatus({ available: res.data.available, suggestion: res.data.suggestion || '' });
         } catch (err) {
             console.error(err);
@@ -235,7 +241,7 @@ const SiteSettings = () => {
                             </button>
                             {settings.slug && slugStatus.available === true && (
                                 <a
-                                    href={`/${settings.slug}`}
+                                    href={`https://digizap.com.br/${settings.slug}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="btn btn-primary"
@@ -285,7 +291,7 @@ const SiteSettings = () => {
                             <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px', alignItems: 'center' }}>
                                 <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>KM grátis</span>
                                 <input
-                                    {...inp}
+                                    style={inputStyle}
                                     type="number"
                                     step="0.1"
                                     min="0"

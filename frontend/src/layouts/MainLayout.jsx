@@ -1,27 +1,29 @@
 import React from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Package, 
-  MessageSquare, 
-  Share2, 
-  Settings, 
-  Globe, 
-  LogOut, 
+import {
+  LayoutDashboard,
+  Package,
+  MessageSquare,
+  Share2,
+  Settings,
+  Globe,
+  LogOut,
   ClipboardList,
   Calendar,
   MessageCircle,
-  Zap
+  Zap,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
+  const isSuperAdmin = String(user?.role || '').toLowerCase() === 'superadmin';
 
   const menuItems = [
-    { path: '/', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
+    { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
     { path: '/chat', icon: <MessageCircle size={20} />, label: 'Chat' },
     { path: '/estoque', icon: <Package size={20} />, label: 'Estoque' },
     { path: '/production', icon: <ClipboardList size={20} />, label: 'Produção' },
@@ -30,6 +32,7 @@ const MainLayout = () => {
     { path: '/connections', icon: <Share2 size={20} />, label: 'Conexões' },
     { path: '/prompts', icon: <MessageSquare size={20} />, label: 'Prompts' },
     { path: '/site-settings', icon: <Globe size={20} />, label: 'Cardápio' },
+    ...(isSuperAdmin ? [{ path: '/users', icon: <Users size={20} />, label: 'Usuários' }] : []),
     { path: '/settings', icon: <Settings size={20} />, label: 'Configurações' },
   ];
 
@@ -40,25 +43,28 @@ const MainLayout = () => {
 
   return (
     <div style={{ display: 'flex', height: '100vh', backgroundColor: '#09090b', color: '#fff', overflow: 'hidden' }}>
-      {/* Sidebar */}
-      <div style={{ 
-        width: '260px', 
-        backgroundColor: '#111113', 
-        borderRight: '1px solid #1f1f22', 
-        display: 'flex', 
-        flexDirection: 'column',
-        padding: '20px'
-      }}>
+      <div
+        style={{
+          width: '260px',
+          backgroundColor: '#111113',
+          borderRight: '1px solid #1f1f22',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '20px',
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px', padding: '0 10px' }}>
-          <div style={{ 
-            width: '32px', 
-            height: '32px', 
-            backgroundColor: '#3b82f6', 
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
+          <div
+            style={{
+              width: '32px',
+              height: '32px',
+              backgroundColor: '#3b82f6',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
             <Zap size={20} color="#fff" />
           </div>
           <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px' }}>ZAPFLY</span>
@@ -66,11 +72,11 @@ const MainLayout = () => {
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
           {menuItems.map((item) => {
-            const isActive = location.pathname === item.path;
+            const isActive = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
             return (
-              <Link 
-                key={item.path} 
-                to={item.path} 
+              <Link
+                key={item.path}
+                to={item.path}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -82,7 +88,7 @@ const MainLayout = () => {
                   backgroundColor: isActive ? '#1f1f22' : 'transparent',
                   transition: 'all 0.2s ease',
                   fontWeight: isActive ? 600 : 500,
-                  fontSize: '14px'
+                  fontSize: '14px',
                 }}
               >
                 {item.icon}
@@ -92,7 +98,7 @@ const MainLayout = () => {
           })}
         </nav>
 
-        <button 
+        <button
           onClick={handleLogout}
           style={{
             display: 'flex',
@@ -106,7 +112,7 @@ const MainLayout = () => {
             cursor: 'pointer',
             fontSize: '14px',
             fontWeight: 500,
-            marginTop: '20px'
+            marginTop: '20px',
           }}
         >
           <LogOut size={20} />
@@ -114,7 +120,6 @@ const MainLayout = () => {
         </button>
       </div>
 
-      {/* Main Content */}
       <div style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
         <Outlet />
       </div>

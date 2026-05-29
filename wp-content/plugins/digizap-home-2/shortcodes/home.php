@@ -31,6 +31,7 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
         $initialData = [
             'total' => 0,
             'categories' => [],
+            'stores' => [],
             'featuredStores' => [],
             'freeDeliveryStores' => [],
             'promoStores' => [],
@@ -133,6 +134,25 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
                                 </a>
                             <?php endforeach; ?>
                         </div>
+                    </div>
+
+                    <div class="dz-home2-directory-toolbar" data-directory-controls>
+                        <div class="dz-home2-directory-filters" role="tablist" aria-label="Filtros do diretório">
+                            <button class="dz-home2-directory-filter is-active" type="button" data-filter-pill="all">Todos</button>
+                            <button class="dz-home2-directory-filter" type="button" data-filter-pill="featured">Destaques</button>
+                            <button class="dz-home2-directory-filter" type="button" data-filter-pill="freeDelivery">Frete grátis</button>
+                            <button class="dz-home2-directory-filter" type="button" data-filter-pill="promo">Em promoção</button>
+                            <button class="dz-home2-directory-filter" type="button" data-filter-pill="open">Aberto agora</button>
+                        </div>
+                        <label class="dz-home2-directory-sort">
+                            <span>Ordenar</span>
+                            <select data-sort-select>
+                                <option value="recommended">Relevância</option>
+                                <option value="orders">Mais pedidos</option>
+                                <option value="rating">Melhor avaliados</option>
+                                <option value="az">A-Z</option>
+                            </select>
+                        </label>
                     </div>
 
                     <?php echo dzhome2_render_store_rail_section('Destaques', $initialData['featuredStores'] ?? [], dzhome2_restaurants_url(), 'featured', empty($initialData['featuredStores'])); ?>

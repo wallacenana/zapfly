@@ -1,6 +1,8 @@
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'zapfly-secret-key-super-safe';
 
+const normalizeRole = (role) => String(role || '').trim().toLowerCase();
+
 const authenticate = (req, res, next) => {
   // Bypassa autenticação para chamadas internas da IA se o token conferir
   const internalToken = req.headers['x-internal-token'];
@@ -42,12 +44,16 @@ const authenticate = (req, res, next) => {
   }
 };
 
-const requireAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'ADMIN') {
-    next();
-  } else {
-    return res.status(403).json({ error: 'Acesso restrito a administradores.' });
-  }
+const requireRole = (...roles) => {
+  const allowedRoles = roles.map(normalizeRole).filter(Boolean);
+  return (req, res, next) => {
+    const role = normalizeRole(req.user?.role);
+    if (allowedRoles.includes(role)) return next();
+    return res.status(403).json({ error: 'Acesso restrito.' });
+  };
 };
 
-module.exports = { authenticate, requireAdmin };
+const requireAdmin = requireRole('admin', 'superadmin');
+const requireSuperAdmin = requireRole('superadmin');
+
+module.exports = { authenticate, requireAdmin, requireSuperAdmin, requireRole, normalizeRole };

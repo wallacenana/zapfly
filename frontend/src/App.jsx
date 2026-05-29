@@ -22,29 +22,82 @@ import Production from './pages/Production';
 import Agenda from './pages/Agenda';
 import FirstLoginSetup from './pages/FirstLoginSetup';
 import Prompts from './pages/Prompts';
+import Users from './pages/Users';
+import AccountHome from './pages/AccountHome';
+
+const FullScreenLoader = () => (
+  <div style={{
+    minHeight: '100vh',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: '#09090b',
+    color: '#f4f4f5',
+    fontSize: '14px',
+  }}>
+    Carregando...
+  </div>
+);
+
+const LoginRoute = () => {
+  const { user, loading, logout } = useAuth();
+
+  if (loading) return <FullScreenLoader />;
+  if (user) {
+    const role = String(user?.role || '').toLowerCase();
+    if (!['admin', 'superadmin', 'user'].includes(role)) {
+      logout();
+      return <Login />;
+    }
+    return <Navigate to={role === 'user' ? '/conta' : '/dashboard'} replace />;
+  }
+  return <Login />;
+};
 
 // Auth Guard
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
   
-  if (loading) return null; // Ou um loading spinner
+  if (loading) return <FullScreenLoader />;
   
   if (!user) return <Navigate to="/login" />;
+  return children;
+};
+
+const SuperAdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return <FullScreenLoader />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (String(user?.role || '').toLowerCase() !== 'superadmin') {
+    return <Navigate to="/dashboard" replace />;
+  }
+  return children;
+};
+
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return <FullScreenLoader />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!['admin', 'superadmin'].includes(String(user?.role || '').toLowerCase())) {
+    return <Navigate to="/conta" replace />;
+  }
   return children;
 };
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
+      <Route path="/login" element={<LoginRoute />} />
       <Route path="/first-login" element={<FirstLoginSetup />} />
-      
-      <Route path="/" element={
-        <PrivateRoute>
+      <Route path="/conta" element={<PrivateRoute><AccountHome /></PrivateRoute>} />
+
+      <Route element={
+        <AdminRoute>
           <MainLayout />
-        </PrivateRoute>
+        </AdminRoute>
       }>
-        <Route index element={<Dashboard />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="estoque" element={<Estoque />} />
         <Route path="inventory" element={<Navigate to="/estoque" replace />} />
@@ -57,9 +110,12 @@ function AppRoutes() {
         <Route path="flows/:id" element={<FlowEditor />} />
         <Route path="flows/edit/:id" element={<FlowEditor />} />
         <Route path="prompts" element={<Prompts />} />
+        <Route path="users" element={<SuperAdminRoute><Users /></SuperAdminRoute>} />
         <Route path="settings" element={<Settings />} />
         <Route path="site-settings" element={<SiteSettings />} />
       </Route>
+
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );
 }

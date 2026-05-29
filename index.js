@@ -92,7 +92,7 @@ const {
     invalidateSettingsCache,
     getCachedInstance
 } = require('./lib/cache');
-const { upsertStoreProfile } = require('./lib/storeProfile');
+const { upsertStoreProfile, mergeStoreProfile } = require('./lib/storeProfile');
 const { buildHomeDirectoryData, renderCategoryCards, renderHeroRestaurants, renderRestaurantCards, escapeHtml } = require('./lib/home');
 
 const { router: ordersRouter, setupCronJobs, checkAvailability, updateCalendarEvent } = require('./routes/orders');
@@ -384,6 +384,7 @@ app.get('/public/menu/:slug', async (req, res) => {
             where: { slug },
             include: {
                 settings: true,
+                storeProfile: true,
                 products: true,
                 categories: {
                     orderBy: { order: 'asc' }
@@ -397,7 +398,11 @@ app.get('/public/menu/:slug', async (req, res) => {
             return res.status(404).json({ error: 'Loja nao encontrada' });
         }
 
-        const settings = Array.isArray(user.settings) ? user.settings[0] : user.settings;
+        const settings = mergeStoreProfile({
+            setting: Array.isArray(user.settings) ? user.settings[0] : user.settings,
+            storeProfile: user.storeProfile,
+            user
+        });
         console.log(`[Public Menu] Loja encontrada: ${user.name} (ID: ${user.id})`);
 
         res.json({
@@ -452,8 +457,9 @@ app.get('/public/restaurants', async (req, res) => {
 app.get('/public/check-slug/:slug', async (req, res) => {
     try {
         const base = req.params.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        const currentSlug = String(req.query.currentSlug || '').toLowerCase().trim();
         const existing = await prisma.user.findUnique({ where: { slug: base } });
-        if (!existing) {
+        if (!existing || (currentSlug && existing.slug === currentSlug)) {
             return res.json({ available: true, slug: base });
         }
         // Tenta base-2, base-3, ...

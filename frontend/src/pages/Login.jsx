@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 import FirstLoginSetup from './FirstLoginSetup';
@@ -8,8 +7,7 @@ import { Loader2, Zap, Lock, Mail, ShieldCheck, ArrowRight, RefreshCw } from 'lu
 const STEP = { LOGIN: 'LOGIN', OTP: 'OTP' };
 
 export default function Login() {
-  const { login, user } = useAuth();
-  const navigate = useNavigate();
+  const { login } = useAuth();
   const [step, setStep] = useState(STEP.LOGIN);
   const [setupData, setSetupData] = useState(null);
   const [email, setEmail] = useState('');
@@ -21,11 +19,11 @@ export default function Login() {
   const [error, setError] = useState('');
   const [countdown, setCountdown] = useState(0);
   const otpRefs = useRef([]);
+  const tempTokenRef = useRef('');
 
-  // Redireciona para o dashboard assim que o login for concluído
   useEffect(() => {
-    if (user) navigate('/dashboard', { replace: true });
-  }, [user, navigate]);
+    tempTokenRef.current = tempToken || '';
+  }, [tempToken]);
 
   // Countdown para reenvio de OTP
   useEffect(() => {
@@ -52,7 +50,26 @@ export default function Login() {
         setSetupData({ setupToken: res.data.setupToken, step: res.data.step });
         return;
       }
-      setTempToken(res.data.tempToken);
+      const directToken = String(res.data.token || '').trim();
+      if (directToken) {
+        login(directToken, res.data.user);
+        const role = String(res.data.user?.role || '').toLowerCase();
+        setTempToken('');
+        tempTokenRef.current = '';
+        setStep(STEP.LOGIN);
+        window.location.replace(role === 'user' ? '/conta' : '/dashboard');
+        return;
+      }
+      const nextTempToken = String(res.data.tempToken || '').trim();
+      if (!nextTempToken) {
+        setError('Sessao de verificacao ausente. Tente entrar novamente.');
+        setTempToken('');
+        tempTokenRef.current = '';
+        setStep(STEP.LOGIN);
+        return;
+      }
+      tempTokenRef.current = nextTempToken;
+      setTempToken(nextTempToken);
       setTwoFactorMethod(res.data.twoFactorMethod);
       setStep(STEP.OTP);
       setCountdown(60);
@@ -89,14 +106,23 @@ export default function Login() {
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     const code = otp.join('');
-    if (code.length < 6) { setError('Digite o código completo de 6 dígitos.'); return; }
+    if (code.length < 6) { setError('Digite o cÃ³digo completo de 6 dÃ­gitos.'); return; }
     setError('');
     setLoading(true);
     try {
-      const res = await api.post('/auth/verify', { tempToken, code });
+      const currentTempToken = String(tempTokenRef.current || tempToken || '').trim();
+      if (!currentTempToken) {
+        setError('Sessao de verificacao perdida. Faça login novamente.');
+        setTempToken('');
+        setStep(STEP.LOGIN);
+        return;
+      }
+      const res = await api.post('/auth/verify', { tempToken: currentTempToken, code });
       login(res.data.token, res.data.user);
+      const role = String(res.data.user?.role || '').toLowerCase();
+      window.location.replace(role === 'user' ? '/conta' : '/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || 'Código inválido ou expirado.');
+      setError(err.response?.data?.error || 'CÃ³digo invÃ¡lido ou expirado.');
       setOtp(['', '', '', '', '', '']);
       otpRefs.current[0]?.focus();
     } finally {
@@ -110,7 +136,25 @@ export default function Login() {
     setLoading(true);
     try {
       const res = await api.post('/auth/login', { email, password });
-      setTempToken(res.data.tempToken);
+      if (res.data?.token) {
+        login(res.data.token, res.data.user);
+        const role = String(res.data.user?.role || '').toLowerCase();
+        setTempToken('');
+        tempTokenRef.current = '';
+        setStep(STEP.LOGIN);
+        window.location.replace(role === 'user' ? '/conta' : '/dashboard');
+        return;
+      }
+      const nextTempToken = String(res.data.tempToken || '').trim();
+      if (!nextTempToken) {
+        setError('Sessao de verificacao ausente. Tente entrar novamente.');
+        setTempToken('');
+        tempTokenRef.current = '';
+        setStep(STEP.LOGIN);
+        return;
+      }
+      tempTokenRef.current = nextTempToken;
+      setTempToken(nextTempToken);
       setOtp(['', '', '', '', '', '']);
       setCountdown(60);
     } catch {
@@ -162,7 +206,7 @@ export default function Login() {
             DigiZap
           </h1>
           <p style={{ color: '#71717a', fontSize: '14px' }}>
-            {step === STEP.LOGIN ? 'Entre na sua conta para continuar' : 'Verificação de segurança'}
+            {step === STEP.LOGIN ? 'Entre na sua conta para continuar' : 'VerificaÃ§Ã£o de seguranÃ§a'}
           </p>
         </div>
 
@@ -217,7 +261,7 @@ export default function Login() {
                       value={password}
                       onChange={e => setPassword(e.target.value)}
                       required
-                      placeholder="••••••••"
+                      placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                       style={{
                         width: '100%', padding: '13px 14px 13px 40px',
                         borderRadius: '12px', fontSize: '14px',
@@ -274,13 +318,13 @@ export default function Login() {
                   <ShieldCheck size={26} color="#10b981" />
                 </div>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#f4f4f5', marginBottom: '6px', fontFamily: "'Outfit', sans-serif" }}>
-                  Verificação de Segurança
+                  VerificaÃ§Ã£o de SeguranÃ§a
                 </h3>
                 <p style={{ fontSize: '13px', color: '#71717a', lineHeight: 1.6 }}>
                   {twoFactorMethod === 'totp' ? (
-                    'Digite o código de 6 dígitos gerado pelo seu aplicativo autenticador.'
+                    'Digite o cÃ³digo de 6 dÃ­gitos gerado pelo seu aplicativo autenticador.'
                   ) : (
-                    'Enviamos um código de verificação de 6 dígitos para o seu e-mail cadastrado.'
+                    'Enviamos um cÃ³digo de verificaÃ§Ã£o de 6 dÃ­gitos para o seu e-mail cadastrado.'
                   )}
                 </p>
               </div>
@@ -339,7 +383,7 @@ export default function Login() {
                   marginBottom: '16px'
                 }}
               >
-                {loading ? <Loader2 size={18} className="animate-spin" /> : <><ShieldCheck size={16} /> Verificar Código</>}
+                {loading ? <Loader2 size={18} className="animate-spin" /> : <><ShieldCheck size={16} /> Verificar CÃ³digo</>}
               </button>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -348,7 +392,7 @@ export default function Login() {
                   onClick={() => { setStep(STEP.LOGIN); setError(''); setOtp(['','','','','','']); }}
                   style={{ background: 'none', border: 'none', color: '#71717a', fontSize: '13px', cursor: 'pointer' }}
                 >
-                  ← Voltar
+                  â† Voltar
                 </button>
                 <button
                   type="button"
@@ -363,7 +407,7 @@ export default function Login() {
                   }}
                 >
                   <RefreshCw size={13} />
-                  {countdown > 0 ? `Reenviar em ${countdown}s` : 'Reenviar código'}
+                  {countdown > 0 ? `Reenviar em ${countdown}s` : 'Reenviar cÃ³digo'}
                 </button>
               </div>
             </form>
@@ -371,7 +415,7 @@ export default function Login() {
         </div>
 
         <p style={{ textAlign: 'center', color: '#3f3f46', fontSize: '12px', marginTop: '24px' }}>
-          DigiZap © {new Date().getFullYear()} — Plataforma de automação WhatsApp
+          DigiZap Â© {new Date().getFullYear()} â€” Plataforma de automaÃ§Ã£o WhatsApp
         </p>
       </div>
     </div>

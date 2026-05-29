@@ -314,11 +314,14 @@
       stateByRoot.set(root, {
         search: '',
         categorySlug: String(root.dataset.categorySlug || ''),
+        filter: 'all',
+        sort: 'recommended',
         address: '',
         selectedAddress: null,
         addressSelected: false,
         abortController: null,
         timer: null,
+        lastData: null,
         scrollBound: false,
         scrollTicking: false,
         lastScrollY: window.scrollY || window.pageYOffset || 0
@@ -531,11 +534,14 @@
       const ratingText = ratingVisible
         ? `${ratingLabel || '5,0'}${ratingCount > 0 ? ` (${ratingCount})` : ''}`
         : '';
+      const promoBadge = store?.hasPromotion ? '<span class="dz-home2-store-badge dz-home2-store-badge-promo">Promo</span>' : '';
+      const freeBadge = store?.freeDeliveryEnabled ? '<span class="dz-home2-store-badge dz-home2-store-badge-free">Frete gratis</span>' : '';
 
       return `
         <a class="dz-home2-featured-card ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}">
           <span class="dz-home2-featured-media"><img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async"></span>
           <span class="dz-home2-featured-copy">
+            ${promoBadge}${freeBadge}
             <strong>${escapeHtml(name)}</strong>
             <small>${escapeHtml(category)}</small>
             ${ratingVisible ? `<span class="dz-home2-hero-rating">${ratingStarSvg(true)}<span class="dz-home2-rating-text">${escapeHtml(ratingText)}</span></span>` : ''}
@@ -609,6 +615,8 @@
       const ratingText = ratingVisible
         ? `${ratingLabel || '5,0'}${ratingCount > 0 ? ` (${ratingCount})` : ''}`
         : '';
+      const promoBadge = store?.hasPromotion ? '<span class="dz-home2-store-badge dz-home2-store-badge-promo">Promo</span>' : '';
+      const freeBadge = store?.freeDeliveryEnabled ? '<span class="dz-home2-store-badge dz-home2-store-badge-free">Frete gratis</span>' : '';
 
       return `
         <article class="dz-home2-restaurant-card ${schedule.isOpenNow ? '' : 'is-closed'}">
@@ -620,6 +628,7 @@
                 <span class="dz-home2-restaurant-status ${schedule.statusClass}">${escapeHtml(schedule.statusLabel)}</span>
               </span>
               <span class="dz-home2-restaurant-category">${escapeHtml(category)}</span>
+              <span class="dz-home2-restaurant-badges">${promoBadge}${freeBadge}</span>
               <span class="dz-home2-restaurant-meta">
                 <span>${count} item${count === 1 ? '' : 's'}</span>
                 ${ratingVisible ? `<span class="dz-home2-rating-chip">${ratingStarSvg(true)}<span class="dz-home2-rating-text">${escapeHtml(ratingText)}</span></span>` : ''}
@@ -631,22 +640,121 @@
     }).join('');
   }
 
+  function getStoreScore(store) {
+    const featuredCount = Array.isArray(store?.featuredProducts) ? store.featuredProducts.length : 0;
+    const promoCount = Number(store?.promotionProductsCount || 0);
+    const freeDeliveryScore = store?.freeDeliveryEnabled ? 5 : 0;
+    const productsCount = Number(store?.productsCount || 0);
+    const orderCount = Number(store?.orderCount || 0);
+    const ratingAverage = Number(store?.ratingAverage || 0);
+    return (featuredCount * 10)
+      + (promoCount * 8)
+      + freeDeliveryScore
+      + productsCount
+      + (orderCount * 0.2)
+      + (ratingAverage * 1.5);
+  }
+
+  function compareStores(a, b, sort = 'recommended') {
+    const nameA = String(a?.name || '');
+    const nameB = String(b?.name || '');
+
+    if (sort === 'orders') {
+      return (Number(b?.orderCount || 0) - Number(a?.orderCount || 0))
+        || (Number(b?.ratingAverage || 0) - Number(a?.ratingAverage || 0))
+        || nameA.localeCompare(nameB, 'pt-BR');
+    }
+
+    if (sort === 'rating') {
+      return (Number(b?.ratingAverage || 0) - Number(a?.ratingAverage || 0))
+        || (Number(b?.orderCount || 0) - Number(a?.orderCount || 0))
+        || nameA.localeCompare(nameB, 'pt-BR');
+    }
+
+    if (sort === 'az') {
+      return nameA.localeCompare(nameB, 'pt-BR');
+    }
+
+    return getStoreScore(b) - getStoreScore(a) || nameA.localeCompare(nameB, 'pt-BR');
+  }
+
+  function matchesFilter(store, filter) {
+    switch (filter) {
+      case 'featured':
+        return Array.isArray(store?.featuredProducts) && store.featuredProducts.length > 0;
+      case 'freeDelivery':
+        return !!store?.freeDeliveryEnabled;
+      case 'promo':
+        return !!store?.hasPromotion;
+      case 'open':
+        return !!store?.isOpenNow;
+      case 'closed':
+        return !store?.isOpenNow;
+      default:
+        return true;
+    }
+  }
+
+  function filterAndSortStores(stores, filter, sort) {
+    return (Array.isArray(stores) ? stores : [])
+      .filter((store) => matchesFilter(store, filter))
+      .sort((a, b) => compareStores(a, b, sort));
+  }
+
+  function updateControlState(root) {
+    const state = stateFor(root);
+    root.querySelectorAll('[data-filter-pill]').forEach((button) => {
+      button.classList.toggle('is-active', button.dataset.filterPill === state.filter);
+    });
+    const sortSelect = root.querySelector('[data-sort-select]');
+    if (sortSelect && sortSelect.value !== state.sort) {
+      sortSelect.value = state.sort;
+    }
+  }
+
   function updateView(root, data) {
+    const state = stateFor(root);
+    state.lastData = data || state.lastData || {};
     const catalog = root.querySelector('[data-catalog]');
     const categoriesTrack = root.querySelector('[data-categories-track]');
     const restaurantsGrid = root.querySelector('[data-restaurants-grid]');
     const emptyResults = root.querySelector('[data-empty-results]');
     const catalogSummary = root.querySelector('[data-catalog-summary]');
-    const total = Number(data?.total || 0);
-    const search = stateFor(root).search || '';
+    const sourceStores = Array.isArray(state.lastData?.stores) && state.lastData.stores.length > 0
+      ? state.lastData.stores
+      : (Array.isArray(state.lastData?.restaurants) ? state.lastData.restaurants : []);
+    const visibleStores = filterAndSortStores(sourceStores, state.filter, state.sort);
+    const total = visibleStores.length;
+    const search = state.search || '';
+    const featuredStores = filterAndSortStores(
+      Array.isArray(state.lastData?.featuredStores) && state.lastData.featuredStores.length > 0
+        ? state.lastData.featuredStores
+        : visibleStores,
+      state.filter,
+      state.sort
+    ).slice(0, 10);
+    const freeDeliveryStores = filterAndSortStores(
+      Array.isArray(state.lastData?.freeDeliveryStores) && state.lastData.freeDeliveryStores.length > 0
+        ? state.lastData.freeDeliveryStores
+        : visibleStores,
+      state.filter,
+      state.sort
+    ).slice(0, 10);
+    const promoStores = filterAndSortStores(
+      Array.isArray(state.lastData?.promoStores) && state.lastData.promoStores.length > 0
+        ? state.lastData.promoStores
+        : visibleStores,
+      state.filter,
+      state.sort
+    ).slice(0, 10);
 
     if (categoriesTrack) {
-      categoriesTrack.innerHTML = renderCategoryCards(data?.categories || []);
+      categoriesTrack.innerHTML = renderCategoryCards(state.lastData?.categories || []);
     }
     [
-      { key: 'featured', title: 'Destaques', stores: data?.featuredStores || [] },
-      { key: 'freeDelivery', title: 'Frete grátis', stores: data?.freeDeliveryStores || [] },
-      { key: 'promo', title: 'Em promoção', stores: data?.promoStores || [] }
+      { key: 'featured', title: 'Destaques', stores: featuredStores },
+      { key: 'freeDelivery', title: 'Frete grátis', stores: freeDeliveryStores },
+      { key: 'promo', title: 'Em promoção', stores: promoStores }
     ].forEach(({ key, stores, title }) => {
       const section = root.querySelector(`[data-rail-key="${key}"]`);
       const track = section?.querySelector('[data-rail-track]');
@@ -667,7 +775,7 @@
       section.dataset.sectionTitle = title;
     });
     if (restaurantsGrid) {
-      restaurantsGrid.innerHTML = renderRestaurantCards(data?.restaurants || []);
+      restaurantsGrid.innerHTML = renderRestaurantCards(visibleStores.slice(0, Number(root.dataset.limit || 18)));
     }
     if (emptyResults) {
       emptyResults.hidden = total > 0;
@@ -677,6 +785,7 @@
         ? `${total} resultado${total === 1 ? '' : 's'} para "${search}"`
         : (total > 0 ? `${total} restaurante${total === 1 ? '' : 's'} cadastrado${total === 1 ? '' : 's'}` : 'Nenhum restaurante cadastrado');
     }
+    updateControlState(root);
     if (catalog && root.dataset.mode !== 'app') {
       catalog.hidden = true;
     }
@@ -728,7 +837,7 @@
         return;
       }
       setLoading(root, false);
-      updateView(root, { total: 0, featuredStores: [], freeDeliveryStores: [], promoStores: [], restaurants: [] });
+      updateView(root, { total: 0, categories: [], stores: [], featuredStores: [], freeDeliveryStores: [], promoStores: [], restaurants: [] });
     }
   }
 
@@ -877,6 +986,7 @@
     const input = root.querySelector('[data-address-input]');
     const searchInput = root.querySelector('[data-search-input]');
     const editButton = root.querySelector('[data-edit-address]');
+    const controls = root.querySelector('[data-directory-controls]');
     const state = stateFor(root);
 
     syncAddressUI(root);
@@ -923,6 +1033,36 @@
         state.timer = window.setTimeout(() => {
           fetchDirectory(root, searchInput.value.trim(), state.address || '');
         }, 220);
+      });
+    }
+
+    if (controls) {
+      controls.addEventListener('click', (event) => {
+        const button = event.target?.closest?.('[data-filter-pill]');
+        if (!button) {
+          return;
+        }
+        const nextFilter = String(button.dataset.filterPill || 'all');
+        if (state.filter === nextFilter) {
+          return;
+        }
+        state.filter = nextFilter;
+        updateControlState(root);
+        updateView(root, state.lastData || {});
+      });
+
+      controls.addEventListener('change', (event) => {
+        const sortSelect = event.target?.matches?.('[data-sort-select]') ? event.target : null;
+        if (!sortSelect) {
+          return;
+        }
+        const nextSort = String(sortSelect.value || 'recommended');
+        if (state.sort === nextSort) {
+          return;
+        }
+        state.sort = nextSort;
+        updateControlState(root);
+        updateView(root, state.lastData || {});
       });
     }
 

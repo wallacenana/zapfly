@@ -1,16 +1,32 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
 const nodemailer = require('nodemailer');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const { getSettings } = require('../lib/cache');
+const { authenticate, requireRole, normalizeRole } = require('../middleware/auth');
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'zapfly-secret-key-super-safe';
 const APP_NAME = 'DigiZap';
+const maskEmail = (email = '') => {
+  const value = String(email || '').trim().toLowerCase();
+  if (!value.includes('@')) return value;
+  const [name, domain] = value.split('@');
+  const safeName = name.length <= 2 ? `${name[0] || '*'}*` : `${name.slice(0, 2)}***`;
+  return `${safeName}@${domain}`;
+};
+
+const authLog = (level, step, message, extra = {}) => {
+  const payload = Object.keys(extra).length ? ` ${JSON.stringify(extra)}` : '';
+  const line = `[AUTH:${level}] ${step} - ${message}${payload}`;
+  if (level === 'error') console.error(line);
+  else if (level === 'warn') console.warn(line);
+  else console.log(line);
+};
 
 // ─── Mailer map (userId -> transporter)
 let mailerInstances = {};
@@ -100,25 +116,404 @@ const sendOtpEmail = async (userId, toEmail, code, userName) => {
 const makeToken = (payload, expiresIn = '10m') =>
   jwt.sign(payload, JWT_SECRET, { expiresIn });
 
+const generateRandomPassword = (length = 12) => {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+  const bytes = crypto.randomBytes(length);
+  let result = '';
+  for (let i = 0; i < length; i += 1) {
+    result += alphabet[bytes[i] % alphabet.length];
+  }
+  return result;
+};
+
+const slugifyText = (value) => String(value || '')
+  .toLowerCase()
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/^-+|-+$/g, '');
+
+const generateUniqueUserSlug = async (baseValue) => {
+  const base = slugifyText(baseValue) || 'user';
+  let candidate = base;
+  let counter = 1;
+  while (await prisma.user.findUnique({ where: { slug: candidate }, select: { id: true } })) {
+    candidate = `${base}-${counter}`;
+    counter += 1;
+  }
+  return candidate;
+};
+
+const USER_ROLES = new Set(['user', 'admin', 'superadmin']);
+
+const normalizeRequestedRole = (role) => {
+  const normalized = normalizeRole(role);
+  return USER_ROLES.has(normalized) ? normalized : 'user';
+};
+
+const sendCredentialsEmail = async ({ userId, toEmail, userName, loginEmail, tempPassword, role }) => {
+  const mailer = await getMailer(userId);
+  if (!mailer) return { sent: false, reason: 'mailer_unavailable' };
+
+  const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
+  const settings = await getSettings(userId);
+  const businessName = settings?.businessName || APP_NAME;
+
+  const info = await mailer.sendMail({
+    from: `"${businessName}" <${fromEmail}>`,
+    to: toEmail,
+    subject: `Credenciais de acesso - ${APP_NAME}`,
+    html: `
+      <div style="font-family:Inter,Arial,sans-serif;background:#09090b;color:#f4f4f5;padding:32px;max-width:560px;margin:auto;border-radius:16px">
+        <h2 style="margin:0 0 8px;color:#22c55e">${businessName}</h2>
+        <p style="margin:0 0 24px;color:#a1a1aa">Sua conta foi criada com sucesso.</p>
+        <p>Olá, <strong>${userName}</strong>.</p>
+        <p style="color:#d4d4d8">Aqui estão suas credenciais de acesso:</p>
+        <div style="background:#18181b;border:1px solid #27272a;border-radius:12px;padding:20px;margin:20px 0">
+          <p style="margin:0 0 10px"><strong>E-mail:</strong> ${loginEmail}</p>
+          <p style="margin:0 0 10px"><strong>Senha provisória:</strong> ${tempPassword}</p>
+          <p style="margin:0"><strong>Nível:</strong> ${role}</p>
+        </div>
+        <p style="color:#a1a1aa">No primeiro acesso, a senha será alterada e as configurações de acesso serão concluídas.</p>
+        <p style="margin-top:24px"><a href="https://dash.digizap.com.br/login" style="display:inline-block;background:#22c55e;color:#fff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700">Acessar painel</a></p>
+      </div>
+    `,
+  });
+
+  return { sent: true, response: info?.response || '' };
+};
+
+const createProvisionedUser = async ({
+  createdByUserId,
+  name,
+  email,
+  role = 'user',
+  password,
+}) => {
+  const cleanName = String(name || '').trim();
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  const requestedRole = normalizeRole(role) || 'user';
+  const creator = await prisma.user.findUnique({ where: { id: createdByUserId }, select: { role: true } });
+  const creatorRole = normalizeRole(creator?.role);
+
+  if (!cleanName || !cleanEmail) {
+    const err = new Error('Nome e e-mail sao obrigatorios.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!['admin', 'superadmin'].includes(creatorRole)) {
+    const err = new Error('Acesso restrito.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const finalRole = creatorRole === 'superadmin' && USER_ROLES.has(requestedRole)
+    ? requestedRole
+    : 'user';
+
+  if (creatorRole === 'admin' && requestedRole !== 'user') {
+    const err = new Error('Admin pode criar apenas usuarios.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const exists = await prisma.user.findUnique({ where: { email: cleanEmail } });
+  if (exists) {
+    const err = new Error('Ja existe um usuario com este e-mail.');
+    err.statusCode = 409;
+    throw err;
+  }
+
+  const tempPassword = String(password || '').trim() || generateRandomPassword(12);
+  const hashedPassword = await bcrypt.hash(tempPassword, 10);
+  const hasManualPassword = Boolean(String(password || '').trim());
+  const slug = await generateUniqueUserSlug(cleanName || cleanEmail.split('@')[0]);
+
+  const user = await prisma.user.create({
+    data: {
+      name: cleanName,
+      email: cleanEmail,
+      slug,
+      role: finalRole,
+      password: hashedPassword,
+      active: true,
+      mustChangePassword: !hasManualPassword,
+      twoFactorMethod: 'none',
+      twoFactorVerified: false,
+      twoFactorEnabled: false,
+      isFirstLogin: !hasManualPassword,
+    },
+  });
+
+  let emailResult = { sent: false, reason: 'not_sent' };
+  try {
+    emailResult = await sendCredentialsEmail({
+      userId: createdByUserId,
+      toEmail: cleanEmail,
+      userName: cleanName,
+      loginEmail: cleanEmail,
+      tempPassword,
+      role: finalRole,
+    });
+  } catch (err) {
+    emailResult = { sent: false, reason: err.message };
+  }
+
+  return {
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      slug: user.slug,
+      active: user.active,
+    },
+    tempPassword,
+    emailResult,
+  };
+};
+
+router.post('/users', authenticate, requireRole('admin', 'superadmin'), async (req, res) => {
+  try {
+    const { name, email, role, password } = req.body || {};
+    const result = await createProvisionedUser({
+      createdByUserId: req.user.id,
+      name,
+      email,
+      role,
+      password,
+    });
+
+    res.status(201).json({
+      message: 'Usuario criado com sucesso.',
+      ...result,
+    });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    res.status(status).json({ error: err.message || 'Falha ao criar usuario.' });
+  }
+});
+
+router.get('/users', authenticate, requireRole('superadmin'), async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      orderBy: [
+        { role: 'desc' },
+        { createdAt: 'desc' },
+      ],
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        slug: true,
+        role: true,
+        active: true,
+        mustChangePassword: true,
+        twoFactorMethod: true,
+        twoFactorVerified: true,
+        twoFactorEnabled: true,
+        isFirstLogin: true,
+        createdAt: true,
+        updatedAt: true,
+        storeProfile: {
+          select: {
+            businessName: true,
+            businessCategory: true,
+            businessAddress: true,
+            acceptOrders: true,
+            active: true,
+          },
+        },
+        _count: {
+          select: {
+            products: true,
+            orders: true,
+            reviews: true,
+          },
+        },
+      },
+    });
+
+    res.json({ users });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Falha ao listar usuarios.' });
+  }
+});
+
+router.patch('/users/:id', authenticate, requireRole('superadmin'), async (req, res) => {
+  try {
+    const userId = req.params.id;
+    const current = await prisma.user.findUnique({ where: { id: userId } });
+    if (!current) return res.status(404).json({ error: 'Usuario nao encontrado.' });
+
+    const {
+      name,
+      email,
+      role,
+      active,
+      mustChangePassword,
+      resetPassword,
+      password,
+    } = req.body || {};
+
+    const data = {};
+    if (typeof name === 'string') {
+      const cleanName = name.trim();
+      if (!cleanName) return res.status(400).json({ error: 'Nome nao pode ser vazio.' });
+      data.name = cleanName;
+    }
+    if (typeof email === 'string') {
+      const cleanEmail = email.trim().toLowerCase();
+      if (!cleanEmail) return res.status(400).json({ error: 'Email nao pode ser vazio.' });
+      const emailOwner = await prisma.user.findFirst({
+        where: { email: cleanEmail, NOT: { id: userId } },
+        select: { id: true },
+      });
+      if (emailOwner) return res.status(409).json({ error: 'Este e-mail já está em uso.' });
+      data.email = cleanEmail;
+    }
+    if (typeof active === 'boolean') data.active = active;
+    if (typeof mustChangePassword === 'boolean') data.mustChangePassword = mustChangePassword;
+
+    if (role !== undefined) {
+      data.role = normalizeRequestedRole(role);
+    }
+
+  let tempPassword = null;
+  const providedPassword = String(password || '').trim();
+    if (resetPassword || providedPassword) {
+      tempPassword = providedPassword || generateRandomPassword(12);
+      data.password = await bcrypt.hash(tempPassword, 10);
+      data.mustChangePassword = !providedPassword;
+      data.twoFactorVerified = false;
+      data.twoFactorMethod = 'none';
+      data.twoFactorEnabled = false;
+      if (providedPassword) {
+        data.isFirstLogin = false;
+      }
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        slug: true,
+        role: true,
+        active: true,
+        mustChangePassword: true,
+        twoFactorMethod: true,
+        twoFactorVerified: true,
+        twoFactorEnabled: true,
+        isFirstLogin: true,
+        createdAt: true,
+        updatedAt: true,
+        storeProfile: {
+          select: {
+            businessName: true,
+            businessCategory: true,
+            businessAddress: true,
+            acceptOrders: true,
+            active: true,
+          },
+        },
+        _count: {
+          select: {
+            products: true,
+            orders: true,
+            reviews: true,
+          },
+        },
+      },
+    });
+
+    if (resetPassword) {
+      try {
+        await sendCredentialsEmail({
+          userId: req.user.id,
+          toEmail: updated.email,
+          userName: updated.name,
+          loginEmail: updated.email,
+          tempPassword,
+          role: updated.role,
+        });
+      } catch (err) {
+        console.warn('[AUTH users] Falha ao reenviar credenciais:', err.message);
+      }
+    }
+
+    res.json({
+      message: 'Usuario atualizado com sucesso.',
+      user: updated,
+      tempPassword,
+    });
+  } catch (err) {
+    const status = err.statusCode || 500;
+    res.status(status).json({ error: err.message || 'Falha ao atualizar usuario.' });
+  }
+});
+
+router.delete('/users/:id', authenticate, requireRole('superadmin'), async (req, res) => {
+  try {
+    const userId = req.params.id;
+    if (req.user.id === userId) {
+      return res.status(400).json({ error: 'Voce nao pode excluir seu proprio usuario.' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, email: true } });
+    if (!user) return res.status(404).json({ error: 'Usuario nao encontrado.' });
+
+    await prisma.user.delete({ where: { id: userId } });
+    res.json({ message: 'Usuario excluido com sucesso.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Falha ao excluir usuario.' });
+  }
+});
+
 // ─── POST /auth/login ─────────────────────────────────────────────────────────
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
+    authLog('info', 'login:start', 'Login iniciado', { email: maskEmail(email) });
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user || !user.active)
+    if (!user) {
+      authLog('warn', 'login:user-not-found', 'Usuario nao encontrado', { email: maskEmail(email) });
       return res.status(401).json({ error: 'Credenciais inválidas ou usuário inativo.' });
+    }
+    if (!user.active) {
+      authLog('warn', 'login:user-inactive', 'Usuario inativo', { userId: user.id, email: maskEmail(user.email) });
+      return res.status(401).json({ error: 'Credenciais inválidas ou usuário inativo.' });
+    }
 
     const valid = await bcrypt.compare(password, user.password);
-    if (!valid) return res.status(401).json({ error: 'Senha incorreta.' });
+    if (!valid) {
+      authLog('warn', 'login:bad-password', 'Senha incorreta', { userId: user.id, email: maskEmail(user.email) });
+      return res.status(401).json({ error: 'Senha incorreta.' });
+    }
 
     // Primeiro login: precisa trocar a senha
     if (user.mustChangePassword) {
+      authLog('info', 'login:setup-password', 'Usuario precisa trocar senha', { userId: user.id, email: maskEmail(user.email) });
       const setupToken = makeToken({ id: user.id, setupStep: 'change_password' }, '30m');
       return res.json({ requiresSetup: true, step: 'change_password', setupToken });
     }
 
+    // Conta provisionada manualmente: senha definida no admin e sem 2FA inicial.
+    if (user.twoFactorMethod === 'none' && !user.twoFactorVerified && !user.isFirstLogin) {
+      authLog('info', 'login:direct-access', 'Acesso direto liberado para conta provisionada manualmente', { userId: user.id, email: maskEmail(user.email) });
+      const finalToken = makeToken({ id: user.id, role: user.role, slug: user.slug }, '7d');
+      return res.json({
+        token: finalToken,
+        user: { id: user.id, name: user.name, email: user.email, role: user.role, slug: user.slug },
+      });
+    }
+
     // Ainda não configurou 2FA
     if (!user.twoFactorVerified) {
+      authLog('info', 'login:setup-2fa', 'Usuario precisa configurar 2FA', { userId: user.id, email: maskEmail(user.email) });
       const setupToken = makeToken({ id: user.id, setupStep: 'setup_2fa' }, '30m');
       return res.json({ requiresSetup: true, step: 'setup_2fa', setupToken });
     }
@@ -126,15 +521,18 @@ router.post('/login', async (req, res) => {
     // Fluxo normal: envia 2FA pelo método do usuário
     if (user.twoFactorMethod === 'email') {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
+      authLog('info', 'login:otp-email', 'Gerando OTP por email', { userId: user.id, email: maskEmail(user.email) });
       await prisma.user.update({ where: { id: user.id }, data: { otpSecret: code } });
       await sendOtpEmail(user.id, user.email, code, user.name);
+      authLog('info', 'login:otp-email-sent', 'OTP por email disparado', { userId: user.id, email: maskEmail(user.email) });
     }
     // Para TOTP (Google Auth), não precisa enviar nada, o usuário abre o app
 
     const tempToken = makeToken({ id: user.id, twoFactorMethod: user.twoFactorMethod, pendingOTP: true });
+    authLog('info', 'login:otp-pending', 'Login aguardando verificacao OTP', { userId: user.id, email: maskEmail(user.email), method: user.twoFactorMethod });
     res.json({ tempToken, twoFactorMethod: user.twoFactorMethod });
   } catch (err) {
-    console.error('[AUTH login]', err);
+    authLog('error', 'login:exception', err.message, { stack: err.stack?.split('\n')?.[0] || '' });
     res.status(500).json({ error: err.message });
   }
 });
@@ -268,14 +666,26 @@ router.post('/setup-2fa/verify', async (req, res) => {
 router.post('/verify', async (req, res) => {
   const { tempToken, code } = req.body;
   try {
+    authLog('info', 'verify:start', 'Verificacao OTP iniciada');
+    if (!tempToken) {
+      authLog('warn', 'verify:missing-temp-token', 'TempToken ausente no request');
+      return res.status(400).json({ error: 'Sessão de verificação ausente. Faça login novamente.' });
+    }
     const decoded = jwt.verify(tempToken, JWT_SECRET);
-    if (!decoded.pendingOTP) return res.status(400).json({ error: 'Token inválido.' });
+    if (!decoded.pendingOTP) {
+      authLog('warn', 'verify:invalid-token', 'Token sem pendingOTP');
+      return res.status(400).json({ error: 'Token inválido.' });
+    }
 
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
-    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    if (!user) {
+      authLog('warn', 'verify:user-not-found', 'Usuario nao encontrado', { userId: decoded.id });
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
 
     let valid = false;
     if (user.twoFactorMethod === 'totp') {
+      authLog('info', 'verify:method-totp', 'Validando TOTP', { userId: user.id, email: maskEmail(user.email) });
       valid = speakeasy.totp.verify({
         secret: user.otpSecret,
         encoding: 'base32',
@@ -283,20 +693,26 @@ router.post('/verify', async (req, res) => {
         window: 2,
       });
     } else {
+      authLog('info', 'verify:method-email', 'Validando OTP por email', { userId: user.id, email: maskEmail(user.email) });
       valid = user.otpSecret === code;
       if (valid) {
         await prisma.user.update({ where: { id: user.id }, data: { otpSecret: null } });
       }
     }
 
-    if (!valid) return res.status(401).json({ error: 'Código inválido ou expirado.' });
+    if (!valid) {
+      authLog('warn', 'verify:invalid-code', 'Codigo invalido ou expirado', { userId: user.id, email: maskEmail(user.email) });
+      return res.status(401).json({ error: 'Código inválido ou expirado.' });
+    }
 
     const finalToken = makeToken({ id: user.id, role: user.role, slug: user.slug }, '7d');
+    authLog('info', 'verify:success', 'Login confirmado', { userId: user.id, email: maskEmail(user.email), role: user.role });
     res.json({
       token: finalToken,
       user: { id: user.id, name: user.name, email: user.email, role: user.role, slug: user.slug },
     });
   } catch (err) {
+    authLog('error', 'verify:exception', err.message);
     res.status(401).json({ error: 'Token expirado ou inválido.' });
   }
 });

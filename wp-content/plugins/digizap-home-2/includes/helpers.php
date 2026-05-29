@@ -324,6 +324,7 @@ if (!function_exists('dzhome2_fetch_directory_data')) {
                 'featuredStores' => [],
                 'freeDeliveryStores' => [],
                 'promoStores' => [],
+                'stores' => [],
                 'restaurants' => []
             ];
         }
@@ -343,6 +344,7 @@ if (!function_exists('dzhome2_fetch_directory_data')) {
                 'featuredStores' => [],
                 'freeDeliveryStores' => [],
                 'promoStores' => [],
+                'stores' => [],
                 'restaurants' => []
             ];
         }
@@ -371,11 +373,14 @@ if (!function_exists('dzhome2_render_featured_cards')) {
             $ratingLabel = isset($store['ratingLabel']) && (string) $store['ratingLabel'] !== '' ? (string) $store['ratingLabel'] : '5,0';
             $ratingText = $ratingVisible ? $ratingLabel . ($ratingCount > 0 ? ' (' . $ratingCount . ')' : '') : '';
             $ratingMarkup = $ratingVisible ? '<svg class="dz-home2-rating-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="currentColor"></path></svg>' : '';
+            $promoBadge = !empty($store['hasPromotion']) ? '<span class="dz-home2-store-badge dz-home2-store-badge-promo">Promo</span>' : '';
+            $freeBadge = !empty($store['freeDeliveryEnabled']) ? '<span class="dz-home2-store-badge dz-home2-store-badge-free">Frete gratis</span>' : '';
 
             $html[] = sprintf(
                 '<a class="dz-home2-featured-card %s" href="%s">
                     <span class="dz-home2-featured-media"><img src="%s" alt="%s" loading="lazy" decoding="async"></span>
                         <span class="dz-home2-featured-copy">
+                            %s
                             <strong>%s</strong>
                             <small>%s</small>
                             %s
@@ -386,6 +391,7 @@ if (!function_exists('dzhome2_render_featured_cards')) {
                 esc_url(dzhome2_store_url($slug)),
                 esc_url($logoUrl),
                 esc_attr($name),
+                $promoBadge . $freeBadge,
                 esc_html($name),
                 esc_html($category),
                 $ratingVisible ? '<span class="dz-home2-hero-rating">' . $ratingMarkup . '<span class="dz-home2-rating-text">' . esc_html($ratingText) . '</span></span>' : '',
