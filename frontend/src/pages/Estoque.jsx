@@ -586,6 +586,60 @@ const Estoque = () => {
 
   return (
     <div style={{ padding: '30px' }}>
+      <style>{`
+        .estoque-label {
+          display: block;
+          margin-bottom: 6px;
+          color: var(--text-secondary);
+          font-size: 11px;
+          font-weight: 800;
+          text-transform: capitalize;
+          line-height: 1.2;
+        }
+
+        .estoque-label--compact {
+          margin-bottom: 6px;
+        }
+
+        .estoque-label--inline {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .estoque-label--micro {
+          margin-bottom: 4px;
+          font-size: 10px;
+          color: var(--text-muted);
+        }
+
+        .estoque-label--switch {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          cursor: pointer;
+          color: #e5e7eb;
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .estoque-label--check {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          cursor: pointer;
+          color: #fff;
+          font-size: 13px;
+          font-weight: 700;
+        }
+
+        .estoque-label--section {
+          font-size: 12px;
+          color: #fff;
+          letter-spacing: 0.01em;
+        }
+      `}</style>
       <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#fff' }}>Catálogo & Estoque</h2>
@@ -736,7 +790,6 @@ const Estoque = () => {
                                   backgroundColor: 'rgba(245, 158, 11, 0.12)',
                                   color: '#f59e0b',
                                   fontWeight: 800,
-                                  textTransform: 'uppercase',
                                   letterSpacing: '0.04em'
                                 }}
                               >
@@ -786,7 +839,7 @@ const Estoque = () => {
                         if (result.isConfirmed) {
                           api.delete(`/orders/products/${p.id}`).then(() => {
                             fetchProducts();
-                            Swal.fire('ExcluÃ­do!', 'O item foi removido com sucesso.', 'success');
+                            Swal.fire('Excluído!', 'O item foi removido com sucesso.', 'success');
                           });
                         }
                       });
@@ -801,7 +854,7 @@ const Estoque = () => {
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                         {p.comboItems.map((item, i) => (
                           <div key={i} style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#a78bfa', padding: '6px 15px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                            ðŸ“¦ {item}
+                            📦 {item}
                           </div>
                         ))}
                       </div>
@@ -809,12 +862,12 @@ const Estoque = () => {
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '15px' }}>
                         {p.variations.filter(v => showHidden || !v.hidden).map((v, i) => (
                           <div key={i} style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '10px' }}>
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontWeight: 800, color: p.type === 'delivery' ? '#60a5fa' : '#34d399', fontSize: '13px' }}>{v.name.toUpperCase()} {v.hidden && <span style={{ color: '#fbbf24', fontSize: '10px', marginLeft: '5px' }}>(INVISÍVEL)</span>}</span>
+                                <span style={{ fontWeight: 800, color: p.type === 'delivery' ? '#60a5fa' : '#34d399', fontSize: '13px' }}>{v.name} {v.hidden && <span style={{ color: '#fbbf24', fontSize: '10px', marginLeft: '5px' }}>(INVISÍVEL)</span>}</span>
                                 {v.description && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{v.description}</span>}
                               </div>
-                              <span style={{ fontWeight: 700, fontSize: '13px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', color: '#fff' }}>R$ {v.price}</span>
+                              <span style={{ fontWeight: 700, fontSize: '13px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', color: '#fff', flex: '0 0 auto' }}>R$ {v.price}</span>
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                               {v.subItems?.map((si, idx) => (
@@ -851,36 +904,36 @@ const Estoque = () => {
             <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '10px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.5fr', gap: '15px', marginBottom: '20px' }}>
                 <div>
-                  <label style={labelStyle}>Nome do Evento</label>
+                  <label className="estoque-label">Nome do Evento</label>
                   <input {...inp} placeholder="Ex: Dia das Mães, Páscoa..." value={seasonalForm.name} onChange={e => setSeasonalForm(f => ({ ...f, name: e.target.value }))} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Data do Evento</label>
+                  <label className="estoque-label">Data do Evento</label>
                   <input {...inp} type="date" value={seasonalForm.eventDate} onChange={e => setSeasonalForm(f => ({ ...f, eventDate: e.target.value }))} />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
                 <div>
-                  <label style={labelStyle}><Clock size={10} /> Antecedência (Exibir X dias antes)</label>
+                  <label className="estoque-label estoque-label--inline"><Clock size={10} /> Antecedência (Exibir X dias antes)</label>
                   <input {...inp} type="number" value={seasonalForm.preStartDays} onChange={e => setSeasonalForm(f => ({ ...f, preStartDays: parseInt(e.target.value) }))} />
                 </div>
                 <div>
-                  <label style={labelStyle}><Clock size={10} /> Permanência (Exibir Y dias depois)</label>
+                  <label className="estoque-label estoque-label--inline"><Clock size={10} /> Permanência (Exibir Y dias depois)</label>
                   <input {...inp} type="number" value={seasonalForm.postEndDays} onChange={e => setSeasonalForm(f => ({ ...f, postEndDays: parseInt(e.target.value) }))} />
                 </div>
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                <label style={labelStyle}>Descrição / Chamada Especial</label>
+                <label className="estoque-label">Descrição / Chamada Especial</label>
                 <textarea {...inp} style={{ ...inp.style, minHeight: '60px' }} placeholder="Ex: Prepare-se para o dia mais especial do ano!" value={seasonalForm.description || ''} onChange={e => setSeasonalForm(f => ({ ...f, description: e.target.value }))} />
               </div>
 
               <div style={sectionBox}>
-                <h5 style={sectionTitle}>âš™ï¸ REGRAS OPERACIONAIS</h5>
+                <h5 style={sectionTitle}>REGRAS OPERACIONAIS</h5>
                 <div style={{ marginTop: '15px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
                   <div>
-                    <label style={microLabel}>Limite Máximo de Pedidos para o Dia (0 = Ilimitado)</label>
+                    <label className="estoque-label estoque-label--micro">Limite Máximo de Pedidos para o Dia (0 = Ilimitado)</label>
                     <input {...inp} type="number" value={seasonalForm.maxOrders} onChange={e => setSeasonalForm(f => ({ ...f, maxOrders: parseInt(e.target.value) }))} />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(236, 72, 153, 0.05)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(236, 72, 153, 0.1)' }}>
@@ -895,7 +948,7 @@ const Estoque = () => {
 
               <div style={{ marginTop: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <label style={labelStyle}>ITENS DO CATÃLOGO ESPECIAL</label>
+                  <label className="estoque-label estoque-label--section">Itens do catálogo especial</label>
                   <button className="btn btn-secondary" style={{ fontSize: '10px' }} onClick={() => setSeasonalForm(f => ({ ...f, items: [...f.items, { name: '', price: 0, description: '' }] }))}>+ Add Item</button>
                 </div>
                 {seasonalForm.items.map((item, idx) => (
@@ -951,16 +1004,16 @@ const Estoque = () => {
 
             <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '10px' }}>
               <div style={{ marginBottom: '20px' }}>
-                <label style={labelStyle}>Identificação do {isComboMode ? 'Combo' : 'Item'}</label>
+                <label className="estoque-label">Identificação do {isComboMode ? 'Combo' : 'Item'}</label>
                 <input {...inp} placeholder={isComboMode ? "Ex: Combo Casal, Kit Festa..." : "Ex: Nome do Produto"} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
               </div>
               <div style={{ marginBottom: '20px' }}>
-                <label style={labelStyle}>Descrição (Opcional)</label>
+                <label className="estoque-label">Descrição (Opcional)</label>
                 <textarea {...inp} style={{ ...inp.style, minHeight: '60px', resize: 'vertical' }} placeholder="Detalhes que o cliente deve saber." value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
               </div>
 
               <div style={{ marginBottom: '20px' }}>
-                <label style={labelStyle}>Imagens do Produto (Múltiplas fotos)</label>
+                <label className="estoque-label">Imagens do Produto (Múltiplas fotos)</label>
                 <div style={{
                   border: '2px dashed var(--border-color)',
                   borderRadius: '12px',
@@ -1035,7 +1088,7 @@ const Estoque = () => {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px', marginBottom: '20px' }}>
                 <div>
-                  <label style={labelStyle}>Categoria</label>
+                  <label className="estoque-label">Categoria</label>
                   <select {...inp} required aria-required="true" value={form.category || ''} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
                     <option value="">Selecione uma categoria</option>
                     {categories.map(cat => (
@@ -1048,7 +1101,7 @@ const Estoque = () => {
               {!isComboMode && !hasVariations && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
                   <div>
-                    <label style={labelStyle}>Preço normal (R$)</label>
+                    <label className="estoque-label">Preço normal (R$)</label>
                     <input
                       {...inp}
                       type="text"
@@ -1059,7 +1112,7 @@ const Estoque = () => {
                     />
                   </div>
                   <div>
-                    <label style={labelStyle}>Preço promocional (R$)</label>
+                    <label className="estoque-label">Preço promocional (R$)</label>
                     <input
                       {...inp}
                       type="text"
@@ -1075,15 +1128,7 @@ const Estoque = () => {
 
               <div style={{ marginBottom: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div style={{ width: "100%", display: "flex", alignItems: "center", gap: "20px" }}>
-                  <label
-                    htmlFor="trackStock"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
+                  <label htmlFor="trackStock" className="estoque-label estoque-label--switch">
                     <span style={{ cursor: 'pointer', fontWeight: 700, fontSize: '13px', color: '#e5e7eb' }}>Controle de estoque</span>
                     <span style={{ position: 'relative', width: '44px', height: '24px', borderRadius: '999px', backgroundColor: form.trackStock ? '#22c55e' : 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, transition: 'all 0.2s ease' }}>
                       <input
@@ -1097,15 +1142,7 @@ const Estoque = () => {
                     </span>
                   </label>
 
-                  <label
-                    htmlFor="featured"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      cursor: 'pointer'
-                    }}
-                  >
+                  <label htmlFor="featured" className="estoque-label estoque-label--switch">
                     <span style={{ cursor: 'pointer', fontWeight: 700, fontSize: '13px'}}>Destaque no menu</span>
                     <span style={{ position: 'relative', width: '44px', height: '24px', borderRadius: '999px', backgroundColor: form.featured ? '#3b82f6' : 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, transition: 'all 0.2s ease' }}>
                       <input
@@ -1196,7 +1233,7 @@ const Estoque = () => {
                           <div key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 0.75fr 0.75fr 0.75fr auto', gap: '10px', alignItems: 'start' }}>
                               <div>
-                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Nome</label>
+                                <label className="estoque-label estoque-label--compact">Nome</label>
                                 <input
                                   {...inp}
                                   placeholder="Ex: 1kg, Chocolate, Tradicional"
@@ -1209,7 +1246,7 @@ const Estoque = () => {
                                 />
                               </div>
                               <div>
-                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Preço (R$)</label>
+                                <label className="estoque-label estoque-label--compact">Preço (R$)</label>
                                 <input
                                   {...inp}
                                   type="text"
@@ -1224,7 +1261,7 @@ const Estoque = () => {
                                 />
                               </div>
                               <div>
-                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Preço promocional (R$)</label>
+                                <label className="estoque-label estoque-label--compact">Preço promocional (R$)</label>
                                 <input
                                   {...inp}
                                   type="text"
@@ -1239,7 +1276,7 @@ const Estoque = () => {
                                 />
                               </div>
                               <div>
-                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Estoque</label>
+                                <label className="estoque-label estoque-label--compact">Estoque</label>
                                 <input
                                   {...inp}
                                   type="number"
@@ -1252,7 +1289,7 @@ const Estoque = () => {
                                 />
                               </div>
                               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingTop: '27px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#fff', cursor: 'pointer' }}>
+                                <label className="estoque-label estoque-label--check">
                                   <input
                                     type="checkbox"
                                     checked={!!variation.hidden}
@@ -1263,7 +1300,7 @@ const Estoque = () => {
                                     }}
                                     style={{ width: '16px', height: '16px', accentColor: '#60a5fa', cursor: 'pointer' }}
                                   />
-                                  Invisível
+                                  Invisivel
                                 </label>
                                   <button
                                     type="button"
@@ -1287,7 +1324,7 @@ const Estoque = () => {
                             </div>
 
                             <div style={{ marginTop: '10px' }}>
-                              <label style={{ ...labelStyle, marginBottom: '6px' }}>Descrição</label>
+                              <label className="estoque-label estoque-label--compact">Descrição</label>
                               <textarea
                                 {...inp}
                                 placeholder="Breve descrição da variação"
@@ -1433,17 +1470,6 @@ const Estoque = () => {
                         return (
                           <label
                             key={group.id}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'flex-start',
-                              gap: '12px',
-                              padding: '14px',
-                              borderRadius: '12px',
-                              border: checked ? '1px solid rgba(245, 158, 11, 0.45)' : '1px solid rgba(255,255,255,0.06)',
-                              backgroundColor: checked ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255,255,255,0.02)',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s ease'
-                            }}
                           >
                             <input
                               type="checkbox"
@@ -1478,7 +1504,7 @@ const Estoque = () => {
 
               {isComboMode && (
                 <div style={{ marginTop: '20px' }}>
-                  <label style={labelStyle}>Preço Final do Combo (R$)</label>
+                  <label className="estoque-label">Preço Final do Combo (R$)</label>
                   <input
                     {...inp}
                     type="text"
@@ -1515,7 +1541,7 @@ const Estoque = () => {
                       <div key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.9fr 0.55fr auto', gap: '10px', alignItems: 'start' }}>
                           <div>
-                            <label style={{ ...labelStyle, marginBottom: '6px' }}>Nome do Campo</label>
+                            <label className="estoque-label estoque-label--compact">Nome do Campo</label>
                             <input
                               {...inp}
                               placeholder="Ex: Cor, Tema, Referência"
@@ -1524,7 +1550,7 @@ const Estoque = () => {
                             />
                           </div>
                           <div>
-                            <label style={{ ...labelStyle, marginBottom: '6px' }}>Tipo</label>
+                            <label className="estoque-label estoque-label--compact">Tipo</label>
                             <select
                               {...inp}
                               value={field.type || 'text'}
@@ -1536,14 +1562,14 @@ const Estoque = () => {
                             </select>
                           </div>
                           <div style={{ paddingTop: '32px' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#fff', fontSize: '13px', fontWeight: 700 }}>
+                            <label className="estoque-label estoque-label--check">
                               <input
                                 type="checkbox"
                                 checked={!!field.required}
                                 onChange={e => updateCustomFieldRow(idx, 'required', e.target.checked)}
                                 style={{ width: '16px', height: '16px', accentColor: '#f59e0b', cursor: 'pointer' }}
                               />
-                              Obrigatório
+                              Obrigatorio
                             </label>
                           </div>
                           <button
@@ -1559,7 +1585,7 @@ const Estoque = () => {
 
                         {String(field.type || 'text').toLowerCase() === 'dropdown' && (
                           <div style={{ marginTop: '10px' }}>
-                            <label style={{ ...labelStyle, marginBottom: '6px' }}>Opções da Lista</label>
+                            <label className="estoque-label estoque-label--compact">Opções da Lista</label>
                             <input
                               {...inp}
                               placeholder="Ex: Chocolate, Morango, Ninho"
@@ -1600,7 +1626,7 @@ const Estoque = () => {
             </div>
 
             <div style={{ marginBottom: '25px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-              <label style={labelStyle}>{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</label>
+              <label className="estoque-label">{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <input
@@ -1650,7 +1676,7 @@ const Estoque = () => {
 
             <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <label style={labelStyle}>Categorias Existentes</label>
+                <label className="estoque-label">Categorias Existentes</label>
                 <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Arraste ou edite a ordem</span>
               </div>
               {categories.length === 0 ? (
@@ -1713,8 +1739,8 @@ const modalOverlay = { position: 'fixed', top: 0, left: 0, width: '100vw', heigh
 const modalContent = { width: '100%', maxWidth: '960px', maxHeight: '90vh', padding: '30px', position: 'relative', overflowY: 'auto', backgroundColor: '#18181b', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' };
 const closeBtn = { background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' };
 const labelStyle = { display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 800, textTransform: 'capitalize' };
-const microLabel = { display: 'block', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 700, textTransform: 'uppercase' };
-const tinyLabel = { display: 'block', fontSize: '8px', color: 'var(--text-muted)', marginBottom: '2px', fontWeight: 600, textTransform: 'uppercase' };
+const microLabel = { display: 'block', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 700};
+const tinyLabel = { display: 'block', fontSize: '8px', color: 'var(--text-muted)', marginBottom: '2px', fontWeight: 600};
 const sectionBox = { backgroundColor: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '12px', border: '1px dashed var(--border-color)' };
 const sectionTitle = { fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' };
 const varGroupStyle = { backgroundColor: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', marginBottom: '15px', border: '1px solid rgba(255,255,255,0.05)' };
