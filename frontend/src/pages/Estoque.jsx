@@ -35,6 +35,49 @@ const createCustomField = () => ({
   options: ''
 });
 
+const sanitizeMoneyInput = (value) => {
+  if (value === null || value === undefined) return '';
+  return String(value).replace(/[^\d.,]/g, '');
+};
+
+const parseMoneyInput = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  const raw = String(value).trim().replace(/[^\d.,-]/g, '');
+  if (!raw) return null;
+
+  let normalized = raw;
+  if (raw.includes(',') && raw.includes('.')) {
+    normalized = raw.replace(/\./g, '').replace(',', '.');
+  } else if (raw.includes(',')) {
+    normalized = raw.replace(',', '.');
+  }
+
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const formatMoneyInput = (value) => {
+  const parsed = parseMoneyInput(value);
+  if (parsed === null) return sanitizeMoneyInput(value);
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(parsed);
+};
+
+const maskMoneyInput = (value) => {
+  if (value === null || value === undefined) return '';
+  const digits = String(value).replace(/\D/g, '');
+  if (!digits) return '';
+  const amount = Number(digits) / 100;
+  return Number.isFinite(amount)
+    ? new Intl.NumberFormat('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount)
+    : '';
+};
+
 const Estoque = () => {
   const [tab, setTab] = useState('delivery'); // 'delivery', 'encomenda' ou 'addon'
   const [products, setProducts] = useState([]);
@@ -52,12 +95,13 @@ const Estoque = () => {
   const [showHidden, setShowHidden] = useState(false);
   const [acceptOrders, setAcceptOrders] = useState(true);
   const [savingAcceptOrders, setSavingAcceptOrders] = useState(false);
-  
+
   const [categories, setCategories] = useState([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [editingCategory, setEditingCategory] = useState(null);
   const [categoryForm, setCategoryForm] = useState({ name: '', order: 0 });
+  const hasVariations = (form.variations || []).length > 0;
 
   const handleDragStart = (e, index) => {
     e.dataTransfer.setData('draggedIndex', index);
@@ -81,8 +125,8 @@ const Estoque = () => {
 
     // Save to backend
     try {
-      await api.post('/orders/categories/reorder', { 
-        items: updated.map(cat => ({ id: cat.id, order: cat.order })) 
+      await api.post('/orders/categories/reorder', {
+        items: updated.map(cat => ({ id: cat.id, order: cat.order }))
       });
       fetchCategories();
     } catch (err) { console.error(err); }
@@ -101,18 +145,18 @@ const Estoque = () => {
     newFiltered.splice(targetIndex, 0, draggedItem);
 
     const updated = newFiltered.map((p, idx) => ({ ...p, displayOrder: idx + 1 }));
-    
+
     // Update local state for immediate feedback
     const newProducts = products.map(p => {
       const match = updated.find(u => u.id === p.id);
       return match ? { ...p, displayOrder: match.displayOrder } : p;
     }).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-    
+
     setProducts(newProducts);
 
     try {
-      await api.post('/orders/products/reorder', { 
-        items: updated.map(p => ({ id: p.id, displayOrder: p.displayOrder })) 
+      await api.post('/orders/products/reorder', {
+        items: updated.map(p => ({ id: p.id, displayOrder: p.displayOrder }))
       });
     } catch (err) { console.error(err); }
   };
@@ -183,8 +227,8 @@ const Estoque = () => {
     }
   }, []);
 
-  useEffect(() => { 
-    fetchProducts(); 
+  useEffect(() => {
+    fetchProducts();
     fetchAddonGroups();
     fetchSeasonal();
     fetchCategories();
@@ -221,7 +265,7 @@ const Estoque = () => {
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-          
+
           const MAX_SIZE = 600; // Optimal size for menu thumbnails
           if (width > height) {
             if (width > MAX_SIZE) {
@@ -234,12 +278,12 @@ const Estoque = () => {
               height = MAX_SIZE;
             }
           }
-          
+
           canvas.width = width;
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          
+
           canvas.toBlob((blob) => {
             const compressedFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".webp", {
               type: 'image/webp',
@@ -254,7 +298,7 @@ const Estoque = () => {
 
   const handleExternalUpload = async (file) => {
     if (!file) return null;
-    
+
     // Mostra um loading enquanto comprime/envia
     Swal.fire({
       title: 'Otimizando Imagem...',
@@ -269,7 +313,7 @@ const Estoque = () => {
       formData.append('file', compressedFile);
       formData.append('secret', 'BlinkMediaSecret123!');
       formData.append('size', '500'); // Tamanho ideal para produtos (carrossel + listagem)
-      
+
       const res = await axios.post('https://files.digizap.com.br/upload.php', formData);
       Swal.close();
       return res.data.url;
@@ -292,7 +336,7 @@ const Estoque = () => {
   const openAdd = (asCombo = false) => {
     setEditing(null);
     setIsComboMode(asCombo);
-    setForm({ name: '', description: '', type: tab, category: '', image: '', bannerUrl: '', price: 0, promoPrice: '', stock: 0, trackStock: tab === 'delivery', capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [], customFields: [] });
+    setForm({ name: '', description: '', type: tab, category: '', image: '', bannerUrl: '', price: '', promoPrice: '', stock: 0, trackStock: tab === 'delivery', capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [], customFields: [] });
     setShowModal(true);
   };
 
@@ -302,10 +346,87 @@ const Estoque = () => {
     const productData = { ...p };
     setForm({
       ...productData,
+      price: p.price ? formatMoneyInput(p.price) : '',
+      promoPrice: p.promoPrice ? formatMoneyInput(p.promoPrice) : '',
+      variations: parseJsonArray(p.variations, []).map(variation => ({
+        ...variation,
+        price: variation?.price ? formatMoneyInput(variation.price) : '',
+        promoPrice: variation?.promoPrice ? formatMoneyInput(variation.promoPrice) : ''
+      })),
       addonGroups: parseJsonArray(p.addonGroups, []),
       customFields: parseJsonArray(p.customFields, []).map(normalizeCustomField)
     });
     setShowModal(true);
+  };
+
+  const duplicateVariationAt = (idx) => {
+    setForm(f => {
+      const current = [...(f.variations || [])];
+      const source = current[idx];
+      if (!source) return f;
+      const copy = JSON.parse(JSON.stringify(source));
+      copy.name = copy.name ? `${copy.name} (Cópia)` : 'Cópia';
+      current.splice(idx + 1, 0, copy);
+      return { ...f, variations: current };
+    });
+  };
+
+  const buildProductPayload = (sourceForm, comboMode) => {
+    const normalizedVariations = (sourceForm.variations || []).map((variation) => ({
+      ...variation,
+      price: parseMoneyInput(variation?.price) ?? 0,
+      promoPrice: parseMoneyInput(variation?.promoPrice) ?? undefined
+    }));
+
+    return {
+      ...sourceForm,
+      type: comboMode
+        ? (String(sourceForm.type || '').startsWith('combo_') ? sourceForm.type : `combo_${sourceForm.type}`)
+        : String(sourceForm.type || '').replace('combo_', ''),
+      price: parseMoneyInput(sourceForm.price) ?? 0,
+      promoPrice: parseMoneyInput(sourceForm.promoPrice) ?? undefined,
+      variations: JSON.stringify(normalizedVariations),
+      comboItems: JSON.stringify(comboMode ? sourceForm.comboItems : []),
+      customFields: JSON.stringify(sourceForm.customFields || []),
+      addonGroups: JSON.stringify(sourceForm.addonGroups || [])
+    };
+  };
+
+  const duplicateProduct = async (product) => {
+    const cloneName = product.name ? `${product.name} (Cópia)` : 'Cópia';
+    const cloneForm = {
+      ...product,
+      name: cloneName,
+      price: product.price ? formatMoneyInput(product.price) : '',
+      promoPrice: product.promoPrice ? formatMoneyInput(product.promoPrice) : '',
+      variations: parseJsonArray(product.variations, []).map(variation => ({
+        ...variation,
+        price: variation?.price ? formatMoneyInput(variation.price) : '',
+        promoPrice: variation?.promoPrice ? formatMoneyInput(variation.promoPrice) : ''
+      })),
+      addonGroups: parseJsonArray(product.addonGroups, []),
+      customFields: parseJsonArray(product.customFields, []).map(normalizeCustomField)
+    };
+
+    const comboMode = (product.comboItems && product.comboItems.length > 0) || String(product.type || '').startsWith('combo_');
+    const payload = buildProductPayload(cloneForm, comboMode);
+    delete payload.id;
+
+    Swal.fire({
+      title: 'Duplicando item...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
+
+    try {
+      await api.post('/orders/products', payload);
+      Swal.close();
+      fetchProducts();
+      Swal.fire({ title: 'Duplicado!', icon: 'success', toast: true, position: 'top-end', timer: 1800, showConfirmButton: false });
+    } catch (err) {
+      Swal.close();
+      Swal.fire('Erro', 'Falha ao duplicar o item.', 'error');
+    }
   };
 
   const handleBannerUpload = async (file) => {
@@ -319,6 +440,16 @@ const Estoque = () => {
   const saveProduct = async () => {
     if (!form.name || form.name.trim() === '') {
       Swal.fire({ title: 'Campo Obrigatório', text: 'Por favor, insira o nome do item.', icon: 'warning', confirmButtonColor: '#3b82f6' });
+      return;
+    }
+
+    if (!form.category || !String(form.category).trim()) {
+      Swal.fire({ title: 'Campo Obrigatório', text: 'Escolha uma categoria para o item.', icon: 'warning', confirmButtonColor: '#3b82f6' });
+      return;
+    }
+
+    if (!hasVariations && !(parseMoneyInput(form.price) > 0)) {
+      Swal.fire({ title: 'Campo Obrigatório', text: 'Informe um valor base para o item.', icon: 'warning', confirmButtonColor: '#3b82f6' });
       return;
     }
 
@@ -343,15 +474,7 @@ const Estoque = () => {
       return;
     }
 
-    const formPayload = { ...form };
-    const payload = { 
-      ...formPayload, 
-      type: isComboMode ? (form.type.startsWith('combo_') ? form.type : `combo_${form.type}`) : form.type.replace('combo_', ''),
-      variations: JSON.stringify(form.variations),
-      comboItems: JSON.stringify(isComboMode ? form.comboItems : []),
-      customFields: JSON.stringify(form.customFields || []),
-      addonGroups: JSON.stringify(form.addonGroups || [])
-    };
+    const payload = buildProductPayload(form, isComboMode);
     try {
       if (editing) await api.patch(`/orders/products/${editing}`, payload);
       else await api.post('/orders/products', payload);
@@ -361,7 +484,7 @@ const Estoque = () => {
     } catch (err) { Swal.fire('Erro', 'Falha ao salvar.', 'error'); }
   };
 
-  const addVar = () => setForm(f => ({ ...f, variations: [...f.variations, { name: '', price: 0, promoPrice: '', stock: 0, description: '', subItems: [] }] }));
+  const addVar = () => setForm(f => ({ ...f, variations: [...f.variations, { name: '', price: '', promoPrice: '', stock: 0, description: '', subItems: [] }] }));
   const addCustomFieldRow = () => setForm(f => ({ ...f, customFields: [...(f.customFields || []), createCustomField()] }));
   const updateCustomFieldRow = (idx, key, value) => {
     setForm(f => {
@@ -459,7 +582,7 @@ const Estoque = () => {
     }
   };
 
-  const inp = { style: { width:'100%', padding:'10px 14px', borderRadius:'10px', backgroundColor:'var(--bg-tertiary)', border:'1px solid var(--border-color)', color:'#fff', fontSize:'14px', outline: 'none' } };
+  const inp = { style: { width: '100%', padding: '10px 14px', borderRadius: '10px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '14px', outline: 'none' } };
 
   return (
     <div style={{ padding: '30px' }}>
@@ -516,21 +639,21 @@ const Estoque = () => {
           border: `1px solid ${acceptOrders ? 'rgba(16, 185, 129, 0.22)' : 'rgba(239, 68, 68, 0.22)'}`,
           backgroundColor: acceptOrders ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)'
         }}>
-           <input
-             type="checkbox"
-             checked={acceptOrders}
-             disabled={savingAcceptOrders}
-             onChange={e => handleAcceptOrdersChange(e.target.checked)}
-             style={{ width: '16px', height: '16px', cursor: savingAcceptOrders ? 'wait' : 'pointer', accentColor: acceptOrders ? '#10b981' : '#ef4444' }}
-           />
-           <div>
-             <div style={{ fontSize: '12px', color: acceptOrders ? '#10b981' : '#ef4444', fontWeight: 800 }}>
-               {savingAcceptOrders ? 'Salvando...' : 'Aceitar encomendas'}
-             </div>
-             <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-               {acceptOrders ? 'Mostra a aba de encomendas no cardápio público.' : 'Cardápio de encomendas oculto para clientes.'}
-             </div>
-           </div>
+          <input
+            type="checkbox"
+            checked={acceptOrders}
+            disabled={savingAcceptOrders}
+            onChange={e => handleAcceptOrdersChange(e.target.checked)}
+            style={{ width: '16px', height: '16px', cursor: savingAcceptOrders ? 'wait' : 'pointer', accentColor: acceptOrders ? '#10b981' : '#ef4444' }}
+          />
+          <div>
+            <div style={{ fontSize: '12px', color: acceptOrders ? '#10b981' : '#ef4444', fontWeight: 800 }}>
+              {savingAcceptOrders ? 'Salvando...' : 'Aceitar encomendas'}
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+              {acceptOrders ? 'Mostra a aba de encomendas no cardápio público.' : 'Cardápio de encomendas oculto para clientes.'}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -573,15 +696,15 @@ const Estoque = () => {
             const isExpanded = expanded === p.id;
             const isCombo = p.comboItems && p.comboItems.length > 0;
             return (
-              <div 
-                key={p.id} 
-                draggable 
+              <div
+                key={p.id}
+                draggable
                 onDragStart={(e) => handleProductDragStart(e, idx)}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleProductDrop(e, idx)}
                 style={{ backgroundColor: '#18181b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', transition: 'all 0.2s', cursor: 'grab' }}
               >
-                <div 
+                <div
                   onClick={() => setExpanded(isExpanded ? null : p.id)}
                   style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent', borderBottom: isExpanded ? '1px solid rgba(255,255,255,0.05)' : 'none' }}
                 >
@@ -646,9 +769,10 @@ const Estoque = () => {
                         <ArrowDown size={14} />
                       </button>
                     </div>
+                    <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); duplicateProduct(p); }} title="Duplicar item"><Copy size={16} /></button>
                     <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); openEdit(p); }}><Pencil size={16} /></button>
-                    <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px' }} onClick={(e) => { 
-                      e.stopPropagation(); 
+                    <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px' }} onClick={(e) => {
+                      e.stopPropagation();
                       Swal.fire({
                         title: 'Tem certeza?',
                         text: "Você não poderá reverter isso!",
@@ -670,36 +794,36 @@ const Estoque = () => {
                     <ChevronRight size={20} color="var(--text-secondary)" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
                   </div>
                 </div>
-                
+
                 {isExpanded && (
                   <div style={{ padding: '20px', backgroundColor: 'rgba(0,0,0,0.2)' }}>
                     {isCombo ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                         {p.comboItems.map((item, i) => (
-                           <div key={i} style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#a78bfa', padding: '6px 15px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                             ðŸ“¦ {item}
-                           </div>
-                         ))}
+                        {p.comboItems.map((item, i) => (
+                          <div key={i} style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#a78bfa', padding: '6px 15px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, border: '1px solid rgba(139, 92, 246, 0.2)' }}>
+                            ðŸ“¦ {item}
+                          </div>
+                        ))}
                       </div>
                     ) : (
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '15px' }}>
                         {p.variations.filter(v => showHidden || !v.hidden).map((v, i) => (
                           <div key={i} style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
-                            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'12px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontWeight:800, color: p.type === 'delivery' ? '#60a5fa' : '#34d399', fontSize:'13px' }}>{v.name.toUpperCase()} {v.hidden && <span style={{ color: '#fbbf24', fontSize: '10px', marginLeft: '5px' }}>(INVISÍVEL)</span>}</span>
+                                <span style={{ fontWeight: 800, color: p.type === 'delivery' ? '#60a5fa' : '#34d399', fontSize: '13px' }}>{v.name.toUpperCase()} {v.hidden && <span style={{ color: '#fbbf24', fontSize: '10px', marginLeft: '5px' }}>(INVISÍVEL)</span>}</span>
                                 {v.description && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{v.description}</span>}
                               </div>
-                              <span style={{ fontWeight:700, fontSize:'13px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', color: '#fff' }}>R$ {v.price}</span>
+                              <span style={{ fontWeight: 700, fontSize: '13px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', color: '#fff' }}>R$ {v.price}</span>
                             </div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                               {v.subItems?.map((si, idx) => (
-                                <div key={idx} style={{ display:'inline-flex', alignItems:'center', gap:'6px', fontSize:'11px', color:'var(--text-secondary)', padding:'4px 10px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '20px' }}>
+                                <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-secondary)', padding: '4px 10px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '20px' }}>
                                   <span style={{ fontWeight: 600 }}>{si.name}</span>
                                   {p.trackStock ? (
-                                    <span style={{ color: si.stock > 0 ? '#10b981' : '#ef4444', fontWeight:800, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '6px' }}>{si.stock}</span>
+                                    <span style={{ color: si.stock > 0 ? '#10b981' : '#ef4444', fontWeight: 800, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '6px' }}>{si.stock}</span>
                                   ) : (
-                                    <span style={{ color: '#60a5fa', fontWeight:800, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '6px' }}>âˆž</span>
+                                    <span style={{ color: '#60a5fa', fontWeight: 800, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '6px' }}>âˆž</span>
                                   )}
                                 </div>
                               ))}
@@ -780,17 +904,17 @@ const Estoque = () => {
                       <input {...inp} placeholder="Nome do Produto Especial" value={item.name} onChange={e => { const i = [...seasonalForm.items]; i[idx].name = e.target.value; setSeasonalForm(f => ({ ...f, items: i })) }} />
                       <div style={{ position: 'relative' }}>
                         <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: 'var(--text-muted)' }}>R$</span>
-                        <input 
-                          {...inp} 
-                          style={{ ...inp.style, paddingLeft: '30px' }} 
-                          placeholder="0,00" 
-                          value={item.price || ''} 
-                          onChange={e => { 
+                        <input
+                          {...inp}
+                          style={{ ...inp.style, paddingLeft: '30px' }}
+                          placeholder="0,00"
+                          value={item.price || ''}
+                          onChange={e => {
                             let val = e.target.value.replace(/\D/g, "");
                             if (val === "") val = "0";
                             const floatVal = parseFloat(val) / 100;
-                            const i = [...seasonalForm.items]; 
-                            i[idx].price = floatVal; 
+                            const i = [...seasonalForm.items];
+                            i[idx].price = floatVal;
                             setSeasonalForm(f => ({ ...f, items: i }));
                           }}
                           onBlur={e => {
@@ -820,305 +944,336 @@ const Estoque = () => {
       {showModal && createPortal(
         <div style={modalOverlay}>
           <div className="card" style={modalContent}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'25px' }}>
-                <h3 style={{ fontWeight: 800 }}>{editing ? 'Editar' : 'Novo'} {isComboMode ? 'Combo' : 'Produto'}</h3>
-                <button onClick={() => setShowModal(false)} style={closeBtn}><X size={24} /></button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+              <h3 style={{ fontWeight: 800 }}>{editing ? 'Editar' : 'Novo'} {isComboMode ? 'Combo' : 'Produto'}</h3>
+              <button onClick={() => setShowModal(false)} style={closeBtn}><X size={24} /></button>
             </div>
 
             <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '10px' }}>
-                <div style={{ marginBottom:'20px' }}>
-                    <label style={labelStyle}>Identificação do {isComboMode ? 'Combo' : 'Item'}</label>
-                    <input {...inp} placeholder={isComboMode ? "Ex: Combo Casal, Kit Festa..." : "Ex: Nome do Produto"} value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))} />
-                </div>
-                <div style={{ marginBottom:'20px' }}>
-                    <label style={labelStyle}>Descrição (Opcional)</label>
-                    <textarea {...inp} style={{ ...inp.style, minHeight: '60px', resize: 'vertical' }} placeholder="Detalhes que o cliente deve saber." value={form.description || ''} onChange={e => setForm(f => ({...f, description: e.target.value}))} />
-                </div>
-                
-                <div style={{ marginBottom: '20px' }}>
-                    <label style={labelStyle}>Imagens do Produto (Múltiplas fotos)</label>
-                    <div style={{ 
-                        border: '2px dashed var(--border-color)', 
-                        borderRadius: '12px', 
-                        padding: '20px', 
-                        textAlign: 'center',
-                        backgroundColor: 'rgba(255,255,255,0.02)',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                    }} onClick={() => document.getElementById('main-image-upload').click()}>
-                        <div style={{ color: 'var(--text-secondary)' }}>
-                            <Upload size={32} style={{ marginBottom: '10px', color: 'var(--active-color)' }} />
-                            <p style={{ fontSize: '14px', fontWeight: 600 }}>Clique para adicionar fotos</p>
-                            <p style={{ fontSize: '12px', opacity: 0.6 }}>Você pode selecionar várias imagens de uma vez</p>
-                        </div>
-                        <input 
-                            id="main-image-upload"
-                            type="file" 
-                            hidden 
-                            multiple
-                            accept="image/*" 
-                            onChange={async (e) => {
-                                const files = Array.from(e.target.files);
-                                if (!files.length) return;
-                                
-                                const newImages = [];
-                                for (const file of files) {
-                                    const url = await handleExternalUpload(file);
-                                    if (url) newImages.push(url);
-                                }
-                                
-                                setForm(f => {
-                                    let current = [];
-                                    try {
-                                        current = JSON.parse(f.image || '[]');
-                                        if (!Array.isArray(current)) current = f.image ? [f.image] : [];
-                                    } catch(e) {
-                                        current = f.image ? [f.image] : [];
-                                    }
-                                    return { ...f, image: JSON.stringify([...current, ...newImages]) };
-                                });
-                            }} 
-                        />
-                    </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={labelStyle}>Identificação do {isComboMode ? 'Combo' : 'Item'}</label>
+                <input {...inp} placeholder={isComboMode ? "Ex: Combo Casal, Kit Festa..." : "Ex: Nome do Produto"} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+              </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={labelStyle}>Descrição (Opcional)</label>
+                <textarea {...inp} style={{ ...inp.style, minHeight: '60px', resize: 'vertical' }} placeholder="Detalhes que o cliente deve saber." value={form.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+              </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '10px', marginTop: '15px' }}>
-                        {(() => {
-                            let imgs = [];
-                            try {
-                                imgs = JSON.parse(form.image || '[]');
-                                if (!Array.isArray(imgs)) imgs = form.image ? [form.image] : [];
-                            } catch(e) {
-                                imgs = form.image ? [form.image] : [];
-                            }
-                            return imgs.map((img, idx) => (
-                                <div key={idx} style={{ position: 'relative', width: '80px', height: '80px' }}>
-                                    <img src={img} alt={`Preview ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)' }} />
-                                    <button 
-                                        onClick={(e) => { 
-                                            e.stopPropagation(); 
-                                            const filtered = imgs.filter((_, i) => i !== idx);
-                                            setForm(f => ({ ...f, image: JSON.stringify(filtered) }));
-                                        }} 
-                                        style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                                    >
-                                        <X size={10} />
-                                    </button>
-                                </div>
-                            ));
-                        })()}
-                    </div>
+              <div style={{ marginBottom: '20px' }}>
+                <label style={labelStyle}>Imagens do Produto (Múltiplas fotos)</label>
+                <div style={{
+                  border: '2px dashed var(--border-color)',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  textAlign: 'center',
+                  backgroundColor: 'rgba(255,255,255,0.02)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }} onClick={() => document.getElementById('main-image-upload').click()}>
+                  <div style={{ color: 'var(--text-secondary)' }}>
+                    <Upload size={32} style={{ marginBottom: '10px', color: 'var(--active-color)' }} />
+                    <p style={{ fontSize: '14px', fontWeight: 600 }}>Clique para adicionar fotos</p>
+                    <p style={{ fontSize: '12px', opacity: 0.6 }}>Você pode selecionar várias imagens de uma vez</p>
+                  </div>
+                  <input
+                    id="main-image-upload"
+                    type="file"
+                    hidden
+                    multiple
+                    accept="image/*"
+                    onChange={async (e) => {
+                      const files = Array.from(e.target.files);
+                      if (!files.length) return;
+
+                      const newImages = [];
+                      for (const file of files) {
+                        const url = await handleExternalUpload(file);
+                        if (url) newImages.push(url);
+                      }
+
+                      setForm(f => {
+                        let current = [];
+                        try {
+                          current = JSON.parse(f.image || '[]');
+                          if (!Array.isArray(current)) current = f.image ? [f.image] : [];
+                        } catch (e) {
+                          current = f.image ? [f.image] : [];
+                        }
+                        return { ...f, image: JSON.stringify([...current, ...newImages]) };
+                      });
+                    }}
+                  />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px', marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(80px, 1fr))', gap: '10px', marginTop: '15px' }}>
+                  {(() => {
+                    let imgs = [];
+                    try {
+                      imgs = JSON.parse(form.image || '[]');
+                      if (!Array.isArray(imgs)) imgs = form.image ? [form.image] : [];
+                    } catch (e) {
+                      imgs = form.image ? [form.image] : [];
+                    }
+                    return imgs.map((img, idx) => (
+                      <div key={idx} style={{ position: 'relative', width: '80px', height: '80px' }}>
+                        <img src={img} alt={`Preview ${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px', border: '1px solid var(--border-color)' }} />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            const filtered = imgs.filter((_, i) => i !== idx);
+                            setForm(f => ({ ...f, image: JSON.stringify(filtered) }));
+                          }}
+                          style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                        >
+                          <X size={10} />
+                        </button>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px', marginBottom: '20px' }}>
+                <div>
+                  <label style={labelStyle}>Categoria</label>
+                  <select {...inp} required aria-required="true" value={form.category || ''} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                    <option value="">Selecione uma categoria</option>
+                    {categories.map(cat => (
+                      <option key={cat.id} value={cat.name}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {!isComboMode && !hasVariations && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
                   <div>
-                    <label style={labelStyle}>Categoria</label>
-                    <select {...inp} value={form.category || ''} onChange={e => setForm(f => ({...f, category: e.target.value}))}>
-                      <option value="">Selecione uma categoria</option>
-                      {categories.map(cat => (
-                        <option key={cat.id} value={cat.name}>{cat.name}</option>
-                      ))}
-                    </select>
+                    <label style={labelStyle}>Preço normal (R$)</label>
+                    <input
+                      {...inp}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0,00"
+                      value={form.price}
+                      onChange={e => setForm(f => ({ ...f, price: maskMoneyInput(e.target.value) }))}
+                    />
+                  </div>
+                  <div>
+                    <label style={labelStyle}>Preço promocional (R$)</label>
+                    <input
+                      {...inp}
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Opcional"
+                      value={form.promoPrice}
+                      onChange={e => setForm(f => ({ ...f, promoPrice: maskMoneyInput(e.target.value) }))}
+                    />
                   </div>
                 </div>
+              )}
 
-                {!isComboMode && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-                    <div>
-                      <label style={labelStyle}>Preço normal (R$)</label>
+
+              <div style={{ marginBottom: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ width: "100%", display: "flex", alignItems: "center", gap: "20px" }}>
+                  <label
+                    htmlFor="trackStock"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <span style={{ cursor: 'pointer', fontWeight: 700, fontSize: '13px', color: '#e5e7eb' }}>Controle de estoque</span>
+                    <span style={{ position: 'relative', width: '44px', height: '24px', borderRadius: '999px', backgroundColor: form.trackStock ? '#22c55e' : 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, transition: 'all 0.2s ease' }}>
                       <input
-                        {...inp}
-                        type="number"
-                        step="0.01"
-                        value={form.price}
-                        onChange={e => setForm(f => ({ ...f, price: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                        type="checkbox"
+                        id="trackStock"
+                        checked={form.trackStock}
+                        onChange={e => setForm(f => ({ ...f, trackStock: e.target.checked }))}
+                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
                       />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Preço promocional (R$)</label>
+                      <span style={{ position: 'absolute', top: '2px', left: form.trackStock ? '21px' : '2px', width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.25)', transition: 'left 0.2s ease' }} />
+                    </span>
+                  </label>
+
+                  <label
+                    htmlFor="featured"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <span style={{ cursor: 'pointer', fontWeight: 700, fontSize: '13px'}}>Destaque no menu</span>
+                    <span style={{ position: 'relative', width: '44px', height: '24px', borderRadius: '999px', backgroundColor: form.featured ? '#3b82f6' : 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, transition: 'all 0.2s ease' }}>
                       <input
-                        {...inp}
-                        type="number"
-                        step="0.01"
-                        placeholder="Opcional"
-                        value={form.promoPrice}
-                        onChange={e => setForm(f => ({ ...f, promoPrice: e.target.value === '' ? '' : parseFloat(e.target.value) }))}
+                        type="checkbox"
+                        id="featured"
+                        checked={form.featured}
+                        onChange={e => setForm(f => ({ ...f, featured: e.target.checked }))}
+                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
                       />
+                      <span style={{ position: 'absolute', top: '2px', left: form.featured ? '21px' : '2px', width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.25)', transition: 'left 0.2s ease' }} />
+                    </span>
+                  </label>
+                </div>
+                {form.featured && (
+                  <div style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(59, 130, 246, 0.08)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.22)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>Banner do destaque</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Se tiver banner, ele aparece no topo como destaque. Sem banner, o produto aparece normalmente.</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <input
+                          id="banner-upload"
+                          type="file"
+                          hidden
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            await handleBannerUpload(file);
+                            e.target.value = '';
+                          }}
+                        />
+                        <button
+                          className="btn"
+                          type="button"
+                          onClick={() => document.getElementById('banner-upload')?.click()}
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          <Upload size={16} /> Enviar banner
+                        </button>
+                      </div>
                     </div>
+
+                    {form.bannerUrl ? (
+                      <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+                        <img src={form.bannerUrl} alt="Banner do destaque" style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }} />
+                        <button
+                          type="button"
+                          onClick={() => setForm(prev => ({ ...prev, bannerUrl: '' }))}
+                          style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'rgba(0,0,0,0.65)', color: '#fff', border: 'none', borderRadius: '999px', padding: '6px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                        >
+                          Remover banner
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ border: '1px dashed rgba(255,255,255,0.12)', borderRadius: '12px', padding: '16px', color: 'var(--text-secondary)', fontSize: '12px' }}>
+                        Nenhum banner enviado ainda. O destaque vai usar a imagem normal do produto.
+                      </div>
+                    )}
                   </div>
                 )}
 
-                
-                <div style={{ marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <input 
-                      type="checkbox" 
-                      id="trackStock" 
-                      checked={form.trackStock} 
-                      onChange={e => setForm(f => ({...f, trackStock: e.target.checked}))}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                    />
-                    <label htmlFor="trackStock" style={{ cursor: 'pointer', fontWeight: 600, fontSize: '14px', color: '#fff' }}>
-                      Controle de estoque
-                    </label>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(59, 130, 246, 0.05)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                    <input 
-                      type="checkbox" 
-                      id="featured" 
-                      checked={form.featured} 
-                      onChange={e => setForm(f => ({...f, featured: e.target.checked}))}
-                      style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                    />
-                    <label htmlFor="featured" style={{ cursor: 'pointer', fontWeight: 600, fontSize: '14px', color: '#3b82f6' }}>
-                      Destaque no Menu (Exibir no topo)
-                    </label>
-                  </div>
-
-                  {form.featured && (
-                    <div style={{ backgroundColor: 'rgba(59, 130, 246, 0.08)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.22)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>Banner do destaque</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Se tiver banner, ele aparece no topo como destaque. Sem banner, o produto aparece normalmente.</div>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <input
-                            id="banner-upload"
-                            type="file"
-                            hidden
-                            accept="image/*"
-                            onChange={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (!file) return;
-                              await handleBannerUpload(file);
-                              e.target.value = '';
-                            }}
-                          />
-                          <button
-                            className="btn"
-                            type="button"
-                            onClick={() => document.getElementById('banner-upload')?.click()}
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}
-                          >
-                            <Upload size={16} /> Enviar banner
-                          </button>
-                        </div>
+                {!isComboMode && (
+                  <div style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(255, 255, 255, 0.02)', padding: '15px', borderRadius: '12px', marginTop: '10px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-secondary)' }}>Variações do Produto</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Use quando o item tiver opções diferentes, como tamanhos, sabores ou versões.</div>
                       </div>
-
-                      {form.bannerUrl ? (
-                        <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
-                          <img src={form.bannerUrl} alt="Banner do destaque" style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }} />
-                          <button
-                            type="button"
-                            onClick={() => setForm(prev => ({ ...prev, bannerUrl: '' }))}
-                            style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'rgba(0,0,0,0.65)', color: '#fff', border: 'none', borderRadius: '999px', padding: '6px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
-                          >
-                            Remover banner
-                          </button>
-                        </div>
-                      ) : (
-                        <div style={{ border: '1px dashed rgba(255,255,255,0.12)', borderRadius: '12px', padding: '16px', color: 'var(--text-secondary)', fontSize: '12px' }}>
-                          Nenhum banner enviado ainda. O destaque vai usar a imagem normal do produto.
-                        </div>
-                      )}
+                      <button
+                        type="button"
+                        className="btn"
+                        onClick={addVar}
+                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'rgba(255, 255, 255, 0.06)', color: 'rgb(255, 255, 255)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        <Plus size={16} /> Add Variação
+                      </button>
                     </div>
-                  )}
 
-                  {!isComboMode && (
-                    <div style={{ backgroundColor: 'rgba(96, 165, 250, 0.05)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(96, 165, 250, 0.16)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>Variações do Produto</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Use quando o item tiver opções diferentes, como tamanhos, sabores ou versões.</div>
-                        </div>
-                        <button
-                          type="button"
-                          className="btn"
-                          onClick={addVar}
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'rgba(96, 165, 250, 0.10)', color: '#60a5fa', border: '1px solid rgba(96, 165, 250, 0.18)', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}
-                        >
-                          <Plus size={16} /> Add Variação
-                        </button>
+                    {(form.variations || []).length === 0 ? (
+                      <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '12px' }}>
+                        Nenhuma variação cadastrada. Se o produto tiver opções, cadastre aqui.
                       </div>
-
-                      {(form.variations || []).length === 0 ? (
-                        <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '12px' }}>
-                          Nenhuma variação cadastrada. Se o produto tiver opções, cadastre aqui.
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          {(form.variations || []).map((variation, idx) => (
-                            <div key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px' }}>
-                              <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 0.75fr 0.75fr 0.75fr auto', gap: '10px', alignItems: 'start' }}>
-                                <div>
-                                  <label style={{ ...labelStyle, marginBottom: '6px' }}>Nome</label>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        {(form.variations || []).map((variation, idx) => (
+                          <div key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 0.75fr 0.75fr 0.75fr auto', gap: '10px', alignItems: 'start' }}>
+                              <div>
+                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Nome</label>
+                                <input
+                                  {...inp}
+                                  placeholder="Ex: 1kg, Chocolate, Tradicional"
+                                  value={variation.name || ''}
+                                  onChange={e => {
+                                    const next = [...(form.variations || [])];
+                                    next[idx] = { ...(next[idx] || {}), name: e.target.value };
+                                    setForm(f => ({ ...f, variations: next }));
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Preço (R$)</label>
+                                <input
+                                  {...inp}
+                                  type="text"
+                                  inputMode="decimal"
+                                  placeholder="0,00"
+                                  value={variation.price}
+                                  onChange={e => {
+                                    const next = [...(form.variations || [])];
+                                    next[idx] = { ...(next[idx] || {}), price: maskMoneyInput(e.target.value) };
+                                    setForm(f => ({ ...f, variations: next }));
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Preço promocional (R$)</label>
+                                <input
+                                  {...inp}
+                                  type="text"
+                                  inputMode="decimal"
+                                  placeholder="Opcional"
+                                  value={variation.promoPrice}
+                                  onChange={e => {
+                                    const next = [...(form.variations || [])];
+                                    next[idx] = { ...(next[idx] || {}), promoPrice: maskMoneyInput(e.target.value) };
+                                    setForm(f => ({ ...f, variations: next }));
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Estoque</label>
+                                <input
+                                  {...inp}
+                                  type="number"
+                                  value={variation.stock ?? 0}
+                                  onChange={e => {
+                                    const next = [...(form.variations || [])];
+                                    next[idx] = { ...(next[idx] || {}), stock: e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0 };
+                                    setForm(f => ({ ...f, variations: next }));
+                                  }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingTop: '27px' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#fff', cursor: 'pointer' }}>
                                   <input
-                                    {...inp}
-                                    placeholder="Ex: 1kg, Chocolate, Tradicional"
-                                    value={variation.name || ''}
+                                    type="checkbox"
+                                    checked={!!variation.hidden}
                                     onChange={e => {
                                       const next = [...(form.variations || [])];
-                                      next[idx] = { ...(next[idx] || {}), name: e.target.value };
+                                      next[idx] = { ...(next[idx] || {}), hidden: e.target.checked };
                                       setForm(f => ({ ...f, variations: next }));
                                     }}
+                                    style={{ width: '16px', height: '16px', accentColor: '#60a5fa', cursor: 'pointer' }}
                                   />
-                                </div>
-                                <div>
-                                  <label style={{ ...labelStyle, marginBottom: '6px' }}>Preço (R$)</label>
-                                  <input
-                                    {...inp}
-                                    type="number"
-                                    step="0.01"
-                                    value={variation.price ?? 0}
-                                    onChange={e => {
-                                      const next = [...(form.variations || [])];
-                                      next[idx] = { ...(next[idx] || {}), price: e.target.value === '' ? 0 : parseFloat(e.target.value) };
-                                      setForm(f => ({ ...f, variations: next }));
-                                    }}
-                                  />
-                                </div>
-                                <div>
-                                  <label style={{ ...labelStyle, marginBottom: '6px' }}>Preço promocional (R$)</label>
-                                  <input
-                                    {...inp}
-                                    type="number"
-                                    step="0.01"
-                                    value={variation.promoPrice ?? ''}
-                                    onChange={e => {
-                                      const next = [...(form.variations || [])];
-                                      next[idx] = { ...(next[idx] || {}), promoPrice: e.target.value === '' ? '' : parseFloat(e.target.value) };
-                                      setForm(f => ({ ...f, variations: next }));
-                                    }}
-                                  />
-                                </div>
-                                <div>
-                                  <label style={{ ...labelStyle, marginBottom: '6px' }}>Estoque</label>
-                                  <input
-                                    {...inp}
-                                    type="number"
-                                    value={variation.stock ?? 0}
-                                    onChange={e => {
-                                      const next = [...(form.variations || [])];
-                                      next[idx] = { ...(next[idx] || {}), stock: e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0 };
-                                      setForm(f => ({ ...f, variations: next }));
-                                    }}
-                                  />
-                                </div>
-                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingTop: '27px' }}>
-                                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#fff', cursor: 'pointer' }}>
-                                    <input
-                                      type="checkbox"
-                                      checked={!!variation.hidden}
-                                      onChange={e => {
-                                        const next = [...(form.variations || [])];
-                                        next[idx] = { ...(next[idx] || {}), hidden: e.target.checked };
-                                        setForm(f => ({ ...f, variations: next }));
-                                      }}
-                                      style={{ width: '16px', height: '16px', accentColor: '#60a5fa', cursor: 'pointer' }}
-                                    />
-                                    Invisível
-                                  </label>
+                                  Invisível
+                                </label>
+                                  <button
+                                    type="button"
+                                    className="btn-icon"
+                                    onClick={() => duplicateVariationAt(idx)}
+                                    style={{ color: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.10)', borderRadius: '8px', padding: '8px' }}
+                                    title="Duplicar variação"
+                                  >
+                                    <Copy size={16} />
+                                  </button>
                                   <button
                                     type="button"
                                     className="btn-icon"
@@ -1129,297 +1284,303 @@ const Estoque = () => {
                                     <Trash2 size={16} />
                                   </button>
                                 </div>
-                              </div>
-
-                              <div style={{ marginTop: '10px' }}>
-                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Descrição</label>
-                                <textarea
-                                  {...inp}
-                                  placeholder="Breve descrição da variação"
-                                  value={variation.description || ''}
-                                  onChange={e => {
-                                    const next = [...(form.variations || [])];
-                                    next[idx] = { ...(next[idx] || {}), description: e.target.value };
-                                    setForm(f => ({ ...f, variations: next }));
-                                  }}
-                                ></textarea>
-                              </div>
-
-                              <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                                  <div style={{ fontSize: '12px', fontWeight: 800, color: '#94a3b8' }}>Subitens / Estoque interno</div>
-                                  <button
-                                    type="button"
-                                    className="btn"
-                                    onClick={() => addSub(idx)}
-                                    style={{ padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}
-                                  >
-                                    + Add Subitem
-                                  </button>
-                                </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                  {(variation.subItems || []).length === 0 ? (
-                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Nenhum subitem adicionado.</div>
-                                  ) : (
-                                    (variation.subItems || []).map((subItem, subIdx) => (
-                                      <div key={subIdx} style={{ display: 'grid', gridTemplateColumns: '1fr 120px auto', gap: '10px', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '10px' }}>
-                                        <input
-                                          {...inp}
-                                          placeholder="Nome do subitem"
-                                          value={subItem.name || ''}
-                                          onChange={e => {
-                                            const next = JSON.parse(JSON.stringify(form.variations));
-                                            next[idx].subItems[subIdx].name = e.target.value;
-                                            setForm(f => ({ ...f, variations: next }));
-                                          }}
-                                        />
-                                        <input
-                                          {...inp}
-                                          type="number"
-                                          placeholder="Estoque"
-                                          value={subItem.stock ?? 0}
-                                          onChange={e => {
-                                            const next = JSON.parse(JSON.stringify(form.variations));
-                                            next[idx].subItems[subIdx].stock = e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0;
-                                            setForm(f => ({ ...f, variations: next }));
-                                          }}
-                                        />
-                                        <button
-                                          type="button"
-                                          className="btn-icon"
-                                          onClick={() => {
-                                            const next = JSON.parse(JSON.stringify(form.variations));
-                                            next[idx].subItems.splice(subIdx, 1);
-                                            setForm(f => ({ ...f, variations: next }));
-                                          }}
-                                          style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.10)', borderRadius: '8px', padding: '8px' }}
-                                          title="Remover subitem"
-                                        >
-                                          <Trash2 size={16} />
-                                        </button>
-                                      </div>
-                                    ))
-                                  )}
-                                </div>
-                              </div>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
 
-                  <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.06)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(245, 158, 11, 0.16)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: 800, color: '#f59e0b' }}>Campos Extras do Item</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Crie perguntas obrigatórias ou opcionais que aparecem na hora de montar o pedido.</div>
-                      </div>
-                      <button
-                        type="button"
-                        className="btn"
-                        onClick={addCustomFieldRow}
-                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'rgba(245, 158, 11, 0.10)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.18)', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}
-                      >
-                        <Plus size={16} /> Add Campo
-                      </button>
-                    </div>
+                            <div style={{ marginTop: '10px' }}>
+                              <label style={{ ...labelStyle, marginBottom: '6px' }}>Descrição</label>
+                              <textarea
+                                {...inp}
+                                placeholder="Breve descrição da variação"
+                                value={variation.description || ''}
+                                onChange={e => {
+                                  const next = [...(form.variations || [])];
+                                  next[idx] = { ...(next[idx] || {}), description: e.target.value };
+                                  setForm(f => ({ ...f, variations: next }));
+                                }}
+                              ></textarea>
+                            </div>
 
-                    {(form.customFields || []).length === 0 ? (
-                      <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '12px' }}>
-                        Nenhum campo extra configurado. Use isso para coletar referência, cor, topo, observações ou qualquer outro dado.
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        {(form.customFields || []).map((field, idx) => (
-                          <div key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.9fr 0.55fr auto', gap: '10px', alignItems: 'start' }}>
-                              <div>
-                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Nome do Campo</label>
-                                <input
-                                  {...inp}
-                                  placeholder="Ex: Cor, Tema, Referência"
-                                  value={field.name || ''}
-                                  onChange={e => updateCustomFieldRow(idx, 'name', e.target.value)}
-                                />
-                              </div>
-                              <div>
-                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Tipo</label>
-                                <select
-                                  {...inp}
-                                  value={field.type || 'text'}
-                                  onChange={e => updateCustomFieldRow(idx, 'type', e.target.value)}
+                            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                <div style={{ fontSize: '12px', fontWeight: 800, color: '#94a3b8' }}>Subitens / Estoque interno</div>
+                                <button
+                                  type="button"
+                                  className="btn"
+                                  onClick={() => addSub(idx)}
+                                  style={{ padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}
                                 >
-                                  <option value="text">Texto</option>
-                                  <option value="dropdown">Lista</option>
-                                  <option value="image">Imagem</option>
-                                </select>
+                                  + Add Subitem
+                                </button>
                               </div>
-                              <div style={{ paddingTop: '32px' }}>
-                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#fff', fontSize: '13px', fontWeight: 700 }}>
-                                  <input
-                                    type="checkbox"
-                                    checked={!!field.required}
-                                    onChange={e => updateCustomFieldRow(idx, 'required', e.target.checked)}
-                                    style={{ width: '16px', height: '16px', accentColor: '#f59e0b', cursor: 'pointer' }}
-                                  />
-                                  Obrigatório
-                                </label>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {(variation.subItems || []).length === 0 ? (
+                                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Nenhum subitem adicionado.</div>
+                                ) : (
+                                  (variation.subItems || []).map((subItem, subIdx) => (
+                                    <div key={subIdx} style={{ display: 'grid', gridTemplateColumns: '1fr 120px auto', gap: '10px', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '10px' }}>
+                                      <input
+                                        {...inp}
+                                        placeholder="Nome do subitem"
+                                        value={subItem.name || ''}
+                                        onChange={e => {
+                                          const next = JSON.parse(JSON.stringify(form.variations));
+                                          next[idx].subItems[subIdx].name = e.target.value;
+                                          setForm(f => ({ ...f, variations: next }));
+                                        }}
+                                      />
+                                      <input
+                                        {...inp}
+                                        type="number"
+                                        placeholder="Estoque"
+                                        value={subItem.stock ?? 0}
+                                        onChange={e => {
+                                          const next = JSON.parse(JSON.stringify(form.variations));
+                                          next[idx].subItems[subIdx].stock = e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0;
+                                          setForm(f => ({ ...f, variations: next }));
+                                        }}
+                                      />
+                                      <button
+                                        type="button"
+                                        className="btn-icon"
+                                        onClick={() => {
+                                          const next = JSON.parse(JSON.stringify(form.variations));
+                                          next[idx].subItems.splice(subIdx, 1);
+                                          setForm(f => ({ ...f, variations: next }));
+                                        }}
+                                        style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.10)', borderRadius: '8px', padding: '8px' }}
+                                        title="Remover subitem"
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </div>
+                                  ))
+                                )}
                               </div>
-                              <button
-                                type="button"
-                                className="btn-icon"
-                                onClick={() => removeCustomFieldRow(idx)}
-                                style={{ marginTop: '26px', color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.10)', borderRadius: '8px', padding: '8px' }}
-                                title="Remover campo"
-                              >
-                                <Trash2 size={16} />
-                              </button>
                             </div>
-
-                            {String(field.type || 'text').toLowerCase() === 'dropdown' && (
-                              <div style={{ marginTop: '10px' }}>
-                                <label style={{ ...labelStyle, marginBottom: '6px' }}>Opções da Lista</label>
-                                <input
-                                  {...inp}
-                                  placeholder="Ex: Chocolate, Morango, Ninho"
-                                  value={field.options || ''}
-                                  onChange={e => updateCustomFieldRow(idx, 'options', e.target.value)}
-                                />
-                                <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                                  Separe as opções por vÃ­rgula.
-                                </div>
-                              </div>
-                            )}
                           </div>
                         ))}
                       </div>
                     )}
                   </div>
+                )}
+              </div>
+              {isComboMode ? (
+                <div style={{ ...sectionBox, gridColumn: '1 / -1' }}>
+                  <h5 style={sectionTitle}>ITENS DISPONÍVEIS PARA O COMBO</h5>
+                  <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '15px' }}>Selecione apenas os produtos de <b>{tab === 'delivery' ? 'Pronta Entrega' : 'Agendamento'}</b>.</p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '300px', overflowY: 'auto', paddingRight: '5px' }}>
+                    {products.filter(p => p.type === tab && (!p.comboItems || p.comboItems.length === 0)).map(p => (
+                      <div key={p.id} style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                        <div style={{ fontWeight: 800, fontSize: '13px', color: '#fff', marginBottom: '8px' }}>{p.name}</div>
+                        {p.variations.length > 0 ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingLeft: '10px' }}>
+                            {p.variations.map((v, i) => {
+                              const isSelected = form.comboItems.includes(`${p.name} (${v.name})`);
+                              return (
+                                <button
+                                  key={i}
+                                  onClick={() => toggleComboItem(p.name, v.name)}
+                                  style={{
+                                    padding: '4px 12px', borderRadius: '20px', fontSize: '11px', border: '1px solid',
+                                    backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
+                                    borderColor: isSelected ? '#8b5cf6' : 'rgba(255,255,255,0.1)',
+                                    color: isSelected ? '#a78bfa' : 'var(--text-muted)',
+                                    cursor: 'pointer', transition: 'all 0.2s'
+                                  }}
+                                >
+                                  {v.name}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div style={{ paddingLeft: '10px' }}>
+                            <button
+                              onClick={() => toggleComboItem(p.name)}
+                              style={{
+                                padding: '4px 12px', borderRadius: '20px', fontSize: '11px', border: '1px solid',
+                                backgroundColor: form.comboItems.includes(p.name) ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
+                                borderColor: form.comboItems.includes(p.name) ? '#8b5cf6' : 'rgba(255,255,255,0.1)',
+                                color: form.comboItems.includes(p.name) ? '#a78bfa' : 'var(--text-muted)',
+                                cursor: 'pointer', transition: 'all 0.2s'
+                              }}
+                            >
+                              Incluir no Combo
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                {isComboMode ? (
-                  <div style={sectionBox}>
-                    <h5 style={sectionTitle}>ITENS DISPONÍVEIS PARA O COMBO</h5>
-                    <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '15px' }}>Selecione apenas os produtos de <b>{tab === 'delivery' ? 'Pronta Entrega' : 'Agendamento'}</b>.</p>
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '300px', overflowY: 'auto', paddingRight: '5px' }}>
-                      {products.filter(p => p.type === tab && (!p.comboItems || p.comboItems.length === 0)).map(p => (
-                        <div key={p.id} style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                          <div style={{ fontWeight: 800, fontSize: '13px', color: '#fff', marginBottom: '8px' }}>{p.name}</div>
-                          {p.variations.length > 0 ? (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingLeft: '10px' }}>
-                              {p.variations.map((v, i) => {
-                                const isSelected = form.comboItems.includes(`${p.name} (${v.name})`);
-                                return (
-                                  <button
-                                    key={i}
-                                    onClick={() => toggleComboItem(p.name, v.name)}
-                                    style={{
-                                      padding: '4px 12px', borderRadius: '20px', fontSize: '11px', border: '1px solid',
-                                      backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
-                                      borderColor: isSelected ? '#8b5cf6' : 'rgba(255,255,255,0.1)',
-                                      color: isSelected ? '#a78bfa' : 'var(--text-muted)',
-                                      cursor: 'pointer', transition: 'all 0.2s'
-                                    }}
-                                  >
-                                    {v.name}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <div style={{ paddingLeft: '10px' }}>
-                               <button
-                                onClick={() => toggleComboItem(p.name)}
-                                style={{
-                                  padding: '4px 12px', borderRadius: '20px', fontSize: '11px', border: '1px solid',
-                                  backgroundColor: form.comboItems.includes(p.name) ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
-                                  borderColor: form.comboItems.includes(p.name) ? '#8b5cf6' : 'rgba(255,255,255,0.1)',
-                                  color: form.comboItems.includes(p.name) ? '#a78bfa' : 'var(--text-muted)',
-                                  cursor: 'pointer', transition: 'all 0.2s'
-                                }}
-                              >
-                                Incluir no Combo
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+              ) : (
+                <div style={{ ...sectionBox, gridColumn: '1 / -1' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px', marginBottom: '14px' }}>
+                    <h5 style={sectionTitle}><Layers size={14} /> GRUPOS DE ADICIONAIS</h5>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Vincule um ou mais grupos ao produto</span>
+                  </div>
+
+                  {addonGroups.length === 0 ? (
+                    <div style={{ padding: '14px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                      Nenhum grupo foi criado ainda. Use a aba <b>Adicionais</b> para cadastrar recheios, coberturas e complementos reutilizáveis.
                     </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
+                      {addonGroups.map(group => {
+                        const checked = (form.addonGroups || []).includes(group.id);
+                        const items = parseJsonArray(group.items, []);
+                        return (
+                          <label
+                            key={group.id}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: '12px',
+                              padding: '14px',
+                              borderRadius: '12px',
+                              border: checked ? '1px solid rgba(245, 158, 11, 0.45)' : '1px solid rgba(255,255,255,0.06)',
+                              backgroundColor: checked ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255,255,255,0.02)',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                const current = [...(form.addonGroups || [])];
+                                const next = e.target.checked
+                                  ? Array.from(new Set([...current, group.id]))
+                                  : current.filter(id => id !== group.id);
+                                setForm(prev => ({ ...prev, addonGroups: next }));
+                              }}
+                              style={{ width: '18px', height: '18px', marginTop: '2px', accentColor: '#f59e0b', cursor: 'pointer' }}
+                            />
+                            <div style={{ flex: 1 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <span style={{ fontWeight: 800, color: '#fff' }}>{group.name}</span>
+                                <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '999px', backgroundColor: group.min > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(255,255,255,0.08)', color: group.min > 0 ? '#fca5a5' : 'var(--text-secondary)', fontWeight: 800 }}>
+                                  {group.min > 0 ? 'Obrigatório' : 'Opcional'}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                Min {group.min} / Max {group.max} Â· {items.length} item(ns)
+                              </div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {isComboMode && (
+                <div style={{ marginTop: '20px' }}>
+                  <label style={labelStyle}>Preço Final do Combo (R$)</label>
+                  <input
+                    {...inp}
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="0,00"
+                    value={form.price}
+                    onChange={e => setForm(f => ({ ...f, price: maskMoneyInput(e.target.value) }))}
+                  />
+                </div>
+              )}
+              <div style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(245, 158, 11, 0.06)', padding: '15px', borderRadius: '12px', marginTop: '20px', border: '1px solid rgba(245, 158, 11, 0.16)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#f59e0b' }}>Campos Extras do Item</div>
+                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Crie perguntas obrigatórias ou opcionais que aparecem na hora de montar o pedido.</div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={addCustomFieldRow}
+                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'rgba(245, 158, 11, 0.10)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.18)', borderRadius: '10px', fontWeight: 800, cursor: 'pointer' }}
+                  >
+                    <Plus size={16} /> Add Campo
+                  </button>
+                </div>
+
+                {(form.customFields || []).length === 0 ? (
+                  <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '12px' }}>
+                    Nenhum campo extra configurado. Use isso para coletar referência, cor, topo, observações ou qualquer outro dado.
                   </div>
                 ) : (
-                <div style={sectionBox}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px', marginBottom: '14px' }}>
-                        <h5 style={sectionTitle}><Layers size={14} /> GRUPOS DE ADICIONAIS</h5>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Vincule um ou mais grupos ao produto</span>
-                    </div>
-
-                    {addonGroups.length === 0 ? (
-                        <div style={{ padding: '14px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                            Nenhum grupo foi criado ainda. Use a aba <b>Adicionais</b> para cadastrar recheios, coberturas e complementos reutilizáveis.
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {(form.customFields || []).map((field, idx) => (
+                      <div key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.9fr 0.55fr auto', gap: '10px', alignItems: 'start' }}>
+                          <div>
+                            <label style={{ ...labelStyle, marginBottom: '6px' }}>Nome do Campo</label>
+                            <input
+                              {...inp}
+                              placeholder="Ex: Cor, Tema, Referência"
+                              value={field.name || ''}
+                              onChange={e => updateCustomFieldRow(idx, 'name', e.target.value)}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ ...labelStyle, marginBottom: '6px' }}>Tipo</label>
+                            <select
+                              {...inp}
+                              value={field.type || 'text'}
+                              onChange={e => updateCustomFieldRow(idx, 'type', e.target.value)}
+                            >
+                              <option value="text">Texto</option>
+                              <option value="dropdown">Lista</option>
+                              <option value="image">Imagem</option>
+                            </select>
+                          </div>
+                          <div style={{ paddingTop: '32px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', color: '#fff', fontSize: '13px', fontWeight: 700 }}>
+                              <input
+                                type="checkbox"
+                                checked={!!field.required}
+                                onChange={e => updateCustomFieldRow(idx, 'required', e.target.checked)}
+                                style={{ width: '16px', height: '16px', accentColor: '#f59e0b', cursor: 'pointer' }}
+                              />
+                              Obrigatório
+                            </label>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn-icon"
+                            onClick={() => removeCustomFieldRow(idx)}
+                            style={{ marginTop: '26px', color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.10)', borderRadius: '8px', padding: '8px' }}
+                            title="Remover campo"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
-                    ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '14px' }}>
-                            {addonGroups.map(group => {
-                                const checked = (form.addonGroups || []).includes(group.id);
-                                const items = parseJsonArray(group.items, []);
-                                return (
-                                    <label
-                                        key={group.id}
-                                        style={{
-                                            display: 'flex',
-                                            alignItems: 'flex-start',
-                                            gap: '12px',
-                                            padding: '14px',
-                                            borderRadius: '12px',
-                                            border: checked ? '1px solid rgba(245, 158, 11, 0.45)' : '1px solid rgba(255,255,255,0.06)',
-                                            backgroundColor: checked ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255,255,255,0.02)',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s ease'
-                                        }}
-                                    >
-                                        <input
-                                            type="checkbox"
-                                            checked={checked}
-                                            onChange={(e) => {
-                                                const current = [...(form.addonGroups || [])];
-                                                const next = e.target.checked
-                                                  ? Array.from(new Set([...current, group.id]))
-                                                  : current.filter(id => id !== group.id);
-                                                setForm(prev => ({ ...prev, addonGroups: next }));
-                                            }}
-                                            style={{ width: '18px', height: '18px', marginTop: '2px', accentColor: '#f59e0b', cursor: 'pointer' }}
-                                        />
-                                        <div style={{ flex: 1 }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                                <span style={{ fontWeight: 800, color: '#fff' }}>{group.name}</span>
-                                                <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '999px', backgroundColor: group.min > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(255,255,255,0.08)', color: group.min > 0 ? '#fca5a5' : 'var(--text-secondary)', fontWeight: 800 }}>
-                                                    {group.min > 0 ? 'Obrigatório' : 'Opcional'}
-                                                </span>
-                                            </div>
-                                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                                Min {group.min} / Max {group.max} Â· {items.length} item(ns)
-                                            </div>
-                                        </div>
-                                    </label>
-                                );
-                            })}
-                        </div>
-                    )}
-                </div>
-                )}
 
-                {isComboMode && (
-                   <div style={{ marginTop: '20px' }}>
-                      <label style={labelStyle}>Preço Final do Combo (R$)</label>
-                      <input {...inp} type="number" value={form.price} onChange={e=>setForm(f=>({...f, price:parseFloat(e.target.value)}))} />
-                   </div>
+                        {String(field.type || 'text').toLowerCase() === 'dropdown' && (
+                          <div style={{ marginTop: '10px' }}>
+                            <label style={{ ...labelStyle, marginBottom: '6px' }}>Opções da Lista</label>
+                            <input
+                              {...inp}
+                              placeholder="Ex: Chocolate, Morango, Ninho"
+                              value={field.options || ''}
+                              onChange={e => updateCustomFieldRow(idx, 'options', e.target.value)}
+                            />
+                            <div style={{ marginTop: '6px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                              Separe as opções por vÃ­rgula.
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 )}
+              </div>
             </div>
 
-            <div style={{ marginTop:'25px', display:'flex', gap:'10px' }}>
-                <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancelar</button>
-                <button className="btn btn-primary" style={{ flex: 2 }} onClick={saveProduct}>Salvar Informações</button>
+            <div style={{ marginTop: '25px', display: 'flex', gap: '10px' }}>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" style={{ flex: 2 }} onClick={saveProduct}>Salvar Informações</button>
             </div>
           </div>
         </div>,
@@ -1433,31 +1594,31 @@ const Estoque = () => {
       {showCategoryModal && createPortal(
         <div style={modalOverlay}>
           <div className="card" style={{ ...modalContent, width: '450px' }}>
-            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'25px' }}>
-                <h3 style={{ fontWeight: 800 }}>Gerenciar Categorias</h3>
-                <button onClick={() => { setShowCategoryModal(false); setEditingCategory(null); }} style={closeBtn}><X size={24} /></button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
+              <h3 style={{ fontWeight: 800 }}>Gerenciar Categorias</h3>
+              <button onClick={() => { setShowCategoryModal(false); setEditingCategory(null); }} style={closeBtn}><X size={24} /></button>
             </div>
 
             <div style={{ marginBottom: '25px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
               <label style={labelStyle}>{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                   <input 
-                    {...inp} 
-                    placeholder="Nome da Categoria" 
-                    value={editingCategory ? categoryForm.name : newCategoryName} 
-                    onChange={e => editingCategory ? setCategoryForm(f => ({...f, name: e.target.value})) : setNewCategoryName(e.target.value)} 
+                  <input
+                    {...inp}
+                    placeholder="Nome da Categoria"
+                    value={editingCategory ? categoryForm.name : newCategoryName}
+                    onChange={e => editingCategory ? setCategoryForm(f => ({ ...f, name: e.target.value })) : setNewCategoryName(e.target.value)}
                   />
-                   {editingCategory && (
-                     <input 
-                      {...inp} 
+                  {editingCategory && (
+                    <input
+                      {...inp}
                       type="number"
                       style={{ ...inp.style, width: '80px' }}
-                      placeholder="Ordem" 
-                      value={categoryForm.order} 
-                      onChange={e => setCategoryForm(f => ({...f, order: e.target.value}))} 
+                      placeholder="Ordem"
+                      value={categoryForm.order}
+                      onChange={e => setCategoryForm(f => ({ ...f, order: e.target.value }))}
                     />
-                   )}
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {editingCategory ? (
@@ -1497,19 +1658,19 @@ const Estoque = () => {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {categories.map((cat, idx) => (
-                    <div 
-                      key={cat.id} 
-                      draggable 
+                    <div
+                      key={cat.id}
+                      draggable
                       onDragStart={(e) => handleDragStart(e, idx)}
                       onDragOver={handleDragOver}
                       onDrop={(e) => handleDrop(e, idx)}
-                      style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        backgroundColor: 'rgba(255,255,255,0.02)', 
-                        padding: '10px 15px', 
-                        borderRadius: '8px', 
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        backgroundColor: 'rgba(255,255,255,0.02)',
+                        padding: '10px 15px',
+                        borderRadius: '8px',
                         border: '1px solid rgba(255,255,255,0.05)',
                         cursor: 'grab'
                       }}
@@ -1551,7 +1712,7 @@ const tabBtn = { display: 'flex', alignItems: 'center', gap: '8px', padding: '12
 const modalOverlay = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, backdropFilter: 'blur(8px)', padding: '20px' };
 const modalContent = { width: '100%', maxWidth: '960px', maxHeight: '90vh', padding: '30px', position: 'relative', overflowY: 'auto', backgroundColor: '#18181b', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' };
 const closeBtn = { background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' };
-const labelStyle = { display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 800, textTransform: 'uppercase' };
+const labelStyle = { display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 800, textTransform: 'capitalize' };
 const microLabel = { display: 'block', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 700, textTransform: 'uppercase' };
 const tinyLabel = { display: 'block', fontSize: '8px', color: 'var(--text-muted)', marginBottom: '2px', fontWeight: 600, textTransform: 'uppercase' };
 const sectionBox = { backgroundColor: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '12px', border: '1px dashed var(--border-color)' };

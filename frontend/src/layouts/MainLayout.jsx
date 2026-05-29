@@ -13,6 +13,7 @@ import {
   MessageCircle,
   Zap,
   Users,
+  ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -21,6 +22,8 @@ const MainLayout = () => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const isSuperAdmin = String(user?.role || '').toLowerCase() === 'superadmin';
+  const storeSlug = String(user?.slug || '').trim();
+  const storeUrl = storeSlug ? `https://digizap.com.br/${storeSlug}` : '';
 
   const menuItems = [
     { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
@@ -53,21 +56,45 @@ const MainLayout = () => {
           padding: '20px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px', padding: '0 10px' }}>
-          <div
-            style={{
-              width: '32px',
-              height: '32px',
-              backgroundColor: '#3b82f6',
-              borderRadius: '8px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Zap size={20} color="#fff" />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '40px', padding: '0 10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                backgroundColor: '#3b82f6',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Zap size={20} color="#fff" />
+            </div>
+            <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px' }}>DigiZap</span>
           </div>
-          <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px' }}>ZAPFLY</span>
+          {storeUrl ? (
+            <a
+              href={storeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Abrir loja pública"
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#a1a1aa',
+                backgroundColor: '#18181b',
+                border: '1px solid #27272a',
+                textDecoration: 'none',
+              }}
+            >
+              <ExternalLink size={16} />
+            </a>
+          ) : null}
         </div>
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
