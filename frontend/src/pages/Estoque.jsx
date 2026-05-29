@@ -422,7 +422,7 @@ const Estoque = () => {
       await api.post('/orders/products', payload);
       Swal.close();
       fetchProducts();
-      Swal.fire({ title: 'Duplicado!', icon: 'success', toast: true, position: 'top-end', timer: 1800, showConfirmButton: false });
+      Swal.fire({ title: 'Duplicado!', icon: 'success', toast: true, position: 'bottom-end', timer: 1800, showConfirmButton: false });
     } catch (err) {
       Swal.close();
       Swal.fire('Erro', 'Falha ao duplicar o item.', 'error');
@@ -480,7 +480,7 @@ const Estoque = () => {
       else await api.post('/orders/products', payload);
       setShowModal(false);
       fetchProducts();
-      Swal.fire({ title: 'Salvo!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+      Swal.fire({ title: 'Salvo!', icon: 'success', toast: true, position: 'bottom-end', timer: 2000, showConfirmButton: false });
     } catch (err) { Swal.fire('Erro', 'Falha ao salvar.', 'error'); }
   };
 
@@ -527,7 +527,7 @@ const Estoque = () => {
       else await api.post('/orders/seasonal', seasonalForm);
       setShowSeasonalModal(false);
       fetchSeasonal();
-      Swal.fire({ title: 'Salvo!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+      Swal.fire({ title: 'Salvo!', icon: 'success', toast: true, position: 'bottom-end', timer: 2000, showConfirmButton: false });
     } catch (err) { Swal.fire('Erro', 'Falha ao salvar catálogo sazonal.', 'error'); }
   };
 
@@ -639,6 +639,10 @@ const Estoque = () => {
           color: #fff;
           letter-spacing: 0.01em;
         }
+
+        .estoque-label--pink {
+          color: #ec4899;
+        }
       `}</style>
       <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
@@ -749,15 +753,23 @@ const Estoque = () => {
           filtered.map((p, idx) => {
             const isExpanded = expanded === p.id;
             const isCombo = p.comboItems && p.comboItems.length > 0;
+            const currentCategory = String(p.category || 'Sem categoria').trim() || 'Sem categoria';
+            const prevCategory = idx > 0 ? String(filtered[idx - 1]?.category || 'Sem categoria').trim() || 'Sem categoria' : '';
+            const showCategoryHeader = idx === 0 || currentCategory !== prevCategory;
             return (
-              <div
-                key={p.id}
-                draggable
-                onDragStart={(e) => handleProductDragStart(e, idx)}
-                onDragOver={handleDragOver}
-                onDrop={(e) => handleProductDrop(e, idx)}
-                style={{ backgroundColor: '#18181b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', transition: 'all 0.2s', cursor: 'grab' }}
-              >
+              <React.Fragment key={p.id}>
+                {showCategoryHeader && (
+                  <div style={{ margin: '10px 2px 2px', fontSize: '12px', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'capitalize', letterSpacing: '0.01em' }}>
+                    {currentCategory}
+                  </div>
+                )}
+                <div
+                  draggable
+                  onDragStart={(e) => handleProductDragStart(e, idx)}
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleProductDrop(e, idx)}
+                  style={{ backgroundColor: '#18181b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', transition: 'all 0.2s', cursor: 'grab' }}
+                >
                 <div
                   onClick={() => setExpanded(isExpanded ? null : p.id)}
                   style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent', borderBottom: isExpanded ? '1px solid rgba(255,255,255,0.05)' : 'none' }}
@@ -848,7 +860,7 @@ const Estoque = () => {
                   </div>
                 </div>
 
-                {isExpanded && (
+                  {isExpanded && (
                   <div style={{ padding: '20px', backgroundColor: 'rgba(0,0,0,0.2)' }}>
                     {isCombo ? (
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
@@ -886,8 +898,9 @@ const Estoque = () => {
                       </div>
                     )}
                   </div>
-                )}
-              </div>
+                  )}
+                </div>
+              </React.Fragment>
             );
           })
         )}
@@ -938,7 +951,7 @@ const Estoque = () => {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(236, 72, 153, 0.05)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(236, 72, 153, 0.1)' }}>
                     <input type="checkbox" id="onlySeasonal" checked={seasonalForm.onlySeasonalOnEventDay} onChange={e => setSeasonalForm(f => ({ ...f, onlySeasonalOnEventDay: e.target.checked }))} style={{ width: '18px', height: '18px' }} />
-                    <label htmlFor="onlySeasonal" style={{ cursor: 'pointer', fontSize: '13px', fontWeight: 700, color: '#ec4899' }}>
+              <label htmlFor="onlySeasonal" className="estoque-label estoque-label--check estoque-label--pink">
                       Aceitar APENAS itens sazonais para a data do evento?
                       <p style={{ fontWeight: 400, fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Lily recusará encomendas do cardápio regular se o cliente escolher o dia do evento para entrega.</p>
                     </label>
@@ -1143,7 +1156,7 @@ const Estoque = () => {
                   </label>
 
                   <label htmlFor="featured" className="estoque-label estoque-label--switch">
-                    <span style={{ cursor: 'pointer', fontWeight: 700, fontSize: '13px'}}>Destaque no menu</span>
+                    <span style={{ cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}>Destaque no menu</span>
                     <span style={{ position: 'relative', width: '44px', height: '24px', borderRadius: '999px', backgroundColor: form.featured ? '#3b82f6' : 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, transition: 'all 0.2s ease' }}>
                       <input
                         type="checkbox"
@@ -1302,25 +1315,25 @@ const Estoque = () => {
                                   />
                                   Invisivel
                                 </label>
-                                  <button
-                                    type="button"
-                                    className="btn-icon"
-                                    onClick={() => duplicateVariationAt(idx)}
-                                    style={{ color: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.10)', borderRadius: '8px', padding: '8px' }}
-                                    title="Duplicar variação"
-                                  >
-                                    <Copy size={16} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="btn-icon"
-                                    onClick={() => setForm(f => ({ ...f, variations: (f.variations || []).filter((_, i) => i !== idx) }))}
-                                    style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.10)', borderRadius: '8px', padding: '8px' }}
-                                    title="Remover variação"
-                                  >
-                                    <Trash2 size={16} />
-                                  </button>
-                                </div>
+                                <button
+                                  type="button"
+                                  className="btn-icon"
+                                  onClick={() => duplicateVariationAt(idx)}
+                                  style={{ color: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.10)', borderRadius: '8px', padding: '8px' }}
+                                  title="Duplicar variação"
+                                >
+                                  <Copy size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-icon"
+                                  onClick={() => setForm(f => ({ ...f, variations: (f.variations || []).filter((_, i) => i !== idx) }))}
+                                  style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.10)', borderRadius: '8px', padding: '8px' }}
+                                  title="Remover variação"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
                             </div>
 
                             <div style={{ marginTop: '10px' }}>
@@ -1655,7 +1668,7 @@ const Estoque = () => {
                           await api.patch(`/orders/categories/${editingCategory}`, categoryForm);
                           setEditingCategory(null);
                           fetchCategories();
-                          Swal.fire({ title: 'Atualizado!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+                          Swal.fire({ title: 'Atualizado!', icon: 'success', toast: true, position: 'bottom-end', timer: 2000, showConfirmButton: false });
                         } catch (err) { Swal.fire('Erro', 'Falha ao atualizar.', 'error'); }
                       }}>Salvar Alterações</button>
                     </>
@@ -1666,7 +1679,7 @@ const Estoque = () => {
                         await api.post('/orders/categories', { name: newCategoryName });
                         setNewCategoryName('');
                         fetchCategories();
-                        Swal.fire({ title: 'Adicionado!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+                        Swal.fire({ title: 'Adicionado!', icon: 'success', toast: true, position: 'bottom-end', timer: 2000, showConfirmButton: false });
                       } catch (err) { Swal.fire('Erro', 'Falha ao adicionar.', 'error'); }
                     }}>Adicionar Categoria</button>
                   )}
@@ -1735,12 +1748,9 @@ const Estoque = () => {
 };
 
 const tabBtn = { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', border: 'none', fontWeight: 700, fontSize: '14px', cursor: 'pointer' };
-const modalOverlay = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9999, backdropFilter: 'blur(8px)', padding: '20px' };
+const modalOverlay = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9, backdropFilter: 'blur(8px)', padding: '20px' };
 const modalContent = { width: '100%', maxWidth: '960px', maxHeight: '90vh', padding: '30px', position: 'relative', overflowY: 'auto', backgroundColor: '#18181b', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' };
 const closeBtn = { background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' };
-const labelStyle = { display: 'block', fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 800, textTransform: 'capitalize' };
-const microLabel = { display: 'block', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '4px', fontWeight: 700};
-const tinyLabel = { display: 'block', fontSize: '8px', color: 'var(--text-muted)', marginBottom: '2px', fontWeight: 600};
 const sectionBox = { backgroundColor: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '12px', border: '1px dashed var(--border-color)' };
 const sectionTitle = { fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' };
 const varGroupStyle = { backgroundColor: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', marginBottom: '15px', border: '1px solid rgba(255,255,255,0.05)' };

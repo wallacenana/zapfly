@@ -97,7 +97,7 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
         title: 'Salvo!',
         icon: 'success',
         toast: true,
-        position: 'top-end',
+        position: 'bottom-end',
         timer: 2000,
         showConfirmButton: false
       });
@@ -131,7 +131,7 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
         title: 'Removido!',
         icon: 'success',
         toast: true,
-        position: 'top-end',
+        position: 'bottom-end',
         timer: 2000,
         showConfirmButton: false
       });
