@@ -21,6 +21,7 @@ const SiteSettings = () => {
         buttonTextColor: '#ffffff',
         backgroundColor: '#ffffff',
         textColor: '#333333',
+        menuTheme: 'dark',
         seoDescription: '',
         pixelId: '',
         googleAnalyticsId: '',
@@ -41,6 +42,7 @@ const SiteSettings = () => {
                     ...prev,
                     ...res.data,
                     active: res.data.active ?? true,
+                    menuTheme: res.data.menuTheme || 'dark',
                     freeDeliveryEnabled: res.data.freeDeliveryEnabled ?? false,
                     freeDeliveryKm: res.data.freeDeliveryKm ?? 0
                 }));
@@ -69,6 +71,7 @@ const SiteSettings = () => {
                 buttonTextColor: settings.buttonTextColor,
                 backgroundColor: settings.backgroundColor,
                 textColor: settings.textColor,
+                menuTheme: settings.menuTheme,
                 seoDescription: settings.seoDescription,
                 pixelId: settings.pixelId,
                 googleAnalyticsId: settings.googleAnalyticsId,
@@ -273,6 +276,19 @@ const SiteSettings = () => {
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
                             Se desativar, a loja sai da home e da lista pública.
                         </p>
+
+                        <div style={{ marginTop: '18px' }}>
+                            <label style={labelStyle}>Tema do Cardápio</label>
+                            <select
+                                value={settings.menuTheme || 'dark'}
+                                onChange={(e) => setSettings({ ...settings, menuTheme: e.target.value })}
+                                style={inputStyle}
+                            >
+                                <option value="dark">Escuro</option>
+                                <option value="light">Claro</option>
+                            </select>
+                            <p style={hintStyle}>O tema escuro usa a paleta padrão DigiZap para melhor contraste.</p>
+                        </div>
 
                         <div style={{ marginTop: '22px', padding: '18px', borderRadius: '14px', border: '1px solid rgba(34,197,94,0.18)', background: 'rgba(34,197,94,0.06)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>

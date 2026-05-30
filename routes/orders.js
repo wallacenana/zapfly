@@ -76,6 +76,19 @@ async function normalizeProductAddonGroups(value, userId) {
   return JSON.stringify(filteredIds);
 }
 
+async function normalizeSuggestedItemId(value, userId, currentId = null) {
+  const itemId = String(value || '').trim();
+  if (!itemId) return null;
+  if (currentId && String(currentId) === itemId) return null;
+
+  const exists = await prisma.product.findFirst({
+    where: { id: itemId, userId },
+    select: { id: true }
+  });
+
+  return exists ? itemId : null;
+}
+
 const SCHEDULING_TIME_ZONE = 'America/Sao_Paulo';
 const ORDER_TIME_OPTIONS = Array.from({ length: 12 }, (_, index) => `${String(index + 9).padStart(2, '0')}:00`);
 
@@ -1257,13 +1270,22 @@ router.get('/products', authenticate, async (req, res) => {
 });
 
 router.post('/products', authenticate, async (req, res) => {
-  const { name, description, price, promoPrice, image, category, type, variations, comboItems, customFields, stock, trackStock, featured, capacityCost, bannerUrl, displayOrder } = req.body;
+  const { name, description, price, promoPrice, image, category, categoryId, type, variations, comboItems, customFields, stock, trackStock, featured, capacityCost, bannerUrl, displayOrder, suggestedItemId } = req.body;
   const addonGroups = await normalizeProductAddonGroups(req.body.addonGroups, req.user.id);
+  const suggestedId = await normalizeSuggestedItemId(suggestedItemId, req.user.id);
   const currentMaxOrder = await prisma.product.aggregate({
     where: { userId: req.user.id },
     _max: { displayOrder: true }
   });
   const nextDisplayOrder = (currentMaxOrder._max.displayOrder ?? 0) + 1;
+  let resolvedCategory = category || null;
+  let resolvedCategoryId = categoryId || null;
+  if (resolvedCategoryId) {
+    const foundCategory = await prisma.category.findFirst({ where: { id: resolvedCategoryId, userId: req.user.id } });
+    if (foundCategory) {
+      resolvedCategory = foundCategory.name;
+    }
+  }
   const product = await prisma.product.create({
     data: {
       name,
@@ -1273,7 +1295,9 @@ router.post('/products', authenticate, async (req, res) => {
         ? (parseFloat(promoPrice) || 0)
         : 0,
       image,
-      category,
+      category: resolvedCategory,
+      categoryName: resolvedCategory,
+      categoryId: resolvedCategoryId,
       type: type || 'delivery',
       variations: variations || '[]',
       comboItems: comboItems || '[]',
@@ -1285,6 +1309,7 @@ router.post('/products', authenticate, async (req, res) => {
       displayOrder: parseInt(displayOrder, 10) || nextDisplayOrder,
       capacityCost: parseInt(capacityCost, 10) || 1,
       addonGroups,
+      suggestedItemId: suggestedId,
       userId: req.user.id
     }
   });
@@ -1556,8 +1581,22 @@ router.patch('/products/:id', authenticate, async (req, res) => {
     if (Object.prototype.hasOwnProperty.call(updateData, 'displayOrder')) {
       updateData.displayOrder = parseInt(updateData.displayOrder, 10) || 0;
     }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'categoryId') || Object.prototype.hasOwnProperty.call(updateData, 'category')) {
+      if (updateData.categoryId) {
+        const foundCategory = await prisma.category.findFirst({ where: { id: updateData.categoryId, userId } });
+        if (foundCategory) {
+          updateData.category = foundCategory.name;
+          updateData.categoryName = foundCategory.name;
+        }
+      } else if (updateData.category) {
+        updateData.categoryName = updateData.category;
+      }
+    }
     if (Object.prototype.hasOwnProperty.call(updateData, 'addonGroups')) {
       updateData.addonGroups = await normalizeProductAddonGroups(updateData.addonGroups, userId);
+    }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'suggestedItemId')) {
+      updateData.suggestedItemId = await normalizeSuggestedItemId(updateData.suggestedItemId, userId, id);
     }
 
     const product = await prisma.product.update({

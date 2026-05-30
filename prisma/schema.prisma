@@ -74,6 +74,7 @@ model StoreProfile {
   freeDeliveryKm       Float?  
   deliveryMode         String   @default("hibrido")
   allowCashOnDelivery  Boolean  @default(true)
+  menuTheme            String   @default("dark")
   createdAt            DateTime @default(now())
   updatedAt            DateTime @default(now()) @updatedAt
 
@@ -217,10 +218,11 @@ model Product {
   featured        Boolean   @default(false)
   promotion       Boolean   @default(false)
   displayOrder    Int       @default(0)
-  bannerUrl       String?   @db.Text
-  addonGroups     String?   @db.Text
-  userId          String
-  user            User      @relation(fields: [userId], references: [id])
+    bannerUrl       String?   @db.Text
+    addonGroups     String?   @db.Text
+    suggestedItemId String?
+    userId          String
+    user            User      @relation(fields: [userId], references: [id])
   orders          Order[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @default(now()) @updatedAt
@@ -374,6 +376,7 @@ model Setting {
   pixelId              String?
   googleAnalyticsId    String?
   microsoftClarityId   String?
+  menuTheme            String? @default("dark")
 
   @@map("setting")
 }

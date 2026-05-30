@@ -47,20 +47,38 @@ try {
 
     // --- MINI CACHE ENGINE (LCP KILLER) ---
     $cacheAcceptOrders = true;
+    $cacheVersionStamp = '';
     try {
-        $cacheSettingsStmt = $pdo->prepare("SELECT COALESCE(s.acceptOrders, 1) AS acceptOrders FROM user u LEFT JOIN setting s ON u.id = s.userId WHERE u.slug = ?");
+        $cacheSettingsStmt = $pdo->prepare("
+            SELECT
+                COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders,
+                DATE_FORMAT(
+                    GREATEST(
+                        COALESCE(u.updatedAt, '1970-01-01 00:00:00'),
+                        COALESCE(s.updatedAt, '1970-01-01 00:00:00'),
+                        COALESCE(sp.updatedAt, '1970-01-01 00:00:00')
+                    ),
+                    '%Y%m%d%H%i%s'
+                ) AS settingsVersion
+            FROM user u
+            LEFT JOIN setting s ON u.id = s.userId
+            LEFT JOIN store_profile sp ON u.id = sp.userId
+            WHERE u.slug = ?
+        ");
         $cacheSettingsStmt->execute([$slug]);
         $cacheSettings = $cacheSettingsStmt->fetch(PDO::FETCH_ASSOC);
         if ($cacheSettings) {
             $cacheAcceptOrders = (bool) $cacheSettings['acceptOrders'];
+            $cacheVersionStamp = (string) ($cacheSettings['settingsVersion'] ?? '');
         }
     } catch (Exception $e) {
         $cacheAcceptOrders = true;
+        $cacheVersionStamp = '';
     }
 
     $cacheDir = __DIR__ . '/cache';
     $cacheVersion = @filemtime(__FILE__) ?: time();
-    $cacheFile = $cacheDir . '/store_' . md5($slug . '_ao_' . ($cacheAcceptOrders ? '1' : '0') . '_v_' . $cacheVersion) . '.html';
+    $cacheFile = $cacheDir . '/store_' . md5($slug . '_ao_' . ($cacheAcceptOrders ? '1' : '0') . '_sv_' . $cacheVersionStamp . '_v_' . $cacheVersion) . '.html';
     $cacheTime = 60; // 60 segundos de cache
 
     $bypassCache = isset($_GET['nocache']);
@@ -72,7 +90,7 @@ try {
 
     ob_start();
 
-    $stmt = $pdo->prepare("SELECT u.*, COALESCE(sp.businessName, s.businessName) AS businessName, COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl, COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl, COALESCE(sp.accentColor, s.accentColor) AS accentColor, COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor, COALESCE(sp.textColor, s.textColor) AS textColor, COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor, COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor, COALESCE(sp.seoDescription, s.seoDescription) AS seoDescription, COALESCE(s.googleApiKey, '') AS googleApiKey, COALESCE(s.deliveryRules, '[]') AS deliveryRules, COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm, COALESCE(sp.pixelId, s.pixelId) AS pixelId, COALESCE(sp.microsoftClarityId, s.microsoftClarityId) AS microsoftClarityId, COALESCE(sp.googleAnalyticsId, s.googleAnalyticsId) AS googleAnalyticsId, COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders, COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders, COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders, COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled, COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm, COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode, COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery FROM user u LEFT JOIN setting s ON u.id = s.userId LEFT JOIN store_profile sp ON u.id = sp.userId WHERE u.slug = ?");
+    $stmt = $pdo->prepare("SELECT u.*, COALESCE(sp.businessName, s.businessName) AS businessName, COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl, COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl, COALESCE(sp.accentColor, s.accentColor) AS accentColor, COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor, COALESCE(sp.textColor, s.textColor) AS textColor, COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor, COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor, COALESCE(sp.seoDescription, s.seoDescription) AS seoDescription, COALESCE(s.googleApiKey, '') AS googleApiKey, COALESCE(s.deliveryRules, '[]') AS deliveryRules, COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm, COALESCE(sp.pixelId, s.pixelId) AS pixelId, COALESCE(sp.microsoftClarityId, s.microsoftClarityId) AS microsoftClarityId, COALESCE(sp.googleAnalyticsId, s.googleAnalyticsId) AS googleAnalyticsId, COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders, COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders, COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders, COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled, COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm, COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode, COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery, COALESCE(sp.menuTheme, s.menuTheme, 'dark') AS menuTheme FROM user u LEFT JOIN setting s ON u.id = s.userId LEFT JOIN store_profile sp ON u.id = sp.userId WHERE u.slug = ?");
     $stmt->execute([$slug]);
     $store = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -84,10 +102,24 @@ try {
     $logoUrl = $store['logoUrl'] ?: '/cardapio/logo.png';
     $faviconUrl = $store['faviconUrl'] ?: '/favicon.ico';
     $accentColor = $store['accentColor'] ?: '#ff4d6d';
-    $backgroundColor = $store['backgroundColor'] ?: '#ffffff';
-    $textColor = $store['textColor'] ?: '#1a1a1a';
-    $buttonColor = $store['buttonColor'] ?: $accentColor;
-    $buttonTextColor = $store['buttonTextColor'] ?: '#ffffff';
+    $menuTheme = strtolower(trim($store['menuTheme'] ?? 'dark')) ?: 'dark';
+    $isDarkTheme = $menuTheme === 'dark';
+    if ($isDarkTheme) {
+        $accentColor = '#6cb649';
+        $backgroundColor = '#07150d';
+        $textColor = '#ffffff';
+        $buttonColor = '#6cb649';
+        $buttonTextColor = '#07150d';
+    } else {
+        $backgroundColor = $store['backgroundColor'] ?: '#ffffff';
+        $textColor = $store['textColor'] ?: '#1a1a1a';
+        $buttonColor = $store['buttonColor'] ?: $accentColor;
+        $buttonTextColor = $store['buttonTextColor'] ?: '#ffffff';
+    }
+    $surfaceColor = $isDarkTheme ? '#09271b' : 'color-mix(in srgb, var(--bg-color) 96%, #ffffff 4%)';
+    $surfaceSoftColor = $isDarkTheme ? '#0c1f15' : 'color-mix(in srgb, var(--bg-color) 90%, #ffffff 10%)';
+    $borderColor = $isDarkTheme ? 'rgba(108, 182, 73, 0.16)' : 'rgba(0, 0, 0, 0.08)';
+    $textSecondary = $isDarkTheme ? 'rgba(255,255,255,0.72)' : ($store['textColor'] ? $store['textColor'] . '99' : 'rgba(102,102,102,0.6)');
     $acceptOrders = isset($store['acceptOrders']) ? (bool) $store['acceptOrders'] : true;
 
     $stmt = $pdo->prepare("SELECT * FROM category WHERE userId = ? ORDER BY `order` ASC");
@@ -140,6 +172,7 @@ try {
         'buttonTextColor' => $buttonTextColor,
         'backgroundColor' => $backgroundColor,
         'textColor' => $textColor,
+        'menuTheme' => $menuTheme,
         'acceptOrders' => $acceptOrders,
         'logoUrl' => $logoUrl,
         'faviconUrl' => $faviconUrl,
@@ -183,12 +216,24 @@ try {
                     <?php echo $backgroundColor; ?>;
                 --text-main:
                     <?php echo $textColor; ?>;
+                --text-secondary:
+                    <?php echo $textSecondary; ?>;
                 --btn:
                     <?php echo $buttonColor; ?>;
                 --btn-text:
                     <?php echo $buttonTextColor; ?>;
                 --accent:
                     <?php echo $accentColor; ?>;
+                --surface-color:
+                    <?php echo $surfaceColor; ?>;
+                --surface-soft:
+                    <?php echo $surfaceSoftColor; ?>;
+                --border-color:
+                    <?php echo $borderColor; ?>;
+                --bg-tertiary:
+                    <?php echo $surfaceSoftColor; ?>;
+                --text-primary:
+                    <?php echo $textColor; ?>;
             }
 
             body {
@@ -362,37 +407,6 @@ try {
                 border-radius: 12px;
             }
 
-            .store-name-row {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                flex-wrap: wrap;
-            }
-
-            .status-badge {
-                padding: 6px 10px;
-                border-radius: 999px;
-                font-size: 0.76rem;
-                font-weight: 700;
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                white-space: nowrap;
-                border: 1px solid transparent;
-            }
-
-            .status-badge.open {
-                background: color-mix(in srgb, var(--primary-color) 10%, #ffffff);
-                color: var(--primary-color);
-                border-color: color-mix(in srgb, var(--primary-color) 18%, #ffffff);
-            }
-
-            .status-badge.closed {
-                background: rgba(220, 38, 38, 0.08);
-                color: #b91c1c;
-                border-color: rgba(220, 38, 38, 0.16);
-            }
-
             .rating-badge {
                 padding: 0;
                 border-radius: 0;
@@ -451,7 +465,7 @@ try {
         </style>
     </head>
 
-    <body>
+    <body class="<?php echo $isDarkTheme ? 'theme-dark' : 'theme-light'; ?>">
 
         <header class="top-nav">
             <div class="container nav-wrapper">
@@ -460,6 +474,7 @@ try {
                             decoding="async"></div>
                     <div class="store-details">
                         <div class="store-name-row">
+                            <div id="store-status-badge" class="status-badge open">&#9679; Aberto agora</div>
                             <h1 id="store-name"><?php echo $businessName; ?></h1>
                             <?php if ($orderCount > 0): ?>
                                 <div id="store-rating-badge" class="rating-badge has-rating">
@@ -477,7 +492,6 @@ try {
                         Ver mais <i data-lucide="chevron-down"></i>
                     </button>
                     <div class="header-divider" aria-hidden="true"></div>
-                    <div id="store-status-badge" class="status-badge open">&#9679; Aberto agora</div>
                 </div>
             </div>
         </header>
@@ -540,13 +554,18 @@ try {
                             <div class="products-grid">
                                 <?php foreach ($catProducts as $p): ?>
                                     <div class="product-card" onclick="openItemDetail('<?php echo $p['id']; ?>')">
+                                        <?php if ($p['image']): ?>
+                                            <img src="<?php echo str_replace('.webp', '_550.webp', json_decode($p['image'], true)[0] ?? $p['image']); ?>"
+                                                class="product-img" <?php echo $imgCounter < 4 ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"'; ?>>
+                                            <?php $imgCounter++; ?>
+                                        <?php endif; ?>
                                         <div class="product-info">
                                             <h3><?php echo $p['name']; ?></h3>
                                             <p><?php echo $p['description']; ?></p>
                                             <?php
-                                                $basePrice = isset($p['price']) ? (float) $p['price'] : 0;
-                                                $promoPrice = isset($p['promoPrice']) ? (float) $p['promoPrice'] : 0;
-                                                $hasPromo = $promoPrice > 0 && $promoPrice < $basePrice;
+                                            $basePrice = isset($p['price']) ? (float) $p['price'] : 0;
+                                            $promoPrice = isset($p['promoPrice']) ? (float) $p['promoPrice'] : 0;
+                                            $hasPromo = $promoPrice > 0 && $promoPrice < $basePrice;
                                             ?>
                                             <div class="product-price">
                                                 <?php if ($hasPromo): ?>
@@ -557,11 +576,6 @@ try {
                                                 <?php endif; ?>
                                             </div>
                                         </div>
-                                        <?php if ($p['image']): ?>
-                                            <img src="<?php echo str_replace('.webp', '_550.webp', json_decode($p['image'], true)[0] ?? $p['image']); ?>"
-                                                class="product-img" <?php echo $imgCounter < 4 ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"'; ?>>
-                                            <?php $imgCounter++; ?>
-                                        <?php endif; ?>
                                     </div>
                                 <?php endforeach; ?>
                             </div>
@@ -959,6 +973,7 @@ try {
                 currentItem: null,
                 currentQty: 1,
                 currentVariation: null,
+                orderBumpSelected: false,
                 userInfo: JSON.parse(localStorage.getItem('zapfly_user') || '{"name":"","phone":"","address":""}'),
                 publicSettings: {
                     googleApiKey: '',
@@ -990,7 +1005,11 @@ try {
                 orderDetailsInfo: '',
                 reviewModalOrderId: null,
                 reviewModalRating: 0,
-                storeReviewSummary: window.__SSR__?.reviewSummary || { averageRating: 5, reviewCount: 0, orderCount: 0 },
+                storeReviewSummary: window.__SSR__?.reviewSummary || {
+                    averageRating: 5,
+                    reviewCount: 0,
+                    orderCount: 0
+                },
                 storeRecentReviews: window.__SSR__?.recentReviews || []
             };
 
@@ -1011,6 +1030,58 @@ try {
                     return `de R$ ${basePrice.toFixed(2)} por R$ ${promoPrice.toFixed(2)}`;
                 }
                 return `R$ ${basePrice.toFixed(2)}`;
+            }
+
+            function getEffectiveProductPrice(product) {
+                const basePrice = parseFloat(product?.price || 0) || 0;
+                const promoPrice = parseFloat(product?.promoPrice || 0) || 0;
+                return promoPrice > 0 && promoPrice < basePrice ? promoPrice : basePrice;
+            }
+
+            function hasPaidAddonsForProduct(product) {
+                try {
+                    const groupIds = JSON.parse(product?.addonGroups || '[]');
+                    if (!Array.isArray(groupIds) || groupIds.length === 0) return false;
+                    return (state.addonGroups || []).some(group => {
+                        if (!groupIds.includes(group.id)) return false;
+                        const items = JSON.parse(group.items || '[]');
+                        return Array.isArray(items) && items.some(item => (parseFloat(item?.price || 0) || 0) > 0);
+                    });
+                } catch (error) {
+                    return false;
+                }
+            }
+
+            function getDisplayPriceText(product) {
+                const variations = JSON.parse(product?.variations || '[]').filter(v => !v.hidden);
+                const basePrice = getEffectiveProductPrice(product);
+
+                if (variations.length > 0) {
+                    const effectiveVariationPrices = variations
+                        .map(v => getEffectiveProductPrice(v))
+                        .filter(price => Number.isFinite(price) && price > 0);
+                    const fromPrice = effectiveVariationPrices.length > 0 ? Math.min(...effectiveVariationPrices) : basePrice;
+                    return `A partir de R$ ${fromPrice.toFixed(2)}`;
+                }
+
+                if (hasPaidAddonsForProduct(product)) {
+                    return `A partir de R$ ${basePrice.toFixed(2)}`;
+                }
+
+                const price = parseFloat(product?.price || 0) || 0;
+                const promoPrice = parseFloat(product?.promoPrice || 0) || 0;
+                if (promoPrice > 0 && promoPrice < price) {
+                    return `de R$ ${price.toFixed(2)} por R$ ${promoPrice.toFixed(2)}`;
+                }
+                return `R$ ${basePrice.toFixed(2)}`;
+            }
+
+            function getSuggestedProductForItem(item) {
+                if (!item?.suggestedItemId) return null;
+                const suggestedId = String(item.suggestedItemId || '');
+                if (!suggestedId) return null;
+                if (String(item.id || '') === suggestedId) return null;
+                return (state.products || []).find(product => String(product.id) === suggestedId) || null;
             }
 
             function minPositiveNumber(values = []) {
@@ -1110,7 +1181,11 @@ try {
                 if (note) note.innerText = '';
                 openModal('order-schedule-modal');
                 if (dateInput?.value) {
-                    loadOrderAvailability(dateInput.value, true, { timeSelectId: 'schedule-time', dateInputId: 'schedule-date', noteId: 'schedule-availability-note' });
+                    loadOrderAvailability(dateInput.value, true, {
+                        timeSelectId: 'schedule-time',
+                        dateInputId: 'schedule-date',
+                        noteId: 'schedule-availability-note'
+                    });
                 }
             }
 
@@ -1349,7 +1424,11 @@ try {
                     state.categories = data.categories || [];
                     state.availableSlots = data.availableSlots || [];
                     state.addonGroups = data.addonGroups || [];
-                    state.storeReviewSummary = data.reviewSummary || state.storeReviewSummary || { averageRating: 5, reviewCount: 0, orderCount: 0 };
+                    state.storeReviewSummary = data.reviewSummary || state.storeReviewSummary || {
+                        averageRating: 5,
+                        reviewCount: 0,
+                        orderCount: 0
+                    };
                     state.storeRecentReviews = data.recentReviews || state.storeRecentReviews || [];
                     state.loading = false;
 
@@ -1639,8 +1718,7 @@ try {
                                 if (!blob) return resolve(file);
                                 resolve(new File(
                                     [blob],
-                                    file.name.replace(/\.[^.]+$/, '') + '.webp',
-                                    {
+                                    file.name.replace(/\.[^.]+$/, '') + '.webp', {
                                         type: 'image/webp',
                                         lastModified: Date.now()
                                     }
@@ -1818,8 +1896,7 @@ try {
             }
 
             function renderFeaturedCard(product, isPriority = false) {
-                const variations = JSON.parse(product.variations || '[]').filter(v => !v.hidden);
-                const priceText = variations.length > 0 ? `A partir de ${formatProductPriceText({ price: minPositiveNumber(variations.map(v => v.price)), promoPrice: minPositiveNumber(variations.map(v => v.promoPrice)) })}` : formatProductPriceText(product);
+                const priceText = getDisplayPriceText(product);
                 const images = parseImages(product.image);
                 const imgAttr = isPriority ? 'fetchpriority="high" loading="eager" decoding="async"' : 'loading="lazy" decoding="async"';
 
@@ -1878,17 +1955,16 @@ try {
             }
 
             function renderProductCard(product, isPriority = false) {
-                const variations = JSON.parse(product.variations || '[]').filter(v => !v.hidden);
-                const priceText = variations.length > 0 ? `A partir de ${formatProductPriceText({ price: minPositiveNumber(variations.map(v => v.price)), promoPrice: minPositiveNumber(variations.map(v => v.promoPrice)) })}` : formatProductPriceText(product);
+                const priceText = getDisplayPriceText(product);
                 const imgAttr = isPriority ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"';
                 return `
         <div class="product-card" onclick="openItemDetail('${product.id}')">
+                    ${parseImages(product.image).length > 0 ? `<img src="${getImg(parseImages(product.image)[0], 'thumb')}" alt="${product.name}" class="product-img" ${imgAttr}>` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
             <div class="product-info">
                 <h3>${product.name}</h3>
                 <p>${product.description || ''}</p>
                 <div class="product-price">${priceText}</div>
             </div>
-            ${parseImages(product.image).length > 0 ? `<img src="${getImg(parseImages(product.image)[0], 'thumb')}" alt="${product.name}" class="product-img" ${imgAttr}>` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
         </div>
     `;
             }
@@ -1967,6 +2043,7 @@ try {
                 state.currentItem = item;
                 state.currentQty = 1;
                 state.currentVariation = null;
+                state.orderBumpSelected = false;
 
                 const modal = document.getElementById('item-detail-modal');
                 const body = document.getElementById('item-detail-body');
@@ -2048,7 +2125,7 @@ try {
                         <div class="item-main-info">
                             <h2>${item.name}</h2>
                             <p>${item.description || ''}</p>
-                            ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price || 0).toFixed(2)}</div>` : ''}
+                            <div class="price">${getDisplayPriceText(item)}</div>
                         </div>
                     `;
 
@@ -2098,7 +2175,7 @@ try {
                                                 <
                                                 span style = "font-size: 12px; color: #ef4444; margin-left: 10px; cursor:pointer; font-weight: 700;"
                                             onclick = "document.getElementById('cf-${i}').value=''; document.getElementById('cf-${i}-preview').style.display='none';" > Remover < /span> < /
-                                                div > <
+                                            div > <
                                                 /div>`;
                                         } else {
                                             inputHtml = `<input type="text" id="cf-${i}" class="custom-field-input" data-name="${cf.name}" placeholder="Ex: ${cf.name}" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-tertiary); color: var(--text-primary); font-family: inherit;">`;
@@ -2115,6 +2192,27 @@ try {
                 catch (e) {}
                 return cfHtml;
             })();
+
+            const suggestedItem = getSuggestedProductForItem(item);
+            const orderBumpHtml = suggestedItem ? `
+                <div class="variation-section addon-group-section order-bump-section" style="margin-top: 18px;">
+                    <div class="addon-group-header">
+                        <h4>Leve também</h4>
+                        <span class="addon-group-badge optional">Sugestão</span>
+                    </div>
+                    <label class="var-option addon-option order-bump-option ${state.orderBumpSelected ? 'selected' : ''}" style="--addon-accent: var(--primary-color);" onclick="toggleOrderBumpSelect(event)">
+                        <div class="addon-option-main">
+                            <span class="var-label">${suggestedItem.name}</span>
+                            <span style="font-size:12px; color:var(--text-gray); margin-top: 4px;">${suggestedItem.description || 'Sugestão para complementar o pedido.'}</span>
+                        </div>
+                        <div class="addon-option-meta">
+                            <span class="var-price addon-option-price">${getDisplayPriceText(suggestedItem)}</span>
+                            <span class="addon-option-mark" aria-hidden="true"></span>
+                        </div>
+                        <input type="checkbox" id="order-bump-input" class="addon-input" ${state.orderBumpSelected ? 'checked' : ''}>
+                    </label>
+                </div>
+            ` : '';
 
             const addonsHtml = (() => {
                 let agHtml = '';
@@ -2164,6 +2262,7 @@ try {
                                 ${variationsHtml}
                                 ${customFieldsHtml}
                                 ${addonsHtml}
+                                ${orderBumpHtml}
                             </div>
                         </div>
                     `;
@@ -2268,7 +2367,6 @@ try {
                 }
 
                 if (maxAllowed <= 1) {
-                    const minRequired = Math.max(parseInt(groupSection?.dataset.min || '0', 10) || 0, 0);
                     const isCurrentlySelected = input.checked;
 
                     // Desmarca visuais do grupo
@@ -2278,7 +2376,7 @@ try {
                         if (option) option.classList.remove('selected');
                     });
 
-                    if (isCurrentlySelected && minRequired === 0) {
+                    if (isCurrentlySelected) {
                         syncAddonGroupState(groupSection);
                         updateDetailFooter();
                         return;
@@ -2321,24 +2419,45 @@ try {
                 const {
                     addonTotal
                 } = getSelectedAddons();
+                const suggestedItem = getSuggestedProductForItem(state.currentItem);
+                const bumpPrice = state.orderBumpSelected && suggestedItem ? getEffectiveProductPrice(suggestedItem) : 0;
                 const totalUnit = basePrice + addonTotal;
                 const priceEl = document.getElementById('add-btn-price');
-                if (priceEl) priceEl.innerText = `R$ ${(totalUnit * state.currentQty).toFixed(2)}`;
+                if (priceEl) priceEl.innerText = `R$ ${((totalUnit * state.currentQty) + bumpPrice).toFixed(2)}`;
 
                 const qtyEl = document.getElementById('detail-qty');
                 if (qtyEl) qtyEl.innerText = state.currentQty;
             }
 
+            function toggleOrderBumpSelect(event) {
+                if (event) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                state.orderBumpSelected = !state.orderBumpSelected;
+                const input = document.getElementById('order-bump-input');
+                if (input) input.checked = state.orderBumpSelected;
+                const label = input?.closest('label');
+                if (label) label.classList.toggle('selected', state.orderBumpSelected);
+                updateDetailFooter();
+            }
+
             function validateCurrentItemSelections() {
                 const item = state.currentItem;
                 if (!item) {
-                    return { ok: false, message: 'Selecione um item primeiro.' };
+                    return {
+                        ok: false,
+                        message: 'Selecione um item primeiro.'
+                    };
                 }
 
                 const variation = state.currentVariation;
                 const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
                 if (variations.length > 0 && !variation) {
-                    return { ok: false, message: 'Por favor, selecione uma opção para continuar.' };
+                    return {
+                        ok: false,
+                        message: 'Por favor, selecione uma opção para continuar.'
+                    };
                 }
 
                 const groupIds = JSON.parse(item.addonGroups || '[]');
@@ -2347,14 +2466,22 @@ try {
                     const maxAllowed = Math.max(parseInt(g.max, 10) || 1, 1);
                     const checked = document.querySelectorAll(`.addon-input[data-group-id="${g.id}"]:checked`).length;
                     if (g.min > 0 && checked < g.min) {
-                        return { ok: false, message: `Selecione pelo menos ${g.min} opção em "${g.name}".` };
+                        return {
+                            ok: false,
+                            message: `Selecione pelo menos ${g.min} opção em "${g.name}".`
+                        };
                     }
                     if (checked > maxAllowed) {
-                        return { ok: false, message: `O grupo "${g.name}" permite no máximo ${maxAllowed} opção(ões).` };
+                        return {
+                            ok: false,
+                            message: `O grupo "${g.name}" permite no máximo ${maxAllowed} opção(ões).`
+                        };
                     }
                 }
 
-                return { ok: true };
+                return {
+                    ok: true
+                };
             }
 
             function renderCheckoutExtraField(item, field, idx, itemKeyBase, currentValue = '') {
@@ -2364,9 +2491,9 @@ try {
 
                 if (fieldType === 'dropdown') {
                     const options = parseJsonValue(field.options, []);
-                    const opts = Array.isArray(options)
-                        ? options.filter(Boolean)
-                        : String(field.options || '').split(',').map(opt => opt.trim()).filter(Boolean);
+                    const opts = Array.isArray(options) ?
+                        options.filter(Boolean) :
+                        String(field.options || '').split(',').map(opt => opt.trim()).filter(Boolean);
                     return `
                         <div style="margin-bottom: 14px;">
                             <label style="display:block; font-size:13px; font-weight:600; color:var(--text-secondary); margin-bottom:5px;">${fieldLabel}</label>
@@ -2442,7 +2569,10 @@ try {
             function collectCheckoutExtraStep() {
                 const cart = getActiveCart();
                 const itemsWithExtras = cart.filter(item => getCustomFieldSchema(item).length > 0);
-                if (itemsWithExtras.length === 0) return { ok: true, cart };
+                if (itemsWithExtras.length === 0) return {
+                    ok: true,
+                    cart
+                };
 
                 const updatedCart = [...cart];
                 for (const item of itemsWithExtras) {
@@ -2455,7 +2585,10 @@ try {
                         const input = document.getElementById(fieldId);
                         const value = input?.value?.trim() || '';
                         if (field.required && !value) {
-                            return { ok: false, message: `Preencha o campo "${field.name}" do item "${item.name}".` };
+                            return {
+                                ok: false,
+                                message: `Preencha o campo "${field.name}" do item "${item.name}".`
+                            };
                         }
                         if (value) answers[field.name] = value;
                     }
@@ -2470,7 +2603,10 @@ try {
                 }
 
                 setActiveCart(updatedCart);
-                return { ok: true, cart: updatedCart };
+                return {
+                    ok: true,
+                    cart: updatedCart
+                };
             }
 
             function closeModal(modalId = null) {
@@ -2785,8 +2921,7 @@ try {
                 if (state.currentStep > 1) {
                     const previousStep = (state.activeTab === 'order' && !hasCheckoutExtras() && state.currentStep === 3) ? 1 : state.currentStep - 1;
                     goToStep(previousStep);
-                }
-                else closeWithAnimation('checkout-modal');
+                } else closeWithAnimation('checkout-modal');
             });
 
             function renderStep1() {
@@ -3191,6 +3326,30 @@ try {
                 });
                 setActiveCart(cart);
 
+                const suggestedItem = state.orderBumpSelected ? getSuggestedProductForItem(item) : null;
+                if (suggestedItem) {
+                    const bumpKey = `${item.id}--bump--${suggestedItem.id}`;
+                    const bumpPrice = getEffectiveProductPrice(suggestedItem);
+                    const existingBump = cart.find(c => c.itemKey === bumpKey);
+                    if (existingBump) {
+                        existingBump.quantity += 1;
+                    } else {
+                        cart.push({
+                            productId: suggestedItem.id,
+                            itemKey: bumpKey,
+                            name: suggestedItem.name,
+                            variation: null,
+                            price: bumpPrice,
+                            quantity: 1,
+                            customFieldSchema: null,
+                            customFieldValues: null,
+                            addons: null,
+                            isOrderBump: true
+                        });
+                    }
+                    setActiveCart(cart);
+                }
+
                 // Tracking: AddToCart
                 const finalPrice = variation ? variation.price : item.price;
                 if (typeof fbq === 'function') {
@@ -3275,7 +3434,11 @@ try {
                             ads.forEach(a => extras.push(a.name));
                         } catch (e) {}
                     }
-                    getCustomFieldSummaryParts(item).forEach(({ key, value, isUrl }) => extras.push(`${key}: ${isUrl ? 'Anexo' : value}`));
+                    getCustomFieldSummaryParts(item).forEach(({
+                        key,
+                        value,
+                        isUrl
+                    }) => extras.push(`${key}: ${isUrl ? 'Anexo' : value}`));
                     if (extras.length > 0) base += ` [${extras.join(', ')}]`;
                     return base;
                 };
@@ -3401,9 +3564,9 @@ try {
                     return;
                 }
 
-                const average = summary.averageRating !== null && summary.averageRating !== undefined
-                    ? Number(summary.averageRating)
-                    : 5;
+                const average = summary.averageRating !== null && summary.averageRating !== undefined ?
+                    Number(summary.averageRating) :
+                    5;
                 const count = Number(summary.reviewCount || 0);
 
                 badge.hidden = false;
@@ -3576,10 +3739,15 @@ try {
 
                 const root = document.documentElement;
                 const isOrder = state.activeTab === 'order';
+                const useDarkTheme = data.menuTheme === 'dark';
 
                 // Escolhe as cores baseadas na aba ativa
-                const accent = isOrder ? (data.accentColorOrders || '#4a2c2a') : (data.accentColor || '#ff4d6d');
-                const button = isOrder ? (data.buttonColorOrders || '#4a2c2a') : (data.buttonColor || '#ff4d6d');
+                const accent = useDarkTheme
+                    ? (data.accentColor || '#6cb649')
+                    : (isOrder ? (data.accentColorOrders || '#4a2c2a') : (data.accentColor || '#ff4d6d'));
+                const button = useDarkTheme
+                    ? (data.buttonColor || '#6cb649')
+                    : (isOrder ? (data.buttonColorOrders || '#4a2c2a') : (data.buttonColor || '#ff4d6d'));
 
                 // Aplica as variáveis
                 root.style.setProperty('--primary-color', accent);
@@ -3587,8 +3755,14 @@ try {
                 root.style.setProperty('--btn-text', data.buttonTextColor || '#ffffff');
                 root.style.setProperty('--bg-color', data.backgroundColor || '#ffffff');
                 root.style.setProperty('--text-main', data.textColor || '#333333');
+                root.style.setProperty('--text-secondary', data.menuTheme === 'dark' ? 'rgba(255,255,255,0.72)' : `${data.textColor || '#333333'}99`);
                 root.style.setProperty('--border', `${data.textColor || '#333333'}15`);
+                root.style.setProperty('--border-color', data.menuTheme === 'dark' ? 'rgba(108, 182, 73, 0.16)' : `${data.textColor || '#333333'}15`);
                 root.style.setProperty('--bg-gray', `${data.textColor || '#333333'}08`);
+                root.style.setProperty('--surface-color', data.menuTheme === 'dark' ? '#09271b' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 96%, #ffffff 4%)`);
+                root.style.setProperty('--surface-soft', data.menuTheme === 'dark' ? '#0c1f15' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 90%, #ffffff 10%)`);
+                root.style.setProperty('--bg-tertiary', data.menuTheme === 'dark' ? '#0c1f15' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 90%, #ffffff 10%)`);
+                root.style.setProperty('--text-primary', data.textColor || '#333333');
                 root.style.setProperty('--text-black', data.textColor || '#333333');
                 root.style.setProperty('--text-gray', `${data.textColor || '#333333'}99`);
             }

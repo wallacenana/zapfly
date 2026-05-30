@@ -84,7 +84,7 @@ const Estoque = () => {
   const [addonGroups, setAddonGroups] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [isComboMode, setIsComboMode] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: '', image: '', bannerUrl: '', price: 0, promoPrice: '', stock: 0, trackStock: false, capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [], customFields: [] });
+  const [form, setForm] = useState({ name: '', description: '', type: 'delivery', category: '', image: '', bannerUrl: '', price: 0, promoPrice: '', stock: 0, trackStock: false, capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [], customFields: [], suggestedItemId: '' });
   const [editing, setEditing] = useState(null);
   const [expanded, setExpanded] = useState(null);
 
@@ -214,7 +214,7 @@ const Estoque = () => {
   const fetchCategories = useCallback(async () => {
     try {
       const res = await api.get('/orders/categories');
-      setCategories(res.data);
+      setCategories(Array.isArray(res.data) ? [...res.data].sort((a, b) => (a.order || 0) - (b.order || 0)) : []);
     } catch (err) { console.error(err); }
   }, []);
 
@@ -336,7 +336,7 @@ const Estoque = () => {
   const openAdd = (asCombo = false) => {
     setEditing(null);
     setIsComboMode(asCombo);
-    setForm({ name: '', description: '', type: tab, category: '', image: '', bannerUrl: '', price: '', promoPrice: '', stock: 0, trackStock: tab === 'delivery', capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [], customFields: [] });
+    setForm({ name: '', description: '', type: tab, category: '', categoryId: '', image: '', bannerUrl: '', price: '', promoPrice: '', stock: 0, trackStock: tab === 'delivery', capacityCost: 1, featured: false, variations: [], comboItems: [], addonGroups: [], customFields: [], suggestedItemId: '' });
     setShowModal(true);
   };
 
@@ -344,8 +344,11 @@ const Estoque = () => {
     setEditing(p.id);
     setIsComboMode(p.comboItems && p.comboItems.length > 0 || p.type.startsWith('combo_'));
     const productData = { ...p };
+    const resolvedCategoryId = p.categoryId || categories.find(cat => cat.name === p.category)?.id || '';
     setForm({
       ...productData,
+      categoryId: resolvedCategoryId,
+      category: p.category || categories.find(cat => cat.id === p.categoryId)?.name || '',
       price: p.price ? formatMoneyInput(p.price) : '',
       promoPrice: p.promoPrice ? formatMoneyInput(p.promoPrice) : '',
       variations: parseJsonArray(p.variations, []).map(variation => ({
@@ -354,6 +357,7 @@ const Estoque = () => {
         promoPrice: variation?.promoPrice ? formatMoneyInput(variation.promoPrice) : ''
       })),
       addonGroups: parseJsonArray(p.addonGroups, []),
+      suggestedItemId: p.suggestedItemId && p.suggestedItemId !== p.id ? p.suggestedItemId : '',
       customFields: parseJsonArray(p.customFields, []).map(normalizeCustomField)
     });
     setShowModal(true);
@@ -377,9 +381,12 @@ const Estoque = () => {
       price: parseMoneyInput(variation?.price) ?? 0,
       promoPrice: parseMoneyInput(variation?.promoPrice) ?? undefined
     }));
+    const selectedCategory = categories.find(cat => String(cat.id) === String(sourceForm.categoryId));
 
     return {
       ...sourceForm,
+      categoryId: sourceForm.categoryId || '',
+      category: selectedCategory?.name || sourceForm.category || '',
       type: comboMode
         ? (String(sourceForm.type || '').startsWith('combo_') ? sourceForm.type : `combo_${sourceForm.type}`)
         : String(sourceForm.type || '').replace('combo_', ''),
@@ -388,7 +395,8 @@ const Estoque = () => {
       variations: JSON.stringify(normalizedVariations),
       comboItems: JSON.stringify(comboMode ? sourceForm.comboItems : []),
       customFields: JSON.stringify(sourceForm.customFields || []),
-      addonGroups: JSON.stringify(sourceForm.addonGroups || [])
+      addonGroups: JSON.stringify(sourceForm.addonGroups || []),
+      suggestedItemId: sourceForm.suggestedItemId || null
     };
   };
 
@@ -405,6 +413,7 @@ const Estoque = () => {
         promoPrice: variation?.promoPrice ? formatMoneyInput(variation.promoPrice) : ''
       })),
       addonGroups: parseJsonArray(product.addonGroups, []),
+      suggestedItemId: product.suggestedItemId || '',
       customFields: parseJsonArray(product.customFields, []).map(normalizeCustomField)
     };
 
@@ -443,7 +452,7 @@ const Estoque = () => {
       return;
     }
 
-    if (!form.category || !String(form.category).trim()) {
+    if (!form.categoryId || !String(form.categoryId).trim()) {
       Swal.fire({ title: 'Campo Obrigatório', text: 'Escolha uma categoria para o item.', icon: 'warning', confirmButtonColor: '#3b82f6' });
       return;
     }
@@ -1104,10 +1113,14 @@ const Estoque = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px', marginBottom: '20px' }}>
                 <div>
                   <label className="estoque-label">Categoria</label>
-                  <select {...inp} required aria-required="true" value={form.category || ''} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}>
+                  <select {...inp} required aria-required="true" value={form.categoryId || ''} onChange={e => {
+                    const categoryId = e.target.value;
+                    const selected = categories.find(cat => String(cat.id) === String(categoryId));
+                    setForm(f => ({ ...f, categoryId, category: selected?.name || '' }));
+                  }}>
                     <option value="">Selecione uma categoria</option>
                     {categories.map(cat => (
-                      <option key={cat.id} value={cat.name}>{cat.name}</option>
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
                 </div>
@@ -1516,6 +1529,40 @@ const Estoque = () => {
                   )}
                 </div>
               )}
+
+              <div style={{ ...sectionBox, gridColumn: '1 / -1' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '12px', marginBottom: '14px' }}>
+                  <h5 style={sectionTitle}><Gift size={14} /> Sugestão de Itens</h5>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Order bump sutil no checkout</span>
+                </div>
+
+                {products.length === 0 ? (
+                  <div style={{ padding: '14px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                    Crie pelo menos um item para poder sugerir outro produto no checkout.
+                  </div>
+                ) : (
+                  <div>
+                    <label className="estoque-label estoque-label--compact">Item sugerido</label>
+                    <select
+                      {...inp}
+                      value={form.suggestedItemId || ''}
+                      onChange={e => setForm(f => ({ ...f, suggestedItemId: e.target.value }))}
+                    >
+                      <option value="">Nenhuma sugestão</option>
+                      {products
+                        .filter(prod => String(prod.id) !== String(editing))
+                        .map(prod => (
+                          <option key={prod.id} value={prod.id}>
+                            {prod.name}{prod.category ? ` · ${prod.category}` : ''}
+                          </option>
+                        ))}
+                    </select>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+                      Mostra um item extra, com no máximo 1 opcao, no momento do pedido.
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {isComboMode && (
                 <div style={{ marginTop: '20px' }}>
