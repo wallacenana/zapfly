@@ -230,7 +230,7 @@ try {
     // Build SSR payload
     $ssrData = [
         'businessName' => $businessName,
-        'googleApiKey' => $store['googleApiKey'] ?? '',
+        'googleApiKey' => getenv('GOOGLE_MAPS_API_KEY') ?: getenv('GOOGLE_MAPS_KEY') ?: getenv('GOOGLE_API_KEY') ?: ($store['googleApiKey'] ?? ''),
         'deliveryRules' => $store['deliveryRules'] ?? '[]',
         'maxDeliveryKm' => (float) ($store['maxDeliveryKm'] ?? 15),
         'availableSlots' => $availableSlots,

@@ -415,7 +415,7 @@ const Settings = () => {
   };
   const handleSave = async () => {
     try {
-      const { slug: _ignoredSlug, ...safeSettings } = settings;
+      const { slug: _ignoredSlug, googleApiKey: _ignoredGoogleApiKey, ...safeSettings } = settings;
       const payload = {
         ...safeSettings,
         openai: safeSettings.openaiKey,
@@ -759,9 +759,11 @@ const Settings = () => {
               <div style={subCard}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
                   <MapPin size={20} color="#3b82f6" />
-                  <span style={{ fontWeight: 800 }}>Chave API Google Maps</span>
+                  <span style={{ fontWeight: 800 }}>Google Maps</span>
                 </div>
-                <input {...inp} type="password" value={settings.googleApiKey} onChange={e => setSettings({ ...settings, googleApiKey: e.target.value })} placeholder="Chave do Google Cloud (Distance Matrix)" />
+                <div style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: '1.4' }}>
+                  A chave do Google Maps vem do ambiente do servidor e nao fica exposta no painel.
+                </div>
               </div>
 
               <div style={subCard}>
