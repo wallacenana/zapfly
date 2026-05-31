@@ -38,8 +38,9 @@ const getFeaturedSizeHint = (count) => {
     const railWidth = 900;
     const gap = 16;
     const width = Math.max(140, Math.floor((railWidth - (gap * (visibleCount - 1))) / visibleCount));
-    const height = Math.max(90, Math.round((width * 9) / 16));
-    return `Tamanho recomendado: ${width} x ${height}px (base 900px)`;
+    const height = Math.min(230, Math.max(90, Math.round((width * 9) / 16)));
+    const ratioNote = width <= 410 ? 'Mantem 16:9 em larguras menores.' : 'Altura limitada a 230px em telas maiores.';
+    return `Tamanho recomendado: ${width} x ${height}px. ${ratioNote}`;
 };
 
 const SiteSettings = () => {

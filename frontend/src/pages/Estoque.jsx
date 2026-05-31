@@ -35,6 +35,8 @@ const createCustomField = () => ({
   options: ''
 });
 
+const getBannerSizeHint = () => 'Tamanho recomendado: altura max. 230px. Em artes menores, use 16:9.';
+
 const sanitizeMoneyInput = (value) => {
   if (value === null || value === undefined) return '';
   return String(value).replace(/[^\d.,]/g, '');
@@ -1075,9 +1077,10 @@ const Estoque = () => {
                   <div style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(59, 130, 246, 0.08)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.22)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                       <div>
-                        <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>Banner do destaque</div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Se tiver banner, ele aparece no topo como destaque. Sem banner, o produto aparece normalmente.</div>
-                      </div>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>Banner do destaque</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Se tiver banner, ele aparece no topo como destaque. Sem banner, o produto aparece normalmente.</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>{getBannerSizeHint()}</div>
+                        </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <input
                           id="banner-upload"
