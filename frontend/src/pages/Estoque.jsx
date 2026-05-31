@@ -1015,10 +1015,10 @@ const Estoque = () => {
                 </div>
               </div>
 
-              {!isComboMode && !hasVariations && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-                  <div>
-                    <label className="estoque-label">Preço normal (R$)</label>
+                {!isComboMode && !hasVariations && (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                    <div>
+                      <label className="estoque-label">Preço normal (R$)</label>
                     <input
                       {...inp}
                       type="text"
@@ -1038,12 +1038,26 @@ const Estoque = () => {
                       value={form.promoPrice}
                       onChange={e => setForm(f => ({ ...f, promoPrice: maskMoneyInput(e.target.value) }))}
                     />
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+                {!isComboMode && !hasVariations && (
+                  <div style={{ marginBottom: '20px' }}>
+                    <label className="estoque-label">Estoque</label>
+                    <input
+                      {...inp}
+                      type="number"
+                      inputMode="numeric"
+                      placeholder="0"
+                      value={form.stock}
+                      onChange={e => setForm(f => ({ ...f, stock: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0 }))}
+                    />
+                  </div>
+                )}
 
 
-              <div style={{ marginBottom: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ marginBottom: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div style={{ width: "100%", display: "flex", alignItems: "center", gap: "20px" }}>
                   <label htmlFor="trackStock" className="estoque-label estoque-label--switch">
                     <span style={{ cursor: 'pointer', fontWeight: 700, fontSize: '13px', color: '#e5e7eb' }}>Controle de estoque</span>
