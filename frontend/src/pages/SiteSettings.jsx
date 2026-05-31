@@ -33,6 +33,15 @@ const normalizeHexColor = (value, fallback = '#ffffff') => {
     return fallback;
 };
 
+const getFeaturedSizeHint = (count) => {
+    const visibleCount = Math.max(1, Number(count) || 1);
+    const railWidth = 900;
+    const gap = 16;
+    const width = Math.max(140, Math.floor((railWidth - (gap * (visibleCount - 1))) / visibleCount));
+    const height = Math.max(90, Math.round((width * 9) / 16));
+    return `Tamanho recomendado: ${width} x ${height}px (base 900px)`;
+};
+
 const SiteSettings = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -339,6 +348,18 @@ const SiteSettings = () => {
                             ))}
                         </div>
                         <p style={hintStyle}>Define quantos itens aparecem em destaque no desktop, tablet e mobile.</p>
+                        <div style={{ marginTop: '12px', display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '14px' }}>
+                            {[
+                                { id: 'featuredCountDesktop', label: 'Desktop' },
+                                { id: 'featuredCountTablet', label: 'Tablet' },
+                                { id: 'featuredCountMobile', label: 'Mobile' }
+                            ].map(item => (
+                                <div key={`${item.id}-hint`} style={{ padding: '10px 12px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)' }}>
+                                    <p style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '6px' }}>{item.label}</p>
+                                    <p style={{ fontSize: '12px', color: 'var(--text-primary)', fontWeight: 700 }}>{getFeaturedSizeHint(settings[item.id])}</p>
+                                </div>
+                            ))}
+                        </div>
                     </section>
 
                     <section className="card" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)' }}>

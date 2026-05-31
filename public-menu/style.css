@@ -2045,7 +2045,8 @@ body.theme-dark .delivery-fee-badge {
     -ms-overflow-style: none;
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
-    --featured-card-width: 168px;
+    --featured-visible-count: 4;
+    --featured-gap: 16px;
 }
 
 .featured-list::-webkit-scrollbar {
@@ -2053,8 +2054,8 @@ body.theme-dark .delivery-fee-badge {
 }
 
 .featured-card {
-    min-width: var(--featured-card-width, 168px);
-    width: var(--featured-card-width, 168px);
+    flex: 0 0 calc((100% - ((var(--featured-visible-count, 1) - 1) * var(--featured-gap, 16px))) / var(--featured-visible-count, 1));
+    min-width: 0;
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--border);
@@ -2069,7 +2070,7 @@ body.theme-dark .delivery-fee-badge {
 
 .featured-img-wrapper {
     width: 100%;
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 16 / 5;
     background: var(--bg-gray);
 }
 
@@ -2099,8 +2100,7 @@ body.theme-dark .delivery-fee-badge {
 }
 
 .featured-card--banner {
-    min-width: var(--featured-banner-width, 340px);
-    width: var(--featured-banner-width, 340px);
+    flex: 0 0 calc((100% - ((var(--featured-visible-count, 1) - 1) * var(--featured-gap, 16px))) / var(--featured-visible-count, 1));
     height: 220px;
     border-radius: 20px;
     overflow: hidden;
@@ -2119,8 +2119,6 @@ body.theme-dark .delivery-fee-badge {
 
 @media (max-width: 768px) {
     .featured-card--banner {
-        width: var(--featured-banner-width, calc(100vw - 28px));
-        min-width: var(--featured-banner-width, calc(100vw - 28px));
         height: 144px;
     }
 }
