@@ -60,17 +60,17 @@ const SiteSettings = () => {
     });
     const isDarkMenuTheme = (settings.menuTheme || 'dark') === 'dark';
     const previewTheme = isDarkMenuTheme ? {
-        bg: '#07150d',
-        surface: '#09271b',
-        surfaceSoft: '#0c1f15',
-        text: '#ffffff',
+        bg: normalizeHexColor(settings.backgroundColor, '#07150d'),
+        surface: normalizeHexColor(settings.backgroundColor, '#07150d'),
+        surfaceSoft: `${normalizeHexColor(settings.backgroundColor, '#07150d')}f2`,
+        text: normalizeHexColor(settings.textColor, '#ffffff'),
         textMuted: 'rgba(255,255,255,0.72)',
-        border: 'rgba(108,182,73,0.16)',
-        accent: '#6cb649',
-        buttonBg: '#6cb649',
-        buttonText: '#07150d',
+        border: `color-mix(in srgb, ${normalizeHexColor(settings.accentColor, '#6cb649')} 16%, transparent)`,
+        accent: normalizeHexColor(settings.accentColor, '#6cb649'),
+        buttonBg: normalizeHexColor(settings.buttonColor, normalizeHexColor(settings.accentColor, '#6cb649')),
+        buttonText: normalizeHexColor(settings.buttonTextColor, '#ffffff'),
         cardBg: 'rgba(255,255,255,0.04)',
-        cardSurface: '#0c1f15'
+        cardSurface: `color-mix(in srgb, ${normalizeHexColor(settings.backgroundColor, '#07150d')} 90%, #ffffff 10%)`
     } : {
         bg: settings.backgroundColor || '#ffffff',
         surface: settings.backgroundColor || '#ffffff',

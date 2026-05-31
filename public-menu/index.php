@@ -1842,7 +1842,12 @@ try {
                 const availableWidth = featuredList.clientWidth || featuredList.parentElement?.clientWidth || window.innerWidth || 0;
                 if (!availableWidth) return;
                 const cardWidth = Math.max(140, Math.floor((availableWidth - (gap * (visibleCount - 1))) / visibleCount));
+                const bannerWidth = Math.max(
+                    cardWidth,
+                    Math.min(availableWidth, Math.floor(cardWidth * 1.25))
+                );
                 featuredList.style.setProperty('--featured-card-width', `${cardWidth}px`);
+                featuredList.style.setProperty('--featured-banner-width', `${bannerWidth}px`);
             }
 
             function renderMenu() {
