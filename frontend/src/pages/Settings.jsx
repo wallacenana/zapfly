@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Save, Shield, MessageSquare, Bell, Calendar, MapPin, Truck, Plus, Trash2, Key, Cpu, ExternalLink, CheckCircle2, Image, Upload, Mail } from 'lucide-react';
 import { api, API_URL } from '../api';
 import axios from 'axios';
@@ -89,6 +89,7 @@ const Settings = () => {
   const [settings, setSettings] = useState({
     businessName: '',
     businessCategory: '',
+    prepTime: '',
     businessAddress: '',
     businessPlaceId: '',
     businessLat: null,
@@ -114,6 +115,8 @@ const Settings = () => {
     pixReceiverName: '',
     pixReceiverKey: '',
     maxDeliveryKm: 15,
+    freeDeliveryEnabled: false,
+    freeDeliveryKm: 0,
     deliveryMode: 'hibrido',
     allowCashOnDelivery: true
   });
@@ -123,6 +126,17 @@ const Settings = () => {
   const [uploadName, setUploadName] = useState('');
   const fileInputRef = useRef(null);
   const businessAddressRef = useRef(null);
+  const [acceptOrders, setAcceptOrders] = useState(true);
+  const [savingAcceptOrders, setSavingAcceptOrders] = useState(false);
+
+  const fetchStoreSettings = useCallback(async () => {
+    try {
+      const res = await api.get('/settings');
+      setAcceptOrders(res.data?.acceptOrders !== false);
+    } catch (err) {
+      console.error(err);
+    }
+  }, []);
 
   const loadSettings = async () => {
     try {
@@ -137,6 +151,7 @@ const Settings = () => {
           googleApiKey: dataWithoutSlug.googleApiKey || '',
           gcalCalendarId: dataWithoutSlug.gcalCalendarId || '',
           businessCategory: dataWithoutSlug.businessCategory || '',
+          prepTime: dataWithoutSlug.prepTime || '',
           businessAddress: dataWithoutSlug.businessAddress || parsedLocation.address || '',
           businessPlaceId: dataWithoutSlug.businessPlaceId || parsedLocation.placeId || '',
           businessLat: dataWithoutSlug.businessLat ?? parsedLocation.lat ?? null,
@@ -149,6 +164,8 @@ const Settings = () => {
           mercadopagoToken: dataWithoutSlug.mercadopagoToken || '',
           mercadopagoPublicKey: dataWithoutSlug.mercadopagoPublicKey || '',
           maxDeliveryKm: dataWithoutSlug.maxDeliveryKm || 15,
+          freeDeliveryEnabled: dataWithoutSlug.freeDeliveryEnabled ?? false,
+          freeDeliveryKm: dataWithoutSlug.freeDeliveryKm ?? 0,
           deliveryMode: dataWithoutSlug.deliveryMode || 'hibrido',
           allowCashOnDelivery: dataWithoutSlug.allowCashOnDelivery ?? true
         });
@@ -259,8 +276,10 @@ const Settings = () => {
     }
     loadSettings();
     loadSlots();
+    fetchStoreSettings();
+
     loadMarketingAssets();
-  }, []);
+  }, [fetchStoreSettings]);
 
   const loadSlots = async () => {
     try {
@@ -332,7 +351,24 @@ const Settings = () => {
       Swal.fire('Erro', 'Não foi possível salvar os horários.', 'error');
     }
   };
-
+  const handleAcceptOrdersChange = async (nextValue) => {
+    setAcceptOrders(nextValue);
+    setSavingAcceptOrders(true);
+    try {
+      await api.post('/settings', { acceptOrders: nextValue });
+    } catch (err) {
+      console.error(err);
+      setAcceptOrders(!nextValue);
+      Swal.fire({
+        title: 'Erro',
+        text: 'Não foi possível salvar a configuração de encomendas.',
+        icon: 'error',
+        confirmButtonColor: '#3b82f6'
+      });
+    } finally {
+      setSavingAcceptOrders(false);
+    }
+  };
   const handleSave = async () => {
     try {
       const { slug: _ignoredSlug, ...safeSettings } = settings;
@@ -408,6 +444,32 @@ const Settings = () => {
               <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '10px' }}>
                 <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Perfil do Negócio</h3>
               </div>
+              <div style={{
+                marginLeft: 'auto',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '10px 14px',
+                borderRadius: '12px',
+                border: `1px solid ${acceptOrders ? 'rgba(16, 185, 129, 0.22)' : 'rgba(239, 68, 68, 0.22)'}`,
+                backgroundColor: acceptOrders ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={acceptOrders}
+                  disabled={savingAcceptOrders}
+                  onChange={e => handleAcceptOrdersChange(e.target.checked)}
+                  style={{ width: '16px', height: '16px', cursor: savingAcceptOrders ? 'wait' : 'pointer', accentColor: acceptOrders ? '#10b981' : '#ef4444' }}
+                />
+                <div>
+                  <div style={{ fontSize: '12px', color: acceptOrders ? '#10b981' : '#ef4444', fontWeight: 800 }}>
+                    {savingAcceptOrders ? 'Salvando...' : 'Aceitar encomendas'}
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                    {acceptOrders ? 'Mostra a aba de encomendas no cardápio público.' : 'Cardápio de encomendas oculto para clientes.'}
+                  </div>
+                </div>
+              </div>
               <div style={{ ...subCard, borderLeftColor: 'var(--primary)' }}>
                 <label style={labelStyle}>Categoria do Negócio</label>
                 <input
@@ -434,6 +496,20 @@ const Settings = () => {
               </div>
 
               <div>
+                <label style={labelStyle}>Tempo de preparo</label>
+                <input
+                  {...inp}
+                  type="text"
+                  value={settings.prepTime || ''}
+                  onChange={e => setSettings({ ...settings, prepTime: e.target.value })}
+                  placeholder="Ex: 30-45"
+                />
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                  Exibido no cabeçalho do cardapio publico como tempo estimado de entrega.
+                </p>
+              </div>
+
+              <div>
                 <label style={labelStyle}>Nome Fantasia</label>
                 <input {...inp} value={settings.businessName} onChange={e => setSettings({ ...settings, businessName: e.target.value })} placeholder="Nome da sua loja" />
               </div>
@@ -444,9 +520,9 @@ const Settings = () => {
                   ref={businessAddressRef}
                   value={settings.businessAddress}
                   onFocus={attachBusinessAddressAutocomplete}
-          onChange={e => setSettings({ ...settings, businessAddress: e.target.value, businessPlaceId: '', businessLat: null, businessLng: null, businessMapsUrl: '' })}
-          placeholder="Rua, número, bairro, cidade e estado"
-        />
+                  onChange={e => setSettings({ ...settings, businessAddress: e.target.value, businessPlaceId: '', businessLat: null, businessLng: null, businessMapsUrl: '' })}
+                  placeholder="Rua, número, bairro, cidade e estado"
+                />
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
                   Selecione uma sugestão do Google para registrar a posição correta.
                 </p>
@@ -514,71 +590,109 @@ const Settings = () => {
                 <input {...inp} type="password" value={settings.googleApiKey} onChange={e => setSettings({ ...settings, googleApiKey: e.target.value })} placeholder="Chave do Google Cloud (Distance Matrix)" />
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div style={subCard}>
-                  <label style={{...labelStyle, marginBottom: '10px'}}>Modo de Cálculo do Frete</label>
-                  <select {...inp} value={settings.deliveryMode} onChange={e => setSettings({ ...settings, deliveryMode: e.target.value })}>
-                    <option value="hibrido">Híbrido (Regras DB + App)</option>
-                    <option value="manual">Manual (Apenas Regras DB)</option>
-                    <option value="automatico">Automático (Apenas App)</option>
-                  </select>
-                </div>
-                <div style={subCard}>
-                  <label style={{...labelStyle, marginBottom: '10px'}}>Limite Máximo de Entrega (KM)</label>
-                  <input {...inp} type="number" step="0.1" value={settings.maxDeliveryKm} onChange={e => setSettings({ ...settings, maxDeliveryKm: parseFloat(e.target.value) || 0 })} />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', gridColumn: '1 / -1' }}>
-                  <input type="checkbox" checked={settings.allowCashOnDelivery} onChange={e => setSettings({ ...settings, allowCashOnDelivery: e.target.checked })} style={{ width: '18px', height: '18px' }} />
-                  <label style={{ fontSize: '14px', fontWeight: 600 }}>Permitir pagamento em Dinheiro (quando calculado pelo App)</label>
-                </div>
+              <div style={subCard}>
+                <label style={{ ...labelStyle, marginBottom: '10px' }}>Modo de Cálculo do Frete</label>
+                <select {...inp} value={settings.deliveryMode} onChange={e => setSettings({ ...settings, deliveryMode: e.target.value })}>
+                  <option value="hibrido">Híbrido (Regras DB + App)</option>
+                  <option value="manual">Manual (Apenas Regras DB)</option>
+                  <option value="automatico">Automático (Apenas App)</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '10px', gridColumn: '1 / -1' }}>
+                <input type="checkbox" checked={settings.allowCashOnDelivery} onChange={e => setSettings({ ...settings, allowCashOnDelivery: e.target.checked })} style={{ width: '18px', height: '18px' }} />
+                <label style={{ fontSize: '14px', fontWeight: 600 }}>Permitir pagamento em Dinheiro (quando calculado pelo App)</label>
               </div>
 
               {settings.deliveryMode !== 'automatico' && (
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <label style={{ ...labelStyle, marginBottom: 0 }}>Tabela de Preços por Distância</label>
-                  <button onClick={addDeliveryRule} style={smallLink}>+ Adicionar Faixa</button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {settings.deliveryRules.length === 0 && <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>Nenhuma regra configurada. O frete será manual.</p>}
-                  {settings.deliveryRules.map((rule, idx) => (
-                    <div key={idx} style={{ ...ruleRow, gridTemplateColumns: 'auto 70px auto auto 90px auto auto', gap: '10px' }}>
-                      <span>Até</span>
-                      <input {...inp} style={smallInp} type="number" value={rule.maxKm} onChange={e => updateRule(idx, 'maxKm', e.target.value)} />
-                      <span>KM</span>
-                      <span style={{ marginLeft: '5px' }}>Taxa: R$</span>
-                      <input {...inp} style={smallInp} type="number" value={rule.fee} onChange={e => updateRule(idx, 'fee', e.target.value)} />
-                      
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '10px' }}>
-                        <input
-                          type="checkbox"
-                          checked={rule.allowCash !== false}
-                          onChange={e => {
-                            const rules = [...settings.deliveryRules];
-                            rules[idx].allowCash = e.target.checked;
-                            setSettings(s => ({ ...s, deliveryRules: rules }));
-                          }}
-                          style={{ width: '16px', height: '16px', cursor: 'pointer' }}
-                        />
-                        <span style={{ fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }} onClick={() => {
-                          const rules = [...settings.deliveryRules];
-                          rules[idx].allowCash = rules[idx].allowCash === false ? true : false;
-                          setSettings(s => ({ ...s, deliveryRules: rules }));
-                        }}>Aceitar Dinheiro</span>
-                      </div>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>Tabela de Preços por Distância</label>
+                    <button onClick={addDeliveryRule} style={smallLink}>+ Adicionar Faixa</button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {settings.deliveryRules.length === 0 && <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>Nenhuma regra configurada. O frete será manual.</p>}
+                    {settings.deliveryRules.map((rule, idx) => (
+                      <div key={idx} style={{ ...ruleRow, gridTemplateColumns: 'auto 70px auto auto 90px auto auto', gap: '10px' }}>
+                        <span>Até</span>
+                        <input {...inp} style={smallInp} type="number" value={rule.maxKm} onChange={e => updateRule(idx, 'maxKm', e.target.value)} />
+                        <span>KM</span>
+                        <span style={{ marginLeft: '5px' }}>Taxa: R$</span>
+                        <input {...inp} style={smallInp} type="number" value={rule.fee} onChange={e => updateRule(idx, 'fee', e.target.value)} />
 
-                      <button onClick={() => setSettings(s => ({ ...s, deliveryRules: s.deliveryRules.filter((_, i) => i !== idx) }))} style={delBtn}>
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  ))}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: '10px' }}>
+                          <input
+                            type="checkbox"
+                            checked={rule.allowCash !== false}
+                            onChange={e => {
+                              const rules = [...settings.deliveryRules];
+                              rules[idx].allowCash = e.target.checked;
+                              setSettings(s => ({ ...s, deliveryRules: rules }));
+                            }}
+                            style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }} onClick={() => {
+                            const rules = [...settings.deliveryRules];
+                            rules[idx].allowCash = rules[idx].allowCash === false ? true : false;
+                            setSettings(s => ({ ...s, deliveryRules: rules }));
+                          }}>Aceitar Dinheiro</span>
+                        </div>
+
+                        <button onClick={() => setSettings(s => ({ ...s, deliveryRules: s.deliveryRules.filter((_, i) => i !== idx) }))} style={delBtn}>
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
               )}
 
               <div>
                 <label style={labelStyle}>WhatsApp do Entregador (Notificações)</label>
                 <input {...inp} value={settings.deliveryJid} onChange={e => setSettings({ ...settings, deliveryJid: e.target.value })} placeholder="JID para aviso de delivery" />
+              </div>
+              <div style={subCard}>
+                <label style={{ ...labelStyle, marginBottom: '10px' }}>Frete gratis por distancia</label>
+                <button
+                  type="button"
+                  onClick={() => setSettings({ ...settings, freeDeliveryEnabled: !settings.freeDeliveryEnabled })}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    border: '1px solid var(--border-color)',
+                    background: settings.freeDeliveryEnabled ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.04)',
+                    color: 'var(--text-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px',
+                    fontWeight: 700
+                  }}
+                >
+                  <span>{settings.freeDeliveryEnabled ? 'Ativado' : 'Desativado'}</span>
+                  <span style={{
+                    width: '46px',
+                    height: '26px',
+                    borderRadius: '999px',
+                    padding: '3px',
+                    background: settings.freeDeliveryEnabled ? 'rgba(34,197,94,0.25)' : 'rgba(255,255,255,0.14)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: settings.freeDeliveryEnabled ? 'flex-end' : 'flex-start'
+                  }}>
+                    <span style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      background: settings.freeDeliveryEnabled ? '#22c55e' : '#d1d5db'
+                    }} />
+                  </span>
+                </button>
+              </div>
+              <div style={subCard}>
+                <label style={{ ...labelStyle, marginBottom: '10px' }}>Km gratis</label>
+                <input {...inp} type="number" step="0.1" min="0" value={settings.freeDeliveryKm} onChange={e => setSettings({ ...settings, freeDeliveryKm: parseFloat(e.target.value) || 0 })} />
               </div>
             </div>
           )}

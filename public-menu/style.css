@@ -1,7 +1,7 @@
 :root {
     --primary-color: #ff4d6d;
     --primary-hover: #ff758f;
-    --bg-color: #ffffff;
+    --bg-color: var(--text-main);
     --bg-gray: #f4f4f5;
     --border: rgba(0, 0, 0, 0.08);
     --primary-color: #ff4d6d;
@@ -11,30 +11,28 @@
     --btn-bg: #ff4d6d;
     --btn-text: #ffffff;
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    --category-nav-top: 0px;
+    --category-nav-top: -1px;
 }
 
 body.theme-dark {
-    --primary-color: #6cb649;
-    --accent: #6cb649;
-    --bg-color: #07150d;
-    --bg-gray: #0c1f15;
-    --surface-color: #09271b;
-    --surface-soft: #0c1f15;
-    --text-main: #ffffff;
-    --text-primary: #ffffff;
-    --text-black: #ffffff;
-    --text-gray: rgba(255, 255, 255, 0.72);
-    --text-secondary: rgba(255, 255, 255, 0.72);
-    --border: rgba(108, 182, 73, 0.16);
-    --border-color: rgba(108, 182, 73, 0.16);
-    --btn-bg: #6cb649;
+    --bg-color: var(--theme-bg-color, #07150d);
+    --bg-gray: var(--theme-bg-gray, #0c1f15);
+    --surface-color: var(--theme-surface-color, #09271b);
+    --surface-soft: var(--theme-surface-soft, #0c1f15);
+    --text-main: var(--theme-text-main, #ffffff);
+    --text-primary: var(--theme-text-main, #ffffff);
+    --text-black: var(--theme-text-main, #ffffff);
+    --text-gray: var(--theme-text-secondary, rgba(255, 255, 255, 0.72));
+    --text-secondary: var(--theme-text-secondary, rgba(255, 255, 255, 0.72));
+    --border: var(--theme-border, color-mix(in srgb, var(--accent, #6cb649) 16%, transparent));
+    --border-color: var(--theme-border-color, color-mix(in srgb, var(--accent, #6cb649) 16%, transparent));
+    --primary-color: var(--accent, #6cb649);
+    --btn-bg: var(--button-color, var(--accent, #6cb649));
     --btn-text: #ffffff;
 }
 
 body.theme-dark .category-tabs,
 body.theme-dark .category-nav {
-    background: var(--surface-color);
     border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
@@ -43,7 +41,7 @@ body.theme-dark .cat-tab {
 }
 
 body.theme-dark .cat-tab.active {
-    color: #ffffff;
+    color: var(--text-main);
 }
 
 body.theme-dark .nav-cat-btn {
@@ -59,7 +57,7 @@ body.theme-dark .nav-cat-btn:hover {
 body.theme-dark .nav-cat-btn.active {
     background: var(--primary-color);
     border-color: var(--primary-color);
-    color: #ffffff;
+    color: var(--text-main);
 }
 
 body.theme-dark .modal-content,
@@ -67,19 +65,19 @@ body.theme-dark .item-detail-panel,
 body.theme-dark .item-detail-media-empty,
 body.theme-dark .item-hero-placeholder {
     background: var(--surface-color);
-    color: #ffffff;
+    color: var(--text-main);
 }
 
 body.theme-dark .close-modal-btn {
     background: rgba(255, 255, 255, 0.06);
     border-color: rgba(255, 255, 255, 0.08);
     box-shadow: none;
-    color: #ffffff;
+    color: var(--text-main);
 }
 
 body.theme-dark .chevron-close-btn {
     background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
+    color: var(--text-main);
 }
 
 body.theme-dark .item-detail-panel {
@@ -97,7 +95,7 @@ body.theme-dark .addon-option.disabled .var-price {
 body.theme-dark .ifood-input {
     background: rgba(255, 255, 255, 0.04);
     border-color: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
+    color: var(--text-main);
 }
 
 body.theme-dark .ifood-input::placeholder {
@@ -112,19 +110,19 @@ body.theme-dark .qty-selector {
 body.theme-dark .qty-btn {
     background: rgba(255, 255, 255, 0.08);
     border-color: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
+    color: var(--text-main);
 }
 
 body.theme-dark .variation-section h4,
 body.theme-dark .addon-group-header h4 {
-    color: #ffffff;
+    color: var(--text-main);
 }
 
 body.theme-dark .var-option,
 body.theme-dark .addon-option {
     background: rgba(255, 255, 255, 0.04);
     border-color: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
+    color: var(--text-main);
 }
 
 body.theme-dark .var-option.selected,
@@ -174,7 +172,7 @@ body.theme-dark .history-card {
 }
 
 body.theme-dark .payment-card:hover:not(.disabled) {
-    background: color-mix(in srgb, var(--surface-soft) 80%, #ffffff 20%);
+    background: color-mix(in srgb, var(--surface-soft) 80%, var(--text-main) 20%);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
@@ -289,12 +287,54 @@ h3 {
     min-width: 0;
 }
 
+.store-name-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    min-width: 0;
+}
+
+.store-title-block {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
 .store-details h1 {
     margin-bottom: 2px;
     font-size: clamp(1.2rem, 2.4vw, 1.75rem);
     line-height: 1.05;
 }
 
+.store-category {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-gray);
+    line-height: 1.15;
+}
+
+.store-meta-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    min-height: 20px;
+}
+
+.store-meta-separator {
+    color: var(--text-gray);
+    opacity: 0.75;
+    font-weight: 700;
+}
+
+.store-prep-time {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-gray);
+    white-space: nowrap;
+}
 
 .store-status {
     font-size: 0.75rem;
@@ -409,8 +449,10 @@ h3 {
 }
 
 .status-badge {
-    font-size: 0.75rem;
-    margin-bottom: 5px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 0;
+    line-height: 1.1;
 }
 
 .status-badge.open {
@@ -419,6 +461,10 @@ h3 {
 
 .status-badge.closed {
     color: #b91c1c;
+}
+
+.status-badge.order-only {
+    color: #f59e0b;
 }
 
 /* Category Tabs */
@@ -531,7 +577,7 @@ h3 {
 .product-list {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 16px;
+    gap: 10px;
 }
 
 @media (min-width: 768px) {
@@ -543,7 +589,7 @@ h3 {
 /* Product Card iFood Style */
 .product-card {
     display: flex;
-    gap: 16px;
+    gap: 20px;
     padding: 16px;
     cursor: pointer;
     border: 1px solid var(--border);
@@ -584,11 +630,49 @@ h3 {
     color: var(--primary-color);
 }
 
+.product-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: auto;
+}
+
+.product-add-btn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 10px;
+    background: var(--primary-color);
+    color: var(--btn-text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+    transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.product-add-btn:hover {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+}
+
+.product-add-btn:active {
+    transform: scale(0.96);
+}
+
+.product-add-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
 .product-img {
-    width: 90px;
-    height: 90px;
+    width: 125px;
+    height: 107px;
     background: var(--bg-gray);
-    border-radius: 4px;
+    border-radius: 14px;
     object-fit: cover;
 }
 
@@ -653,9 +737,10 @@ h3 {
     background: rgba(0, 0, 0, 0.5);
 }
 
-.modal-content.checkout-content{
+.modal-content.checkout-content {
     max-width: 510px;
 }
+
 .modal-content {
     position: relative;
     background: var(--bg-color);
@@ -680,7 +765,7 @@ h3 {
     top: 16px;
     right: 16px;
     z-index: 10;
-    background: color-mix(in srgb, var(--bg-color) 92%, #ffffff 8%);
+    background: color-mix(in srgb, var(--bg-color) 92%, var(--text-main) 8%);
     border: 1px solid var(--border);
     width: 32px;
     height: 32px;
@@ -737,7 +822,7 @@ h3 {
     position: sticky;
     top: 0;
     overflow: hidden;
-    background: color-mix(in srgb, var(--bg-color) 90%, #ffffff 10%);
+    background: color-mix(in srgb, var(--bg-color) 90%, var(--text-main) 10%);
     height: 57vh;
 }
 
@@ -758,7 +843,7 @@ h3 {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: color-mix(in srgb, var(--bg-color) 90%, #ffffff 10%);
+    background: color-mix(in srgb, var(--bg-color) 90%, var(--text-main) 10%);
 }
 
 .item-hero-placeholder {
@@ -787,7 +872,7 @@ h3 {
     flex-direction: column;
     gap: 16px;
     border-left: 1px solid var(--border);
-    background: color-mix(in srgb, var(--bg-color) 96%, #ffffff 4%);
+    background: color-mix(in srgb, var(--bg-color) 96%, var(--text-main) 4%);
 }
 
 .item-detail-panel .item-main-info {
@@ -907,7 +992,7 @@ body.theme-dark .var-option.selected {
 
 .addon-option.selected {
     border-color: var(--addon-accent, var(--primary-color));
-    background: #ffffff;
+    background: var(--text-main);
     background: color-mix(in srgb, var(--addon-accent, var(--primary-color)) 7%, white);
 }
 
@@ -970,7 +1055,7 @@ body.theme-dark .var-option.selected {
     height: 20px;
     border-radius: 6px;
     border: 2px solid #d1d5db;
-    background: #ffffff;
+    background: var(--text-main);
     flex: 0 0 auto;
     position: relative;
     transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
@@ -983,7 +1068,7 @@ body.theme-dark .var-option.selected {
     top: 2px;
     width: 5px;
     height: 10px;
-    border: solid #ffffff;
+    border: solid var(--text-main);
     border-width: 0 2px 2px 0;
     transform: rotate(45deg) scale(0.85);
     opacity: 0;
@@ -1191,7 +1276,7 @@ body.theme-dark .var-option.selected {
 
 body.theme-dark .delivery-fee-badge {
     background: color-mix(in srgb, var(--primary-color) 12%, var(--surface-color));
-    border-color: color-mix(in srgb, var(--primary-color) 24%, rgba(255,255,255,0.08));
+    border-color: color-mix(in srgb, var(--primary-color) 24%, rgba(255, 255, 255, 0.08));
     color: #d6f7c8;
 }
 
@@ -1271,6 +1356,15 @@ body.theme-dark .delivery-fee-badge {
 @keyframes spin {
     to {
         transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 600px) {
+    .product-card {
+        padding: 16px 0;
+        border: none;
+        border-bottom: 1px solid var(--border);
+        border-radius: 0;
     }
 }
 
@@ -1544,6 +1638,13 @@ body.theme-dark .delivery-fee-badge {
     min-width: 0;
     display: grid;
     gap: 6px;
+}
+
+#history-modal .store-info-category {
+    color: var(--text-gray);
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.15;
 }
 
 #history-modal .store-info-copy strong {
@@ -1828,7 +1929,7 @@ body.theme-dark .delivery-fee-badge {
 }
 
 .carousel-dot.active {
-    background: #ffffff;
+    background: var(--text-main);
     transform: scale(1.3);
     width: 12px;
     border-radius: 4px;
@@ -1900,7 +2001,7 @@ body.theme-dark .delivery-fee-badge {
 }
 
 .nav-cat-btn {
-    background: color-mix(in srgb, var(--bg-color) 86%, rgba(255,255,255,0.18));
+    background: color-mix(in srgb, var(--bg-color) 86%, rgba(255, 255, 255, 0.18));
     border: 1px solid var(--border-color);
     border-radius: 20px;
     padding: 6px 16px;
@@ -1913,7 +2014,7 @@ body.theme-dark .delivery-fee-badge {
 }
 
 .nav-cat-btn:hover {
-    background: color-mix(in srgb, var(--bg-color) 78%, rgba(255,255,255,0.28));
+    background: color-mix(in srgb, var(--bg-color) 78%, rgba(255, 255, 255, 0.28));
 }
 
 .nav-cat-btn.active {
@@ -1944,6 +2045,7 @@ body.theme-dark .delivery-fee-badge {
     -ms-overflow-style: none;
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
+    --featured-card-width: 168px;
 }
 
 .featured-list::-webkit-scrollbar {
@@ -1951,9 +2053,8 @@ body.theme-dark .delivery-fee-badge {
 }
 
 .featured-card {
-    min-width: 168px;
-    width: 168px;
-    background: #fff;
+    min-width: var(--featured-card-width, 168px);
+    width: var(--featured-card-width, 168px);
     border-radius: 12px;
     overflow: hidden;
     border: 1px solid var(--border);
@@ -1967,8 +2068,8 @@ body.theme-dark .delivery-fee-badge {
 }
 
 .featured-img-wrapper {
-    width: 168px;
-    height: 168px;
+    width: 100%;
+    aspect-ratio: 16 / 9;
     background: var(--bg-gray);
 }
 
@@ -1979,11 +2080,12 @@ body.theme-dark .delivery-fee-badge {
 }
 
 .featured-info {
-    padding: 12px;
+    padding: 28px;
+    padding-top: 17px;
 }
 
 .featured-info h3 {
-    font-size: 0.9rem;
+    font-size: 1rem;
     color: var(--text-main);
     margin-bottom: 4px;
     white-space: nowrap;
@@ -1992,8 +2094,7 @@ body.theme-dark .delivery-fee-badge {
 }
 
 .featured-info .product-price {
-    font-size: 0.85rem;
-    font-weight: 700;
+    font-size: 0.9rem;
     color: var(--primary-color);
 }
 
@@ -2001,7 +2102,7 @@ body.theme-dark .delivery-fee-badge {
     min-width: 340px;
     width: 340px;
     height: 220px;
-    border-radius: 18px;
+    border-radius: 20px;
     overflow: hidden;
     background: #f4f4f4;
     border: 1px solid rgba(0, 0, 0, 0.06);
@@ -2017,16 +2118,6 @@ body.theme-dark .delivery-fee-badge {
 }
 
 @media (max-width: 768px) {
-    .featured-card {
-        min-width: 164px;
-        width: 164px;
-    }
-
-    .featured-img-wrapper {
-        width: 164px;
-        height: 164px;
-    }
-
     .featured-card--banner {
         width: calc(100vw - 28px);
         min-width: calc(100vw - 28px);

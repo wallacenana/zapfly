@@ -41,6 +41,22 @@ try {
         exit;
     };
 
+    function formatPrepTimeLabel($value)
+    {
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return '';
+        }
+        $normalized = str_replace(['–', '—'], '-', $raw);
+        $normalized = preg_replace('/\s*-\s*/', ' - ', $normalized);
+        $normalized = preg_replace('/\s*(?:min(?:utos?)?\.?)$/iu', '', $normalized);
+        $normalized = trim(preg_replace('/\s+/', ' ', $normalized));
+        if ($normalized === '') {
+            return '';
+        }
+        return 'Entrega ' . $normalized . 'min';
+    }
+
     if (empty($slug) || $slug === 'cardapio' || $slug === 'index.php') {
         $fallbackToWP();
     }
@@ -52,14 +68,24 @@ try {
         $cacheSettingsStmt = $pdo->prepare("
             SELECT
                 COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders,
-                DATE_FORMAT(
-                    GREATEST(
-                        COALESCE(u.updatedAt, '1970-01-01 00:00:00'),
-                        COALESCE(s.updatedAt, '1970-01-01 00:00:00'),
-                        COALESCE(sp.updatedAt, '1970-01-01 00:00:00')
-                    ),
-                    '%Y%m%d%H%i%s'
-                ) AS settingsVersion
+                COALESCE(sp.menuTheme, s.menuTheme, 'dark') AS menuTheme,
+                COALESCE(sp.businessName, s.businessName) AS businessName,
+                COALESCE(sp.businessCategory, s.businessCategory) AS businessCategory,
+                COALESCE(sp.prepTime, '') AS prepTime,
+                COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl,
+                COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl,
+                COALESCE(sp.accentColor, s.accentColor) AS accentColor,
+                COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor,
+                COALESCE(sp.textColor, s.textColor) AS textColor,
+                COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor,
+                COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor,
+                COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders,
+                COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders,
+                COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled,
+                COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm,
+                COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode,
+                COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm,
+                COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery
             FROM user u
             LEFT JOIN setting s ON u.id = s.userId
             LEFT JOIN store_profile sp ON u.id = sp.userId
@@ -69,7 +95,7 @@ try {
         $cacheSettings = $cacheSettingsStmt->fetch(PDO::FETCH_ASSOC);
         if ($cacheSettings) {
             $cacheAcceptOrders = (bool) $cacheSettings['acceptOrders'];
-            $cacheVersionStamp = (string) ($cacheSettings['settingsVersion'] ?? '');
+            $cacheVersionStamp = md5(json_encode($cacheSettings, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
         }
     } catch (Exception $e) {
         $cacheAcceptOrders = true;
@@ -90,7 +116,7 @@ try {
 
     ob_start();
 
-    $stmt = $pdo->prepare("SELECT u.*, COALESCE(sp.businessName, s.businessName) AS businessName, COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl, COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl, COALESCE(sp.accentColor, s.accentColor) AS accentColor, COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor, COALESCE(sp.textColor, s.textColor) AS textColor, COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor, COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor, COALESCE(sp.seoDescription, s.seoDescription) AS seoDescription, COALESCE(s.googleApiKey, '') AS googleApiKey, COALESCE(s.deliveryRules, '[]') AS deliveryRules, COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm, COALESCE(sp.pixelId, s.pixelId) AS pixelId, COALESCE(sp.microsoftClarityId, s.microsoftClarityId) AS microsoftClarityId, COALESCE(sp.googleAnalyticsId, s.googleAnalyticsId) AS googleAnalyticsId, COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders, COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders, COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders, COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled, COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm, COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode, COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery, COALESCE(sp.menuTheme, s.menuTheme, 'dark') AS menuTheme FROM user u LEFT JOIN setting s ON u.id = s.userId LEFT JOIN store_profile sp ON u.id = sp.userId WHERE u.slug = ?");
+    $stmt = $pdo->prepare("SELECT u.*, COALESCE(sp.businessName, s.businessName) AS businessName, COALESCE(sp.businessCategory, s.businessCategory) AS businessCategory, COALESCE(sp.prepTime, '') AS prepTime, COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl, COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl, COALESCE(sp.accentColor, s.accentColor) AS accentColor, COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor, COALESCE(sp.textColor, s.textColor) AS textColor, COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor, COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor, COALESCE(sp.seoDescription, s.seoDescription) AS seoDescription, COALESCE(s.googleApiKey, '') AS googleApiKey, COALESCE(s.deliveryRules, '[]') AS deliveryRules, COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm, COALESCE(sp.pixelId, s.pixelId) AS pixelId, COALESCE(sp.microsoftClarityId, s.microsoftClarityId) AS microsoftClarityId, COALESCE(sp.googleAnalyticsId, s.googleAnalyticsId) AS googleAnalyticsId, COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders, COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders, COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders, COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled, COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm, COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode, COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery, COALESCE(sp.menuTheme, s.menuTheme, 'dark') AS menuTheme, COALESCE(s.featuredCountDesktop, 4) AS featuredCountDesktop, COALESCE(s.featuredCountTablet, 2) AS featuredCountTablet, COALESCE(s.featuredCountMobile, 1) AS featuredCountMobile FROM user u LEFT JOIN setting s ON u.id = s.userId LEFT JOIN store_profile sp ON u.id = sp.userId WHERE u.slug = ?");
     $stmt->execute([$slug]);
     $store = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -99,28 +125,22 @@ try {
     }
 
     $businessName = $store['businessName'] ?: $store['name'];
+    $businessCategory = trim((string) ($store['businessCategory'] ?? ''));
     $logoUrl = $store['logoUrl'] ?: '/cardapio/logo.png';
     $faviconUrl = $store['faviconUrl'] ?: '/favicon.ico';
-    $accentColor = $store['accentColor'] ?: '#ff4d6d';
     $menuTheme = strtolower(trim($store['menuTheme'] ?? 'dark')) ?: 'dark';
     $isDarkTheme = $menuTheme === 'dark';
-    if ($isDarkTheme) {
-        $accentColor = '#6cb649';
-        $backgroundColor = '#07150d';
-        $textColor = '#ffffff';
-        $buttonColor = '#6cb649';
-        $buttonTextColor = '#07150d';
-    } else {
-        $backgroundColor = $store['backgroundColor'] ?: '#ffffff';
-        $textColor = $store['textColor'] ?: '#1a1a1a';
-        $buttonColor = $store['buttonColor'] ?: $accentColor;
-        $buttonTextColor = $store['buttonTextColor'] ?: '#ffffff';
-    }
+    $accentColor = $store['accentColor'] ?: ($isDarkTheme ? '#6cb649' : '#ff4d6d');
+    $backgroundColor = $store['backgroundColor'] ?: ($isDarkTheme ? '#07150d' : '#ffffff');
+    $textColor = $store['textColor'] ?: ($isDarkTheme ? '#ffffff' : '#1a1a1a');
+    $buttonColor = $store['buttonColor'] ?: $accentColor;
+    $buttonTextColor = $store['buttonTextColor'] ?: ($isDarkTheme ? '#ffffff' : '#ffffff');
     $surfaceColor = $isDarkTheme ? '#09271b' : 'color-mix(in srgb, var(--bg-color) 96%, #ffffff 4%)';
     $surfaceSoftColor = $isDarkTheme ? '#0c1f15' : 'color-mix(in srgb, var(--bg-color) 90%, #ffffff 10%)';
-    $borderColor = $isDarkTheme ? 'rgba(108, 182, 73, 0.16)' : 'rgba(0, 0, 0, 0.08)';
+    $borderColor = $isDarkTheme ? 'color-mix(in srgb, ' . $accentColor . ' 16%, transparent)' : 'rgba(0, 0, 0, 0.08)';
     $textSecondary = $isDarkTheme ? 'rgba(255,255,255,0.72)' : ($store['textColor'] ? $store['textColor'] . '99' : 'rgba(102,102,102,0.6)');
     $acceptOrders = isset($store['acceptOrders']) ? (bool) $store['acceptOrders'] : true;
+    $prepTimeLabel = formatPrepTimeLabel($store['prepTime'] ?? '');
 
     $stmt = $pdo->prepare("SELECT * FROM category WHERE userId = ? ORDER BY `order` ASC");
     $stmt->execute([$store['id']]);
@@ -174,6 +194,11 @@ try {
         'textColor' => $textColor,
         'menuTheme' => $menuTheme,
         'acceptOrders' => $acceptOrders,
+        'businessCategory' => $businessCategory,
+        'prepTime' => $store['prepTime'] ?? '',
+        'featuredCountDesktop' => (int) ($store['featuredCountDesktop'] ?? 4),
+        'featuredCountTablet' => (int) ($store['featuredCountTablet'] ?? 2),
+        'featuredCountMobile' => (int) ($store['featuredCountMobile'] ?? 1),
         'logoUrl' => $logoUrl,
         'faviconUrl' => $faviconUrl,
         'seoDescription' => $store['seoDescription'] ?? '',
@@ -474,8 +499,19 @@ try {
                             decoding="async"></div>
                     <div class="store-details">
                         <div class="store-name-row">
-                            <div id="store-status-badge" class="status-badge open">&#9679; Aberto agora</div>
-                            <h1 id="store-name"><?php echo $businessName; ?></h1>
+                            <div class="store-title-block">
+                                <h1 id="store-name"><?php echo htmlspecialchars($businessName, ENT_QUOTES, 'UTF-8'); ?></h1>
+                                <?php if ($businessCategory !== ''): ?>
+                                    <div class="store-category"><?php echo htmlspecialchars($businessCategory, ENT_QUOTES, 'UTF-8'); ?></div>
+                                <?php endif; ?>
+                                <div class="store-meta-line">
+                                    <span id="store-status-badge" class="status-badge open">Aberto</span>
+                                    <?php if ($prepTimeLabel !== ''): ?>
+                                        <span class="store-meta-separator" aria-hidden="true">•</span>
+                                        <span id="store-prep-time" class="store-prep-time"><?php echo htmlspecialchars($prepTimeLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
                             <?php if ($orderCount > 0): ?>
                                 <div id="store-rating-badge" class="rating-badge has-rating">
                                     <svg class="rating-star-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -758,6 +794,9 @@ try {
                         <?php endif; ?>
                         <div class="store-info-copy">
                             <strong><?php echo htmlspecialchars($businessName); ?></strong>
+                            <?php if ($businessCategory !== ''): ?>
+                                <div class="store-info-category"><?php echo htmlspecialchars($businessCategory, ENT_QUOTES, 'UTF-8'); ?></div>
+                            <?php endif; ?>
                             <?php if ($orderCount > 0): ?>
                                 <div class="store-info-rating">
                                     <svg class="rating-star-icon filled" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -767,7 +806,13 @@ try {
                                     <small>(<?php echo (int) $reviewCount; ?>)</small>
                                 </div>
                             <?php endif; ?>
-                            <div id="drawer-store-status" class="status-badge open">&#9679; Aberto agora</div>
+                            <div class="store-meta-line">
+                                <div id="drawer-store-status" class="status-badge open">Aberto</div>
+                                <?php if ($prepTimeLabel !== ''): ?>
+                                    <span class="store-meta-separator" aria-hidden="true">•</span>
+                                    <span id="drawer-store-prep-time" class="store-prep-time"><?php echo htmlspecialchars($prepTimeLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
 
@@ -979,7 +1024,12 @@ try {
                     googleApiKey: '',
                     deliveryRules: [],
                     businessName: 'Carregando...',
-                    acceptOrders: true
+                    businessCategory: '',
+                    prepTime: '',
+                    acceptOrders: true,
+                    featuredCountDesktop: 4,
+                    featuredCountTablet: 2,
+                    featuredCountMobile: 1
                 },
                 currentStep: 1,
                 deliveryFee: 0,
@@ -1437,6 +1487,8 @@ try {
                         document.body.classList.remove('theme-order');
                     }
 
+                    updateFeaturedCardSizing();
+
                     // Remove Skeletons e mostra o conteúdo real instantaneamente
                     const loader = document.getElementById('skeleton-loader');
                     if (loader) loader.remove();
@@ -1529,16 +1581,19 @@ try {
                     return time >= start && time <= end;
                 });
 
+                const statusLabel = state.isOpen ? 'Aberto' : (isOrderEnabled() ? 'Apenas encomendas' : 'Fechado');
+                const statusClass = state.isOpen ? 'status-badge open' : (isOrderEnabled() ? 'status-badge order-only' : 'status-badge closed');
+
                 const statusEl = document.getElementById('store-status-badge');
                 if (statusEl) {
-                    statusEl.innerText = state.isOpen ? 'Aberto agora' : (isOrderEnabled() ? 'Apenas encomendas' : 'Fechado agora');
-                    statusEl.className = state.isOpen ? 'status-badge open' : 'status-badge closed';
+                    statusEl.innerText = statusLabel;
+                    statusEl.className = statusClass;
                 }
 
                 const drawerStatusEl = document.getElementById('drawer-store-status');
                 if (drawerStatusEl) {
-                    drawerStatusEl.innerText = state.isOpen ? 'Aberto agora' : (isOrderEnabled() ? 'Apenas encomendas' : 'Fechado agora');
-                    drawerStatusEl.className = state.isOpen ? 'status-badge open' : 'status-badge closed';
+                    drawerStatusEl.innerText = statusLabel;
+                    drawerStatusEl.className = statusClass;
                 }
             }
 
@@ -1768,6 +1823,28 @@ try {
                 }
             }
 
+            function getFeaturedCountByViewport() {
+                const data = state.publicSettings || {};
+                const width = window.innerWidth || document.documentElement.clientWidth || 0;
+                const desktop = Math.max(1, parseInt(data.featuredCountDesktop || 4, 10) || 4);
+                const tablet = Math.max(1, parseInt(data.featuredCountTablet || 2, 10) || 2);
+                const mobile = Math.max(1, parseInt(data.featuredCountMobile || 1, 10) || 1);
+                if (width < 768) return mobile;
+                if (width < 1024) return tablet;
+                return desktop;
+            }
+
+            function updateFeaturedCardSizing() {
+                const featuredList = document.querySelector('.featured-list');
+                if (!featuredList) return;
+                const visibleCount = getFeaturedCountByViewport();
+                const gap = 16;
+                const availableWidth = featuredList.clientWidth || featuredList.parentElement?.clientWidth || window.innerWidth || 0;
+                if (!availableWidth) return;
+                const cardWidth = Math.max(140, Math.floor((availableWidth - (gap * (visibleCount - 1))) / visibleCount));
+                featuredList.style.setProperty('--featured-card-width', `${cardWidth}px`);
+            }
+
             function renderMenu() {
                 const skeletonContainer = document.getElementById('skeleton-loader');
                 const actualContainer = document.getElementById('actual-menu-content');
@@ -1869,7 +1946,7 @@ try {
                     html += `
             <section class="menu-section featured-section">
                 <div class="featured-list">
-                    ${featured.map((item, idx) => renderFeaturedCard(item, idx < 4)).join('')}
+                    ${featured.map((item, idx) => renderFeaturedCard(item, idx < Math.min(4, getFeaturedCountByViewport()))).join('')}
                 </div>
             </section>
         `;
@@ -1889,6 +1966,7 @@ try {
                 actualContainer.innerHTML = html;
                 renderCategoryNav(sortedCategories);
                 lucide.createIcons();
+                updateFeaturedCardSizing();
 
                 // Troca a visibilidade SOMENTE APOS o DOM estar completamente pronto
                 if (skeletonContainer) skeletonContainer.classList.add('hidden');
@@ -1963,7 +2041,12 @@ try {
             <div class="product-info">
                 <h3>${product.name}</h3>
                 <p>${product.description || ''}</p>
-                <div class="product-price">${priceText}</div>
+                <div class="product-footer">
+                    <div class="product-price">${priceText}</div>
+                    <button class="product-add-btn" type="button" aria-label="Adicionar item" onclick="event.stopPropagation(); openItemDetail('${product.id}')">
+                        <i data-lucide="plus"></i>
+                    </button>
+                </div>
             </div>
         </div>
     `;
@@ -2736,6 +2819,7 @@ try {
 
                 window.addEventListener('resize', () => {
                     syncCategoryNavOffset();
+                    updateFeaturedCardSizing();
                 }, {
                     passive: true
                 });
@@ -3738,33 +3822,59 @@ try {
                 if (!data) return;
 
                 const root = document.documentElement;
+                const body = document.body;
                 const isOrder = state.activeTab === 'order';
                 const useDarkTheme = data.menuTheme === 'dark';
 
-                // Escolhe as cores baseadas na aba ativa
-                const accent = useDarkTheme
-                    ? (data.accentColor || '#6cb649')
-                    : (isOrder ? (data.accentColorOrders || '#4a2c2a') : (data.accentColor || '#ff4d6d'));
-                const button = useDarkTheme
-                    ? (data.buttonColor || '#6cb649')
-                    : (isOrder ? (data.buttonColorOrders || '#4a2c2a') : (data.buttonColor || '#ff4d6d'));
+                const accent = isOrder
+                    ? (data.accentColorOrders || data.accentColor || '#ff4d6d')
+                    : (data.accentColor || '#ff4d6d');
+                const button = isOrder
+                    ? (data.buttonColorOrders || data.buttonColor || accent)
+                    : (data.buttonColor || accent);
 
-                // Aplica as variáveis
+                if (body) {
+                    body.classList.toggle('theme-dark', useDarkTheme);
+                    body.classList.toggle('theme-light', !useDarkTheme);
+                }
+
                 root.style.setProperty('--primary-color', accent);
+                root.style.setProperty('--accent', accent);
                 root.style.setProperty('--btn-bg', button);
+                root.style.setProperty('--button-color', button);
                 root.style.setProperty('--btn-text', data.buttonTextColor || '#ffffff');
-                root.style.setProperty('--bg-color', data.backgroundColor || '#ffffff');
-                root.style.setProperty('--text-main', data.textColor || '#333333');
-                root.style.setProperty('--text-secondary', data.menuTheme === 'dark' ? 'rgba(255,255,255,0.72)' : `${data.textColor || '#333333'}99`);
-                root.style.setProperty('--border', `${data.textColor || '#333333'}15`);
-                root.style.setProperty('--border-color', data.menuTheme === 'dark' ? 'rgba(108, 182, 73, 0.16)' : `${data.textColor || '#333333'}15`);
-                root.style.setProperty('--bg-gray', `${data.textColor || '#333333'}08`);
-                root.style.setProperty('--surface-color', data.menuTheme === 'dark' ? '#09271b' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 96%, #ffffff 4%)`);
-                root.style.setProperty('--surface-soft', data.menuTheme === 'dark' ? '#0c1f15' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 90%, #ffffff 10%)`);
-                root.style.setProperty('--bg-tertiary', data.menuTheme === 'dark' ? '#0c1f15' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 90%, #ffffff 10%)`);
-                root.style.setProperty('--text-primary', data.textColor || '#333333');
-                root.style.setProperty('--text-black', data.textColor || '#333333');
-                root.style.setProperty('--text-gray', `${data.textColor || '#333333'}99`);
+                const themeBg = data.backgroundColor || (useDarkTheme ? '#07150d' : '#ffffff');
+                const themeSurface = useDarkTheme
+                    ? (data.surfaceColor || '#09271b')
+                    : `color-mix(in srgb, ${themeBg} 96%, #ffffff 4%)`;
+                const themeSoft = useDarkTheme
+                    ? (data.surfaceSoftColor || '#0c1f15')
+                    : `color-mix(in srgb, ${themeBg} 90%, #ffffff 10%)`;
+                const themeText = data.textColor || (useDarkTheme ? '#ffffff' : '#333333');
+                const themeSecondary = useDarkTheme ? 'rgba(255,255,255,0.72)' : `${themeText}99`;
+                const themeBorder = useDarkTheme
+                    ? `color-mix(in srgb, ${accent} 16%, transparent)`
+                    : `${themeText}15`;
+                root.style.setProperty('--bg-color', themeBg);
+                root.style.setProperty('--text-main', themeText);
+                root.style.setProperty('--text-secondary', themeSecondary);
+                root.style.setProperty('--border', themeBorder);
+                root.style.setProperty('--border-color', themeBorder);
+                root.style.setProperty('--bg-gray', `${themeText}08`);
+                root.style.setProperty('--surface-color', themeSurface);
+                root.style.setProperty('--surface-soft', themeSoft);
+                root.style.setProperty('--bg-tertiary', themeSoft);
+                root.style.setProperty('--text-primary', themeText);
+                root.style.setProperty('--text-black', themeText);
+                root.style.setProperty('--text-gray', `${themeText}99`);
+                root.style.setProperty('--theme-bg-color', themeBg);
+                root.style.setProperty('--theme-surface-color', themeSurface);
+                root.style.setProperty('--theme-surface-soft', themeSoft);
+                root.style.setProperty('--theme-text-main', themeText);
+                root.style.setProperty('--theme-text-secondary', themeSecondary);
+                root.style.setProperty('--theme-border', themeBorder);
+                root.style.setProperty('--theme-border-color', themeBorder);
+                root.style.setProperty('--theme-bg-gray', `${themeText}08`);
             }
 
             // Inicialização imediata de elementos visuais

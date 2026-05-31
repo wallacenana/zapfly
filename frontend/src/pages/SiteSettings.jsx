@@ -5,6 +5,34 @@ import axios from 'axios';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
+const COLOR_FIELDS = [
+    'accentColor',
+    'buttonColor',
+    'accentColorOrders',
+    'buttonColorOrders',
+    'buttonTextColor',
+    'backgroundColor',
+    'textColor'
+];
+
+const normalizeHexColor = (value, fallback = '#ffffff') => {
+    const raw = String(value || '').trim();
+    if (!raw) return fallback;
+    if (/^#[0-9a-f]{3}$/i.test(raw)) {
+        return `#${raw.slice(1).split('').map((c) => c + c).join('').toLowerCase()}`;
+    }
+    if (/^#[0-9a-f]{6}$/i.test(raw)) {
+        return raw.toLowerCase();
+    }
+    const rgbMatch = raw.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+    if (rgbMatch) {
+        const toHex = (n) => Math.max(0, Math.min(255, Number(n) || 0)).toString(16).padStart(2, '0');
+        return `#${toHex(rgbMatch[1])}${toHex(rgbMatch[2])}${toHex(rgbMatch[3])}`;
+    }
+    if (raw.toLowerCase() === 'transparent') return fallback;
+    return fallback;
+};
+
 const SiteSettings = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -22,13 +50,40 @@ const SiteSettings = () => {
         backgroundColor: '#ffffff',
         textColor: '#333333',
         menuTheme: 'dark',
+        featuredCountDesktop: 4,
+        featuredCountTablet: 2,
+        featuredCountMobile: 1,
         seoDescription: '',
         pixelId: '',
         googleAnalyticsId: '',
-        microsoftClarityId: '',
-        freeDeliveryEnabled: false,
-        freeDeliveryKm: 0
+        microsoftClarityId: ''
     });
+    const isDarkMenuTheme = (settings.menuTheme || 'dark') === 'dark';
+    const previewTheme = isDarkMenuTheme ? {
+        bg: '#07150d',
+        surface: '#09271b',
+        surfaceSoft: '#0c1f15',
+        text: '#ffffff',
+        textMuted: 'rgba(255,255,255,0.72)',
+        border: 'rgba(108,182,73,0.16)',
+        accent: '#6cb649',
+        buttonBg: '#6cb649',
+        buttonText: '#07150d',
+        cardBg: 'rgba(255,255,255,0.04)',
+        cardSurface: '#0c1f15'
+    } : {
+        bg: settings.backgroundColor || '#ffffff',
+        surface: settings.backgroundColor || '#ffffff',
+        surfaceSoft: `${settings.backgroundColor || '#ffffff'}f2`,
+        text: settings.textColor || '#333333',
+        textMuted: 'rgba(102,102,102,0.7)',
+        border: 'rgba(0,0,0,0.08)',
+        accent: settings.accentColor || '#ff4d6d',
+        buttonBg: settings.buttonColor || '#ff4d6d',
+        buttonText: settings.buttonTextColor || '#ffffff',
+        cardBg: '#fff',
+        cardSurface: '#f4f4f5'
+    };
 
     useEffect(() => {
         loadSettings();
@@ -38,13 +93,19 @@ const SiteSettings = () => {
         try {
             const res = await api.get('/settings');
             if (res.data) {
+                const normalizedColors = COLOR_FIELDS.reduce((acc, key) => {
+                    acc[key] = normalizeHexColor(res.data[key], key === 'accentColorOrders' || key === 'buttonColorOrders' ? '#4a2c2a' : acc[key] || settings[key]);
+                    return acc;
+                }, {});
                 setSettings(prev => ({
                     ...prev,
                     ...res.data,
                     active: res.data.active ?? true,
                     menuTheme: res.data.menuTheme || 'dark',
-                    freeDeliveryEnabled: res.data.freeDeliveryEnabled ?? false,
-                    freeDeliveryKm: res.data.freeDeliveryKm ?? 0
+                    ...normalizedColors,
+                    featuredCountDesktop: Number.isFinite(Number(res.data.featuredCountDesktop)) ? Number(res.data.featuredCountDesktop) : 4,
+                    featuredCountTablet: Number.isFinite(Number(res.data.featuredCountTablet)) ? Number(res.data.featuredCountTablet) : 2,
+                    featuredCountMobile: Number.isFinite(Number(res.data.featuredCountMobile)) ? Number(res.data.featuredCountMobile) : 1
                 }));
             }
         } catch (err) {
@@ -58,26 +119,25 @@ const SiteSettings = () => {
     const handleSave = async () => {
         setSaving(true);
         try {
+            const colorPayload = COLOR_FIELDS.reduce((acc, key) => {
+                acc[key] = normalizeHexColor(settings[key], key === 'accentColorOrders' || key === 'buttonColorOrders' ? '#4a2c2a' : '#ffffff');
+                return acc;
+            }, {});
             const payload = {
                 slug: settings.slug,
                 businessName: settings.businessName,
                 logoUrl: settings.logoUrl,
                 faviconUrl: settings.faviconUrl,
                 active: settings.active,
-                accentColor: settings.accentColor,
-                buttonColor: settings.buttonColor,
-                accentColorOrders: settings.accentColorOrders,
-                buttonColorOrders: settings.buttonColorOrders,
-                buttonTextColor: settings.buttonTextColor,
-                backgroundColor: settings.backgroundColor,
-                textColor: settings.textColor,
+                ...colorPayload,
                 menuTheme: settings.menuTheme,
+                featuredCountDesktop: settings.featuredCountDesktop,
+                featuredCountTablet: settings.featuredCountTablet,
+                featuredCountMobile: settings.featuredCountMobile,
                 seoDescription: settings.seoDescription,
                 pixelId: settings.pixelId,
                 googleAnalyticsId: settings.googleAnalyticsId,
-                microsoftClarityId: settings.microsoftClarityId,
-                freeDeliveryEnabled: settings.freeDeliveryEnabled,
-                freeDeliveryKm: settings.freeDeliveryKm
+                microsoftClarityId: settings.microsoftClarityId
             };
             await api.post('/settings', payload);
             toast.success('Identidade visual salva com sucesso!');
@@ -206,16 +266,80 @@ const SiteSettings = () => {
         >
             <header style={{ marginBottom: '35px' }}>
                 <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <Palette color="var(--accent-primary)" size={32} />
                     Identidade Visual do Site
                 </h1>
                 <p style={{ color: 'var(--text-secondary)', marginTop: '5px' }}>Personalize as cores e mídias do seu cardápio digital público.</p>
             </header>
+            <label style={labelStyle}>
+                <button
+                    type="button"
+                    onClick={() => setSettings({ ...settings, menuTheme: (settings.menuTheme || 'dark') === 'dark' ? 'light' : 'dark' })}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        borderRadius: '14px',
+                        border: 'none',
+                        background: 'rgba(255,255,255,0.04)',
+                        color: 'var(--text-primary)',
+                        cursor: 'pointer',
+                        fontWeight: 700
+                    }}
+                >
+                    <span>{(settings.menuTheme || 'dark') === 'dark' ? 'Modo Escuro' : 'Modo Claro'}</span>
+                    <span style={{
+                        width: '52px',
+                        height: '28px',
+                        borderRadius: '999px',
+                        padding: '3px',
+                        background: (settings.menuTheme || 'dark') === 'dark' ? 'rgba(108,182,73,0.25)' : 'rgba(255,255,255,0.12)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: (settings.menuTheme || 'dark') === 'dark' ? 'flex-end' : 'flex-start'
+                    }}>
+                        <span style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: (settings.menuTheme || 'dark') === 'dark' ? '#6cb649' : '#d1d5db',
+                            boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                        }} />
+                    </span>
+                </button>
+            </label>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '30px' }}>
 
                 {/* CONFIGURAÇÕES */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+
+                    <section className="card" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)' }}>
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <CheckCircle size={18} color="var(--accent-primary)" />
+                            Destaques do Cardapio
+                        </h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '14px' }}>
+                            {[
+                                { id: 'featuredCountDesktop', label: 'Desktop' },
+                                { id: 'featuredCountTablet', label: 'Tablet' },
+                                { id: 'featuredCountMobile', label: 'Mobile' }
+                            ].map((item) => (
+                                <div key={item.id}>
+                                    <label style={labelStyle}>{item.label}</label>
+                                    <input
+                                        type="number"
+                                        min="1"
+                                        max="12"
+                                        style={inputStyle}
+                                        value={settings[item.id] ?? ''}
+                                        onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value })}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                        <p style={hintStyle}>Define quantos itens aparecem em destaque no desktop, tablet e mobile.</p>
+                    </section>
 
                     <section className="card" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -276,50 +400,6 @@ const SiteSettings = () => {
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
                             Se desativar, a loja sai da home e da lista pública.
                         </p>
-
-                        <div style={{ marginTop: '18px' }}>
-                            <label style={labelStyle}>Tema do Cardápio</label>
-                            <select
-                                value={settings.menuTheme || 'dark'}
-                                onChange={(e) => setSettings({ ...settings, menuTheme: e.target.value })}
-                                style={inputStyle}
-                            >
-                                <option value="dark">Escuro</option>
-                                <option value="light">Claro</option>
-                            </select>
-                            <p style={hintStyle}>O tema escuro usa a paleta padrão DigiZap para melhor contraste.</p>
-                        </div>
-
-                        <div style={{ marginTop: '22px', padding: '18px', borderRadius: '14px', border: '1px solid rgba(34,197,94,0.18)', background: 'rgba(34,197,94,0.06)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                                <CheckCircle size={18} color="#22c55e" />
-                                <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Frete grátis por distância</span>
-                            </div>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', marginBottom: '12px' }}>
-                                <input
-                                    type="checkbox"
-                                    checked={!!settings.freeDeliveryEnabled}
-                                    onChange={(e) => setSettings({ ...settings, freeDeliveryEnabled: e.target.checked })}
-                                    style={{ width: '16px', height: '16px', accentColor: '#22c55e' }}
-                                />
-                                <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>Liberar frete grátis até uma distância</span>
-                            </label>
-                            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr', gap: '12px', alignItems: 'center' }}>
-                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 600 }}>KM grátis</span>
-                                <input
-                                    style={inputStyle}
-                                    type="number"
-                                    step="0.1"
-                                    min="0"
-                                    value={settings.freeDeliveryKm}
-                                    onChange={e => setSettings({ ...settings, freeDeliveryKm: parseFloat(e.target.value) || 0 })}
-                                    placeholder="Ex: 3"
-                                />
-                            </div>
-                            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                                Se estiver ativado, pedidos dentro da distância informada ficam com frete zerado.
-                            </p>
-                        </div>
                     </section>
 
                     {/* Sessão de Imagens */}
@@ -382,8 +462,15 @@ const SiteSettings = () => {
                                                 <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item.desc}</p>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{settings[item.id]}</span>
-                                                <input type="color" value={settings[item.id]} onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value })} style={colorPicker} />
+                                                <input
+                                                    type="text"
+                                                    value={settings[item.id] || ''}
+                                                    onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value })}
+                                                    onBlur={(e) => setSettings({ ...settings, [item.id]: normalizeHexColor(e.target.value, settings[item.id]) })}
+                                                    placeholder="#rrggbb"
+                                                    style={{ ...colorTextInput, width: '110px' }}
+                                                />
+                                                <input type="color" value={normalizeHexColor(settings[item.id], '#ffffff')} onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value.toLowerCase() })} style={colorPicker} />
                                             </div>
                                         </div>
                                     ))}
@@ -404,8 +491,15 @@ const SiteSettings = () => {
                                                 <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item.desc}</p>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{settings[item.id]}</span>
-                                                <input type="color" value={settings[item.id]} onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value })} style={colorPicker} />
+                                                <input
+                                                    type="text"
+                                                    value={settings[item.id] || ''}
+                                                    onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value })}
+                                                    onBlur={(e) => setSettings({ ...settings, [item.id]: normalizeHexColor(e.target.value, settings[item.id]) })}
+                                                    placeholder="#rrggbb"
+                                                    style={{ ...colorTextInput, width: '110px' }}
+                                                />
+                                                <input type="color" value={normalizeHexColor(settings[item.id], '#ffffff')} onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value.toLowerCase() })} style={colorPicker} />
                                             </div>
                                         </div>
                                     ))}
@@ -427,8 +521,15 @@ const SiteSettings = () => {
                                                 <p style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{item.desc}</p>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{settings[item.id]}</span>
-                                                <input type="color" value={settings[item.id]} onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value })} style={colorPicker} />
+                                                <input
+                                                    type="text"
+                                                    value={settings[item.id] || ''}
+                                                    onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value })}
+                                                    onBlur={(e) => setSettings({ ...settings, [item.id]: normalizeHexColor(e.target.value, settings[item.id]) })}
+                                                    placeholder="#rrggbb"
+                                                    style={{ ...colorTextInput, width: '110px' }}
+                                                />
+                                                <input type="color" value={normalizeHexColor(settings[item.id], '#ffffff')} onChange={(e) => setSettings({ ...settings, [item.id]: e.target.value.toLowerCase() })} style={colorPicker} />
                                             </div>
                                         </div>
                                     ))}
@@ -513,39 +614,40 @@ const SiteSettings = () => {
                     <div style={phoneFrame}>
                         <div style={phoneNotch}></div>
 
-                        <div style={{ ...phoneScreen, backgroundColor: settings.backgroundColor }}>
-                            {/* Header */}
-                            <div style={{ padding: '40px 20px 20px', textAlign: 'center' }}>
-                                <div style={{ width: '70px', height: '70px', margin: '0 auto 15px', backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '10px' }}>
+                        <div style={{ ...phoneScreen, backgroundColor: previewTheme.bg, color: previewTheme.text }}>
+                            <div style={{ padding: '20px', paddingBottom: '10px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                <div style={{ width: '50px', height: '50px', backgroundColor: previewTheme.surfaceSoft, borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                     {settings.logoUrl ? (
-                                        <img src={settings.logoUrl} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                        <img src={settings.logoUrl} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: '50%' }} />
                                     ) : (
-                                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.1)' }}></div>
+                                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: previewTheme.surface }}></div>
                                     )}
                                 </div>
-                                <h1 style={{ fontSize: '18px', fontWeight: 900, color: settings.textColor }}>{settings.businessName || 'Sua Loja'}</h1>
+                                <h1 style={{ fontSize: '18px', fontWeight: 900, color: previewTheme.text }}>{settings.businessName || 'Sua Loja'}</h1>
+                            </div>
+                            <div style={{ padding: '0 15px', display: 'flex', gap: '8px', borderBottom: `1px solid ${previewTheme.border}`, marginBottom: '15px' }}>
+                                <span style={{ display: 'block', fontSize: '12px', fontWeight: 600, padding: '5px 10px', color: previewTheme.accent, borderBottom: `2px solid ${previewTheme.accent}` }}>Entrega</span>
+                                <span style={{ display: 'block', fontSize: '12px', fontWeight: 600, padding: '5px 10px' }}>Encomendas</span>
                             </div>
 
-                            {/* Mini Menu */}
                             <div style={{ padding: '0 15px', display: 'flex', gap: '8px', overflowX: 'hidden' }}>
-                                <div style={{ padding: '6px 15px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, backgroundColor: settings.buttonColor, color: settings.buttonTextColor }}>Bolos</div>
-                                <div style={{ padding: '6px 15px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, backgroundColor: 'rgba(0,0,0,0.05)', color: settings.textColor }}>Doces</div>
+                                <div style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, backgroundColor: previewTheme.cardSurface, color: previewTheme.text, border: `1px solid ${previewTheme.border}` }}>Bolos</div>
+                                <div style={{ padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: 800, backgroundColor: previewTheme.cardSurface, color: previewTheme.text, border: `1px solid ${previewTheme.border}` }}>Doces</div>
                             </div>
 
-                            {/* Product List */}
                             <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                 {[1, 2].map(i => (
-                                    <div key={i} style={{ padding: '10px', backgroundColor: '#fff', borderRadius: '12px', display: 'flex', gap: '10px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-                                        <div style={{ width: '60px', height: '60px', backgroundColor: '#f4f4f5', borderRadius: '8px' }}></div>
+                                    <div key={i} style={{ padding: '10px', backgroundColor: previewTheme.cardBg, borderRadius: '12px', display: 'flex', gap: '10px', boxShadow: isDarkMenuTheme ? '0 2px 8px rgba(0,0,0,0.18)' : '0 2px 8px rgba(0,0,0,0.05)', border: `1px solid ${previewTheme.border}` }}>
+                                        <div style={{ width: '60px', height: '60px', backgroundColor: previewTheme.cardSurface, borderRadius: '8px' }}></div>
                                         <div style={{ flex: 1 }}>
-                                            <div style={{ width: '70%', height: '10px', backgroundColor: '#e4e4e7', borderRadius: '4px', marginBottom: '6px' }}></div>
-                                            <div style={{ width: '40%', height: '14px', borderRadius: '4px', backgroundColor: `${settings.accentColor}20`, color: settings.accentColor, fontSize: '10px', fontWeight: 800, display: 'flex', alignItems: 'center', paddingLeft: '5px' }}>R$ 45,00</div>
+                                            <div style={{ width: '80%', height: '10px', backgroundColor: isDarkMenuTheme ? 'rgba(255,255,255,0.2)' : '#e4e4e7', borderRadius: '4px', marginBottom: '6px' }}></div>
+                                            <div style={{ width: '70%', height: '10px', backgroundColor: isDarkMenuTheme ? 'rgba(255,255,255,0.2)' : '#e4e4e7', borderRadius: '4px', marginBottom: '6px' }}></div>
+                                            <div style={{ fontSize: '10px', fontWeight: 800, display: 'flex', alignItems: 'center', paddingLeft: '5px' }}>R$ 45,00</div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
-                            {/* Finalizar Button */}
                             <div style={{
                                 position: 'absolute',
                                 bottom: '20px',
@@ -553,12 +655,12 @@ const SiteSettings = () => {
                                 right: '15px',
                                 padding: '15px',
                                 borderRadius: '12px',
-                                backgroundColor: settings.buttonColor,
-                                color: settings.buttonTextColor,
+                                backgroundColor: previewTheme.buttonBg,
+                                color: previewTheme.buttonText,
                                 textAlign: 'center',
                                 fontWeight: 900,
                                 fontSize: '12px',
-                                boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                                boxShadow: isDarkMenuTheme ? '0 4px 15px rgba(0,0,0,0.22)' : '0 4px 15px rgba(0,0,0,0.1)'
                             }}>
                                 FINALIZAR PEDIDO
                             </div>
@@ -578,6 +680,7 @@ const hintStyle = { fontSize: '10px', color: 'var(--text-muted)', marginTop: '6p
 const uploadBox = { position: 'relative', height: '120px', backgroundColor: 'var(--bg-tertiary)', border: '2px dashed var(--border-color)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', transition: 'all 0.2s' };
 const fileInput = { position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' };
 const colorRow = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 18px', backgroundColor: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border-color)' };
+const colorTextInput = { padding: '10px 12px', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', fontSize: '12px', fontFamily: 'monospace', outline: 'none', width: '110px' };
 const colorPicker = { width: '36px', height: '36px', borderRadius: '8px', border: 'none', backgroundColor: 'transparent', cursor: 'pointer' };
 const phoneFrame = { width: '310px', height: '580px', margin: '0 auto', backgroundColor: '#18181b', borderRadius: '40px', border: '8px solid #27272a', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', overflow: 'hidden' };
 const phoneNotch = { position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)', width: '100px', height: '18px', backgroundColor: '#27272a', borderBottomLeftRadius: '12px', borderBottomRightRadius: '12px', zIndex: 10 };

@@ -188,8 +188,12 @@ async function getGoogleCalendar(userId) {
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
-    if (!clientId || !clientSecret || !settings?.gcalRefreshToken) {
-      console.error(`[GCal] [User ${userId}] Interrompendo: Faltam credenciais no .env ou no banco.`);
+    if (!settings?.gcalEnabled || !settings?.gcalRefreshToken) {
+      return null;
+    }
+
+    if (!clientId || !clientSecret) {
+      console.error(`[GCal] [User ${userId}] Interrompendo: Faltam credenciais no .env.`);
       return null;
     }
 
@@ -230,6 +234,15 @@ async function getGoogleCalendar(userId) {
   } catch (e) {
     if (e.message.includes('invalid_grant') || e.code === 401) {
       console.error(`[GCal] [User ${userId}] Acesso revogado ou credenciais inválidas.`);
+      await prisma.setting.update({
+        where: { userId },
+        data: {
+          gcalEnabled: false,
+          gcalAccessToken: null,
+          gcalRefreshToken: null,
+          gcalTokenExpiry: null
+        }
+      }).catch(() => {});
     } else {
       console.error(`[GCal] [User ${userId}] Erro ao autenticar:`, e.message);
     }
@@ -864,7 +877,10 @@ async function setupCronJobs(sockGetter) {
   // Sincronização GCal (A cada 5 min para todos os usuários com GCal)
   cron.schedule('*/5 * * * *', async () => {
     const usersWithGCal = await prisma.setting.findMany({
-      where: { gcalRefreshToken: { not: null } },
+      where: {
+        gcalEnabled: true,
+        gcalRefreshToken: { not: null }
+      },
       select: { userId: true }
     });
     for (const u of usersWithGCal) {

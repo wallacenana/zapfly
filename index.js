@@ -163,6 +163,9 @@ app.post('/settings', authenticate, async (req, res) => {
             acceptOrders,
             freeDeliveryEnabled,
             freeDeliveryKm,
+            featuredCountDesktop,
+            featuredCountTablet,
+            featuredCountMobile,
             active
         } = req.body;
 
@@ -184,6 +187,34 @@ app.post('/settings', authenticate, async (req, res) => {
             await prisma.user.update({
                 where: { id: req.user.id },
                 data: { active: !!active }
+            });
+        }
+
+        const parsePositiveInt = (value, fallback) => {
+            if (value === undefined || value === null || value === '') return fallback;
+            const parsed = Number.parseInt(value, 10);
+            return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+        };
+
+        const settingPayload = {};
+        if (featuredCountDesktop !== undefined) {
+            settingPayload.featuredCountDesktop = parsePositiveInt(featuredCountDesktop, 4);
+        }
+        if (featuredCountTablet !== undefined) {
+            settingPayload.featuredCountTablet = parsePositiveInt(featuredCountTablet, 2);
+        }
+        if (featuredCountMobile !== undefined) {
+            settingPayload.featuredCountMobile = parsePositiveInt(featuredCountMobile, 1);
+        }
+
+        if (Object.keys(settingPayload).length > 0) {
+            await prisma.setting.upsert({
+                where: { userId: req.user.id },
+                update: settingPayload,
+                create: {
+                    userId: req.user.id,
+                    ...settingPayload
+                }
             });
         }
 
@@ -615,7 +646,7 @@ app.get('/auth/google/callback', async (req, res) => {
 // Status da conexão com o Google Calendar
 app.get('/auth/google/status', authenticate, async (req, res) => {
     const settings = await getSettings(req.user.id);
-    const connected = !!(settings?.gcalRefreshToken);
+    const connected = !!(settings?.gcalEnabled && settings?.gcalRefreshToken);
     const hasCredentials = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
     res.json({ connected, calendarId: settings?.gcalCalendarId, hasCredentials });
 });
@@ -1962,6 +1993,7 @@ app.get('/config/keys', authenticate, async (req, res) => {
         gcalSyncHour: config.gcalSyncHour,
         businessName: config.businessName,
         businessCategory: config.businessCategory,
+        prepTime: config.prepTime,
         businessAddress: config.businessAddress,
         businessPlaceId: config.businessPlaceId,
         businessLat: config.businessLat,
@@ -2005,7 +2037,7 @@ app.get('/config/keys', authenticate, async (req, res) => {
 app.post('/config/keys', authenticate, async (req, res) => {
     const {
         slug, openai, claude, activeModel, gcalSyncHour,
-        businessName, businessCategory, businessAddress, businessPlaceId, businessLat, businessLng, businessMapsUrl, businessLocation,
+        businessName, businessCategory, prepTime, businessAddress, businessPlaceId, businessLat, businessLng, businessMapsUrl, businessLocation,
         dailyMaxOrders, dailyDeliveryItems, managerJid,
         deliveryJid, reportEnabled, reportHour,
         googleApiKey, deliveryRules, gcalCalendarId,
@@ -2058,6 +2090,7 @@ app.post('/config/keys', authenticate, async (req, res) => {
     const storeProfileData = {
         businessName,
         businessCategory,
+        prepTime,
         businessAddress,
         businessPlaceId,
         businessLat,

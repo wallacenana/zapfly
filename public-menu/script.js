@@ -945,10 +945,10 @@ function selectPaymentMethod(method) {
 
 function renderStep3() {
     const opts = document.getElementById('payment-options');
-    if(!opts) return;
-    
+    if (!opts) return;
+
     const isCashAllowed = (state.activeTab !== 'delivery') || state.allowCash;
-    
+
     let html = `
         <div class="payment-card ${state.paymentMethod === 'mercadopago' ? 'selected' : ''}" data-method="mercadopago" onclick="selectPaymentMethod('mercadopago')">
             <div class="payment-icon" style="background:#e0f2fe; color:#0284c7;"><i data-lucide="credit-card"></i></div>
@@ -958,7 +958,7 @@ function renderStep3() {
             </div>
         </div>
     `;
-    
+
     if (isCashAllowed) {
         html += `
             <div class="payment-card ${state.paymentMethod === 'dinheiro' ? 'selected' : ''}" data-method="dinheiro" onclick="selectPaymentMethod('dinheiro')">
@@ -1259,22 +1259,43 @@ function updateTheme() {
     if (!data) return;
 
     const root = document.documentElement;
+    const body = document.body;
     const isOrder = state.activeTab === 'order';
+    const useDarkTheme = data.menuTheme === 'dark';
 
-    // Escolhe as cores baseadas na aba ativa
-    const accent = isOrder ? (data.accentColorOrders || '#4a2c2a') : (data.accentColor || '#ff4d6d');
-    const button = isOrder ? (data.buttonColorOrders || '#4a2c2a') : (data.buttonColor || '#ff4d6d');
+    const accent = isOrder
+        ? (data.accentColorOrders || data.accentColor || '#ff4d6d')
+        : (data.accentColor || '#ff4d6d');
+    const button = isOrder
+        ? (data.buttonColorOrders || data.buttonColor || accent)
+        : (data.buttonColor || accent);
 
-    // Aplica as variáveis
+    if (body) {
+        body.classList.toggle('theme-dark', useDarkTheme);
+        body.classList.toggle('theme-light', !useDarkTheme);
+    }
+
     root.style.setProperty('--primary-color', accent);
+    root.style.setProperty('--accent', accent);
     root.style.setProperty('--btn-bg', button);
+    root.style.setProperty('--button-color', button);
     root.style.setProperty('--btn-text', data.buttonTextColor || '#ffffff');
-    root.style.setProperty('--bg-color', data.backgroundColor || '#ffffff');
-    root.style.setProperty('--text-main', data.textColor || '#333333');
-    root.style.setProperty('--border', `${data.textColor || '#333333'}15`);
+    root.style.setProperty('--bg-color', data.backgroundColor || (useDarkTheme ? '#07150d' : '#ffffff'));
+    root.style.setProperty('--text-main', data.textColor || (useDarkTheme ? '#ffffff' : '#333333'));
+    root.style.setProperty('--text-secondary', useDarkTheme ? 'rgba(255,255,255,0.72)' : `${data.textColor || '#333333'}99`);
+    root.style.setProperty('--border', useDarkTheme
+        ? `color-mix(in srgb, ${accent} 16%, transparent)`
+        : `${data.textColor || '#333333'}15`);
+    root.style.setProperty('--border-color', useDarkTheme
+        ? `color-mix(in srgb, ${accent} 16%, transparent)`
+        : `${data.textColor || '#333333'}15`);
     root.style.setProperty('--bg-gray', `${data.textColor || '#333333'}08`);
-    root.style.setProperty('--text-black', data.textColor || '#333333');
-    root.style.setProperty('--text-gray', `${data.textColor || '#333333'}99`);
+    root.style.setProperty('--surface-color', useDarkTheme ? '#09271b' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 96%, #ffffff 4%)`);
+    root.style.setProperty('--surface-soft', useDarkTheme ? '#0c1f15' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 90%, #ffffff 10%)`);
+    root.style.setProperty('--bg-tertiary', useDarkTheme ? '#0c1f15' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 90%, #ffffff 10%)`);
+    root.style.setProperty('--text-primary', data.textColor || (useDarkTheme ? '#ffffff' : '#333333'));
+    root.style.setProperty('--text-black', data.textColor || (useDarkTheme ? '#ffffff' : '#333333'));
+    root.style.setProperty('--text-gray', `${data.textColor || (useDarkTheme ? '#ffffff' : '#333333')}99`);
 }
 
 // Inicialização imediata de elementos visuais síncronos

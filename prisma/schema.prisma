@@ -49,6 +49,7 @@ model StoreProfile {
   user                 User     @relation(fields: [userId], references: [id])
   businessName         String?
   businessCategory     String?
+  prepTime             String?
   businessAddress      String?
   businessPlaceId      String?
   businessLat          Float?
@@ -351,6 +352,7 @@ model Setting {
   acceptOrders         Boolean @default(true)
   allowCashOnDelivery  Boolean @default(true)
   featuredCountDesktop Int     @default(4)
+  featuredCountTablet  Int     @default(2)
   featuredCountMobile  Int     @default(1)
   dailyDeliveryItems   String? @db.Text
   reportEnabled        Boolean @default(false)

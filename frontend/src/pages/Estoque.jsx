@@ -93,8 +93,6 @@ const Estoque = () => {
   const [seasonalForm, setSeasonalForm] = useState({ name: '', eventDate: '', preStartDays: 15, postEndDays: 2, description: '', items: [], maxOrders: 0, onlySeasonalOnEventDay: false, active: true });
   const [editingSeasonal, setEditingSeasonal] = useState(null);
   const [showHidden, setShowHidden] = useState(false);
-  const [acceptOrders, setAcceptOrders] = useState(true);
-  const [savingAcceptOrders, setSavingAcceptOrders] = useState(false);
 
   const [categories, setCategories] = useState([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -218,41 +216,15 @@ const Estoque = () => {
     } catch (err) { console.error(err); }
   }, []);
 
-  const fetchStoreSettings = useCallback(async () => {
-    try {
-      const res = await api.get('/settings');
-      setAcceptOrders(res.data?.acceptOrders !== false);
-    } catch (err) {
-      console.error(err);
-    }
-  }, []);
+
 
   useEffect(() => {
     fetchProducts();
     fetchAddonGroups();
     fetchSeasonal();
     fetchCategories();
-    fetchStoreSettings();
-  }, [fetchProducts, fetchAddonGroups, fetchSeasonal, fetchCategories, fetchStoreSettings]);
+  }, [fetchProducts, fetchAddonGroups, fetchSeasonal, fetchCategories]);
 
-  const handleAcceptOrdersChange = async (nextValue) => {
-    setAcceptOrders(nextValue);
-    setSavingAcceptOrders(true);
-    try {
-      await api.post('/settings', { acceptOrders: nextValue });
-    } catch (err) {
-      console.error(err);
-      setAcceptOrders(!nextValue);
-      Swal.fire({
-        title: 'Erro',
-        text: 'Não foi possível salvar a configuração de encomendas.',
-        icon: 'error',
-        confirmButtonColor: '#3b82f6'
-      });
-    } finally {
-      setSavingAcceptOrders(false);
-    }
-  };
 
   const compressImage = (file) => {
     return new Promise((resolve) => {
@@ -556,16 +528,50 @@ const Estoque = () => {
   const filtered = [...products]
     .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
     .filter(p => {
-    const matchesTab = p.type === tab || p.type === `combo_${tab}`;
-    if (!matchesTab) return false;
+      const matchesTab = p.type === tab || p.type === `combo_${tab}`;
+      if (!matchesTab) return false;
 
-    if (!showHidden && p.variations.length > 0) {
-      const hasVisible = p.variations.some(v => !v.hidden);
-      if (!hasVisible) return false;
-    }
+      if (!showHidden && p.variations.length > 0) {
+        const hasVisible = p.variations.some(v => !v.hidden);
+        if (!hasVisible) return false;
+      }
 
-    return true;
-  });
+      return true;
+    });
+
+  const groupedProducts = (() => {
+    const categoryNameById = new Map(categories.map(cat => [String(cat.id), cat.name]));
+    const buckets = [];
+    const bucketMap = new Map();
+
+    const resolveCategoryLabel = (product) => {
+      const labelById = product.categoryId ? categoryNameById.get(String(product.categoryId)) : '';
+      return String(labelById || product.category || 'Sem categoria').trim() || 'Sem categoria';
+    };
+
+    filtered.forEach((product) => {
+      const label = resolveCategoryLabel(product);
+      if (!bucketMap.has(label)) {
+        const bucket = { label, items: [] };
+        bucketMap.set(label, bucket);
+        buckets.push(bucket);
+      }
+      bucketMap.get(label).items.push(product);
+    });
+
+    const ordered = [];
+    categories.forEach((cat) => {
+      const label = String(cat.name || 'Sem categoria').trim() || 'Sem categoria';
+      const bucket = bucketMap.get(label);
+      if (bucket && !ordered.includes(bucket)) ordered.push(bucket);
+    });
+
+    buckets.forEach((bucket) => {
+      if (!ordered.includes(bucket)) ordered.push(bucket);
+    });
+
+    return ordered;
+  })();
 
   const moveProductOrder = async (currentIndex, delta) => {
     const targetIndex = currentIndex + delta;
@@ -597,136 +603,54 @@ const Estoque = () => {
 
   return (
     <div style={{ padding: '30px' }}>
-      <style>{`
-        .estoque-label {
-          display: block;
-          margin-bottom: 6px;
-          color: var(--text-secondary);
-          font-size: 11px;
-          font-weight: 800;
-          text-transform: capitalize;
-          line-height: 1.2;
-        }
-
-        .estoque-label--compact {
-          margin-bottom: 6px;
-        }
-
-        .estoque-label--inline {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .estoque-label--micro {
-          margin-bottom: 4px;
-          font-size: 10px;
-          color: var(--text-muted);
-        }
-
-        .estoque-label--switch {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          cursor: pointer;
-          color: #e5e7eb;
-          font-size: 13px;
-          font-weight: 700;
-        }
-
-        .estoque-label--check {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          cursor: pointer;
-          color: #fff;
-          font-size: 13px;
-          font-weight: 700;
-        }
-
-        .estoque-label--section {
-          font-size: 12px;
-          color: #fff;
-          letter-spacing: 0.01em;
-        }
-
-        .estoque-label--pink {
-          color: #ec4899;
-        }
-      `}</style>
       <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#fff' }}>Catálogo & Estoque</h2>
           <p style={{ color: 'var(--text-secondary)' }}>Gerencie seus produtos e combos de {tab === 'delivery' ? 'Pronta Entrega' : 'Agendamento'}</p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+      </div>
+
+      <div className="mb-30 d-flex gap-10 justify-content-between align-items-center">
+        <div className="d-flex gap-10">
           {tab === 'seasonal' ? (
-            <button className="btn btn-primary" onClick={openAddSeasonal} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: '#ec4899' }}>
+            <button className="btn btn-primary d-flex align-items-center gap-2" onClick={openAddSeasonal} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: '#ec4899' }}>
               <Plus size={20} /> Novo Evento
             </button>
           ) : tab === 'addon' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 18px', backgroundColor: 'rgba(245, 158, 11, 0.08)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.18)', borderRadius: '12px', fontWeight: 700 }}>
+            <div className="d-flex align-items-center gap-2" style={{ padding: '12px 18px', backgroundColor: 'rgba(245, 158, 11, 0.08)', color: '#f59e0b', border: '1px solid rgba(245, 158, 11, 0.18)', borderRadius: '12px', fontWeight: 700 }}>
               <Layers size={18} /> Os grupos são gerenciados na lista abaixo
             </div>
           ) : (
             <>
-              <button className="btn" onClick={() => setShowCategoryModal(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: 'rgba(255, 255, 255, 0.05)', color: '#fff', border: '1px solid var(--border-color)', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}>
-                <Layers size={20} /> Categorias
-              </button>
-              <button className="btn" onClick={() => openAdd(true)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#a78bfa', border: '1px solid #8b5cf6', borderRadius: '12px', fontWeight: 700, cursor: 'pointer' }}>
-                Novo Combo
-              </button>
-              <button className="btn btn-primary" onClick={() => openAdd(false)} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px' }}>
+              <button className="btn btn-primary" onClick={() => openAdd(false)} >
                 <Plus size={20} /> Adicionar Item
+              </button>
+              <button className="btn btn-primary" onClick={() => openAdd(true)} >
+                <Plus size={20} /> Novo Combo
+              </button>
+              <button className="btn btn-primary" onClick={() => setShowCategoryModal(true)} >
+                <Layers size={20} /> Categorias
               </button>
             </>
           )}
         </div>
-      </div>
 
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '30px' }}>
-        <button onClick={() => setTab('delivery')} style={{ ...tabBtn, backgroundColor: tab === 'delivery' ? '#3b82f6' : 'var(--bg-secondary)', color: tab === 'delivery' ? '#fff' : 'var(--text-secondary)' }}>
-          <ShoppingBag size={18} /> Pronta Entrega
-        </button>
-        <button onClick={() => setTab('encomenda')} style={{ ...tabBtn, backgroundColor: tab === 'encomenda' ? '#10b981' : 'var(--bg-secondary)', color: tab === 'encomenda' ? '#fff' : 'var(--text-secondary)' }}>
-          <Calendar size={18} /> Agendamentos
-        </button>
-        <button onClick={() => setTab('addon')} style={{ ...tabBtn, backgroundColor: tab === 'addon' ? '#f59e0b' : 'var(--bg-secondary)', color: tab === 'addon' ? '#fff' : 'var(--text-secondary)' }}>
-          <Plus size={18} /> Adicionais
-        </button>
-        <button onClick={() => setTab('seasonal')} style={{ ...tabBtn, backgroundColor: tab === 'seasonal' ? '#ec4899' : 'var(--bg-secondary)', color: tab === 'seasonal' ? '#fff' : 'var(--text-secondary)' }}>
-          <Gift size={18} /> Datas Comemorativas
-        </button>
-        <div style={{
-          marginLeft: 'auto',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '10px',
-          padding: '10px 14px',
-          borderRadius: '12px',
-          border: `1px solid ${acceptOrders ? 'rgba(16, 185, 129, 0.22)' : 'rgba(239, 68, 68, 0.22)'}`,
-          backgroundColor: acceptOrders ? 'rgba(16, 185, 129, 0.08)' : 'rgba(239, 68, 68, 0.08)'
-        }}>
-          <input
-            type="checkbox"
-            checked={acceptOrders}
-            disabled={savingAcceptOrders}
-            onChange={e => handleAcceptOrdersChange(e.target.checked)}
-            style={{ width: '16px', height: '16px', cursor: savingAcceptOrders ? 'wait' : 'pointer', accentColor: acceptOrders ? '#10b981' : '#ef4444' }}
-          />
-          <div>
-            <div style={{ fontSize: '12px', color: acceptOrders ? '#10b981' : '#ef4444', fontWeight: 800 }}>
-              {savingAcceptOrders ? 'Salvando...' : 'Aceitar encomendas'}
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-              {acceptOrders ? 'Mostra a aba de encomendas no cardápio público.' : 'Cardápio de encomendas oculto para clientes.'}
-            </div>
-          </div>
-        </div>
-      </div>
+        <div className="d-flex gap-10 tab-actions radius-8">
+          <button onClick={() => setTab('delivery')} style={{ ...tabBtn, backgroundColor: tab === 'delivery' ? '#161b29' : '#0F172A', color: tab === 'delivery' ? '#fff' : 'var(--text-secondary)' }}>
+            <ShoppingBag size={18} /> Pronta Entrega
+          </button>
+          <button onClick={() => setTab('encomenda')} style={{ ...tabBtn, backgroundColor: tab === 'encomenda' ? '#161b29' : '#0F172A', color: tab === 'encomenda' ? '#fff' : 'var(--text-secondary)' }}>
+            <Calendar size={18} /> Agendamentos
+          </button>
+          <button onClick={() => setTab('addon')} style={{ ...tabBtn, backgroundColor: tab === 'addon' ? '#161b29' : '#0F172A', color: tab === 'addon' ? '#fff' : 'var(--text-secondary)' }}>
+            <Plus size={18} /> Adicionais
+          </button>
+          <button onClick={() => setTab('seasonal')} style={{ ...tabBtn, backgroundColor: tab === 'seasonal' ? '#161b29' : '#0F172A', color: tab === 'seasonal' ? '#fff' : 'var(--text-secondary)' }}>
+            <Gift size={18} /> Datas Comemorativas
+          </button>
+        </div></div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
         {tab === 'seasonal' ? (
           seasonalCatalogs.map(s => (
             <div key={s.id} style={{ backgroundColor: '#18181b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -735,7 +659,7 @@ const Estoque = () => {
                   <Gift size={20} />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 800, fontSize: '16px', color: '#fff' }}>{s.name}</div>
+                  <div style={{ fontWeight: 500, fontSize: '16px', color: '#fff' }}>{s.name}</div>
                   <div style={{ fontSize: '13px', color: 'var(--text-secondary)', display: 'flex', gap: '10px', marginTop: '4px' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={14} /> {new Date(s.eventDate + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> Antecedência: {s.preStartDays} dias</span>
@@ -761,159 +685,122 @@ const Estoque = () => {
             onReloadProducts={fetchProducts}
           />
         ) : (
-          filtered.map((p, idx) => {
-            const isExpanded = expanded === p.id;
-            const isCombo = p.comboItems && p.comboItems.length > 0;
-            const currentCategory = String(p.category || 'Sem categoria').trim() || 'Sem categoria';
-            const prevCategory = idx > 0 ? String(filtered[idx - 1]?.category || 'Sem categoria').trim() || 'Sem categoria' : '';
-            const showCategoryHeader = idx === 0 || currentCategory !== prevCategory;
-            return (
-              <React.Fragment key={p.id}>
-                {showCategoryHeader && (
-                  <div style={{ margin: '10px 2px 2px', fontSize: '12px', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'capitalize', letterSpacing: '0.01em' }}>
-                    {currentCategory}
-                  </div>
-                )}
-                <div
-                  draggable
-                  onDragStart={(e) => handleProductDragStart(e, idx)}
-                  onDragOver={handleDragOver}
-                  onDrop={(e) => handleProductDrop(e, idx)}
-                  style={{ backgroundColor: '#18181b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', transition: 'all 0.2s', cursor: 'grab' }}
-                >
-                <div
-                  onClick={() => setExpanded(isExpanded ? null : p.id)}
-                  style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent', borderBottom: isExpanded ? '1px solid rgba(255,255,255,0.05)' : 'none' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <div style={{ width: '4px', height: '24px', borderRadius: '4px', background: isCombo ? '#8b5cf6' : (p.type === 'delivery' ? '#3b82f6' : '#10b981') }} />
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ fontWeight: 800, fontSize: '16px', color: '#fff' }}>{p.name}</div>
-                        {isCombo && <span style={{ fontSize: '10px', backgroundColor: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', padding: '2px 8px', borderRadius: '4px', fontWeight: 900 }}>COMBO</span>}
-                        <span style={{ fontSize: '10px', backgroundColor: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: '999px', fontWeight: 800 }}>#{p.displayOrder || idx + 1}</span>
-                        {p.featured && <span style={{ fontSize: '10px', backgroundColor: 'rgba(59, 130, 246, 0.16)', color: '#60a5fa', padding: '2px 8px', borderRadius: '999px', fontWeight: 900 }}>DESTAQUE</span>}
-                        {Array.isArray(p.customFields) && p.customFields.length > 0 && <span style={{ fontSize: '10px', backgroundColor: 'rgba(245, 158, 11, 0.16)', color: '#f59e0b', padding: '2px 8px', borderRadius: '999px', fontWeight: 900 }}>EXTRAS</span>}
-                      </div>
-                      {p.description && <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>{p.description}</div>}
-                      {!p.variations.length && !isCombo && <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.trackStock && `| Estoque: ${p.stock}`} {!p.trackStock && '| Estoque: âˆž'}</div>}
-                      {isCombo && <div style={{ fontSize: '13px', color: '#8b5cf6', marginTop: '4px', fontWeight: 700 }}>R$ {p.price.toFixed(2)} | {p.comboItems.length} itens inclusos</div>}
-                      {!isCombo && Array.isArray(p.addonGroups) && p.addonGroups.length > 0 && (
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
-                          {p.addonGroups.map(groupId => {
-                            const group = addonGroups.find(g => g.id === groupId);
-                            if (!group) return null;
-                            return (
-                              <span
-                                key={groupId}
-                                style={{
-                                  fontSize: '10px',
-                                  padding: '3px 8px',
-                                  borderRadius: '999px',
-                                  backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                                  color: '#f59e0b',
-                                  fontWeight: 800,
-                                  letterSpacing: '0.04em'
-                                }}
-                              >
-                                {group.name}
-                              </span>
-                            );
-                          })}
+          groupedProducts.map((group) => (
+            <React.Fragment key={group.label}>
+              <div style={{ margin: '20px 2px 2px', fontSize: '15px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
+                {group.label}
+              </div>
+              {group.items.map((p) => {
+                const globalIndex = filtered.findIndex(item => item.id === p.id);
+                const isExpanded = expanded === p.id;
+                const isCombo = p.comboItems && p.comboItems.length > 0;
+                return (
+                  <div
+                    key={p.id}
+                    draggable
+                    onDragStart={(e) => handleProductDragStart(e, globalIndex)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleProductDrop(e, globalIndex)}
+                    style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', transition: 'all 0.2s', cursor: 'grab' }}
+                  >
+                    <div
+                      onClick={() => setExpanded(isExpanded ? null : p.id)}
+                      onMouseEnter={(e) => {
+                        if (!isExpanded) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent';
+                      }}
+                      style={{ padding: '20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent', borderBottom: isExpanded ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'background-color 0.18s ease, border-color 0.18s ease' }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <ChevronRight size={20} color="var(--text-secondary)" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ fontWeight: 800, fontSize: '16px', color: '#fff' }}>{p.name}</div>
+                            {isCombo && <span style={{ fontSize: '10px', backgroundColor: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', padding: '2px 8px', borderRadius: '4px', fontWeight: 900 }}>COMBO</span>}
+                            <span style={{ fontSize: '10px', backgroundColor: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: '999px', fontWeight: 800 }}>#{p.displayOrder || globalIndex + 1}</span>
+                            {p.featured && <span style={{ fontSize: '10px', backgroundColor: 'rgba(59, 130, 246, 0.16)', color: '#60a5fa', padding: '2px 8px', borderRadius: '999px', fontWeight: 900 }}>DESTAQUE</span>}
+                            {Array.isArray(p.customFields) && p.customFields.length > 0 && <span style={{ fontSize: '10px', backgroundColor: 'rgba(245, 158, 11, 0.16)', color: '#f59e0b', padding: '2px 8px', borderRadius: '999px', fontWeight: 900 }}>EXTRAS</span>}
+                          </div>
+                          {!p.variations.length && !isCombo && <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.trackStock && `| Estoque: ${p.stock}`} {!p.trackStock && '| Estoque: âˆž'}</div>}
+                          {isCombo && <div style={{ fontSize: '13px', color: '#8b5cf6', marginTop: '4px', fontWeight: 700 }}>R$ {p.price.toFixed(2)} | {p.comboItems.length} itens inclusos</div>}
+                          {!isCombo && Array.isArray(p.addonGroups) && p.addonGroups.length > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                              {p.addonGroups.map(groupId => {
+                                const group = addonGroups.find(g => g.id === groupId);
+                                if (!group) return null;
+                                return (
+                                  <span
+                                    key={groupId}
+                                    style={{
+                                      fontSize: '10px',
+                                      padding: '3px 8px',
+                                      borderRadius: '999px',
+                                      backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                                      color: '#f59e0b',
+                                      fontWeight: 800,
+                                      letterSpacing: '0.04em'
+                                    }}
+                                  >
+                                    {group.name}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <button
-                        className="btn-icon"
-                        disabled={idx === 0}
-                        title="Mover para cima"
-                        style={{ padding: '7px', backgroundColor: 'rgba(255,255,255,0.05)', color: idx === 0 ? 'rgba(255,255,255,0.25)' : '#fff', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', cursor: idx === 0 ? 'not-allowed' : 'pointer' }}
-                        onClick={(e) => { e.stopPropagation(); moveProductOrder(idx, -1); }}
-                      >
-                        <ArrowUp size={14} />
-                      </button>
-                      <button
-                        className="btn-icon"
-                        disabled={idx === filtered.length - 1}
-                        title="Mover para baixo"
-                        style={{ padding: '7px', backgroundColor: 'rgba(255,255,255,0.05)', color: idx === filtered.length - 1 ? 'rgba(255,255,255,0.25)' : '#fff', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', cursor: idx === filtered.length - 1 ? 'not-allowed' : 'pointer' }}
-                        onClick={(e) => { e.stopPropagation(); moveProductOrder(idx, 1); }}
-                      >
-                        <ArrowDown size={14} />
-                      </button>
-                    </div>
-                    <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); duplicateProduct(p); }} title="Duplicar item"><Copy size={16} /></button>
-                    <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); openEdit(p); }}><Pencil size={16} /></button>
-                    <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px' }} onClick={(e) => {
-                      e.stopPropagation();
-                      Swal.fire({
-                        title: 'Tem certeza?',
-                        text: "Você não poderá reverter isso!",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#ef4444',
-                        cancelButtonColor: '#6e7881',
-                        confirmButtonText: 'Sim, excluir!',
-                        cancelButtonText: 'Cancelar'
-                      }).then((result) => {
-                        if (result.isConfirmed) {
-                          api.delete(`/orders/products/${p.id}`).then(() => {
-                            fetchProducts();
-                            Swal.fire('Excluído!', 'O item foi removido com sucesso.', 'success');
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <button
+                            className="btn-icon"
+                            disabled={globalIndex === 0}
+                            title="Mover para cima"
+                            style={{ padding: '7px', backgroundColor: 'rgba(255,255,255,0.05)', color: globalIndex === 0 ? 'rgba(255,255,255,0.25)' : '#fff', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', cursor: globalIndex === 0 ? 'not-allowed' : 'pointer' }}
+                            onClick={(e) => { e.stopPropagation(); moveProductOrder(globalIndex, -1); }}
+                          >
+                            <ArrowUp size={14} />
+                          </button>
+                          <button
+                            className="btn-icon"
+                            disabled={globalIndex === filtered.length - 1}
+                            title="Mover para baixo"
+                            style={{ padding: '7px', backgroundColor: 'rgba(255,255,255,0.05)', color: globalIndex === filtered.length - 1 ? 'rgba(255,255,255,0.25)' : '#fff', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', cursor: globalIndex === filtered.length - 1 ? 'not-allowed' : 'pointer' }}
+                            onClick={(e) => { e.stopPropagation(); moveProductOrder(globalIndex, 1); }}
+                          >
+                            <ArrowDown size={14} />
+                          </button>
+                        </div>
+                        <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); duplicateProduct(p); }} title="Duplicar item"><Copy size={16} /></button>
+                        <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); openEdit(p); }}><Pencil size={16} /></button>
+                        <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px' }} onClick={(e) => {
+                          e.stopPropagation();
+                          Swal.fire({
+                            title: 'Tem certeza?',
+                            text: "Você não poderá reverter isso!",
+                            icon: 'warning',
+                            showCancelButton: true,
+                            confirmButtonColor: '#ef4444',
+                            cancelButtonColor: '#6e7881',
+                            confirmButtonText: 'Sim, excluir!',
+                            cancelButtonText: 'Cancelar'
+                          }).then((result) => {
+                            if (result.isConfirmed) {
+                              api.delete(`/orders/products/${p.id}`).then(() => {
+                                fetchProducts();
+                                Swal.fire('Excluído!', 'O item foi removido com sucesso.', 'success');
+                              });
+                            }
                           });
-                        }
-                      });
-                    }}><Trash2 size={16} /></button>
-                    <ChevronRight size={20} color="var(--text-secondary)" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
-                  </div>
-                </div>
-
-                  {isExpanded && (
-                  <div style={{ padding: '20px', backgroundColor: 'rgba(0,0,0,0.2)' }}>
-                    {isCombo ? (
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                        {p.comboItems.map((item, i) => (
-                          <div key={i} style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#a78bfa', padding: '6px 15px', borderRadius: '20px', fontSize: '12px', fontWeight: 700, border: '1px solid rgba(139, 92, 246, 0.2)' }}>
-                            📦 {item}
-                          </div>
-                        ))}
+                        }}><Trash2 size={16} /></button>
                       </div>
-                    ) : (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '15px' }}>
-                        {p.variations.filter(v => showHidden || !v.hidden).map((v, i) => (
-                          <div key={i} style={{ padding: '15px', backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', gap: '10px' }}>
-                              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontWeight: 800, color: p.type === 'delivery' ? '#60a5fa' : '#34d399', fontSize: '13px' }}>{v.name} {v.hidden && <span style={{ color: '#fbbf24', fontSize: '10px', marginLeft: '5px' }}>(INVISÍVEL)</span>}</span>
-                                {v.description && <span style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{v.description}</span>}
-                              </div>
-                              <span style={{ fontWeight: 700, fontSize: '13px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '4px 8px', borderRadius: '6px', color: '#fff', flex: '0 0 auto' }}>R$ {v.price}</span>
-                            </div>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                              {v.subItems?.map((si, idx) => (
-                                <div key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'var(--text-secondary)', padding: '4px 10px', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: '20px' }}>
-                                  <span style={{ fontWeight: 600 }}>{si.name}</span>
-                                  {p.trackStock ? (
-                                    <span style={{ color: si.stock > 0 ? '#10b981' : '#ef4444', fontWeight: 800, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '6px' }}>{si.stock}</span>
-                                  ) : (
-                                    <span style={{ color: '#60a5fa', fontWeight: 800, borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '6px' }}>âˆž</span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    </div>
                   </div>
-                  )}
-                </div>
-              </React.Fragment>
-            );
-          })
+                );
+              })}
+            </React.Fragment>
+          ))
         )}
       </div>
 
@@ -962,7 +849,7 @@ const Estoque = () => {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', backgroundColor: 'rgba(236, 72, 153, 0.05)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(236, 72, 153, 0.1)' }}>
                     <input type="checkbox" id="onlySeasonal" checked={seasonalForm.onlySeasonalOnEventDay} onChange={e => setSeasonalForm(f => ({ ...f, onlySeasonalOnEventDay: e.target.checked }))} style={{ width: '18px', height: '18px' }} />
-              <label htmlFor="onlySeasonal" className="estoque-label estoque-label--check estoque-label--pink">
+                    <label htmlFor="onlySeasonal" className="estoque-label estoque-label--check estoque-label--pink">
                       Aceitar APENAS itens sazonais para a data do evento?
                       <p style={{ fontWeight: 400, fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>Lily recusará encomendas do cardápio regular se o cliente escolher o dia do evento para entrega.</p>
                     </label>
@@ -1800,8 +1687,9 @@ const tabBtn = { display: 'flex', alignItems: 'center', gap: '8px', padding: '12
 const modalOverlay = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9, backdropFilter: 'blur(8px)', padding: '20px' };
 const modalContent = { width: '100%', maxWidth: '960px', maxHeight: '90vh', padding: '30px', position: 'relative', overflowY: 'auto', backgroundColor: '#18181b', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' };
 const closeBtn = { background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' };
-const sectionBox = { backgroundColor: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '12px', border: '1px dashed var(--border-color)' };
+const sectionBox = { backgroundColor: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '12px', border: '1px dashed var(--border-color)', marginTop: '20px' };
 const sectionTitle = { fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' };
 const varGroupStyle = { backgroundColor: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', marginBottom: '15px', border: '1px solid rgba(255,255,255,0.05)' };
 
 export default Estoque;
+
