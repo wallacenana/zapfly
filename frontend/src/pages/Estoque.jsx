@@ -541,9 +541,26 @@ const Estoque = () => {
       return true;
     });
 
-  const groupedProducts = (() => {
-    const categoryNameById = new Map(categories.map(cat => [String(cat.id), cat.name]));
-    const buckets = [];
+    const getVariationPriceRange = (variations = []) => {
+      const prices = variations
+        .map(v => parseMoneyInput(v?.promoPrice || v?.price))
+        .filter(value => Number.isFinite(value));
+      const min = prices.length ? Math.min(...prices) : null;
+      const max = prices.length ? Math.max(...prices) : null;
+      return { min, max };
+    };
+
+    const getVariationStockSummary = (variations = []) => {
+      const total = variations.reduce((sum, variation) => {
+        const stock = Number.parseInt(variation?.stock, 10);
+        return sum + (Number.isFinite(stock) ? stock : 0);
+      }, 0);
+      return total;
+    };
+
+    const groupedProducts = (() => {
+      const categoryNameById = new Map(categories.map(cat => [String(cat.id), cat.name]));
+      const buckets = [];
     const bucketMap = new Map();
 
     const resolveCategoryLabel = (product) => {
@@ -726,6 +743,16 @@ const Estoque = () => {
                             {Array.isArray(p.customFields) && p.customFields.length > 0 && <span style={{ fontSize: '10px', backgroundColor: 'rgba(245, 158, 11, 0.16)', color: '#f59e0b', padding: '2px 8px', borderRadius: '999px', fontWeight: 900 }}>EXTRAS</span>}
                           </div>
                           {!p.variations.length && !isCombo && <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.trackStock && `| Estoque: ${p.stock}`} {!p.trackStock && '| Estoque: âˆž'}</div>}
+                          {p.variations.length > 0 && !isCombo && (() => {
+                            const { min, max } = getVariationPriceRange(p.variations);
+                            const stock = getVariationStockSummary(p.variations);
+                            const stockLabel = p.trackStock ? ` | Estoque: ${stock}` : ' | Estoque: âˆž';
+                            if (min !== null && max !== null) {
+                              const priceLabel = min === max ? `R$ ${min.toFixed(2)}` : `R$ ${min.toFixed(2)} - R$ ${max.toFixed(2)}`;
+                              return <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>{priceLabel}{stockLabel}</div>;
+                            }
+                            return <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>{p.price ? `R$ ${Number(p.price).toFixed(2)}` : 'Sem preço definido'}{stockLabel}</div>;
+                          })()}
                           {isCombo && <div style={{ fontSize: '13px', color: '#8b5cf6', marginTop: '4px', fontWeight: 700 }}>R$ {p.price.toFixed(2)} | {p.comboItems.length} itens inclusos</div>}
                           {!isCombo && Array.isArray(p.addonGroups) && p.addonGroups.length > 0 && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
