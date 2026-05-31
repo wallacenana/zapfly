@@ -212,6 +212,7 @@ app.post('/settings', authenticate, async (req, res) => {
                 where: { userId: req.user.id },
                 update: settingPayload,
                 create: {
+                    id: req.user.id,
                     userId: req.user.id,
                     ...settingPayload
                 }
@@ -1980,7 +1981,7 @@ app.post('/instances/:id/ai-test', async (req, res) => {
 // API Routes
 app.get('/config/keys', authenticate, async (req, res) => {
     let config = await getSettings(req.user.id);
-    if (!config) config = await prisma.setting.create({ data: { userId: req.user.id, activeModel: 'openai' } });
+    if (!config) config = await prisma.setting.create({ data: { id: req.user.id, userId: req.user.id, activeModel: 'openai' } });
     const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { slug: true } });
 
     res.json({
@@ -2125,7 +2126,7 @@ app.post('/config/keys', authenticate, async (req, res) => {
         prisma.setting.upsert({
             where: { userId: req.user.id },
             update: updateData,
-            create: { userId: req.user.id, ...updateData, gcalEnabled: false }
+            create: { id: req.user.id, userId: req.user.id, ...updateData, gcalEnabled: false }
         }),
         upsertStoreProfile(req.user.id, storeProfileData)
     ]);
