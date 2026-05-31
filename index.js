@@ -2022,6 +2022,7 @@ app.get('/config/keys', authenticate, async (req, res) => {
         reportHour: config.reportHour,
         googleApiKey: config.googleApiKey,
         deliveryRules: config.deliveryRules,
+        dailyDeliveryItems: config.dailyDeliveryItems,
         gcalRefreshToken: config.gcalRefreshToken,
         mercadopagoPublicKey: config.mercadopagoPublicKey,
         mercadopagoToken: config.mercadopagoToken,

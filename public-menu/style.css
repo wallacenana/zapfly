@@ -60,14 +60,6 @@ body.theme-dark .nav-cat-btn.active {
     color: var(--text-main);
 }
 
-body.theme-dark .modal-content,
-body.theme-dark .item-detail-panel,
-body.theme-dark .item-detail-media-empty,
-body.theme-dark .item-hero-placeholder {
-    background: var(--surface-color);
-    color: var(--text-main);
-}
-
 body.theme-dark .close-modal-btn {
     background: rgba(255, 255, 255, 0.06);
     border-color: rgba(255, 255, 255, 0.08);
@@ -140,8 +132,13 @@ body.theme-dark .addon-option.disabled .addon-option-mark {
     border-color: rgba(255, 255, 255, 0.10);
 }
 
+.addon-group-header {
+    background: rgba(0, 0, 0, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 body.theme-dark .addon-option-mark {
-    background: rgba(255, 255, 255, 0.06);
+    background: rgba(0, 0, 0, .2);
     border-color: rgba(255, 255, 255, 0.12);
 }
 
@@ -161,7 +158,6 @@ body.theme-dark .addon-group-badge.optional {
 }
 
 body.theme-dark .modal-footer-sticky {
-    background: var(--surface-color);
     border-top-color: rgba(255, 255, 255, 0.08);
 }
 
@@ -639,8 +635,8 @@ h3 {
 }
 
 .product-add-btn {
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 30px;
     border: none;
     border-radius: 10px;
     background: var(--primary-color);
@@ -946,7 +942,6 @@ body.theme-dark .var-option.selected {
     margin-bottom: 12px;
     position: sticky;
     top: 0;
-    background: rgba(0, 0, 0, .2);
     padding: 15px 14px;
     z-index: 1;
 }
@@ -1093,7 +1088,6 @@ body.theme-dark .var-option.selected {
     border-top: 1px solid var(--border);
     display: flex;
     gap: 12px;
-    background: white;
     position: sticky;
     bottom: 0;
     z-index: 5;
@@ -1388,6 +1382,7 @@ body.theme-dark .delivery-fee-badge {
 @media (max-width: 767px) {
     .item-detail-layout {
         grid-template-columns: 1fr;
+        min-height: auto;
     }
 
     .item-detail-media {
@@ -2028,6 +2023,10 @@ body.theme-dark .delivery-fee-badge {
     padding-top: 10px;
 }
 
+.featured-carousel {
+    position: relative;
+}
+
 .section-header {
     display: flex;
     align-items: center;
@@ -2043,10 +2042,15 @@ body.theme-dark .delivery-fee-badge {
     margin: 0 -4px;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    scroll-snap-type: x proximity;
+    scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
+    cursor: grab;
     --featured-visible-count: 4;
     --featured-gap: 16px;
+}
+
+.featured-list:active {
+    cursor: grabbing;
 }
 
 .featured-list::-webkit-scrollbar {
@@ -2062,6 +2066,7 @@ body.theme-dark .delivery-fee-badge {
     cursor: pointer;
     transition: transform 0.2s;
     scroll-snap-align: start;
+    scroll-snap-stop: always;
 }
 
 .featured-card:active {
@@ -2101,13 +2106,13 @@ body.theme-dark .delivery-fee-badge {
 
 .featured-card--banner {
     flex: 0 0 calc((100% - ((var(--featured-visible-count, 1) - 1) * var(--featured-gap, 16px))) / var(--featured-visible-count, 1));
-    height: 220px;
+    height: auto;
+    aspect-ratio: 16 / 9;
     border-radius: 20px;
     overflow: hidden;
-    background: #f4f4f4;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border);
     scroll-snap-align: start;
+    scroll-snap-stop: always;
 }
 
 .featured-card--banner img {
@@ -2117,9 +2122,57 @@ body.theme-dark .delivery-fee-badge {
     display: block;
 }
 
+.featured-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 3;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg-color) 88%, transparent);
+    color: var(--text-main);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.2s ease, transform 0.2s ease, background-color 0.2s ease;
+}
+
+.featured-nav:hover {
+    background: color-mix(in srgb, var(--bg-color) 95%, transparent);
+}
+
+.featured-prev {
+    left: -10px;
+}
+
+.featured-next {
+    right: -10px;
+}
+
+.featured-nav.hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%) scale(0.9);
+}
+
 @media (max-width: 768px) {
-    .featured-card--banner {
-        height: 144px;
+    .featured-nav {
+        width: 30px;
+        height: 30px;
+        background: color-mix(in srgb, var(--bg-color) 92%, transparent);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+    }
+
+    .featured-prev {
+        left: 2px;
+    }
+
+    .featured-next {
+        right: 2px;
     }
 }
 

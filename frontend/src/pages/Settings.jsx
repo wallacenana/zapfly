@@ -39,6 +39,48 @@ function parseGoogleLocationMeta(value) {
   return { address: raw, placeId: '', lat: null, lng: null, mapsUrl: '' };
 }
 
+const DEFAULT_DELIVERY_MENU_OPTIONS = {
+  orderTypes: { delivery: true, order: true },
+  fulfillmentMethods: { delivery: true, pickup: true, local: true }
+};
+
+function normalizeDeliveryMenuOptions(value) {
+  const base = {
+    orderTypes: { ...DEFAULT_DELIVERY_MENU_OPTIONS.orderTypes },
+    fulfillmentMethods: { ...DEFAULT_DELIVERY_MENU_OPTIONS.fulfillmentMethods }
+  };
+
+  if (!value) return base;
+
+  let parsed = value;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch (error) {
+      return base;
+    }
+  }
+
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    return base;
+  }
+
+  const orderTypes = parsed.orderTypes && typeof parsed.orderTypes === 'object' ? parsed.orderTypes : {};
+  const fulfillmentMethods = parsed.fulfillmentMethods && typeof parsed.fulfillmentMethods === 'object' ? parsed.fulfillmentMethods : {};
+
+  return {
+    orderTypes: {
+      delivery: orderTypes.delivery !== false,
+      order: orderTypes.order !== false
+    },
+    fulfillmentMethods: {
+      delivery: fulfillmentMethods.delivery !== false,
+      pickup: fulfillmentMethods.pickup !== false,
+      local: fulfillmentMethods.local !== false
+    }
+  };
+}
+
 function loadGooglePlaces(apiKey) {
   if (window.google?.maps?.places?.Autocomplete) {
     return Promise.resolve(window.google.maps.places);
@@ -112,6 +154,7 @@ const Settings = () => {
     gcalRefreshToken: '',
     gcalEnabled: false,
     reminderHours: 2,
+    dailyDeliveryItems: DEFAULT_DELIVERY_MENU_OPTIONS,
     pixReceiverName: '',
     pixReceiverKey: '',
     maxDeliveryKm: 15,
@@ -157,6 +200,7 @@ const Settings = () => {
           businessLat: dataWithoutSlug.businessLat ?? parsedLocation.lat ?? null,
           businessLng: dataWithoutSlug.businessLng ?? parsedLocation.lng ?? null,
           businessMapsUrl: dataWithoutSlug.businessMapsUrl || parsedLocation.mapsUrl || '',
+          dailyDeliveryItems: normalizeDeliveryMenuOptions(dataWithoutSlug.dailyDeliveryItems),
           deliveryRules: typeof dataWithoutSlug.deliveryRules === 'string'
             ? JSON.parse(dataWithoutSlug.deliveryRules || '[]')
             : (Array.isArray(dataWithoutSlug.deliveryRules) ? dataWithoutSlug.deliveryRules : []),
@@ -376,7 +420,8 @@ const Settings = () => {
         ...safeSettings,
         openai: safeSettings.openaiKey,
         claude: safeSettings.claudeKey,
-        deliveryRules: JSON.stringify(safeSettings.deliveryRules)
+        deliveryRules: JSON.stringify(safeSettings.deliveryRules),
+        dailyDeliveryItems: JSON.stringify(normalizeDeliveryMenuOptions(safeSettings.dailyDeliveryItems))
       };
       await api.post('/config/keys', payload);
       await loadSettings(); // Recarrega para garantir que o estado local bata com o banco (especialmente GCal)
@@ -492,6 +537,135 @@ const Settings = () => {
                 </datalist>
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
                   Essa categoria alimenta o diretório público e a home estilo iFood.
+                </p>
+              </div>
+
+              <div style={{ ...subCard, borderLeftColor: 'var(--primary)' }}>
+                <label style={labelStyle}>Tipos de pedidos</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  {[
+                    { key: 'delivery', label: 'Delivery' },
+                    { key: 'order', label: 'Encomendas' }
+                  ].map(item => {
+                    const checked = !!settings.dailyDeliveryItems?.orderTypes?.[item.key];
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setSettings(s => ({
+                          ...s,
+                          dailyDeliveryItems: {
+                            ...normalizeDeliveryMenuOptions(s.dailyDeliveryItems),
+                            orderTypes: {
+                              ...normalizeDeliveryMenuOptions(s.dailyDeliveryItems).orderTypes,
+                              [item.key]: !checked
+                            }
+                          }
+                        }))}
+                        style={{
+                          width: '100%',
+                          padding: '12px 14px',
+                          borderRadius: '12px',
+                          border: `1px solid ${checked ? 'rgba(59,130,246,0.4)' : 'var(--border-color)'}`,
+                          background: checked ? 'rgba(59,130,246,0.10)' : 'rgba(255,255,255,0.03)',
+                          color: 'var(--text-primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <span>{item.label}</span>
+                        <span style={{
+                          width: '46px',
+                          height: '26px',
+                          borderRadius: '999px',
+                          padding: '3px',
+                          background: checked ? 'rgba(59,130,246,0.24)' : 'rgba(255,255,255,0.14)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: checked ? 'flex-end' : 'flex-start'
+                        }}>
+                          <span style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            background: checked ? '#3b82f6' : '#d1d5db'
+                          }} />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div style={{ ...subCard, borderLeftColor: 'var(--primary)' }}>
+                <label style={labelStyle}>Métodos de retirada</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+                  {[
+                    { key: 'delivery', label: 'Delivery' },
+                    { key: 'pickup', label: 'Retirada na loja' },
+                    { key: 'local', label: 'Consumo no local' }
+                  ].map(item => {
+                    const checked = !!settings.dailyDeliveryItems?.fulfillmentMethods?.[item.key];
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => setSettings(s => {
+                          const current = normalizeDeliveryMenuOptions(s.dailyDeliveryItems);
+                          return {
+                            ...s,
+                            dailyDeliveryItems: {
+                              ...current,
+                              fulfillmentMethods: {
+                                ...current.fulfillmentMethods,
+                                [item.key]: !checked
+                              }
+                            }
+                          };
+                        })}
+                        style={{
+                          width: '100%',
+                          padding: '12px 14px',
+                          borderRadius: '12px',
+                          border: `1px solid ${checked ? 'rgba(59,130,246,0.4)' : 'var(--border-color)'}`,
+                          background: checked ? 'rgba(59,130,246,0.10)' : 'rgba(255,255,255,0.03)',
+                          color: 'var(--text-primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <span>{item.label}</span>
+                        <span style={{
+                          width: '46px',
+                          height: '26px',
+                          borderRadius: '999px',
+                          padding: '3px',
+                          background: checked ? 'rgba(59,130,246,0.24)' : 'rgba(255,255,255,0.14)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: checked ? 'flex-end' : 'flex-start'
+                        }}>
+                          <span style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            background: checked ? '#3b82f6' : '#d1d5db'
+                          }} />
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                  O cardápio só exibe as opções que estiverem ativadas aqui.
                 </p>
               </div>
 

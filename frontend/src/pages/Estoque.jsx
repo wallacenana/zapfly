@@ -865,6 +865,88 @@ const Estoque = () => {
                         }}><Trash2 size={16} /></button>
                       </div>
                     </div>
+                    {canExpand && isExpanded && (
+                      <div style={{ padding: '0 10px 14px 30px', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                        {isCombo ? (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingTop: '12px' }}>
+                            {(p.comboItems || []).length === 0 ? (
+                              <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Nenhum item incluso no combo.</div>
+                            ) : (
+                              p.comboItems.map((comboItem, idx) => (
+                                <span
+                                  key={`${p.id}-combo-${idx}`}
+                                  style={{
+                                    fontSize: '11px',
+                                    padding: '4px 10px',
+                                    borderRadius: '999px',
+                                    backgroundColor: 'rgba(139, 92, 246, 0.14)',
+                                    color: '#c4b5fd',
+                                    border: '1px solid rgba(139, 92, 246, 0.18)',
+                                    fontWeight: 700
+                                  }}
+                                >
+                                  {comboItem}
+                                </span>
+                              ))
+                            )}
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '12px' }}>
+                            {(p.variations || []).map((variation, idx) => {
+                              const subItems = Array.isArray(variation?.subItems) ? variation.subItems : [];
+                              const hasSubItems = subItems.length > 0;
+                              const { min, max } = hasSubItems
+                                ? getVariationPriceRange([{ subItems }])
+                                : { min: parseMoneyInput(variation?.promoPrice || variation?.price), max: parseMoneyInput(variation?.promoPrice || variation?.price) };
+                              const variationStock = hasSubItems
+                                ? getVariationStockSummary([{ subItems }])
+                                : (Number.parseInt(variation?.stock, 10) || 0);
+                              const priceLabel = min !== null && max !== null
+                                ? (min === max ? `R$ ${min.toFixed(2)}` : `R$ ${min.toFixed(2)} - R$ ${max.toFixed(2)}`)
+                                : 'Sem preço definido';
+                              return (
+                                <div key={`${p.id}-var-${idx}`} style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
+                                    <div>
+                                      <div style={{ fontWeight: 800, color: '#fff', fontSize: '14px' }}>{variation?.name || `Variação ${idx + 1}`}</div>
+                                      {variation?.description && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{variation.description}</div>}
+                                    </div>
+                                    <div style={{ textAlign: 'right' }}>
+                                      <div style={{ fontSize: '13px', color: '#fff', fontWeight: 700 }}>{priceLabel}</div>
+                                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Estoque: {variationStock}</div>
+                                    </div>
+                                  </div>
+                                  {hasSubItems && (
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px' }}>
+                                      {subItems.map((subItem, subIdx) => {
+                                        const subPrice = parseMoneyInput(subItem?.promoPrice || subItem?.price);
+                                        return (
+                                          <span
+                                            key={`${p.id}-var-${idx}-sub-${subIdx}`}
+                                            style={{
+                                              fontSize: '11px',
+                                              padding: '4px 10px',
+                                              borderRadius: '999px',
+                                              backgroundColor: 'rgba(255,255,255,0.04)',
+                                              color: 'var(--text-secondary)',
+                                              border: '1px solid rgba(255,255,255,0.06)'
+                                            }}
+                                          >
+                                            {subItem?.name || `Subitem ${subIdx + 1}`}
+                                            {subPrice !== null ? ` • R$ ${subPrice.toFixed(2)}` : ''}
+                                            {subItem?.stock !== undefined ? ` • Estoque ${subItem.stock}` : ''}
+                                          </span>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}

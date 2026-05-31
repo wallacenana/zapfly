@@ -57,6 +57,54 @@ try {
         return 'Entrega ' . $normalized . 'min';
     }
 
+    function parseDailyDeliveryItemsValue($value)
+    {
+        $default = [
+            'orderTypes' => [
+                'delivery' => true,
+                'order' => true
+            ],
+            'fulfillmentMethods' => [
+                'delivery' => true,
+                'pickup' => true,
+                'local' => true
+            ]
+        ];
+
+        if (empty($value)) {
+            return $default;
+        }
+
+        $parsed = $value;
+        if (is_string($parsed)) {
+            $decoded = json_decode($parsed, true);
+            if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                $parsed = $decoded;
+            } else {
+                return $default;
+            }
+        }
+
+        if (!is_array($parsed)) {
+            return $default;
+        }
+
+        $orderTypes = is_array($parsed['orderTypes'] ?? null) ? $parsed['orderTypes'] : [];
+        $fulfillmentMethods = is_array($parsed['fulfillmentMethods'] ?? null) ? $parsed['fulfillmentMethods'] : [];
+
+        return [
+            'orderTypes' => [
+                'delivery' => array_key_exists('delivery', $orderTypes) ? (bool) $orderTypes['delivery'] : true,
+                'order' => array_key_exists('order', $orderTypes) ? (bool) $orderTypes['order'] : true,
+            ],
+            'fulfillmentMethods' => [
+                'delivery' => array_key_exists('delivery', $fulfillmentMethods) ? (bool) $fulfillmentMethods['delivery'] : true,
+                'pickup' => array_key_exists('pickup', $fulfillmentMethods) ? (bool) $fulfillmentMethods['pickup'] : true,
+                'local' => array_key_exists('local', $fulfillmentMethods) ? (bool) $fulfillmentMethods['local'] : true,
+            ]
+        ];
+    }
+
     if (empty($slug) || $slug === 'cardapio' || $slug === 'index.php') {
         $fallbackToWP();
     }
@@ -85,7 +133,8 @@ try {
                 COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm,
                 COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode,
                 COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm,
-                COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery
+                COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery,
+                COALESCE(s.dailyDeliveryItems, '{\"orderTypes\":{\"delivery\":true,\"order\":true},\"fulfillmentMethods\":{\"delivery\":true,\"pickup\":true,\"local\":true}}') AS dailyDeliveryItems
             FROM user u
             LEFT JOIN setting s ON u.id = s.userId
             LEFT JOIN store_profile sp ON u.id = sp.userId
@@ -116,7 +165,7 @@ try {
 
     ob_start();
 
-    $stmt = $pdo->prepare("SELECT u.*, COALESCE(sp.businessName, s.businessName) AS businessName, COALESCE(sp.businessCategory, s.businessCategory) AS businessCategory, COALESCE(sp.prepTime, '') AS prepTime, COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl, COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl, COALESCE(sp.accentColor, s.accentColor) AS accentColor, COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor, COALESCE(sp.textColor, s.textColor) AS textColor, COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor, COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor, COALESCE(sp.seoDescription, s.seoDescription) AS seoDescription, COALESCE(s.googleApiKey, '') AS googleApiKey, COALESCE(s.deliveryRules, '[]') AS deliveryRules, COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm, COALESCE(sp.pixelId, s.pixelId) AS pixelId, COALESCE(sp.microsoftClarityId, s.microsoftClarityId) AS microsoftClarityId, COALESCE(sp.googleAnalyticsId, s.googleAnalyticsId) AS googleAnalyticsId, COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders, COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders, COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders, COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled, COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm, COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode, COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery, COALESCE(sp.menuTheme, s.menuTheme, 'dark') AS menuTheme, COALESCE(s.featuredCountDesktop, 4) AS featuredCountDesktop, COALESCE(s.featuredCountTablet, 2) AS featuredCountTablet, COALESCE(s.featuredCountMobile, 1) AS featuredCountMobile FROM user u LEFT JOIN setting s ON u.id = s.userId LEFT JOIN store_profile sp ON u.id = sp.userId WHERE u.slug = ?");
+    $stmt = $pdo->prepare("SELECT u.*, COALESCE(sp.businessName, s.businessName) AS businessName, COALESCE(sp.businessCategory, s.businessCategory) AS businessCategory, COALESCE(sp.prepTime, '') AS prepTime, COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl, COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl, COALESCE(sp.accentColor, s.accentColor) AS accentColor, COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor, COALESCE(sp.textColor, s.textColor) AS textColor, COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor, COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor, COALESCE(sp.seoDescription, s.seoDescription) AS seoDescription, COALESCE(s.googleApiKey, '') AS googleApiKey, COALESCE(s.deliveryRules, '[]') AS deliveryRules, COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm, COALESCE(sp.pixelId, s.pixelId) AS pixelId, COALESCE(sp.microsoftClarityId, s.microsoftClarityId) AS microsoftClarityId, COALESCE(sp.googleAnalyticsId, s.googleAnalyticsId) AS googleAnalyticsId, COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders, COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders, COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders, COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled, COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm, COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode, COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery, COALESCE(sp.menuTheme, s.menuTheme, 'dark') AS menuTheme, COALESCE(s.featuredCountDesktop, 4) AS featuredCountDesktop, COALESCE(s.featuredCountTablet, 2) AS featuredCountTablet, COALESCE(s.featuredCountMobile, 1) AS featuredCountMobile, COALESCE(s.dailyDeliveryItems, '{\"orderTypes\":{\"delivery\":true,\"order\":true},\"fulfillmentMethods\":{\"delivery\":true,\"pickup\":true,\"local\":true}}') AS dailyDeliveryItems FROM user u LEFT JOIN setting s ON u.id = s.userId LEFT JOIN store_profile sp ON u.id = sp.userId WHERE u.slug = ?");
     $stmt->execute([$slug]);
     $store = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -170,6 +219,9 @@ try {
     $stmt->execute([$store['id']]);
     $orderSummary = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['orderCount' => 0];
     $orderCount = (int) ($orderSummary['orderCount'] ?? 0);
+    $deliveryMenuOptions = parseDailyDeliveryItemsValue($store['dailyDeliveryItems'] ?? null);
+    $showDeliveryTab = !empty($deliveryMenuOptions['orderTypes']['delivery']);
+    $showOrderTab = $acceptOrders && !empty($deliveryMenuOptions['orderTypes']['order']);
 
     $stmt = $pdo->prepare("SELECT sr.id, sr.orderId, sr.clientName, sr.rating, sr.comment, sr.createdAt, o.product, o.variation FROM store_review sr LEFT JOIN `order` o ON o.id = sr.orderId WHERE sr.userId = ? ORDER BY sr.createdAt DESC LIMIT 6");
     $stmt->execute([$store['id']]);
@@ -194,6 +246,7 @@ try {
         'textColor' => $textColor,
         'menuTheme' => $menuTheme,
         'acceptOrders' => $acceptOrders,
+        'dailyDeliveryItems' => $deliveryMenuOptions,
         'businessCategory' => $businessCategory,
         'prepTime' => $store['prepTime'] ?? '',
         'featuredCountDesktop' => (int) ($store['featuredCountDesktop'] ?? 4),
@@ -210,7 +263,9 @@ try {
             'reviewCount' => $reviewCount,
             'orderCount' => $orderCount
         ],
-        'recentReviews' => $recentReviews
+        'recentReviews' => $recentReviews,
+        'showDeliveryTab' => $showDeliveryTab,
+        'showOrderTab' => $showOrderTab
     ];
 
 ?>
@@ -532,10 +587,14 @@ try {
             </div>
         </header>
 
-        <nav id="order-tabs-nav" class="category-tabs <?php echo $acceptOrders ? '' : 'hidden'; ?>">
+        <nav id="order-tabs-nav" class="category-tabs <?php echo ($showDeliveryTab || $showOrderTab) ? '' : 'hidden'; ?>">
             <div class="container tabs-scroll">
-                <button class="cat-tab active" data-tab="delivery">Entrega</button>
-                <button class="cat-tab" data-tab="order">Encomendas</button>
+                <?php if ($showDeliveryTab): ?>
+                    <button class="cat-tab active" data-tab="delivery">Entrega</button>
+                <?php endif; ?>
+                <?php if ($showOrderTab): ?>
+                    <button class="cat-tab<?php echo $showDeliveryTab ? '' : ' active'; ?>" data-tab="order">Encomendas</button>
+                <?php endif; ?>
             </div>
         </nav>
 
@@ -703,12 +762,15 @@ try {
                     <!-- Step 2: Details -->
                     <div class="checkout-step hidden" id="step-2">
                         <!-- Toggle Delivery/Pickup -->
-                        <div id="checkout-type-tabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
-                            <button type="button" class="ifood-btn type-tab active" style="flex: 1; padding: 10px;"
+                        <div id="checkout-type-tabs" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                            <button type="button" class="ifood-btn type-tab active" data-method="delivery" style="flex: 1; padding: 10px;"
                                 onclick="setDeliveryType('delivery')">Entrega</button>
-                            <button type="button" class="ifood-btn type-tab"
+                            <button type="button" class="ifood-btn type-tab" data-method="pickup"
                                 style="flex: 1; background: var(--bg-gray); color: var(--text-main); padding: 10px;"
                                 onclick="setDeliveryType('pickup')">Retirada na Loja</button>
+                            <button type="button" class="ifood-btn type-tab" data-method="local"
+                                style="flex: 1; background: var(--bg-gray); color: var(--text-main); padding: 10px;"
+                                onclick="setDeliveryType('local')">Consumo no Local</button>
                         </div>
 
                         <!-- Address Section -->
@@ -1023,6 +1085,10 @@ try {
                 publicSettings: {
                     googleApiKey: '',
                     deliveryRules: [],
+                    dailyDeliveryItems: {
+                        orderTypes: { delivery: true, order: true },
+                        fulfillmentMethods: { delivery: true, pickup: true, local: true }
+                    },
                     businessName: 'Carregando...',
                     businessCategory: '',
                     prepTime: '',
@@ -1157,7 +1223,48 @@ try {
             }
 
             function isOrderEnabled() {
-                return state.publicSettings.acceptOrders !== false;
+                const options = getMenuDeliveryOptions();
+                return state.publicSettings.acceptOrders !== false && options.orderTypes.order !== false;
+            }
+
+            function isDeliveryTabEnabled() {
+                return getMenuDeliveryOptions().orderTypes.delivery !== false;
+            }
+
+            function getMenuDeliveryOptions() {
+                const parsed = parseJsonValue(state.publicSettings.dailyDeliveryItems || {}, {});
+                const orderTypes = parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.orderTypes && typeof parsed.orderTypes === 'object'
+                    ? parsed.orderTypes
+                    : {};
+                const fulfillmentMethods = parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.fulfillmentMethods && typeof parsed.fulfillmentMethods === 'object'
+                    ? parsed.fulfillmentMethods
+                    : {};
+
+                return {
+                    orderTypes: {
+                        delivery: orderTypes.delivery !== false,
+                        order: orderTypes.order !== false
+                    },
+                    fulfillmentMethods: {
+                        delivery: fulfillmentMethods.delivery !== false,
+                        pickup: fulfillmentMethods.pickup !== false,
+                        local: fulfillmentMethods.local !== false
+                    }
+                };
+            }
+
+            function isFulfillmentMethodEnabled(method) {
+                const options = getMenuDeliveryOptions();
+                return options.fulfillmentMethods[method] !== false;
+            }
+
+            function getEnabledFulfillmentMethods() {
+                return ['delivery', 'pickup', 'local'].filter(method => isFulfillmentMethodEnabled(method));
+            }
+
+            function getDefaultFulfillmentMethod() {
+                const enabled = getEnabledFulfillmentMethods();
+                return enabled[0] || 'delivery';
             }
 
             function parseJsonValue(value, fallback) {
@@ -1482,7 +1589,15 @@ try {
                     state.storeRecentReviews = data.recentReviews || state.storeRecentReviews || [];
                     state.loading = false;
 
-                    if (!isOrderEnabled() && state.activeTab === 'order') {
+                    const deliveryEnabled = isDeliveryTabEnabled();
+                    const orderEnabled = isOrderEnabled();
+                    if (state.activeTab === 'order' && !orderEnabled && deliveryEnabled) {
+                        state.activeTab = 'delivery';
+                        document.body.classList.remove('theme-order');
+                    } else if (state.activeTab === 'delivery' && !deliveryEnabled && orderEnabled) {
+                        state.activeTab = 'order';
+                        document.body.classList.add('theme-order');
+                    } else if (!deliveryEnabled && !orderEnabled) {
                         state.activeTab = 'delivery';
                         document.body.classList.remove('theme-order');
                     }
@@ -1843,6 +1958,34 @@ try {
                 featuredList.style.setProperty('--featured-gap', `${gap}px`);
             }
 
+            function updateFeaturedCarouselControls() {
+                const featuredList = document.querySelector('.featured-list');
+                const prevBtn = document.querySelector('.featured-prev');
+                const nextBtn = document.querySelector('.featured-next');
+                if (!featuredList || !prevBtn || !nextBtn) return;
+
+                const canScroll = featuredList.scrollWidth > featuredList.clientWidth + 8;
+                const atStart = featuredList.scrollLeft <= 4;
+                const atEnd = featuredList.scrollLeft + featuredList.clientWidth >= featuredList.scrollWidth - 4;
+
+                prevBtn.classList.toggle('hidden', !canScroll || atStart);
+                nextBtn.classList.toggle('hidden', !canScroll || atEnd);
+            }
+
+            function scrollFeaturedCarousel(direction) {
+                const featuredList = document.querySelector('.featured-list');
+                if (!featuredList) return;
+
+                const card = featuredList.querySelector('.featured-card, .featured-card--banner');
+                const cardWidth = card ? card.getBoundingClientRect().width : 320;
+                const gap = parseInt(getComputedStyle(featuredList).getPropertyValue('--featured-gap') || '16', 10) || 16;
+                featuredList.scrollBy({
+                    left: direction * (cardWidth + gap),
+                    behavior: 'smooth'
+                });
+                setTimeout(updateFeaturedCarouselControls, 220);
+            }
+
             function renderMenu() {
                 const skeletonContainer = document.getElementById('skeleton-loader');
                 const actualContainer = document.getElementById('actual-menu-content');
@@ -1911,7 +2054,7 @@ try {
                     }
 
                     const matchesSearch = p.name.toLowerCase().includes(query) || (p.description && p.description.toLowerCase().includes(query));
-                    const matchesTab = (state.activeTab === 'delivery' && p.type === 'delivery') || (state.activeTab === 'order' && isOrderEnabled());
+                    const matchesTab = (state.activeTab === 'delivery' && isDeliveryTabEnabled() && p.type === 'delivery') || (state.activeTab === 'order' && isOrderEnabled());
                     return matchesTab && matchesSearch;
                 });
 
@@ -1943,8 +2086,16 @@ try {
                 if (featured.length > 0) {
                     html += `
             <section class="menu-section featured-section">
-                <div class="featured-list">
-                    ${featured.map((item, idx) => renderFeaturedCard(item, idx < Math.min(4, getFeaturedCountByViewport()))).join('')}
+                <div class="featured-carousel">
+                    <button class="featured-nav featured-prev hidden" type="button" aria-label="Destaques anteriores" onclick="scrollFeaturedCarousel(-1)">
+                        <i data-lucide="chevron-left"></i>
+                    </button>
+                    <div class="featured-list">
+                        ${featured.map((item, idx) => renderFeaturedCard(item, idx < Math.min(4, getFeaturedCountByViewport()))).join('')}
+                    </div>
+                    <button class="featured-nav featured-next hidden" type="button" aria-label="Proximos destaques" onclick="scrollFeaturedCarousel(1)">
+                        <i data-lucide="chevron-right"></i>
+                    </button>
                 </div>
             </section>
         `;
@@ -1965,6 +2116,11 @@ try {
                 renderCategoryNav(sortedCategories);
                 lucide.createIcons();
                 updateFeaturedCardSizing();
+                updateFeaturedCarouselControls();
+                const featuredListEl = document.querySelector('.featured-list');
+                if (featuredListEl) {
+                    featuredListEl.addEventListener('scroll', updateFeaturedCarouselControls, { passive: true });
+                }
 
                 // Troca a visibilidade SOMENTE APOS o DOM estar completamente pronto
                 if (skeletonContainer) skeletonContainer.classList.add('hidden');
@@ -2818,9 +2974,13 @@ try {
                 window.addEventListener('resize', () => {
                     syncCategoryNavOffset();
                     updateFeaturedCardSizing();
+                    updateFeaturedCarouselControls();
                 }, {
                     passive: true
                 });
+
+                const featuredScrollHandler = () => updateFeaturedCarouselControls();
+                window.addEventListener('scroll', featuredScrollHandler, { passive: true });
 
                 const scheduleDateInput = document.getElementById('schedule-date');
                 if (scheduleDateInput) {
@@ -2948,7 +3108,10 @@ try {
                 }
                 // Only restore if the saved progress matches the cart the user is currently looking at
                 if (saved.activeTab && saved.activeTab !== state.activeTab) return;
-                if (saved.deliveryType) state.deliveryType = saved.deliveryType;
+                if (saved.deliveryType) {
+                    const allowedMethods = getEnabledFulfillmentMethods();
+                    state.deliveryType = allowedMethods.includes(saved.deliveryType) ? saved.deliveryType : getDefaultFulfillmentMethod();
+                }
                 if (saved.paymentMethod) state.paymentMethod = saved.paymentMethod;
                 if (typeof saved.deliveryFee === 'number') state.deliveryFee = saved.deliveryFee;
                 if (saved.orderSchedule && typeof saved.orderSchedule === 'object') {
@@ -3073,7 +3236,7 @@ try {
                 const opts = document.getElementById('payment-options');
                 if (!opts) return;
 
-                const isCashAllowed = (state.deliveryType === 'pickup') || state.allowCash;
+                const isCashAllowed = ['pickup', 'local'].includes(state.deliveryType) || state.allowCash;
 
                 // fallback dinamico:
                 if (!isCashAllowed && state.paymentMethod === 'dinheiro') {
@@ -3130,16 +3293,26 @@ try {
 
             function renderStep2() {
                 const isDelivery = state.activeTab === 'delivery';
+                const enabledMethods = getEnabledFulfillmentMethods();
 
                 // Hide delivery toggle entirely for orders
                 const typeTabs = document.getElementById('checkout-type-tabs');
-                if (typeTabs) typeTabs.style.display = isDelivery ? 'flex' : 'none';
+                if (typeTabs) {
+                    const methodButtons = Array.from(typeTabs.querySelectorAll('.type-tab[data-method]'));
+                    const visibleButtons = methodButtons.filter(btn => isFulfillmentMethodEnabled(btn.dataset.method));
+                    typeTabs.style.display = isDelivery && visibleButtons.length ? 'flex' : 'none';
+                    methodButtons.forEach(btn => {
+                        const method = btn.dataset.method;
+                        const enabled = isFulfillmentMethodEnabled(method);
+                        btn.style.display = enabled ? 'flex' : 'none';
+                        btn.style.flex = visibleButtons.length <= 1 ? '1 1 100%' : '1';
+                    });
+                }
 
-                // Enforce pickup if it's an order
-                if (!isDelivery && state.deliveryType !== 'pickup') {
-                    setDeliveryType('pickup');
+                if (!enabledMethods.includes(state.deliveryType)) {
+                    setDeliveryType(getDefaultFulfillmentMethod());
                 } else {
-                    setDeliveryType(state.deliveryType); // Ensure UI is completely updated based on current state
+                    setDeliveryType(state.deliveryType);
                 }
 
                 const deliveryContent = document.getElementById('delivery-step-content');
@@ -3184,40 +3357,47 @@ try {
             }
 
             function setDeliveryType(type) {
-                // If it's an order, force pickup internally
-                if (state.activeTab === 'order') {
-                    type = 'pickup';
+                const allowedMethods = getEnabledFulfillmentMethods();
+                if (!allowedMethods.includes(type)) {
+                    type = allowedMethods[0] || 'delivery';
                 }
 
                 state.deliveryType = type;
-                const btns = document.querySelectorAll('.type-tab');
+                const btns = document.querySelectorAll('#checkout-type-tabs .type-tab[data-method]');
+                const labels = {
+                    delivery: 'Entrega',
+                    pickup: 'Retirada na Loja',
+                    local: 'Consumo no Local'
+                };
 
-                const isDelivery = type === 'delivery';
-                btns[0].classList.toggle('active', isDelivery);
-                btns[0].style.background = isDelivery ? '#fff' : '#f9fafb';
-                btns[0].style.color = isDelivery ? 'var(--primary-color)' : '#6b7280';
-                btns[0].style.border = isDelivery ? '2px solid var(--primary-color)' : '2px solid #e5e7eb';
-                btns[0].style.fontWeight = isDelivery ? '700' : '500';
-                btns[0].innerHTML = isDelivery ? '<i data-lucide="check-circle-2" style="margin-right:6px; display:inline-block; vertical-align:middle; width:18px; height:18px;"></i> Entrega' : 'Entrega';
-
-                const isPickup = type === 'pickup';
-                btns[1].classList.toggle('active', isPickup);
-                btns[1].style.background = isPickup ? '#fff' : '#f9fafb';
-                btns[1].style.color = isPickup ? 'var(--primary-color)' : '#6b7280';
-                btns[1].style.border = isPickup ? '2px solid var(--primary-color)' : '2px solid #e5e7eb';
-                btns[1].style.fontWeight = isPickup ? '700' : '500';
-                btns[1].innerHTML = isPickup ? '<i data-lucide="check-circle-2" style="margin-right:6px; display:inline-block; vertical-align:middle; width:18px; height:18px;"></i> Retirada na Loja' : 'Retirada na Loja';
+                btns.forEach(btn => {
+                    const method = btn.dataset.method;
+                    const isActive = method === type;
+                    btn.classList.toggle('active', isActive);
+                    btn.style.background = isActive ? '#fff' : 'var(--bg-gray)';
+                    btn.style.color = isActive ? 'var(--primary-color)' : 'var(--text-main)';
+                    btn.style.border = isActive ? '2px solid var(--primary-color)' : '1px solid var(--border-color)';
+                    btn.style.fontWeight = isActive ? '700' : '500';
+                    btn.innerHTML = isActive
+                        ? `<i data-lucide="check-circle-2" style="margin-right:6px; display:inline-block; vertical-align:middle; width:18px; height:18px;"></i> ${labels[method] || method}`
+                        : (labels[method] || method);
+                });
 
                 lucide.createIcons();
 
                 const addressSection = document.getElementById('delivery-address-section');
-                if (addressSection) addressSection.classList.toggle('hidden', type === 'pickup');
+                if (addressSection) addressSection.classList.toggle('hidden', type !== 'delivery');
 
-                if (type === 'pickup') {
+                if (type === 'delivery') {
+                    if (state.userInfo.address) {
+                        calculateDeliveryFee(state.userInfo.address);
+                    } else {
+                        state.deliveryFee = 0;
+                        updateStep4Summary();
+                    }
+                } else {
                     state.deliveryFee = 0;
                     updateStep4Summary();
-                } else {
-                    if (state.userInfo.address) calculateDeliveryFee(state.userInfo.address);
                 }
             }
 
@@ -3533,7 +3713,9 @@ try {
                     variation: cart[0].variation,
                     quantity: cart[0].quantity,
                     type: state.activeTab,
-                    deliveryAddress: state.deliveryType === 'delivery' ? state.userInfo.address : 'Retirada na Loja',
+                    deliveryAddress: state.deliveryType === 'delivery'
+                        ? state.userInfo.address
+                        : (state.deliveryType === 'local' ? 'Consumo no Local' : 'Retirada na Loja'),
                     scheduledDate: state.activeTab === 'order' ? state.orderSchedule?.date || null : null,
                     scheduledTime: state.activeTab === 'order' ? state.orderSchedule?.time || null : null,
                     deliveryFee: state.deliveryType === 'delivery' ? state.deliveryFee : 0,
