@@ -354,10 +354,9 @@ estoque-label {
 }
 
 .tab-actions button {
-  font-size: 14px!important;
+  font-size: 13px!important;
   padding: 8px 15px !important;
   border-radius: 4px !important;
-  font-weight: 500 !important;
   color: var(--text-primary) !important;
 }
 

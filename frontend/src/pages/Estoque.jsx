@@ -328,7 +328,13 @@ const Estoque = () => {
       variations: parseJsonArray(p.variations, []).map(variation => ({
         ...variation,
         price: variation?.price ? formatMoneyInput(variation.price) : '',
-        promoPrice: variation?.promoPrice ? formatMoneyInput(variation.promoPrice) : ''
+        promoPrice: variation?.promoPrice ? formatMoneyInput(variation.promoPrice) : '',
+        subItems: parseJsonArray(variation?.subItems, []).map(subItem => ({
+          ...subItem,
+          price: subItem?.price ? formatMoneyInput(subItem.price) : '',
+          promoPrice: subItem?.promoPrice ? formatMoneyInput(subItem.promoPrice) : '',
+          stock: subItem?.stock ?? 0
+        }))
       })),
       addonGroups: parseJsonArray(p.addonGroups, []),
       suggestedItemId: p.suggestedItemId && p.suggestedItemId !== p.id ? p.suggestedItemId : '',
@@ -352,8 +358,15 @@ const Estoque = () => {
   const buildProductPayload = (sourceForm, comboMode) => {
     const normalizedVariations = (sourceForm.variations || []).map((variation) => ({
       ...variation,
-      price: parseMoneyInput(variation?.price) ?? 0,
-      promoPrice: parseMoneyInput(variation?.promoPrice) ?? undefined
+      subItems: Array.isArray(variation?.subItems) ? variation.subItems.map(subItem => ({
+        ...subItem,
+        price: parseMoneyInput(subItem?.price) ?? 0,
+        promoPrice: parseMoneyInput(subItem?.promoPrice) ?? undefined,
+        stock: Number.parseInt(subItem?.stock, 10) || 0
+      })) : [],
+      price: Array.isArray(variation?.subItems) && variation.subItems.length > 0 ? undefined : (parseMoneyInput(variation?.price) ?? 0),
+      promoPrice: Array.isArray(variation?.subItems) && variation.subItems.length > 0 ? undefined : (parseMoneyInput(variation?.promoPrice) ?? undefined),
+      stock: Array.isArray(variation?.subItems) && variation.subItems.length > 0 ? undefined : (Number.parseInt(variation?.stock, 10) || 0)
     }));
     const selectedCategory = categories.find(cat => String(cat.id) === String(sourceForm.categoryId));
 
@@ -486,7 +499,7 @@ const Estoque = () => {
     setForm(f => {
       const v2 = JSON.parse(JSON.stringify(f.variations));
       if (!v2[vIdx].subItems) v2[vIdx].subItems = [];
-      v2[vIdx].subItems.push({ name: '', stock: 0 });
+      v2[vIdx].subItems.push({ name: '', price: '', promoPrice: '', stock: 0 });
       return { ...f, variations: v2 };
     });
   };
@@ -542,8 +555,16 @@ const Estoque = () => {
     });
 
     const getVariationPriceRange = (variations = []) => {
-      const prices = variations
-        .map(v => parseMoneyInput(v?.promoPrice || v?.price))
+      const prices = variations.flatMap((variation) => {
+        const subItems = Array.isArray(variation?.subItems) ? variation.subItems : [];
+        if (subItems.length > 0) {
+          return subItems
+            .map(subItem => parseMoneyInput(subItem?.promoPrice || subItem?.price))
+            .filter(value => Number.isFinite(value));
+        }
+        return [parseMoneyInput(variation?.promoPrice || variation?.price)]
+          .filter(value => Number.isFinite(value));
+      })
         .filter(value => Number.isFinite(value));
       const min = prices.length ? Math.min(...prices) : null;
       const max = prices.length ? Math.max(...prices) : null;
@@ -552,6 +573,14 @@ const Estoque = () => {
 
     const getVariationStockSummary = (variations = []) => {
       const total = variations.reduce((sum, variation) => {
+        const subItems = Array.isArray(variation?.subItems) ? variation.subItems : [];
+        if (subItems.length > 0) {
+          const subTotal = subItems.reduce((subSum, subItem) => {
+            const stock = Number.parseInt(subItem?.stock, 10);
+            return subSum + (Number.isFinite(stock) ? stock : 0);
+          }, 0);
+          return sum + subTotal;
+        }
         const stock = Number.parseInt(variation?.stock, 10);
         return sum + (Number.isFinite(stock) ? stock : 0);
       }, 0);
@@ -647,7 +676,7 @@ const Estoque = () => {
               <button className="btn btn-primary" onClick={() => openAdd(true)} >
                 <Plus size={20} /> Novo Combo
               </button>
-              <button className="btn btn-primary" onClick={() => setShowCategoryModal(true)} >
+              <button className="btn btn-primary" onClick={() => setShowCategoryModal(true)} style={{ backgroundColor: 'transparent', border: '1px solid rgba(255,255,255,0.16)', color: '#fff' }}>
                 <Layers size={20} /> Categorias
               </button>
             </>
@@ -655,16 +684,16 @@ const Estoque = () => {
         </div>
 
         <div className="d-flex gap-10 tab-actions radius-8">
-          <button onClick={() => setTab('delivery')} style={{ ...tabBtn, backgroundColor: tab === 'delivery' ? '#161b29' : '#0F172A', color: tab === 'delivery' ? '#fff' : 'var(--text-secondary)' }}>
+          <button onClick={() => setTab('delivery')} style={{ ...tabBtn, backgroundColor: tab === 'delivery' ? '#161b29' : '#0F172A', fontWeight: tab === 'delivery' ? 700 : 400, color: tab === 'delivery' ? '#fff' : 'var(--text-secondary)' }}>
             <ShoppingBag size={18} /> Pronta Entrega
           </button>
-          <button onClick={() => setTab('encomenda')} style={{ ...tabBtn, backgroundColor: tab === 'encomenda' ? '#161b29' : '#0F172A', color: tab === 'encomenda' ? '#fff' : 'var(--text-secondary)' }}>
+          <button onClick={() => setTab('encomenda')} style={{ ...tabBtn, backgroundColor: tab === 'encomenda' ? '#161b29' : '#0F172A', fontWeight: tab === 'encomenda' ? 700 : 400, color: tab === 'encomenda' ? '#fff' : 'var(--text-secondary)' }}>
             <Calendar size={18} /> Agendamentos
           </button>
-          <button onClick={() => setTab('addon')} style={{ ...tabBtn, backgroundColor: tab === 'addon' ? '#161b29' : '#0F172A', color: tab === 'addon' ? '#fff' : 'var(--text-secondary)' }}>
+          <button onClick={() => setTab('addon')} style={{ ...tabBtn, backgroundColor: tab === 'addon' ? '#161b29' : '#0F172A', fontWeight: tab === 'addon' ? 700 : 400, color: tab === 'addon' ? '#fff' : 'var(--text-secondary)' }}>
             <Plus size={18} /> Adicionais
           </button>
-          <button onClick={() => setTab('seasonal')} style={{ ...tabBtn, backgroundColor: tab === 'seasonal' ? '#161b29' : '#0F172A', color: tab === 'seasonal' ? '#fff' : 'var(--text-secondary)' }}>
+          <button onClick={() => setTab('seasonal')} style={{ ...tabBtn, backgroundColor: tab === 'seasonal' ? '#161b29' : '#0F172A', fontWeight: tab === 'seasonal' ? 700 : 400, color: tab === 'seasonal' ? '#fff' : 'var(--text-secondary)' }}>
             <Gift size={18} /> Datas Comemorativas
           </button>
         </div></div>
@@ -713,6 +742,7 @@ const Estoque = () => {
                 const globalIndex = filtered.findIndex(item => item.id === p.id);
                 const isExpanded = expanded === p.id;
                 const isCombo = p.comboItems && p.comboItems.length > 0;
+                const canExpand = isCombo || (Array.isArray(p.variations) && p.variations.length > 0);
                 return (
                   <div
                     key={p.id}
@@ -723,7 +753,13 @@ const Estoque = () => {
                     style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', transition: 'all 0.2s', cursor: 'grab' }}
                   >
                     <div
-                      onClick={() => setExpanded(isExpanded ? null : p.id)}
+                      onClick={() => {
+                        if (canExpand) {
+                          setExpanded(isExpanded ? null : p.id);
+                          return;
+                        }
+                        openEdit(p);
+                      }}
                       onMouseEnter={(e) => {
                         if (!isExpanded) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)';
                       }}
@@ -733,20 +769,24 @@ const Estoque = () => {
                       style={{ padding: '20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent', borderBottom: isExpanded ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'background-color 0.18s ease, border-color 0.18s ease' }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                        <ChevronRight size={20} color="var(--text-secondary)" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+                        {canExpand ? (
+                          <ChevronRight size={20} color="var(--text-secondary)" style={{ transform: isExpanded ? 'rotate(90deg)' : 'rotate(0)', transition: 'transform 0.2s' }} />
+                        ) : (
+                          <div style={{ width: '20px', height: '20px' }} />
+                        )}
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ fontWeight: 800, fontSize: '16px', color: '#fff' }}>{p.name}</div>
+                            <div style={{ fontWeight: 800, fontSize: '15px', color: '#fff' }}>{p.name}</div>
                             {isCombo && <span style={{ fontSize: '10px', backgroundColor: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', padding: '2px 8px', borderRadius: '4px', fontWeight: 900 }}>COMBO</span>}
                             <span style={{ fontSize: '10px', backgroundColor: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: '999px', fontWeight: 800 }}>#{p.displayOrder || globalIndex + 1}</span>
                             {p.featured && <span style={{ fontSize: '10px', backgroundColor: 'rgba(59, 130, 246, 0.16)', color: '#60a5fa', padding: '2px 8px', borderRadius: '999px', fontWeight: 900 }}>DESTAQUE</span>}
                             {Array.isArray(p.customFields) && p.customFields.length > 0 && <span style={{ fontSize: '10px', backgroundColor: 'rgba(245, 158, 11, 0.16)', color: '#f59e0b', padding: '2px 8px', borderRadius: '999px', fontWeight: 900 }}>EXTRAS</span>}
                           </div>
-                          {!p.variations.length && !isCombo && <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.trackStock && `| Estoque: ${p.stock}`} {!p.trackStock && '| Estoque: âˆž'}</div>}
+                          {!p.variations.length && !isCombo && <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.trackStock && `| Estoque: ${p.stock}`} {!p.trackStock && '| Estoque: Ilimitado'}</div>}
                           {p.variations.length > 0 && !isCombo && (() => {
                             const { min, max } = getVariationPriceRange(p.variations);
                             const stock = getVariationStockSummary(p.variations);
-                            const stockLabel = p.trackStock ? ` | Estoque: ${stock}` : ' | Estoque: âˆž';
+                            const stockLabel = p.trackStock ? ` | Estoque: ${stock}` : ' | Estoque: Ilimitado';
                             if (min !== null && max !== null) {
                               const priceLabel = min === max ? `R$ ${min.toFixed(2)}` : `R$ ${min.toFixed(2)} - R$ ${max.toFixed(2)}`;
                               return <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>{priceLabel}{stockLabel}</div>;
@@ -786,7 +826,7 @@ const Estoque = () => {
                             className="btn-icon"
                             disabled={globalIndex === 0}
                             title="Mover para cima"
-                            style={{ padding: '7px', backgroundColor: 'rgba(255,255,255,0.05)', color: globalIndex === 0 ? 'rgba(255,255,255,0.25)' : '#fff', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', cursor: globalIndex === 0 ? 'not-allowed' : 'pointer' }}
+                            style={{  color: globalIndex === 0 ? 'rgba(255,255,255,0.25)' : '#fff', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', cursor: globalIndex === 0 ? 'not-allowed' : 'pointer' }}
                             onClick={(e) => { e.stopPropagation(); moveProductOrder(globalIndex, -1); }}
                           >
                             <ArrowUp size={14} />
@@ -795,15 +835,15 @@ const Estoque = () => {
                             className="btn-icon"
                             disabled={globalIndex === filtered.length - 1}
                             title="Mover para baixo"
-                            style={{ padding: '7px', backgroundColor: 'rgba(255,255,255,0.05)', color: globalIndex === filtered.length - 1 ? 'rgba(255,255,255,0.25)' : '#fff', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', cursor: globalIndex === filtered.length - 1 ? 'not-allowed' : 'pointer' }}
+                            style={{  color: globalIndex === filtered.length - 1 ? 'rgba(255,255,255,0.25)' : '#fff', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', cursor: globalIndex === filtered.length - 1 ? 'not-allowed' : 'pointer' }}
                             onClick={(e) => { e.stopPropagation(); moveProductOrder(globalIndex, 1); }}
                           >
                             <ArrowDown size={14} />
                           </button>
                         </div>
-                        <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); duplicateProduct(p); }} title="Duplicar item"><Copy size={16} /></button>
-                        <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); openEdit(p); }}><Pencil size={16} /></button>
-                        <button className="btn-icon" style={{ padding: '8px', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '8px' }} onClick={(e) => {
+                        <button className="btn-icon" style={{ color: '#22c55e', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); duplicateProduct(p); }} title="Duplicar item"><Copy size={16} /></button>
+                        <button className="btn-icon" style={{ color: '#3b82f6', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); openEdit(p); }}><Pencil size={16} /></button>
+                        <button className="btn-icon" style={{ color: '#ef4444', borderRadius: '8px' }} onClick={(e) => {
                           e.stopPropagation();
                           Swal.fire({
                             title: 'Tem certeza?',
@@ -1190,10 +1230,10 @@ const Estoque = () => {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {(form.variations || []).map((variation, idx) => (
                           <div key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 0.75fr 0.75fr 0.75fr auto', gap: '10px', alignItems: 'start' }}>
-                              <div>
-                                <label className="estoque-label estoque-label--compact">Nome</label>
-                                <input
+                          <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 0.75fr 0.75fr 0.75fr auto', gap: '10px', alignItems: 'start' }}>
+                            <div>
+                              <label className="estoque-label estoque-label--compact">Nome</label>
+                              <input
                                   {...inp}
                                   placeholder="Ex: 1kg, Chocolate, Tradicional"
                                   value={variation.name || ''}
@@ -1204,49 +1244,53 @@ const Estoque = () => {
                                   }}
                                 />
                               </div>
-                              <div>
-                                <label className="estoque-label estoque-label--compact">Preço (R$)</label>
-                                <input
-                                  {...inp}
-                                  type="text"
-                                  inputMode="decimal"
-                                  placeholder="0,00"
-                                  value={variation.price}
-                                  onChange={e => {
-                                    const next = [...(form.variations || [])];
-                                    next[idx] = { ...(next[idx] || {}), price: maskMoneyInput(e.target.value) };
-                                    setForm(f => ({ ...f, variations: next }));
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label className="estoque-label estoque-label--compact">Preço promocional (R$)</label>
-                                <input
-                                  {...inp}
-                                  type="text"
-                                  inputMode="decimal"
-                                  placeholder="Opcional"
-                                  value={variation.promoPrice}
-                                  onChange={e => {
-                                    const next = [...(form.variations || [])];
-                                    next[idx] = { ...(next[idx] || {}), promoPrice: maskMoneyInput(e.target.value) };
-                                    setForm(f => ({ ...f, variations: next }));
-                                  }}
-                                />
-                              </div>
-                              <div>
-                                <label className="estoque-label estoque-label--compact">Estoque</label>
-                                <input
-                                  {...inp}
-                                  type="number"
-                                  value={variation.stock ?? 0}
-                                  onChange={e => {
-                                    const next = [...(form.variations || [])];
-                                    next[idx] = { ...(next[idx] || {}), stock: e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0 };
-                                    setForm(f => ({ ...f, variations: next }));
-                                  }}
-                                />
-                              </div>
+                              {!(variation.subItems || []).length && (
+                                <>
+                                  <div>
+                                    <label className="estoque-label estoque-label--compact">Preço (R$)</label>
+                                    <input
+                                      {...inp}
+                                      type="text"
+                                      inputMode="decimal"
+                                      placeholder="0,00"
+                                      value={variation.price}
+                                      onChange={e => {
+                                        const next = [...(form.variations || [])];
+                                        next[idx] = { ...(next[idx] || {}), price: maskMoneyInput(e.target.value) };
+                                        setForm(f => ({ ...f, variations: next }));
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="estoque-label estoque-label--compact">Preço promocional (R$)</label>
+                                    <input
+                                      {...inp}
+                                      type="text"
+                                      inputMode="decimal"
+                                      placeholder="Opcional"
+                                      value={variation.promoPrice}
+                                      onChange={e => {
+                                        const next = [...(form.variations || [])];
+                                        next[idx] = { ...(next[idx] || {}), promoPrice: maskMoneyInput(e.target.value) };
+                                        setForm(f => ({ ...f, variations: next }));
+                                      }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="estoque-label estoque-label--compact">Estoque</label>
+                                    <input
+                                      {...inp}
+                                      type="number"
+                                      value={variation.stock ?? 0}
+                                      onChange={e => {
+                                        const next = [...(form.variations || [])];
+                                        next[idx] = { ...(next[idx] || {}), stock: e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0 };
+                                        setForm(f => ({ ...f, variations: next }));
+                                      }}
+                                    />
+                                  </div>
+                                </>
+                              )}
                               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingTop: '27px' }}>
                                 <label className="estoque-label estoque-label--check">
                                   <input
@@ -1313,7 +1357,7 @@ const Estoque = () => {
                                   <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Nenhum subitem adicionado.</div>
                                 ) : (
                                   (variation.subItems || []).map((subItem, subIdx) => (
-                                    <div key={subIdx} style={{ display: 'grid', gridTemplateColumns: '1fr 120px auto', gap: '10px', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '10px' }}>
+                                    <div key={subIdx} style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.7fr 0.7fr 0.7fr auto', gap: '10px', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '10px' }}>
                                       <input
                                         {...inp}
                                         placeholder="Nome do subitem"
@@ -1321,6 +1365,30 @@ const Estoque = () => {
                                         onChange={e => {
                                           const next = JSON.parse(JSON.stringify(form.variations));
                                           next[idx].subItems[subIdx].name = e.target.value;
+                                          setForm(f => ({ ...f, variations: next }));
+                                        }}
+                                      />
+                                      <input
+                                        {...inp}
+                                        type="text"
+                                        inputMode="decimal"
+                                        placeholder="Preço"
+                                        value={subItem.price || ''}
+                                        onChange={e => {
+                                          const next = JSON.parse(JSON.stringify(form.variations));
+                                          next[idx].subItems[subIdx].price = maskMoneyInput(e.target.value);
+                                          setForm(f => ({ ...f, variations: next }));
+                                        }}
+                                      />
+                                      <input
+                                        {...inp}
+                                        type="text"
+                                        inputMode="decimal"
+                                        placeholder="Promoção"
+                                        value={subItem.promoPrice || ''}
+                                        onChange={e => {
+                                          const next = JSON.parse(JSON.stringify(form.variations));
+                                          next[idx].subItems[subIdx].promoPrice = maskMoneyInput(e.target.value);
                                           setForm(f => ({ ...f, variations: next }));
                                         }}
                                       />
