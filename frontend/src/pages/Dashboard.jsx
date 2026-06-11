@@ -1,660 +1,1142 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Activity,
   AlertTriangle,
-  CalendarDays,
-  CircleDollarSign,
+  ArrowRight,
+  CalendarClock,
+  CheckCircle2,
   Clock3,
+  DollarSign,
+  ExternalLink,
   Package,
-  RefreshCcw,
+  RefreshCw,
+  ShieldAlert,
+  ShoppingBag,
   Star,
   Store,
+  TrendingUp,
   Truck,
-  Wifi,
-  Boxes,
-  Layers3,
-  Gauge,
-  ShieldAlert,
   Zap,
+  CircleAlert,
+  Layers3,
 } from 'lucide-react';
 import { api } from '../api';
 
-const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
-const number = new Intl.NumberFormat('pt-BR');
+const money = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+});
 
-const formatCurrency = (value) => money.format(Number(value || 0));
+const integer = new Intl.NumberFormat('pt-BR');
 
-const formatDateTime = (value) => {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
+const safeNumber = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+
+const safeText = (value, fallback = '—') => {
+  const text = String(value || '').trim();
+  return text || fallback;
+};
+
+const toBrazilDate = (value) => {
+  if (!value) return '—';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
   return new Intl.DateTimeFormat('pt-BR', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+  }).format(date);
+};
+
+const toShortDateTime = (value) => {
+  if (!value) return '—';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('pt-BR', {
+    day: '2-digit',
+    month: 'short',
     hour: '2-digit',
     minute: '2-digit',
   }).format(date);
 };
 
-const labelFromStatus = (status = '') => {
-  const value = String(status || '').toLowerCase();
-  const map = {
-    pending: 'Pendente',
-    waiting_payment: 'Aguardando pagamento',
-    confirmed: 'Confirmado',
-    paid: 'Pago',
-    accepted: 'Aceito',
-    production: 'Em produção',
-    ready: 'Pronto',
-    completed: 'Finalizado',
-    cancelled: 'Cancelado',
-    canceled: 'Cancelado',
+const severityTone = (count, total) => {
+  if (!total) return { fill: 'rgba(93, 183, 44, 0.12)', bar: 'var(--accent-primary)', text: 'var(--accent-primary)' };
+  const ratio = count / total;
+  if (ratio >= 0.7) return { fill: 'rgba(34, 197, 94, 0.12)', bar: '#16a34a', text: '#16a34a' };
+  if (ratio >= 0.4) return { fill: 'rgba(245, 158, 11, 0.12)', bar: '#f59e0b', text: '#b45309' };
+  return { fill: 'rgba(239, 68, 68, 0.12)', bar: '#ef4444', text: '#dc2626' };
+};
+
+const Card = ({ children, style = {}, className = '', ...rest }) => (
+  <section
+    className={`card ${className}`.trim()}
+    style={{
+      backgroundColor: 'var(--bg-secondary)',
+      border: '1px solid var(--border-color)',
+      borderRadius: '24px',
+      boxShadow: 'var(--card-shadow)',
+      ...style,
+    }}
+    {...rest}
+  >
+    {children}
+  </section>
+);
+
+const Badge = ({ tone = 'neutral', children, icon: Icon }) => {
+  const palette = {
+    neutral: { background: 'rgba(15, 23, 42, 0.05)', color: 'var(--text-secondary)', border: 'rgba(15, 23, 42, 0.06)' },
+    success: { background: 'rgba(93, 183, 44, 0.12)', color: '#2e7d15', border: 'rgba(93, 183, 44, 0.18)' },
+    info: { background: 'rgba(59, 130, 246, 0.10)', color: '#2563eb', border: 'rgba(59, 130, 246, 0.16)' },
+    warning: { background: 'rgba(245, 158, 11, 0.12)', color: '#b45309', border: 'rgba(245, 158, 11, 0.18)' },
+    danger: { background: 'rgba(239, 68, 68, 0.10)', color: '#dc2626', border: 'rgba(239, 68, 68, 0.16)' },
   };
-  return map[value] || status || '-';
-};
-
-const statusTone = (status = '') => {
-  const value = String(status || '').toLowerCase();
-  if (['completed'].includes(value)) return { bg: 'rgba(16,185,129,0.14)', fg: '#34d399', border: 'rgba(16,185,129,0.22)' };
-  if (['accepted', 'production'].includes(value)) return { bg: 'rgba(59,130,246,0.14)', fg: '#60a5fa', border: 'rgba(59,130,246,0.22)' };
-  if (['ready'].includes(value)) return { bg: 'rgba(34,197,94,0.14)', fg: '#4ade80', border: 'rgba(34,197,94,0.22)' };
-  if (['cancelled', 'canceled'].includes(value)) return { bg: 'rgba(239,68,68,0.14)', fg: '#f87171', border: 'rgba(239,68,68,0.22)' };
-  return { bg: 'rgba(245,158,11,0.14)', fg: '#fbbf24', border: 'rgba(245,158,11,0.22)' };
-};
-
-const paymentLabel = (status = '') => {
-  const value = String(status || '').toLowerCase();
-  const map = {
-    pending: 'Pendente',
-    confirmed: 'Confirmado',
-    paid: 'Pago',
-    refunded: 'Reembolsado',
-    cancelled: 'Cancelado',
-    canceled: 'Cancelado',
-  };
-  return map[value] || status || '-';
-};
-
-const glass = {
-  background: 'linear-gradient(180deg, rgba(24,24,27,0.98), rgba(17,17,19,0.96))',
-  border: '1px solid rgba(63,63,70,0.9)',
-  boxShadow: '0 12px 30px rgba(0,0,0,0.16)',
-};
-
-function Panel({ title, subtitle, icon: Icon, accent = '#60a5fa', children, action }) {
+  const toneStyle = palette[tone] || palette.neutral;
   return (
-    <section style={{ ...glass, borderRadius: 18, padding: 18 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 16 }}>
-        <div>
-          <h2 style={{ fontSize: 18, marginBottom: 4 }}>{title}</h2>
-          {subtitle ? <p style={{ color: '#a1a1aa', fontSize: 13, lineHeight: 1.4 }}>{subtitle}</p> : null}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {action}
-          {Icon ? <Icon size={18} color={accent} /> : null}
-        </div>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Metric({ title, value, hint, icon: Icon, accent }) {
-  return (
-    <div
+    <span
       style={{
-        ...glass,
-        borderRadius: 18,
-        padding: 18,
-        display: 'flex',
-        justifyContent: 'space-between',
-        gap: 16,
-        minHeight: 116,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '8px 12px',
+        borderRadius: '999px',
+        backgroundColor: toneStyle.background,
+        color: toneStyle.color,
+        border: `1px solid ${toneStyle.border}`,
+        fontSize: '12px',
+        fontWeight: 700,
+        lineHeight: 1,
+        whiteSpace: 'nowrap',
       }}
     >
-      <div style={{ minWidth: 0 }}>
-        <div style={{ color: '#a1a1aa', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-          {title}
+      {Icon ? <Icon size={14} /> : null}
+      {children}
+    </span>
+  );
+};
+
+const SectionHeader = ({ eyebrow, title, description, actions }) => (
+  <div
+    style={{
+      display: 'flex',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: '16px',
+      marginBottom: '18px',
+      flexWrap: 'wrap',
+    }}
+  >
+    <div>
+      {eyebrow ? (
+        <div
+          style={{
+            fontSize: '12px',
+            fontWeight: 800,
+            letterSpacing: '0.08em',
+            color: 'var(--accent-primary)',
+            textTransform: 'uppercase',
+            marginBottom: '8px',
+          }}
+        >
+          {eyebrow}
         </div>
-        <div style={{ fontSize: 30, fontWeight: 800, letterSpacing: '-0.05em', lineHeight: 1.05 }}>{value}</div>
-        <div style={{ color: '#71717a', fontSize: 12, marginTop: 8, lineHeight: 1.4 }}>{hint}</div>
-      </div>
-      <div
-        style={{
-          width: 46,
-          height: 46,
-          borderRadius: 14,
-          background: accent.bg,
-          border: `1px solid ${accent.border}`,
-          color: accent.fg,
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}
-      >
-        <Icon size={20} />
-      </div>
+      ) : null}
+      <h2 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '22px', lineHeight: 1.1, color: 'var(--text-primary)', marginBottom: description ? '6px' : 0 }}>
+        {title}
+      </h2>
+      {description ? (
+        <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6, maxWidth: '760px' }}>
+          {description}
+        </p>
+      ) : null}
     </div>
-  );
-}
+    {actions ? <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>{actions}</div> : null}
+  </div>
+);
 
-function Empty({ text }) {
+const MetricCard = ({ icon: Icon, label, value, caption, tone = 'accent' }) => {
+  const iconStyles = {
+    accent: { backgroundColor: 'rgba(93, 183, 44, 0.12)', color: 'var(--accent-primary)' },
+    blue: { backgroundColor: 'rgba(59, 130, 246, 0.12)', color: '#2563eb' },
+    amber: { backgroundColor: 'rgba(245, 158, 11, 0.12)', color: '#d97706' },
+    red: { backgroundColor: 'rgba(239, 68, 68, 0.12)', color: '#dc2626' },
+    violet: { backgroundColor: 'rgba(139, 92, 246, 0.12)', color: '#7c3aed' },
+  };
+  const tint = iconStyles[tone] || iconStyles.accent;
   return (
-    <div style={{ color: '#a1a1aa', fontSize: 14, padding: '18px 0' }}>
-      {text}
+    <Card style={{ padding: '22px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+            <span
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '14px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: tint.backgroundColor,
+                color: tint.color,
+              }}
+            >
+              <Icon size={20} />
+            </span>
+            <div>
+              <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: 800 }}>
+                {label}
+              </div>
+            </div>
+          </div>
+          <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '30px', lineHeight: 1, color: 'var(--text-primary)', fontWeight: 800 }}>
+            {value}
+          </div>
+          {caption ? (
+            <div style={{ marginTop: '10px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+              {caption}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </Card>
+  );
+};
+
+const EmptyState = ({ icon: Icon = CircleAlert, title, text }) => (
+  <div
+    style={{
+      padding: '24px',
+      borderRadius: '18px',
+      border: '1px dashed var(--border-color)',
+      backgroundColor: 'var(--bg-primary)',
+      display: 'flex',
+      alignItems: 'center',
+      gap: '14px',
+    }}
+  >
+    <div
+      style={{
+        width: '40px',
+        height: '40px',
+        borderRadius: '12px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'rgba(93, 183, 44, 0.10)',
+        color: 'var(--accent-primary)',
+        flexShrink: 0,
+      }}
+    >
+      <Icon size={18} />
+    </div>
+    <div>
+      <div style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '4px' }}>{title}</div>
+      <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{text}</div>
+    </div>
+  </div>
+);
+
+const ProgressLine = ({ value, max, tone = 'accent', label }) => {
+  const width = max > 0 ? Math.max(8, Math.min(100, (value / max) * 100)) : 8;
+  const toneMap = {
+    accent: 'var(--accent-primary)',
+    blue: '#2563eb',
+    amber: '#f59e0b',
+    red: '#ef4444',
+  };
+  return (
+    <div style={{ marginBottom: '14px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+        <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>{label}</span>
+        <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{integer.format(value)}</span>
+      </div>
+      <div style={{ height: '10px', borderRadius: '999px', backgroundColor: 'var(--bg-primary)', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+        <div
+          style={{
+            width: `${width}%`,
+            height: '100%',
+            borderRadius: '999px',
+            background: `linear-gradient(90deg, ${toneMap[tone]}, rgba(93, 183, 44, 0.55))`,
+          }}
+        />
+      </div>
     </div>
   );
-}
+};
 
-export default function Dashboard() {
+const SkeletonBlock = ({ height = 18, width = '100%', radius = 12 }) => (
+  <div
+    style={{
+      height,
+      width,
+      borderRadius: radius,
+      background: 'linear-gradient(90deg, rgba(148,163,184,0.10), rgba(148,163,184,0.18), rgba(148,163,184,0.10))',
+      backgroundSize: '200% 100%',
+      animation: 'dashboard-shimmer 1.4s ease-in-out infinite',
+    }}
+  />
+);
+
+const DashboardSkeleton = () => (
+  <div style={{ padding: '28px', display: 'grid', gap: '24px' }}>
+    <Card style={{ padding: '28px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: '280px' }}>
+          <SkeletonBlock width="160px" />
+          <div style={{ height: '14px' }} />
+          <SkeletonBlock width="340px" height={28} />
+          <div style={{ height: '10px' }} />
+          <SkeletonBlock width="500px" height={16} />
+        </div>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <SkeletonBlock width="140px" height={34} />
+          <SkeletonBlock width="110px" height={34} />
+        </div>
+      </div>
+    </Card>
+
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '18px' }}>
+      {[...Array(4)].map((_, index) => (
+        <Card key={index} style={{ padding: '22px' }}>
+          <SkeletonBlock width="80px" />
+          <div style={{ height: '12px' }} />
+          <SkeletonBlock width="120px" height={34} />
+          <div style={{ height: '12px' }} />
+          <SkeletonBlock width="180px" />
+        </Card>
+      ))}
+    </div>
+
+    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+      <Card style={{ padding: '24px' }}>
+        <SkeletonBlock width="180px" />
+        <div style={{ height: '18px' }} />
+        <SkeletonBlock height={220} radius={18} />
+      </Card>
+      <Card style={{ padding: '24px' }}>
+        <SkeletonBlock width="160px" />
+        <div style={{ height: '16px' }} />
+        <SkeletonBlock height={220} radius={18} />
+      </Card>
+    </div>
+  </div>
+);
+
+const Dashboard = () => {
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [data, setData] = useState(null);
-  const [updatedAt, setUpdatedAt] = useState(null);
+  const [summary, setSummary] = useState(null);
 
-  const load = async () => {
-    setLoading(true);
+  const loadSummary = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
+    else setRefreshing(true);
     setError('');
     try {
-      const { data: payload } = await api.get('/dashboard/summary');
-      setData(payload || null);
-      setUpdatedAt(new Date());
+      const { data } = await api.get('/dashboard/summary');
+      setSummary(data || {});
     } catch (err) {
-      setError(err?.response?.data?.error || 'Falha ao carregar o dashboard.');
+      console.error('[Dashboard] summary error:', err);
+      setError(err?.response?.data?.error || 'Falha ao carregar o resumo do painel.');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    load();
+    loadSummary();
   }, []);
 
-  const metrics = data?.metrics || {};
-  const store = data?.store || {};
-  const charts = data?.charts || {};
-  const lists = data?.lists || {};
+  const store = summary?.store || {};
+  const metrics = summary?.metrics || {};
+  const charts = summary?.charts || {};
+  const lists = summary?.lists || {};
 
-  const ordersByDay = charts.ordersByDay || [];
-  const statusBreakdown = charts.statusBreakdown || [];
-  const paymentBreakdown = charts.paymentBreakdown || [];
-  const orderTypeBreakdown = charts.orderTypeBreakdown || {};
+  const ordersByDay = Array.isArray(charts.ordersByDay) ? charts.ordersByDay : [];
+  const topProducts = Array.isArray(lists.topProducts) ? lists.topProducts : [];
+  const recentOrders = Array.isArray(lists.recentOrders) ? lists.recentOrders : [];
+  const lowStockItems = Array.isArray(lists.lowStockItems) ? lists.lowStockItems : [];
+  const upcomingOrders = Array.isArray(lists.upcomingOrders) ? lists.upcomingOrders : [];
+  const recentReviews = Array.isArray(lists.recentReviews) ? lists.recentReviews : [];
+  const categoryStats = Array.isArray(lists.categoryProductStats) ? lists.categoryProductStats : [];
+  const configIssues = Array.isArray(lists.configIssues) ? lists.configIssues : [];
+  const instances = Array.isArray(lists.instances) ? lists.instances : [];
+  const slotsByDay = Array.isArray(lists.slotsByDay) ? lists.slotsByDay : [];
 
-  const recentOrders = lists.recentOrders || [];
-  const topProducts = lists.topProducts || [];
-  const lowStockItems = lists.lowStockItems || [];
-  const recentReviews = lists.recentReviews || [];
-  const upcomingOrders = lists.upcomingOrders || [];
-  const recentSlots = lists.recentSlots || [];
-  const categoryProductStats = lists.categoryProductStats || [];
-  const configIssues = lists.configIssues || [];
-  const slotsByDay = lists.slotsByDay || [];
-
-  const storeState = store.active ? 'Ativo' : 'Inativo';
-  const acceptState = store.acceptOrders ? 'Recebendo pedidos' : 'Fechado para pedidos';
-  const themeState = String(store.menuTheme || 'dark').toLowerCase() === 'light' ? 'Tema claro' : 'Tema escuro';
-
-  const totalPayments = useMemo(
-    () => paymentBreakdown.reduce((sum, item) => sum + Number(item.count || 0), 0),
-    [paymentBreakdown]
+  const highestDay = useMemo(
+    () => Math.max(...ordersByDay.map((item) => safeNumber(item.count)), 1),
+    [ordersByDay],
   );
 
-  const kpis = [
+  const openStoreUrl = store.slug ? `https://hotwhats.com.br/${store.slug}` : '';
+  const storeStatus = String(store.acceptOrders ? 'opened' : 'closed');
+  const deliveryMode = String(store.deliveryMode || '').toLowerCase();
+  const orderTypeBreakdown = charts.orderTypeBreakdown || {};
+  const statusBreakdown = Array.isArray(charts.statusBreakdown) ? charts.statusBreakdown : [];
+  const paymentBreakdown = Array.isArray(charts.paymentBreakdown) ? charts.paymentBreakdown : [];
+  const totalOrderTypes = Math.max(1, Object.values(orderTypeBreakdown).reduce((sum, item) => sum + safeNumber(item), 0));
+  const totalPayments = Math.max(1, paymentBreakdown.reduce((sum, item) => sum + safeNumber(item.count), 0));
+  const avgRating = safeNumber(metrics.reviewsAverage || 0);
+
+  const actions = (
+    <>
+      {store.acceptOrders ? (
+        <Badge tone="success" icon={CheckCircle2}>Aberto para pedidos</Badge>
+      ) : (
+        <Badge tone="danger" icon={AlertTriangle}>Fechado para pedidos</Badge>
+      )}
+      {store.prepTime ? <Badge tone="info" icon={Clock3}>Entrega {store.prepTime}min</Badge> : null}
+      <button
+        type="button"
+        onClick={() => loadSummary({ silent: true })}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '12px 16px',
+          borderRadius: '14px',
+          border: '1px solid var(--border-color)',
+          backgroundColor: 'var(--bg-secondary)',
+          color: 'var(--text-primary)',
+          fontWeight: 800,
+          cursor: 'pointer',
+        }}
+      >
+        <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+        Atualizar
+      </button>
+      {openStoreUrl ? (
+        <a
+          href={openStoreUrl}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '12px 16px',
+            borderRadius: '14px',
+            border: '1px solid rgba(93, 183, 44, 0.18)',
+            backgroundColor: 'rgba(93, 183, 44, 0.08)',
+            color: 'var(--accent-primary)',
+            textDecoration: 'none',
+            fontWeight: 800,
+          }}
+        >
+          Abrir cardápio
+          <ExternalLink size={16} />
+        </a>
+      ) : null}
+    </>
+  );
+
+  if (loading) return <DashboardSkeleton />;
+
+  const metricCards = [
     {
-      title: 'Pedidos hoje',
-      value: number.format(metrics.ordersTodayCount || 0),
-      hint: `${number.format(metrics.pendingOrdersCount || 0)} ainda em aberto`,
-      icon: CalendarDays,
-      accent: { bg: 'rgba(59,130,246,0.14)', fg: '#60a5fa', border: 'rgba(59,130,246,0.2)' },
+      label: 'Pedidos Hoje',
+      value: integer.format(safeNumber(metrics.ordersTodayCount)),
+      caption: `${integer.format(safeNumber(metrics.pendingOrdersCount))} aguardando preparo`,
+      icon: ShoppingBag,
+      tone: 'blue',
     },
     {
-      title: 'Faturamento hoje',
-      value: formatCurrency(metrics.completedOrdersTodayValue || 0),
-      hint: 'Somente pedidos finalizados',
-      icon: CircleDollarSign,
-      accent: { bg: 'rgba(16,185,129,0.14)', fg: '#34d399', border: 'rgba(16,185,129,0.2)' },
+      label: 'Faturamento Hoje',
+      value: money.format(safeNumber(metrics.completedOrdersTodayValue)),
+      caption: 'Somente pedidos concluídos',
+      icon: DollarSign,
+      tone: 'accent',
     },
     {
-      title: 'Ticket médio',
-      value: formatCurrency(metrics.averageTicketToday || 0),
-      hint: 'Baseado nos pedidos do dia',
-      icon: Gauge,
-      accent: { bg: 'rgba(168,85,247,0.14)', fg: '#c084fc', border: 'rgba(168,85,247,0.2)' },
+      label: 'Ticket Médio',
+      value: money.format(safeNumber(metrics.averageTicketToday)),
+      caption: 'Média de gasto por pedido',
+      icon: TrendingUp,
+      tone: 'violet',
     },
     {
-      title: 'Pedidos em aberto',
-      value: number.format((metrics.pendingOrdersCount || 0) + (metrics.acceptedOrdersCount || 0) + (metrics.productionOrdersCount || 0) + (metrics.readyOrdersCount || 0)),
-      hint: 'Fila operacional agora',
-      icon: Clock3,
-      accent: { bg: 'rgba(245,158,11,0.14)', fg: '#fbbf24', border: 'rgba(245,158,11,0.2)' },
-    },
-    {
-      title: 'Produtos',
-      value: number.format(metrics.productsCount || 0),
-      hint: `${number.format(metrics.featuredProductsCount || 0)} em destaque`,
+      label: 'Estoque Crítico',
+      value: integer.format(safeNumber(metrics.lowStockCount)),
+      caption: 'Itens abaixo do mínimo',
       icon: Package,
-      accent: { bg: 'rgba(14,165,233,0.14)', fg: '#38bdf8', border: 'rgba(14,165,233,0.2)' },
+      tone: 'red',
     },
     {
-      title: 'Categorias',
-      value: number.format(metrics.categoriesCount || 0),
-      hint: `${number.format(metrics.promotionProductsCount || 0)} com promoção`,
+      label: 'Instâncias Conectadas',
+      value: integer.format(safeNumber(metrics.connectedInstancesCount)),
+      caption: `${integer.format(safeNumber(metrics.instancesCount))} conexões cadastradas`,
+      icon: Zap,
+      tone: 'amber',
+    },
+    {
+      label: 'Fluxos Ativos',
+      value: integer.format(safeNumber(metrics.activeFlowsCount)),
+      caption: `${integer.format(safeNumber(metrics.flowsCount))} fluxos no total`,
       icon: Layers3,
-      accent: { bg: 'rgba(236,72,153,0.14)', fg: '#f472b6', border: 'rgba(236,72,153,0.2)' },
-    },
-    {
-      title: 'Estoque baixo',
-      value: number.format(metrics.lowStockCount || 0),
-      hint: `${number.format(metrics.stockItemsCount || 0)} itens cadastrados`,
-      icon: Boxes,
-      accent: { bg: 'rgba(239,68,68,0.14)', fg: '#f87171', border: 'rgba(239,68,68,0.2)' },
-    },
-    {
-      title: 'Conexões online',
-      value: number.format(metrics.connectedInstancesCount || 0),
-      hint: `${number.format(metrics.instancesCount || 0)} instâncias no total`,
-      icon: Wifi,
-      accent: { bg: 'rgba(34,197,94,0.14)', fg: '#4ade80', border: 'rgba(34,197,94,0.2)' },
-    },
-    {
-      title: 'Horários ativos',
-      value: number.format(metrics.slotsCount || 0),
-      hint: 'Grade de atendimento configurada',
-      icon: CalendarDays,
-      accent: { bg: 'rgba(14,165,233,0.14)', fg: '#38bdf8', border: 'rgba(14,165,233,0.2)' },
-    },
-    {
-      title: 'Variações',
-      value: number.format(metrics.variationProductsCount || 0),
-      hint: 'Itens com opções ou tamanhos',
-      icon: Layers3,
-      accent: { bg: 'rgba(168,85,247,0.14)', fg: '#c084fc', border: 'rgba(168,85,247,0.2)' },
-    },
-    {
-      title: 'Delivery',
-      value: number.format(orderTypeBreakdown.delivery || 0),
-      hint: `${number.format(orderTypeBreakdown.order || 0)} de encomendas`,
-      icon: Truck,
-      accent: { bg: 'rgba(59,130,246,0.14)', fg: '#60a5fa', border: 'rgba(59,130,246,0.2)' },
-    },
-    {
-      title: 'Pagamentos confirmados',
-      value: number.format(metrics.paymentConfirmedCount || 0),
-      hint: `${number.format(totalPayments || 0)} rastreados`,
-      icon: CircleDollarSign,
-      accent: { bg: 'rgba(16,185,129,0.14)', fg: '#34d399', border: 'rgba(16,185,129,0.2)' },
+      tone: 'blue',
     },
   ];
 
-  const highestOrders = ordersByDay.length
-    ? Math.max(...ordersByDay.map((item) => Number(item.count || 0)), 1)
-    : 1;
+  const openSlots = slotsByDay.reduce((sum, item) => sum + safeNumber(item.count), 0);
 
   return (
-    <div style={{ minHeight: '100%', background: '#09090b', color: '#fff', padding: 28 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 24 }}>
-        <div style={{ minWidth: 280, flex: 1 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 999, background: 'rgba(59,130,246,0.12)', color: '#60a5fa', fontSize: 12, fontWeight: 800, marginBottom: 12 }}>
-            <Zap size={14} />
-            Painel real da operação
-          </div>
-          <h1 style={{ fontSize: 34, lineHeight: 1.1, letterSpacing: '-0.05em', marginBottom: 8 }}>Dashboard</h1>
-          <p style={{ color: '#a1a1aa', maxWidth: 860, lineHeight: 1.55 }}>
-            Resumo operacional com base no que já existe no sistema: pedidos, catálogo, estoque, avaliações, horários, conexões e configuração da loja.
-          </p>
-        </div>
-
-        <div style={{ display: 'grid', gap: 10, justifyItems: 'end' }}>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-            <span style={{ padding: '8px 12px', borderRadius: 999, background: store.active ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', color: store.active ? '#34d399' : '#f87171', border: `1px solid ${store.active ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`, fontSize: 12, fontWeight: 700 }}>
-              {storeState}
-            </span>
-            <span style={{ padding: '8px 12px', borderRadius: 999, background: store.acceptOrders ? 'rgba(59,130,246,0.12)' : 'rgba(245,158,11,0.12)', color: store.acceptOrders ? '#60a5fa' : '#fbbf24', border: `1px solid ${store.acceptOrders ? 'rgba(59,130,246,0.2)' : 'rgba(245,158,11,0.2)'}`, fontSize: 12, fontWeight: 700 }}>
-              {acceptState}
-            </span>
-            <span style={{ padding: '8px 12px', borderRadius: 999, background: 'rgba(168,85,247,0.12)', color: '#c084fc', border: '1px solid rgba(168,85,247,0.2)', fontSize: 12, fontWeight: 700 }}>
-              {themeState}
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end', color: '#a1a1aa', fontSize: 13, lineHeight: 1.5 }}>
-            <span>{store.category || store.businessCategory || 'Sem categoria'}</span>
-            <span>•</span>
-            <span>{store.prepTime ? `Preparo ${store.prepTime} min` : 'Tempo de preparo não informado'}</span>
-            <span>•</span>
-            <span>{store.deliveryMode || 'operando'}</span>
-            <span>•</span>
-            <span>{store.slug ? `/${store.slug}` : 'Slug não definido'}</span>
-          </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end', color: '#71717a', fontSize: 12 }}>
-            <span>Atualizado {updatedAt ? formatDateTime(updatedAt) : '-'}</span>
-            <span>•</span>
-            <button type="button" onClick={load} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, border: '1px solid rgba(63,63,70,0.9)', background: 'rgba(24,24,27,0.9)', color: '#fff', borderRadius: 999, padding: '8px 12px', cursor: 'pointer' }}>
-              <RefreshCcw size={14} />
-              Atualizar
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {error ? (
-        <div style={{ marginBottom: 20, padding: '14px 16px', borderRadius: 14, background: 'rgba(239,68,68,0.12)', color: '#fecaca', border: '1px solid rgba(239,68,68,0.22)' }}>
-          {error}
-        </div>
-      ) : null}
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 16, marginBottom: 22 }}>
-        {kpis.map((item) => (
-          <Metric key={item.title} {...item} />
-        ))}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(320px, 1fr)', gap: 18, marginBottom: 18 }}>
-        <Panel title="Movimento dos últimos 7 dias" subtitle="Pedidos criados no período e valor acumulado por dia." icon={Activity}>
-          {loading ? (
-            <div style={{ display: 'grid', gap: 12 }}>
-              {Array.from({ length: 7 }).map((_, index) => (
-                <div key={index} style={{ height: 18, borderRadius: 999, background: 'rgba(63,63,70,0.55)' }} />
-              ))}
+    <div
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#f6f8f3',
+        color: '#0f172a',
+        '--bg-primary': '#f6f8f3',
+        '--bg-secondary': '#ffffff',
+        '--bg-tertiary': '#eef5ea',
+        '--text-primary': '#0f172a',
+        '--text-secondary': '#475569',
+        '--text-muted': '#64748b',
+        '--border-color': '#d9e5d2',
+        '--accent-primary': '#5db72c',
+        '--accent-glow': 'rgba(93, 183, 44, 0.14)',
+        '--card-shadow': '0 12px 30px rgba(15, 23, 42, 0.06)',
+        '--bg-gray': '#eef5ea',
+        '--text-black': '#0f172a',
+        '--text-gray': '#64748b',
+        '--btn-bg': '#5db72c',
+        '--btn-text': '#ffffff',
+      }}
+    >
+      <style>{`
+        @keyframes dashboard-shimmer {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+      `}</style>
+      <div style={{ padding: '28px', maxWidth: '1680px', margin: '0 auto' }}>
+        <Card style={{ padding: '28px', marginBottom: '22px', background: 'linear-gradient(180deg, #ffffff 0%, #fbfdf8 100%)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
+            <div style={{ maxWidth: '920px' }}>
+              <Badge tone={storeStatus === 'opened' ? 'success' : 'danger'} icon={storeStatus === 'opened' ? CheckCircle2 : ShieldAlert}>
+                {storeStatus === 'opened' ? 'Operação estável' : 'Operação com restrições'}
+              </Badge>
+              <div style={{ height: '14px' }} />
+              <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '34px', lineHeight: 1.05, letterSpacing: '-0.04em', marginBottom: '8px', color: 'var(--text-primary)' }}>
+                Resumo Diário
+              </h1>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '15px', lineHeight: 1.7, maxWidth: '760px' }}>
+                Métricas reais da operação, catálogo e atendimento em um painel mais limpo, leve e objetivo.
+              </p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '18px' }}>
+                <Badge tone={store.acceptOrders ? 'success' : 'danger'} icon={store.acceptOrders ? CheckCircle2 : AlertTriangle}>
+                  {store.acceptOrders ? 'Aceitando pedidos' : 'Pedidos pausados'}
+                </Badge>
+                <Badge tone="info" icon={Truck}>
+                  {deliveryMode === 'delivery'
+                    ? 'Delivery ativo'
+                    : deliveryMode === 'pickup'
+                      ? 'Retirada na loja'
+                      : deliveryMode === 'local'
+                        ? 'Consumo no local'
+                        : 'Entrega + retirada'}
+                </Badge>
+                <Badge tone="neutral" icon={Clock3}>
+                  Tempo de preparo: {store.prepTime ? `${store.prepTime} min` : 'não informado'}
+                </Badge>
+                <Badge tone="neutral" icon={Store}>
+                  {safeText(store.category, 'Categoria não informada')}
+                </Badge>
+                <Badge tone="neutral" icon={ExternalLink}>
+                  {safeText(store.slug, 'slug não configurado')}
+                </Badge>
+              </div>
             </div>
-          ) : ordersByDay.length ? (
-            <div style={{ display: 'grid', gap: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', minWidth: '320px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: '10px' }}>
+                {actions}
+              </div>
+              <div
+                style={{
+                  padding: '18px 20px',
+                  borderRadius: '20px',
+                  border: '1px solid var(--border-color)',
+                  background: 'linear-gradient(135deg, rgba(93,183,44,0.08), rgba(59,130,246,0.04))',
+                }}
+              >
+                <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: 800, marginBottom: '8px' }}>
+                  Restaurante
+                </div>
+                <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                  {safeText(store.name, 'HotWhats')}
+                </div>
+                <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                  {safeText(store.address, 'Endereço não informado')}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card>
+
+        {error ? (
+          <div style={{ marginBottom: '18px' }}>
+            <Card style={{ padding: '18px 20px', backgroundColor: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.16)' }}>
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', color: '#b91c1c', fontWeight: 700 }}>
+                <AlertTriangle size={18} />
+                {error}
+              </div>
+            </Card>
+          </div>
+        ) : null}
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: '18px',
+            marginBottom: '22px',
+          }}
+        >
+          {metricCards.map((metric) => (
+            <MetricCard key={metric.label} {...metric} />
+          ))}
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', marginBottom: '22px' }}>
+          <Card style={{ padding: '24px' }}>
+            <SectionHeader
+              eyebrow="Movimento"
+              title="Pedidos por dia"
+              description="Resumo dos últimos dias com volume de pedidos e faturamento por período."
+            />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: '14px', alignItems: 'end' }}>
               {ordersByDay.map((day) => {
-                const width = `${Math.max(8, Math.round(((Number(day.count || 0)) / highestOrders) * 100))}%`;
+                const tone = severityTone(safeNumber(day.count), highestDay);
+                const height = Math.max(36, Math.round((safeNumber(day.count) / highestDay) * 190));
                 return (
-                  <div key={day.date} style={{ display: 'grid', gridTemplateColumns: '96px 1fr 110px', gap: 12, alignItems: 'center' }}>
-                    <div style={{ color: '#d4d4d8', fontWeight: 700, fontSize: 13 }}>{day.label}</div>
-                    <div style={{ height: 10, borderRadius: 999, background: 'rgba(63,63,70,0.45)', overflow: 'hidden' }}>
-                      <div style={{ width, height: '100%', borderRadius: 999, background: 'linear-gradient(90deg, #3b82f6, #22c55e)' }} />
+                  <div
+                    key={day.date || day.label}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 700 }}>{day.label}</div>
+                    <div
+                      style={{
+                        width: '100%',
+                        minHeight: '220px',
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'center',
+                        borderRadius: '18px',
+                        border: '1px solid var(--border-color)',
+                        background: 'linear-gradient(180deg, rgba(93,183,44,0.05), rgba(255,255,255,0.6))',
+                        padding: '14px 12px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: '100%',
+                          height,
+                          minHeight: '16px',
+                          borderRadius: '999px 999px 12px 12px',
+                          background: `linear-gradient(180deg, ${tone.bar}, rgba(93,183,44,0.45))`,
+                          boxShadow: `0 12px 22px ${tone.fill}`,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: '#fff',
+                          fontSize: '12px',
+                          fontWeight: 800,
+                        }}
+                      >
+                        {safeNumber(day.count) > 0 ? integer.format(safeNumber(day.count)) : ''}
+                      </div>
                     </div>
-                    <div style={{ textAlign: 'right', color: '#a1a1aa', fontSize: 13, lineHeight: 1.35 }}>
-                      {number.format(day.count)} pedido{Number(day.count) === 1 ? '' : 's'}
-                      <br />
-                      <span style={{ color: '#34d399', fontWeight: 700 }}>{formatCurrency(day.total)}</span>
+                    <div style={{ textAlign: 'center' }}>
+                      <div style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 800 }}>{money.format(safeNumber(day.total))}</div>
                     </div>
                   </div>
                 );
               })}
+              {!ordersByDay.length ? <div style={{ gridColumn: '1 / -1' }}><EmptyState title="Sem pedidos no período." text="Quando houver movimentação, o gráfico aparece aqui com os valores dos últimos dias." /></div> : null}
             </div>
-          ) : (
-            <Empty text="Sem pedidos no período." />
-          )}
-        </Panel>
 
-        <Panel title="Saúde da loja" subtitle="Status operacional e configurações já salvas." icon={Store}>
-          <div style={{ display: 'grid', gap: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: 14, background: 'rgba(39,39,42,0.7)', border: '1px solid rgba(63,63,70,0.8)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Store size={18} color="#60a5fa" />
-                <div>
-                  <div style={{ fontWeight: 700 }}>{store.name || store.businessName || 'Loja'}</div>
-                  <div style={{ color: '#a1a1aa', fontSize: 12 }}>{store.slug ? `/${store.slug}` : 'Slug não definido'}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '12px', marginTop: '22px' }}>
+              <div style={{ padding: '18px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, marginBottom: '8px' }}>
+                  Tipos de pedido
+                </div>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  <ProgressLine label="Delivery" value={safeNumber(orderTypeBreakdown.delivery)} max={totalOrderTypes} tone="accent" />
+                  <ProgressLine label="Encomenda" value={safeNumber(orderTypeBreakdown.order)} max={totalOrderTypes} tone="blue" />
                 </div>
               </div>
-              <div style={{ color: store.active ? '#34d399' : '#f87171', fontWeight: 700 }}>{storeState}</div>
+              <div style={{ padding: '18px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, marginBottom: '8px' }}>
+                  Pagamentos
+                </div>
+                <div style={{ display: 'grid', gap: '12px' }}>
+                  {paymentBreakdown.map((item) => (
+                    <ProgressLine
+                      key={item.status}
+                      label={safeText(item.status)}
+                      value={safeNumber(item.count)}
+                      max={totalPayments}
+                      tone={String(item.status || '').toLowerCase() === 'paid' ? 'accent' : String(item.status || '').toLowerCase() === 'confirmed' ? 'blue' : 'amber'}
+                    />
+                  ))}
+                  {!paymentBreakdown.length ? <EmptyState title="Sem pagamentos no período." text="As formas de pagamento utilizadas aparecem aqui quando houver pedidos." /> : null}
+                </div>
+              </div>
             </div>
+          </Card>
 
-            <div style={{ display: 'grid', gap: 10 }}>
-              <Row label="Pedidos aceitos" value={store.acceptOrders ? 'Sim' : 'Não'} />
-              <Row label="Tempo de preparo" value={store.prepTime ? `${store.prepTime} min` : 'Não informado'} />
-              <Row label="Entrega grátis" value={store.freeDeliveryEnabled ? `Até ${store.freeDeliveryKm || 0} km` : 'Desativado'} />
-              <Row label="Distância máxima" value={store.maxDeliveryKm ? `${store.maxDeliveryKm} km` : '-'} />
-              <Row label="Avaliação" value={metrics.reviewsCount > 0 ? `${Number(metrics.reviewsAverage || 0).toFixed(1)} (${number.format(metrics.reviewsCount)})` : 'Sem avaliações'} star />
-              <Row label="Mensagens hoje" value={number.format(metrics.messagesTodayCount || 0)} />
-              <Row label="Fluxos ativos" value={number.format(metrics.activeFlowsCount || 0)} />
-            </div>
-          </div>
-        </Panel>
-      </div>
+          <Card style={{ padding: '24px' }}>
+            <SectionHeader
+              eyebrow="Operação"
+              title="Parâmetros da loja"
+              description="Resumo do que está configurado para esse cardápio público."
+            />
+            <div style={{ display: 'grid', gap: '12px' }}>
+              <div style={{ padding: '18px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '10px' }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '14px', backgroundColor: 'rgba(93,183,44,0.10)', color: 'var(--accent-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Store size={20} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{safeText(store.name, 'HotWhats')}</div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{safeText(store.category, 'Categoria não informada')}</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{safeText(store.address, 'Endereço não informado')}</div>
+              </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(320px, 1fr)', gap: 18, marginBottom: 18 }}>
-        <Panel title="Pedidos recentes" subtitle="O que entrou agora no sistema." icon={RefreshCcw}>
-          <div style={{ display: 'grid', gap: 10 }}>
-            {loading ? (
-              Array.from({ length: 5 }).map((_, index) => (
-                <div key={index} style={{ height: 72, borderRadius: 16, background: 'rgba(63,63,70,0.5)' }} />
-              ))
-            ) : recentOrders.length ? (
-              recentOrders.map((order) => {
-                const tone = statusTone(order.status);
-                return (
-                  <div key={order.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, padding: '14px 16px', borderRadius: 16, background: 'rgba(39,39,42,0.68)', border: '1px solid rgba(63,63,70,0.8)' }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-                        <strong style={{ fontSize: 15 }}>{order.product}</strong>
-                        <span style={{ padding: '4px 8px', borderRadius: 999, background: tone.bg, color: tone.fg, border: `1px solid ${tone.border}`, fontSize: 11, fontWeight: 700 }}>
-                          {labelFromStatus(order.status)}
-                        </span>
-                      </div>
-                      <div style={{ color: '#a1a1aa', fontSize: 13, lineHeight: 1.4 }}>
-                        {order.clientName}
-                        {order.variation ? ` • ${order.variation}` : ''}
-                        {order.scheduledDate ? ` • ${order.scheduledDate}` : ''}
-                        {order.scheduledTime ? ` às ${order.scheduledTime}` : ''}
-                      </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ padding: '16px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800 }}>Tempo de preparo</div>
+                  <div style={{ marginTop: '8px', fontFamily: 'Outfit, sans-serif', fontSize: '24px', color: 'var(--text-primary)', fontWeight: 800 }}>
+                    {store.prepTime ? `${store.prepTime} min` : '—'}
+                  </div>
+                </div>
+                <div style={{ padding: '16px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800 }}>Horários</div>
+                  <div style={{ marginTop: '8px', fontFamily: 'Outfit, sans-serif', fontSize: '24px', color: 'var(--text-primary)', fontWeight: 800 }}>{integer.format(openSlots)}</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>slots ativos</div>
+                </div>
+              </div>
+
+              <div style={{ padding: '16px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800 }}>Cobertura</span>
+                  <span style={{ fontWeight: 800, color: 'var(--accent-primary)' }}>
+                    {safeNumber(metrics.deliveryCapableProducts)} itens
+                  </span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Produtos</div>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)' }}>{integer.format(safeNumber(metrics.productsCount))}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Categorias</div>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)' }}>{integer.format(safeNumber(metrics.categoriesCount))}</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Avaliação</div>
+                    <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      {avgRating > 0 ? avgRating.toFixed(1).replace('.', ',') : '5,0'}
                     </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontWeight: 800 }}>{formatCurrency(order.totalValue)}</div>
-                      <div style={{ color: '#a1a1aa', fontSize: 12, marginTop: 4 }}>{formatDateTime(order.createdAt)}</div>
+                  </div>
+                </div>
+              </div>
+
+              {configIssues.length ? (
+                <div style={{ padding: '18px', borderRadius: '18px', border: '1px solid rgba(239,68,68,0.14)', backgroundColor: 'rgba(239,68,68,0.04)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', color: '#b91c1c', fontWeight: 800 }}>
+                    <ShieldAlert size={18} />
+                    Pontos de atenção
+                  </div>
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {configIssues.slice(0, 5).map((issue) => (
+                      <div key={issue} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.5 }}>
+                        <CircleAlert size={16} style={{ color: '#ef4444', flexShrink: 0 }} />
+                        <span>{issue}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <EmptyState title="Tudo certo por aqui." text="Não há alertas de configuração no momento." />
+              )}
+            </div>
+          </Card>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 1fr', gap: '20px', marginBottom: '22px' }}>
+          <Card style={{ padding: '24px' }}>
+            <SectionHeader
+              eyebrow="Atividade"
+              title="Pedidos recentes"
+              description="Últimos pedidos processados com status, cliente e valor."
+            />
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {recentOrders.length ? recentOrders.slice(0, 6).map((order) => (
+                <div
+                  key={order.id}
+                  style={{
+                    padding: '16px',
+                    borderRadius: '18px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-primary)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: '14px',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{safeText(order.product, 'Produto')}</div>
+                      <Badge tone={String(order.type || '').toLowerCase() === 'delivery' ? 'accent' : 'info'}>
+                        {String(order.type || '').toLowerCase() === 'delivery' ? 'Delivery' : 'Encomenda'}
+                      </Badge>
+                    </div>
+                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '5px' }}>
+                      {safeText(order.clientName, 'Cliente')} · {order.variation ? order.variation : 'Sem variação'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                      {toShortDateTime(order.createdAt)} · {safeText(order.status)}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                      {money.format(safeNumber(order.totalValue))}
+                    </div>
+                    {safeNumber(order.deliveryFee) > 0 ? (
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                        Frete {money.format(safeNumber(order.deliveryFee))}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              )) : <EmptyState title="Sem pedidos recentes." text="Quando houver novos pedidos, eles aparecem neste bloco." />}
+            </div>
+          </Card>
+
+          <Card style={{ padding: '24px' }}>
+            <SectionHeader
+              eyebrow="Catálogo"
+              title="Produtos em destaque"
+              description="Itens mais vendidos, com indicação de promoção e variação de preço quando existir."
+            />
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {topProducts.length ? topProducts.slice(0, 6).map((product, index) => {
+                const hasPromo = product.promoPrice !== null && product.promoPrice !== undefined && safeNumber(product.promoPrice) > 0;
+                return (
+                  <div key={product.id} style={{ padding: '16px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', alignItems: 'flex-start' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ width: '28px', height: '28px', borderRadius: '10px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(93,183,44,0.10)', color: 'var(--accent-primary)', fontSize: '12px', fontWeight: 800 }}>
+                            {integer.format(index + 1)}
+                          </span>
+                          <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{safeText(product.name, 'Produto')}</div>
+                          {product.featured ? <Badge tone="info">Destaque</Badge> : null}
+                          {product.promotion ? <Badge tone="success">Promoção</Badge> : null}
+                        </div>
+                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '6px', lineHeight: 1.5 }}>
+                          {integer.format(safeNumber(product.count))} vendas · {money.format(safeNumber(product.totalValue))}
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                        {hasPromo ? (
+                          <>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', textDecoration: 'line-through' }}>
+                              {money.format(safeNumber(product.price))}
+                            </div>
+                            <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '18px', fontWeight: 800, color: 'var(--accent-primary)' }}>
+                              {money.format(safeNumber(product.promoPrice))}
+                            </div>
+                          </>
+                        ) : (
+                          <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                            {money.format(safeNumber(product.price))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
-              })
-            ) : (
-              <Empty text="Nenhum pedido encontrado." />
-            )}
-          </div>
-        </Panel>
-
-        <div style={{ display: 'grid', gap: 18 }}>
-          <Panel title="Produtos em destaque" subtitle="Itens que mais aparecem e vendem." icon={Package}>
-            <div style={{ display: 'grid', gap: 10 }}>
-              {topProducts.length ? topProducts.map((product) => (
-                <div key={product.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 16, background: 'rgba(39,39,42,0.68)', border: '1px solid rgba(63,63,70,0.8)' }}>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
-                      <strong>{product.name}</strong>
-                      {product.featured ? <Badge text="Destaque" tone="blue" /> : null}
-                      {product.promotion ? <Badge text="Promoção" tone="green" /> : null}
-                    </div>
-                    <div style={{ color: '#a1a1aa', fontSize: 13 }}>
-                      {number.format(product.count)} pedido{Number(product.count) === 1 ? '' : 's'} · {formatCurrency(product.totalValue)}
-                    </div>
-                  </div>
-                  <div style={{ color: '#34d399', fontWeight: 800, flexShrink: 0 }}>#{number.format(product.count)}</div>
-                </div>
-              )) : (
-                <Empty text="Sem produtos vendidos ainda." />
-              )}
+              }) : <EmptyState title="Nenhum destaque cadastrado." text="Os produtos mais vendidos e destacados vão aparecer aqui." />}
             </div>
-          </Panel>
+          </Card>
 
-          <Panel title="Estoque baixo" subtitle="Itens que merecem reposição." icon={AlertTriangle} accent="#fbbf24">
-            <div style={{ display: 'grid', gap: 10 }}>
-              {lowStockItems.length ? lowStockItems.map((item) => (
-                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', padding: '12px 14px', borderRadius: 16, background: 'rgba(39,39,42,0.68)', border: '1px solid rgba(63,63,70,0.8)' }}>
-                  <div>
-                    <div style={{ fontWeight: 700 }}>{item.name}</div>
-                    <div style={{ color: '#a1a1aa', fontSize: 12 }}>Mínimo: {item.minQuantity} {item.unit}</div>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontWeight: 800, color: '#f87171' }}>{item.quantity} {item.unit}</div>
-                    <div style={{ color: '#a1a1aa', fontSize: 12 }}>em estoque</div>
-                  </div>
+          <Card style={{ padding: '24px' }}>
+            <SectionHeader
+              eyebrow="Controle"
+              title="Estoque e agenda"
+              description="Resumo rápido do que precisa de atenção imediata."
+            />
+            <div style={{ display: 'grid', gap: '14px' }}>
+              <div style={{ padding: '16px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                  <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Itens com baixo estoque</span>
+                  <Badge tone="warning">{integer.format(safeNumber(metrics.lowStockCount))}</Badge>
                 </div>
-              )) : (
-                <div style={{ color: '#4ade80', fontSize: 14 }}>Estoque sem alertas no momento.</div>
-              )}
-            </div>
-          </Panel>
-        </div>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 18, marginBottom: 18 }}>
-        <Panel title="Próximos agendamentos" subtitle="Pedidos já marcados no calendário da operação." icon={CalendarDays}>
-          <div style={{ display: 'grid', gap: 10 }}>
-            {upcomingOrders.length ? upcomingOrders.map((order) => {
-              const tone = statusTone(order.status);
-              return (
-                <div key={order.id} style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(39,39,42,0.68)', border: '1px solid rgba(63,63,70,0.8)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 800, marginBottom: 4 }}>{order.product}</div>
-                      <div style={{ color: '#a1a1aa', fontSize: 12, lineHeight: 1.4 }}>
-                        {order.clientName}
-                        {order.variation ? ` • ${order.variation}` : ''}
+                {lowStockItems.length ? (
+                  <div style={{ display: 'grid', gap: '12px', marginTop: '12px' }}>
+                    {lowStockItems.slice(0, 5).map((item) => (
+                      <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{safeText(item.name, 'Item')}</div>
+                          <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                            {integer.format(safeNumber(item.quantity))} {safeText(item.unit, 'un')} · mínimo {integer.format(safeNumber(item.minQuantity))}
+                          </div>
+                        </div>
+                        <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '18px', fontWeight: 800, color: safeNumber(item.quantity) <= safeNumber(item.minQuantity) ? '#dc2626' : 'var(--accent-primary)' }}>
+                          {integer.format(safeNumber(item.quantity))}
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ marginTop: '12px', color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>
+                    Nenhum item em nível crítico no momento.
+                  </p>
+                )}
+              </div>
+
+              <div style={{ padding: '16px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                  <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Próximas encomendas</span>
+                  <Badge tone="info">{integer.format(safeNumber(upcomingOrders.length))}</Badge>
+                </div>
+                {upcomingOrders.length ? (
+                  <div style={{ display: 'grid', gap: '12px' }}>
+                    {upcomingOrders.slice(0, 4).map((order) => (
+                      <div key={order.id} style={{ padding: '12px 14px', borderRadius: '14px', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}>
+                          <div>
+                            <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{safeText(order.product, 'Produto')}</div>
+                            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>{safeText(order.clientName, 'Cliente')}</div>
+                          </div>
+                          <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                            <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{safeText(order.scheduledTime, '—')}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{toBrazilDate(order.scheduledDate)}</div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p style={{ marginTop: '12px', color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>
+                    Nenhuma encomenda agendada no período.
+                  </p>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+          <Card style={{ padding: '24px' }}>
+            <SectionHeader eyebrow="Mix" title="Categorias mais usadas" description="Distribuição de produtos por categoria no catálogo." />
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {categoryStats.length ? categoryStats.slice(0, 6).map((category, index) => (
+                <div key={category.id || category.name} style={{ padding: '14px', borderRadius: '16px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                      <span style={{ width: '30px', height: '30px', borderRadius: '10px', backgroundColor: 'rgba(93,183,44,0.10)', color: 'var(--accent-primary)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 800 }}>
+                        {integer.format(index + 1)}
+                      </span>
+                      <span style={{ fontWeight: 800, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{safeText(category.name, 'Categoria')}</span>
                     </div>
-                    <span style={{ padding: '4px 8px', borderRadius: 999, background: tone.bg, color: tone.fg, border: `1px solid ${tone.border}`, fontSize: 11, fontWeight: 700 }}>
-                      {labelFromStatus(order.status)}
-                    </span>
+                    <span style={{ color: 'var(--text-secondary)', fontWeight: 800 }}>{integer.format(safeNumber(category.total))}</span>
                   </div>
-                  <div style={{ marginTop: 8, color: '#d4d4d8', fontSize: 13 }}>
-                    {order.scheduledDate || '-'} {order.scheduledTime ? `às ${order.scheduledTime}` : ''}
-                  </div>
-                  <div style={{ color: '#a1a1aa', fontSize: 12, marginTop: 4 }}>
-                    {order.type === 'delivery' ? 'Entrega' : 'Encomenda'}
-                    {order.deliveryAddress ? ` • ${order.deliveryAddress}` : ''}
+                  <div style={{ height: '8px', borderRadius: '999px', backgroundColor: 'var(--bg-secondary)', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                    <div style={{ width: `${Math.max(8, Math.min(100, (safeNumber(category.total) / Math.max(1, categoryStats[0]?.total || 1)) * 100))}%`, height: '100%', borderRadius: '999px', backgroundColor: index === 0 ? 'var(--accent-primary)' : 'rgba(93,183,44,0.58)' }} />
                   </div>
                 </div>
-              );
-            }) : (
-              <Empty text="Nenhum agendamento futuro encontrado." />
-            )}
-          </div>
-        </Panel>
+              )) : <EmptyState title="Sem categorias mapeadas." text="As categorias cadastradas aparecem aqui com a quantidade de produtos." />}
+            </div>
+          </Card>
 
-        <Panel title="Avaliações recentes" subtitle="Feedback real dos pedidos já concluídos." icon={Star} accent="#f59e0b">
-          <div style={{ display: 'grid', gap: 10 }}>
-            {recentReviews.length ? recentReviews.map((review) => (
-              <div key={review.id} style={{ padding: '12px 14px', borderRadius: 14, background: 'rgba(39,39,42,0.68)', border: '1px solid rgba(63,63,70,0.8)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginBottom: 6 }}>
-                  <strong>{review.clientName}</strong>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#fbbf24', fontWeight: 800 }}>
-                    <Star size={14} fill="#fbbf24" color="#fbbf24" />
-                    {Number(review.rating || 0).toFixed(1)}
+          <Card style={{ padding: '24px' }}>
+            <SectionHeader eyebrow="Avaliação" title="Últimas notas" description="Feedbacks recentes deixados pelos clientes." />
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {recentReviews.length ? recentReviews.slice(0, 5).map((review) => (
+                <div key={review.id} style={{ padding: '16px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                    <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{safeText(review.clientName, 'Cliente')}</div>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', color: '#d97706', fontWeight: 800 }}>
+                      <Star size={14} fill="currentColor" /> {safeNumber(review.rating).toFixed(1).replace('.', ',')}
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    {safeText(review.comment, 'Sem comentário')}
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px' }}>
+                    {safeText(review.product, 'Produto')} {review.variation ? `· ${review.variation}` : ''}
+                  </div>
+                </div>
+              )) : <EmptyState title="Sem avaliações recentes." text="Quando clientes avaliarem pedidos, os feedbacks aparecem aqui." />}
+            </div>
+          </Card>
+
+          <Card style={{ padding: '24px' }}>
+            <SectionHeader eyebrow="Conexões" title="Instâncias e disponibilidade" description="Status dos canais e horários configurados." />
+            <div style={{ display: 'grid', gap: '12px' }}>
+              <div style={{ padding: '16px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
+                  <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Instâncias</div>
+                  <div style={{ color: 'var(--accent-primary)', fontWeight: 800 }}>{integer.format(safeNumber(metrics.connectedInstancesCount))}/{integer.format(safeNumber(metrics.instancesCount))}</div>
+                </div>
+                <div style={{ display: 'grid', gap: '10px' }}>
+                  {instances.length ? instances.slice(0, 4).map((instance) => (
+                    <div key={instance.id} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{safeText(instance.name, 'Instância')}</div>
+                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{safeText(instance.status, '—')}</div>
+                      </div>
+                      <Badge tone={String(instance.status || '').toLowerCase() === 'connected' ? 'success' : 'danger'}>
+                        {String(instance.status || '').toLowerCase() === 'connected' ? 'Conectada' : 'Pendente'}
+                      </Badge>
+                    </div>
+                  )) : <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Nenhuma instância cadastrada.</div>}
+                </div>
+              </div>
+
+              <div style={{ padding: '16px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '10px' }}>
+                  <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>Horários ativos</div>
+                  <Badge tone="neutral">{integer.format(openSlots)}</Badge>
+                </div>
+                {slotsByDay.length ? (
+                  <div style={{ display: 'grid', gap: '10px' }}>
+                    {slotsByDay.slice(0, 5).map((slot) => (
+                      <div key={slot.dayOfWeek} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '14px' }}>
+                        <span style={{ color: 'var(--text-primary)', fontWeight: 700 }}>{safeText(slot.dayOfWeek)}</span>
+                        <span style={{ color: 'var(--text-secondary)' }}>{integer.format(safeNumber(slot.count))} faixas · capacidade {integer.format(safeNumber(slot.totalCapacity))}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Nenhum horário configurado.</div>
+                )}
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
+          <Card style={{ padding: '24px' }}>
+            <SectionHeader eyebrow="Resumo" title="Pedidos por status" description="Distribuição dos pedidos em andamento e finalizados." />
+            <div style={{ display: 'grid', gap: '12px' }}>
+              {statusBreakdown.length ? statusBreakdown.map((item) => (
+                <div key={item.status} style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', padding: '14px 0', borderBottom: '1px solid var(--border-color)' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{safeText(item.status)}</span>
+                  <span style={{ color: 'var(--text-secondary)', fontWeight: 800 }}>{integer.format(safeNumber(item.count))}</span>
+                </div>
+              )) : <EmptyState title="Sem dados de status." text="Os status dos pedidos aparecerão aqui conforme a operação evolui." />}
+            </div>
+          </Card>
+
+          <Card style={{ padding: '24px' }}>
+            <SectionHeader eyebrow="Maturidade" title="Indicadores gerais" description="Panorama compacto da operação e do catálogo." />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+              <div style={{ padding: '16px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800 }}>Avaliação média</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px', color: '#d97706', fontWeight: 800 }}>
+                  <Star size={16} fill="currentColor" />
+                  {avgRating > 0 ? avgRating.toFixed(1).replace('.', ',') : '5,0'}
+                </div>
+              </div>
+              <div style={{ padding: '16px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800 }}>Itens em promoção</div>
+                <div style={{ marginTop: '10px', fontFamily: 'Outfit, sans-serif', fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  {integer.format(safeNumber(metrics.promotionProductsCount))}
+                </div>
+              </div>
+              <div style={{ padding: '16px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800 }}>Produtos com variação</div>
+                <div style={{ marginTop: '10px', fontFamily: 'Outfit, sans-serif', fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  {integer.format(safeNumber(metrics.variationProductsCount))}
+                </div>
+              </div>
+              <div style={{ padding: '16px', borderRadius: '18px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                <div style={{ color: 'var(--text-muted)', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800 }}>Entrega grátis</div>
+                <div style={{ marginTop: '10px', fontFamily: 'Outfit, sans-serif', fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                  {store.freeDeliveryEnabled ? 'Ativo' : 'Desativado'}
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <Card style={{ padding: '24px' }}>
+          <SectionHeader
+            eyebrow="Sugestões"
+            title="Atalhos do painel"
+            description="Acesso rápido para as partes que você mais usa no dia a dia."
+          />
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+            {[
+              { label: 'Gerenciar estoque', icon: Package, href: '/estoque', tone: 'accent' },
+              { label: 'Ver agenda', icon: CalendarClock, href: '/agenda', tone: 'blue' },
+              { label: 'Ajustar site', icon: Store, href: '/site-settings', tone: 'success' },
+              { label: 'Acompanhar automações', icon: Zap, href: '/flows', tone: 'amber' },
+            ].map((item) => (
+              <a
+                key={item.label}
+                href={item.href}
+                style={{
+                  textDecoration: 'none',
+                  padding: '18px',
+                  borderRadius: '18px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  color: 'var(--text-primary)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                  <span
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '14px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: item.tone === 'blue'
+                        ? 'rgba(59,130,246,0.10)'
+                        : item.tone === 'success'
+                          ? 'rgba(93,183,44,0.10)'
+                          : item.tone === 'amber'
+                            ? 'rgba(245,158,11,0.10)'
+                            : 'rgba(93,183,44,0.10)',
+                      color: item.tone === 'blue'
+                        ? '#2563eb'
+                        : item.tone === 'success'
+                          ? 'var(--accent-primary)'
+                          : item.tone === 'amber'
+                            ? '#d97706'
+                            : 'var(--accent-primary)',
+                    }}
+                  >
+                    <item.icon size={18} />
                   </span>
+                  <div style={{ fontWeight: 800 }}>{item.label}</div>
                 </div>
-                <div style={{ color: '#a1a1aa', fontSize: 12, lineHeight: 1.4, marginBottom: 6 }}>
-                  {review.product}{review.variation ? ` • ${review.variation}` : ''}
-                </div>
-                <div style={{ color: '#d4d4d8', fontSize: 13, lineHeight: 1.5 }}>
-                  {review.comment || 'Sem comentário.'}
-                </div>
-                <div style={{ color: '#71717a', fontSize: 12, marginTop: 6 }}>{formatDateTime(review.createdAt)}</div>
-              </div>
-            )) : (
-              <Empty text="Nenhuma avaliação registrada." />
-            )}
+                <ArrowRight size={16} style={{ color: 'var(--text-secondary)' }} />
+              </a>
+            ))}
           </div>
-        </Panel>
-
-        <Panel title="Catálogo em números" subtitle="Categorias, promoções e destaque do estoque." icon={Package} accent="#38bdf8">
-          <div style={{ display: 'grid', gap: 10 }}>
-            {categoryProductStats.length ? categoryProductStats.slice(0, 6).map((category) => (
-              <div key={category.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', padding: '12px 14px', borderRadius: 14, background: 'rgba(39,39,42,0.68)', border: '1px solid rgba(63,63,70,0.8)' }}>
-                <div>
-                  <div style={{ fontWeight: 700 }}>{category.name}</div>
-                  <div style={{ color: '#a1a1aa', fontSize: 12 }}>Ordem {category.order}</div>
-                </div>
-                <strong>{number.format(category.total)} item{Number(category.total) === 1 ? '' : 's'}</strong>
-              </div>
-            )) : (
-              <Empty text="Nenhuma categoria cadastrada." />
-            )}
-          </div>
-          <div style={{ marginTop: 16, display: 'grid', gap: 10 }}>
-            <Row label="Com variações" value={number.format(metrics.variationProductsCount || 0)} />
-            <Row label="Tempo médio de preparo" value={metrics.averagePrepTime ? `${metrics.averagePrepTime} min` : 'Não informado'} />
-            <Row label="Produtos de entrega" value={number.format(metrics.deliveryCapableProducts || 0)} />
-          </div>
-        </Panel>
-
-        <Panel title="Operação e agenda" subtitle="Alertas e horários que o sistema já conhece." icon={ShieldAlert} accent="#fbbf24">
-          <div style={{ display: 'grid', gap: 10, marginBottom: 14 }}>
-            {configIssues.length ? configIssues.map((issue, index) => (
-              <div key={`${issue}-${index}`} style={{ padding: '10px 12px', borderRadius: 12, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.2)', color: '#fbbf24', fontSize: 13 }}>
-                {issue}
-              </div>
-            )) : (
-              <div style={{ color: '#4ade80', fontSize: 14 }}>Nenhum alerta de configuração no momento.</div>
-            )}
-          </div>
-          <div style={{ display: 'grid', gap: 10 }}>
-            <Row label="Horários cadastrados" value={number.format(metrics.slotsCount || 0)} />
-            <Row label="Pagamentos pendentes" value={number.format(metrics.paymentPendingCount || 0)} />
-            <Row label="Pagamento confirmado" value={number.format(metrics.paymentConfirmedCount || 0)} />
-          </div>
-          <div style={{ marginTop: 16 }}>
-            <h3 style={{ fontSize: 15, marginBottom: 10 }}>Grade de atendimento</h3>
-            <div style={{ display: 'grid', gap: 8 }}>
-              {recentSlots.length ? recentSlots.map((slot) => (
-                <div key={slot.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '10px 12px', borderRadius: 12, background: 'rgba(39,39,42,0.68)', border: '1px solid rgba(63,63,70,0.8)' }}>
-                  <span style={{ color: '#d4d4d8' }}>Dia {slot.dayOfWeek}</span>
-                  <span style={{ color: '#a1a1aa' }}>{slot.startTime} - {slot.endTime}</span>
-                  <strong>{number.format(slot.maxOrders)} pedidos</strong>
-                </div>
-              )) : (
-                <Empty text="Sem horários cadastrados." />
-              )}
-            </div>
-            {slotsByDay.length ? (
-              <div style={{ marginTop: 12, color: '#71717a', fontSize: 12 }}>
-                Dias com horários: {slotsByDay.map((item) => `Dia ${item.dayOfWeek} (${item.count})`).join(' · ')}
-              </div>
-            ) : null}
-          </div>
-        </Panel>
-
-        <Panel title="Pagamentos e canais" subtitle="Distribuição dos pedidos por status financeiro." icon={CircleDollarSign} accent="#34d399">
-          <div style={{ display: 'grid', gap: 10 }}>
-            {paymentBreakdown.length ? paymentBreakdown.map((item) => (
-              <div key={item.paymentStatus} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', padding: '12px 14px', borderRadius: 14, background: 'rgba(39,39,42,0.68)', border: '1px solid rgba(63,63,70,0.8)' }}>
-                <span style={{ padding: '4px 8px', borderRadius: 999, background: 'rgba(16,185,129,0.12)', color: '#34d399', border: '1px solid rgba(16,185,129,0.2)', fontSize: 11, fontWeight: 700 }}>
-                  {paymentLabel(item.paymentStatus)}
-                </span>
-                <strong>{number.format(item.count)}</strong>
-              </div>
-            )) : (
-              <Empty text="Sem dados de pagamento para mostrar." />
-            )}
-          </div>
-          <div style={{ marginTop: 16 }}>
-            <h3 style={{ fontSize: 15, marginBottom: 10 }}>Pedidos por tipo</h3>
-            <div style={{ display: 'grid', gap: 8 }}>
-              <Row label="Delivery" value={number.format(orderTypeBreakdown.delivery || 0)} />
-              <Row label="Encomendas" value={number.format(orderTypeBreakdown.order || 0)} />
-              <Row label="Mensagens hoje" value={number.format(metrics.messagesTodayCount || 0)} />
-            </div>
-          </div>
-        </Panel>
+        </Card>
       </div>
     </div>
   );
-}
+};
 
-function Row({ label, value, star = false }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
-      <span style={{ color: '#a1a1aa' }}>{label}</span>
-      <strong style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-        {star ? <Star size={14} fill="#f59e0b" color="#f59e0b" /> : null}
-        {value}
-      </strong>
-    </div>
-  );
-}
-
-function Badge({ text, tone = 'blue' }) {
-  const palette = {
-    blue: { bg: 'rgba(59,130,246,0.12)', fg: '#60a5fa', border: 'rgba(59,130,246,0.2)' },
-    green: { bg: 'rgba(16,185,129,0.12)', fg: '#34d399', border: 'rgba(16,185,129,0.2)' },
-  }[tone];
-
-  return (
-    <span style={{ padding: '3px 8px', borderRadius: 999, background: palette.bg, color: palette.fg, border: `1px solid ${palette.border}`, fontSize: 11, fontWeight: 700 }}>
-      {text}
-    </span>
-  );
-}
+export default Dashboard;

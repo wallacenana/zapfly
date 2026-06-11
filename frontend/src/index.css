@@ -15,6 +15,16 @@
   --warning: #f59e0b;
   --sidebar-width: 260px;
   --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --surface-color: #0c1f15;
+  --surface-soft: #10301f;
+  --bg-gray: #f4f4f5;
+  --text-black: #111111;
+  --text-gray: #666666;
+  --btn-bg: #ff4d6d;
+  --btn-text: #ffffff;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --primary-hover: #ff758f;
+  --category-nav-top: -1px;
 }
 
 * {

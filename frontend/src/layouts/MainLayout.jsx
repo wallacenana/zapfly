@@ -46,55 +46,79 @@ const MainLayout = () => {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-primary)', color: '#fff', overflow: 'hidden' }}>
+    <div
+      style={{
+        display: 'flex',
+        minHeight: '100vh',
+        backgroundColor: '#f6f8f3',
+        color: '#0f172a',
+        overflow: 'hidden',
+        '--bg-primary': '#f6f8f3',
+        '--bg-secondary': '#ffffff',
+        '--bg-tertiary': '#eef5ea',
+        '--text-primary': '#0f172a',
+        '--text-secondary': '#475569',
+        '--text-muted': '#64748b',
+        '--border-color': '#d9e5d2',
+        '--accent-primary': '#5db72c',
+        '--accent-glow': 'rgba(93, 183, 44, 0.14)',
+        '--card-shadow': '0 12px 30px rgba(15, 23, 42, 0.06)',
+      }}
+    >
       <div
         style={{
           width: '260px',
-          backgroundColor: '#020c00',
+          backgroundColor: '#ffffff',
           borderRight: '1px solid var(--border-color)',
           display: 'flex',
           flexDirection: 'column',
-          padding: '20px',
+          padding: '22px 16px',
+          boxShadow: '18px 0 40px rgba(15, 23, 42, 0.04)',
+          zIndex: 20,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '40px', padding: '0 8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '28px', padding: '0 8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
             <div
               style={{
                 width: '40px',
                 height: '40px',
-                borderRadius: '10px',
-                backgroundColor: 'rgb(255 255 255 / 13%)',
+                borderRadius: '12px',
+                backgroundColor: 'rgb(93 183 44 / 12%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'hidden',
                 flexShrink: 0,
+                border: '1px solid rgba(93, 183, 44, 0.10)',
               }}
             >
               <img src={brandLogo} alt="HotWhats" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px' }} />
             </div>
-            <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: '#ffffff' }}>HotWhats</span>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', lineHeight: 1.1 }}>HotWhats</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '3px' }}>Painel operacional</div>
+            </div>
           </div>
           {storeUrl ? (
             <a
               href={storeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              title="Abrir loja p?blica"
+              title="Abrir loja pública"
               style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '8px',
+                width: '34px',
+                height: '34px',
+                borderRadius: '12px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'var(--accent-primary)',
-                backgroundColor: 'transparent',
-                border: 'none',
-                padding: '2px',
+                backgroundColor: '#ffffff',
+                border: '1px solid var(--border-color)',
+                padding: '4px',
                 textDecoration: 'none',
-                transition: 'color 0.15s ease, transform 0.15s ease',
+                transition: 'color 0.15s ease, transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease',
               }}
             >
               <ExternalLink size={16} color="currentColor" />
@@ -109,22 +133,23 @@ const MainLayout = () => {
               <Link
                 key={item.path}
                 to={item.path}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px 16px',
-                  borderRadius: '10px',
-                  textDecoration: 'none',
-                  color: isActive ? '#ffffff' : 'rgba(255,255,255,0.72)',
-                  backgroundColor: isActive ? 'var(--accent-primary)' : 'transparent',
-                  transition: 'all 0.2s ease',
-                  fontWeight: isActive ? 700 : 500,
-                  fontSize: '14px',
-                }}
-              >
-                {item.icon}
-                {item.label}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '12px 16px',
+                borderRadius: '14px',
+                textDecoration: 'none',
+                color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                backgroundColor: isActive ? 'rgba(93, 183, 44, 0.12)' : 'transparent',
+                border: isActive ? '1px solid rgba(93, 183, 44, 0.18)' : '1px solid transparent',
+                transition: 'all 0.2s ease',
+                fontWeight: isActive ? 800 : 600,
+                fontSize: '14px',
+              }}
+            >
+              {item.icon}
+              {item.label}
               </Link>
             );
           })}
@@ -137,13 +162,13 @@ const MainLayout = () => {
             alignItems: 'center',
             gap: '12px',
             padding: '12px 16px',
-            borderRadius: '10px',
-            border: 'none',
+            borderRadius: '14px',
+            border: '1px solid transparent',
             backgroundColor: 'transparent',
-            color: '#ffffff',
+            color: 'var(--text-secondary)',
             cursor: 'pointer',
             fontSize: '14px',
-            fontWeight: 500,
+            fontWeight: 700,
             marginTop: '20px',
           }}
         >
@@ -152,7 +177,7 @@ const MainLayout = () => {
         </button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
+      <div style={{ flex: 1, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3' }}>
         <Outlet />
       </div>
     </div>

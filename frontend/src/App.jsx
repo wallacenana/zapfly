@@ -32,8 +32,9 @@ const FullScreenLoader = () => (
     alignItems: 'center',
     justifyContent: 'center',
     background: 'var(--bg-primary)',
-    color: '#f4f4f5',
+    color: 'var(--text-secondary)',
     fontSize: '14px',
+    fontWeight: 600,
   }}>
     Carregando...
   </div>
