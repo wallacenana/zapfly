@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Save, Shield, MessageSquare, Bell, Calendar, MapPin, Truck, Plus, Trash2, Key, Cpu, ExternalLink, CheckCircle2, Image, Upload, Mail } from 'lucide-react';
 import { api, API_URL } from '../api';
 import axios from 'axios';
@@ -281,13 +281,13 @@ const Settings = () => {
 
       input.dataset.autocompleteReady = '1';
     } catch (error) {
-      console.error('Erro ao carregar autocomplete do endereço:', error);
+      console.error('Erro ao carregar autocomplete do endereÃ§o:', error);
       input.dataset.autocompleteReady = 'error';
     }
   };
 
   const connectGoogle = () => {
-    const token = localStorage.getItem('digizap_token');
+    const token = localStorage.getItem('hotwhats_token');
     const width = 500;
     const height = 600;
     const left = window.screen.width / 2 - width / 2;
@@ -307,7 +307,7 @@ const Settings = () => {
       const res = await api.get('/auth/google/calendars');
       setCalendars(res.data);
     } catch (err) {
-      console.error('Erro ao buscar calendários:', err);
+      console.error('Erro ao buscar calendÃ¡rios:', err);
     }
   };
 
@@ -345,7 +345,7 @@ const Settings = () => {
 
   const handleUploadAsset = async () => {
     if (!fileInputRef.current?.files[0] || !uploadName.trim()) {
-      Swal.fire('Atenção', 'Preencha o nome e selecione uma imagem.', 'warning');
+      Swal.fire('AtenÃ§Ã£o', 'Preencha o nome e selecione uma imagem.', 'warning');
       return;
     }
     const formData = new FormData();
@@ -356,12 +356,12 @@ const Settings = () => {
 
     try {
       // 1. Sobe o arquivo para o bucket PHP
-      const uploadRes = await axios.post('https://files.digizap.com.br/upload.php', formData, {
+      const uploadRes = await axios.post('https://files.hotwhats.com.br/upload.php', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       if (uploadRes.data.success) {
-        // 2. Salva a referência da URL no banco de dados do Node.js
+        // 2. Salva a referÃªncia da URL no banco de dados do Node.js
         await api.post('/marketing-assets', {
           name: uploadName,
           url: uploadRes.data.url // Passamos a URL final do bucket
@@ -376,12 +376,12 @@ const Settings = () => {
       }
     } catch (err) {
       console.error(err);
-      Swal.fire('Erro', 'Não foi possível subir a imagem: ' + (err.message || ''), 'error');
+      Swal.fire('Erro', 'NÃ£o foi possÃ­vel subir a imagem: ' + (err.message || ''), 'error');
     }
   };
 
   const handleDeleteAsset = async (id) => {
-    const { isConfirmed } = await Swal.fire({ title: 'Remover foto?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sim', cancelButtonText: 'Não' });
+    const { isConfirmed } = await Swal.fire({ title: 'Remover foto?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Sim', cancelButtonText: 'NÃ£o' });
     if (!isConfirmed) return;
     await api.delete(`/marketing-assets/${id}`);
     await loadMarketingAssets();
@@ -390,9 +390,9 @@ const Settings = () => {
   const handleSaveSlots = async () => {
     try {
       await api.post('/config/slots', { slots });
-      Swal.fire({ title: 'Horários Atualizados!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+      Swal.fire({ title: 'HorÃ¡rios Atualizados!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
     } catch (err) {
-      Swal.fire('Erro', 'Não foi possível salvar os horários.', 'error');
+      Swal.fire('Erro', 'NÃ£o foi possÃ­vel salvar os horÃ¡rios.', 'error');
     }
   };
   const handleAcceptOrdersChange = async (nextValue) => {
@@ -405,7 +405,7 @@ const Settings = () => {
       setAcceptOrders(!nextValue);
       Swal.fire({
         title: 'Erro',
-        text: 'Não foi possível salvar a configuração de encomendas.',
+        text: 'NÃ£o foi possÃ­vel salvar a configuraÃ§Ã£o de encomendas.',
         icon: 'error',
         confirmButtonColor: '#3b82f6'
       });
@@ -425,9 +425,9 @@ const Settings = () => {
       };
       await api.post('/config/keys', payload);
       await loadSettings(); // Recarrega para garantir que o estado local bata com o banco (especialmente GCal)
-      Swal.fire({ title: 'Configurações Salvas!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+      Swal.fire({ title: 'ConfiguraÃ§Ãµes Salvas!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
     } catch (err) {
-      Swal.fire('Erro', 'Não foi possível salvar.', 'error');
+      Swal.fire('Erro', 'NÃ£o foi possÃ­vel salvar.', 'error');
     }
   };
 
@@ -441,27 +441,27 @@ const Settings = () => {
 
   const tabs = [
     { id: 'business', label: 'Empresa', icon: Shield },
-    { id: 'delivery', label: 'Logística & Frete', icon: Truck },
-    { id: 'schedules', label: 'Horários', icon: Calendar },
-    { id: 'bot', label: 'Integrações (IA/GCal)', icon: Cpu },
-    { id: 'marketing', label: 'Mídias de Marketing', icon: Image }
+    { id: 'delivery', label: 'LogÃ­stica & Frete', icon: Truck },
+    { id: 'schedules', label: 'HorÃ¡rios', icon: Calendar },
+    { id: 'bot', label: 'IntegraÃ§Ãµes (IA/GCal)', icon: Cpu },
+    { id: 'marketing', label: 'MÃ­dias de Marketing', icon: Image }
   ];
 
-  if (loading) return <div style={{ padding: '40px', color: '#fff' }}>Carregando configurações...</div>;
+  if (loading) return <div style={{ padding: '40px', color: '#fff' }}>Carregando configuraÃ§Ãµes...</div>;
 
   return (
     <div style={{ padding: '30px', maxWidth: '1200px', margin: '0 auto' }}>
       <div style={{ marginBottom: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#fff' }}>Configurações</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>Gerencie o cérebro e a logística da sua plataforma</p>
+          <h2 style={{ fontSize: '28px', fontWeight: 800, color: '#fff' }}>ConfiguraÃ§Ãµes</h2>
+          <p style={{ color: 'var(--text-secondary)' }}>Gerencie o cÃ©rebro e a logÃ­stica da sua plataforma</p>
         </div>
         <button
           onClick={activeTab === 'schedules' ? handleSaveSlots : handleSave}
           style={{ display: activeTab === 'marketing' ? 'none' : 'flex', alignItems: 'center', gap: '8px', padding: '12px 25px', borderRadius: '12px' }}
           className="btn btn-primary"
         >
-          <Save size={20} /> Salvar {activeTab === 'schedules' ? 'Horários' : 'Tudo'}
+          <Save size={20} /> Salvar {activeTab === 'schedules' ? 'HorÃ¡rios' : 'Tudo'}
         </button>
       </div>
 
@@ -487,7 +487,7 @@ const Settings = () => {
           {activeTab === 'business' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
               <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '10px' }}>
-                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Perfil do Negócio</h3>
+                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Perfil do NegÃ³cio</h3>
               </div>
               <div style={{
                 marginLeft: 'auto',
@@ -511,18 +511,18 @@ const Settings = () => {
                     {savingAcceptOrders ? 'Salvando...' : 'Aceitar encomendas'}
                   </div>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                    {acceptOrders ? 'Mostra a aba de encomendas no cardápio público.' : 'Cardápio de encomendas oculto para clientes.'}
+                    {acceptOrders ? 'Mostra a aba de encomendas no cardÃ¡pio pÃºblico.' : 'CardÃ¡pio de encomendas oculto para clientes.'}
                   </div>
                 </div>
               </div>
               <div style={{ ...subCard, borderLeftColor: 'var(--primary)' }}>
-                <label style={labelStyle}>Categoria do Negócio</label>
+                <label style={labelStyle}>Categoria do NegÃ³cio</label>
                 <input
                   {...inp}
                   list="business-category-list"
                   value={settings.businessCategory || ''}
                   onChange={e => setSettings({ ...settings, businessCategory: e.target.value })}
-                  placeholder="Ex: Pizza, Marmitaria, Açaí, Confeitaria"
+                  placeholder="Ex: Pizza, Marmitaria, AÃ§aÃ­, Confeitaria"
                 />
                 <datalist id="business-category-list">
                   <option value="Brasileira" />
@@ -531,12 +531,12 @@ const Settings = () => {
                   <option value="Japonesa" />
                   <option value="Marmita" />
                   <option value="Doces & Bolos" />
-                  <option value="Saudável" />
-                  <option value="Açaí" />
+                  <option value="SaudÃ¡vel" />
+                  <option value="AÃ§aÃ­" />
                   <option value="Sorvetes" />
                 </datalist>
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                  Essa categoria alimenta o diretório público e a home estilo iFood.
+                  Essa categoria alimenta o diretÃ³rio pÃºblico e a home estilo iFood.
                 </p>
               </div>
 
@@ -602,7 +602,7 @@ const Settings = () => {
               </div>
 
               <div style={{ ...subCard, borderLeftColor: 'var(--primary)' }}>
-                <label style={labelStyle}>Métodos de retirada</label>
+                <label style={labelStyle}>MÃ©todos de retirada</label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
                   {[
                     { key: 'delivery', label: 'Delivery' },
@@ -665,7 +665,7 @@ const Settings = () => {
                   })}
                 </div>
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                  O cardápio só exibe as opções que estiverem ativadas aqui.
+                  O cardÃ¡pio sÃ³ exibe as opÃ§Ãµes que estiverem ativadas aqui.
                 </p>
               </div>
 
@@ -679,7 +679,7 @@ const Settings = () => {
                   placeholder="Ex: 30-45"
                 />
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                  Exibido no cabeçalho do cardapio publico como tempo estimado de entrega.
+                  Exibido no cabeÃ§alho do cardapio publico como tempo estimado de entrega.
                 </p>
               </div>
 
@@ -688,22 +688,22 @@ const Settings = () => {
                 <input {...inp} value={settings.businessName} onChange={e => setSettings({ ...settings, businessName: e.target.value })} placeholder="Nome da sua loja" />
               </div>
               <div>
-                <label style={labelStyle}>Endereço completo</label>
+                <label style={labelStyle}>EndereÃ§o completo</label>
                 <input
                   {...inp}
                   ref={businessAddressRef}
                   value={settings.businessAddress}
                   onFocus={attachBusinessAddressAutocomplete}
                   onChange={e => setSettings({ ...settings, businessAddress: e.target.value, businessPlaceId: '', businessLat: null, businessLng: null, businessMapsUrl: '' })}
-                  placeholder="Rua, número, bairro, cidade e estado"
+                  placeholder="Rua, nÃºmero, bairro, cidade e estado"
                 />
                 <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                  Selecione uma sugestão do Google para registrar a posição correta.
+                  Selecione uma sugestÃ£o do Google para registrar a posiÃ§Ã£o correta.
                 </p>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 <div>
-                  <label style={labelStyle}>🆔 ID / Número do Administrador</label>
+                  <label style={labelStyle}>ðŸ†” ID / NÃºmero do Administrador</label>
                   <input {...inp} value={settings.managerJid} onChange={e => setSettings({ ...settings, managerJid: e.target.value })} placeholder="Ex: 5521..." />
                 </div>
                 <div>
@@ -715,7 +715,7 @@ const Settings = () => {
               <div style={{ ...subCard, borderLeftColor: '#ef4444' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
                   <Shield size={20} color="#ef4444" />
-                  <span style={{ fontWeight: 800 }}>Dados para Validação de Pix (Gabarito)</span>
+                  <span style={{ fontWeight: 800 }}>Dados para ValidaÃ§Ã£o de Pix (Gabarito)</span>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div>
@@ -727,23 +727,23 @@ const Settings = () => {
                     <input {...inp} value={settings.pixReceiverKey || ''} onChange={e => setSettings({ ...settings, pixReceiverKey: e.target.value })} placeholder="Ex: 12.345..." />
                   </div>
                 </div>
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px' }}>A Lily usará esses dados para conferir se o Pix enviado pelo cliente caiu na conta certa.</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px' }}>A Lily usarÃ¡ esses dados para conferir se o Pix enviado pelo cliente caiu na conta certa.</p>
               </div>
               <div style={subCard}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
                   <Bell size={20} color="#f59e0b" />
-                  <span style={{ fontWeight: 800 }}>Lembrete Automático de Retirada</span>
+                  <span style={{ fontWeight: 800 }}>Lembrete AutomÃ¡tico de Retirada</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={microLabel}>Horas de antecedência para enviar o lembrete</label>
+                    <label style={microLabel}>Horas de antecedÃªncia para enviar o lembrete</label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <input {...inp} style={{ ...inp.style, width: '100px' }} type="number" value={settings.reminderHours} onChange={e => setSettings({ ...settings, reminderHours: parseInt(e.target.value) })} />
                       <span style={{ fontWeight: 600, fontSize: '14px' }}>horas antes da retirada</span>
                     </div>
                   </div>
                   <div style={{ flex: 1, fontSize: '13px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
-                    O sistema enviará uma mensagem automática ao cliente lembrando do horário agendado.
+                    O sistema enviarÃ¡ uma mensagem automÃ¡tica ao cliente lembrando do horÃ¡rio agendado.
                   </div>
                 </div>
               </div>
@@ -752,26 +752,12 @@ const Settings = () => {
 
           {activeTab === 'delivery' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-              <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '10px' }}>
-                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Logística & Google Maps</h3>
-              </div>
-
               <div style={subCard}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
-                  <MapPin size={20} color="#3b82f6" />
-                  <span style={{ fontWeight: 800 }}>Google Maps</span>
-                </div>
-                <div style={{ color: 'var(--text-muted)', fontSize: '12px', lineHeight: '1.4' }}>
-                  A chave do Google Maps vem do ambiente do servidor e nao fica exposta no painel.
-                </div>
-              </div>
-
-              <div style={subCard}>
-                <label style={{ ...labelStyle, marginBottom: '10px' }}>Modo de Cálculo do Frete</label>
+                <label style={{ ...labelStyle, marginBottom: '10px' }}>Modo de CÃ¡lculo do Frete</label>
                 <select {...inp} value={settings.deliveryMode} onChange={e => setSettings({ ...settings, deliveryMode: e.target.value })}>
-                  <option value="hibrido">Híbrido (Regras DB + App)</option>
+                  <option value="hibrido">HÃ­brido (Regras DB + App)</option>
                   <option value="manual">Manual (Apenas Regras DB)</option>
-                  <option value="automatico">Automático (Apenas App)</option>
+                  <option value="automatico">AutomÃ¡tico (Apenas App)</option>
                 </select>
               </div>
 
@@ -783,14 +769,14 @@ const Settings = () => {
               {settings.deliveryMode !== 'automatico' && (
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                    <label style={{ ...labelStyle, marginBottom: 0 }}>Tabela de Preços por Distância</label>
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>Tabela de PreÃ§os por DistÃ¢ncia</label>
                     <button onClick={addDeliveryRule} style={smallLink}>+ Adicionar Faixa</button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {settings.deliveryRules.length === 0 && <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>Nenhuma regra configurada. O frete será manual.</p>}
+                    {settings.deliveryRules.length === 0 && <p style={{ fontSize: '13px', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>Nenhuma regra configurada. O frete serÃ¡ manual.</p>}
                     {settings.deliveryRules.map((rule, idx) => (
                       <div key={idx} style={{ ...ruleRow, gridTemplateColumns: 'auto 70px auto auto 90px auto auto', gap: '10px' }}>
-                        <span>Até</span>
+                        <span>AtÃ©</span>
                         <input {...inp} style={smallInp} type="number" value={rule.maxKm} onChange={e => updateRule(idx, 'maxKm', e.target.value)} />
                         <span>KM</span>
                         <span style={{ marginLeft: '5px' }}>Taxa: R$</span>
@@ -824,7 +810,7 @@ const Settings = () => {
               )}
 
               <div>
-                <label style={labelStyle}>WhatsApp do Entregador (Notificações)</label>
+                <label style={labelStyle}>WhatsApp do Entregador (NotificaÃ§Ãµes)</label>
                 <input {...inp} value={settings.deliveryJid} onChange={e => setSettings({ ...settings, deliveryJid: e.target.value })} placeholder="JID para aviso de delivery" />
               </div>
               <div style={subCard}>
@@ -876,12 +862,12 @@ const Settings = () => {
           {activeTab === 'schedules' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
               <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '10px' }}>
-                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Horários de Funcionamento</h3>
+                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>HorÃ¡rios de Funcionamento</h3>
                 <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Defina quando a Lily pode aceitar pedidos e as regras de retirada.</p>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                {['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((day, idx) => {
+                {['Domingo', 'Segunda', 'TerÃ§a', 'Quarta', 'Quinta', 'Sexta', 'SÃ¡bado'].map((day, idx) => {
                   const slot = slots.find(s => s.dayOfWeek === idx);
                   return (
                     <div key={idx} style={{ ...ruleRow, gridTemplateColumns: '120px 1fr 1fr auto' }}>
@@ -957,7 +943,7 @@ const Settings = () => {
           {activeTab === 'bot' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
               <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '10px' }}>
-                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Motores de Inteligência</h3>
+                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Motores de InteligÃªncia</h3>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '15px' }}>
@@ -965,14 +951,14 @@ const Settings = () => {
                   <label style={labelStyle}>Modelo de IA Ativo</label>
                   <select {...inp} value={settings.activeModel} onChange={e => setSettings({ ...settings, activeModel: e.target.value })}>
                     <option value="openai">OpenAI GPT-4o (Recomendado)</option>
-                    <option value="openai-mini">OpenAI GPT-4o Mini (Econômico)</option>
+                    <option value="openai-mini">OpenAI GPT-4o Mini (EconÃ´mico)</option>
                     <option value="openai-nano">OpenAI GPT-4.1 Nano</option>
                     <option value="claude">Anthropic Claude 3.5 Sonnet</option>
                   </select>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', paddingTop: '25px' }}>
                   <input type="checkbox" checked={settings.reportEnabled} onChange={e => setSettings({ ...settings, reportEnabled: e.target.checked })} style={{ width: '18px', height: '18px' }} />
-                  <label style={{ fontSize: '14px', fontWeight: 600 }}>Ativar Relatório Diário por WhatsApp</label>
+                  <label style={{ fontSize: '14px', fontWeight: 600 }}>Ativar RelatÃ³rio DiÃ¡rio por WhatsApp</label>
                 </div>
               </div>
 
@@ -1008,7 +994,7 @@ const Settings = () => {
                     <input {...inp} type="password" value={settings.mercadopagoPublicKey || ''} onChange={e => setSettings({ ...settings, mercadopagoPublicKey: e.target.value })} placeholder="APP_USR-..." />
                   </div>
                 </div>
-                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px' }}>Usado para gerar links de pagamento automáticos e garantir que a cozinha só receba pedidos pagos.</p>
+                <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '5px' }}>Usado para gerar links de pagamento automÃ¡ticos e garantir que a cozinha sÃ³ receba pedidos pagos.</p>
               </div>
 
               <div style={{ ...subCard, borderLeftColor: '#f59e0b' }}>
@@ -1037,7 +1023,7 @@ const Settings = () => {
                             const res = await api.post('/orders/calendar-sync');
                             Swal.fire({ title: 'Sincronizado!', text: `${res.data.synced} eventos atualizados.`, icon: 'success', timer: 2000, showConfirmButton: false });
                           } catch (err) {
-                            Swal.fire('Erro na Sincronização', err.response?.data?.error || 'Não foi possível conectar ao Google.', 'error');
+                            Swal.fire('Erro na SincronizaÃ§Ã£o', err.response?.data?.error || 'NÃ£o foi possÃ­vel conectar ao Google.', 'error');
                           }
                         }}
                         style={{ ...smallLink, color: '#ef4444', fontSize: '12px' }}
@@ -1069,7 +1055,7 @@ const Settings = () => {
 
                 <label style={microLabel}>Agenda para Gravar Pedidos</label>
                 <select {...inp} value={settings.gcalCalendarId} onChange={e => setSettings({ ...settings, gcalCalendarId: e.target.value })}>
-                  <option value="" style={{ backgroundColor: '#18181b' }}>Selecione um calendário...</option>
+                  <option value="" style={{ backgroundColor: '#18181b' }}>Selecione um calendÃ¡rio...</option>
                   {calendars.map(c => (
                     <option key={c.id} value={c.id} style={{ backgroundColor: '#18181b' }}>
                       {c.name} {c.primary ? '(Principal)' : ''}
@@ -1079,11 +1065,11 @@ const Settings = () => {
 
                 <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div>
-                    <label style={microLabel}>Hora da Sincronização (H)</label>
+                    <label style={microLabel}>Hora da SincronizaÃ§Ã£o (H)</label>
                     <input {...inp} type="number" value={settings.gcalSyncHour} onChange={e => setSettings({ ...settings, gcalSyncHour: parseInt(e.target.value) })} />
                   </div>
                   <div>
-                    <label style={microLabel}>Hora do Relatório (H)</label>
+                    <label style={microLabel}>Hora do RelatÃ³rio (H)</label>
                     <input {...inp} type="number" value={settings.reportHour} onChange={e => setSettings({ ...settings, reportHour: parseInt(e.target.value) })} />
                   </div>
                 </div>
@@ -1096,8 +1082,8 @@ const Settings = () => {
           {activeTab === 'marketing' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
               <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '10px' }}>
-                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Galeria de Mídias da Lily</h3>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '5px' }}>Envie aqui as fotos que a Lily usará para postar Stories no WhatsApp quando você pedir.</p>
+                <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Galeria de MÃ­dias da Lily</h3>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '5px' }}>Envie aqui as fotos que a Lily usarÃ¡ para postar Stories no WhatsApp quando vocÃª pedir.</p>
               </div>
 
               {/* Upload */}
@@ -1108,7 +1094,7 @@ const Settings = () => {
                 </div>
                 <div style={{ display: 'flex', gap: '15px', alignItems: 'flex-end' }}>
                   <div style={{ flex: 1 }}>
-                    <label style={microLabel}>Nome (ex: "Vulcão Chocolate")</label>
+                    <label style={microLabel}>Nome (ex: "VulcÃ£o Chocolate")</label>
                     <input {...inp} value={uploadName} onChange={e => setUploadName(e.target.value)} placeholder="Nome que a Lily vai reconhecer" />
                   </div>
                   <div style={{ flex: 1 }}>
@@ -1161,3 +1147,4 @@ const smallLink = { border: 'none', background: 'none', color: '#3b82f6', fontWe
 const delBtn = { background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: 'auto', padding: '5px' };
 
 export default Settings;
+

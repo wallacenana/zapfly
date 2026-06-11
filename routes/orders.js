@@ -260,7 +260,7 @@ router.get('/settings/public', async (req, res) => {
 
     const settings = await getSettings(user.id);
     res.json({
-      businessName: settings?.businessName || user.name || 'DigiZap Shop',
+      businessName: settings?.businessName || user.name || 'HotWhats Shop',
       googleApiKey: process.env.GOOGLE_MAPS_API_KEY || process.env.GOOGLE_MAPS_KEY || process.env.GOOGLE_API_KEY || settings?.googleApiKey || '',
       deliveryRules: JSON.parse(settings?.deliveryRules || '[]'),
       maxDeliveryKm: settings?.maxDeliveryKm || 15

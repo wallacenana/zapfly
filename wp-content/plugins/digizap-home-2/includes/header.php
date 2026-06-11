@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 if (!defined('ABSPATH')) {
     exit;
@@ -12,7 +12,7 @@ if (!function_exists('dzhome2_render_directory_header')) {
             'homeUrl' => home_url('/'),
             'restaurantsUrl' => dzhome2_restaurants_url(),
             'blogUrl' => dzhome2_blog_url(),
-            'loginUrl' => 'https://dash.digizap.com.br/login',
+            'loginUrl' => 'https://dash.hotwhats.com.br/login',
             'registerUrl' => home_url('/comprar/'),
             'hasSelectedAddress' => false,
             'initialAddressLabel' => '',
@@ -36,12 +36,12 @@ if (!function_exists('dzhome2_render_directory_header')) {
                             <?php
                             $logo_id = (int) get_theme_mod('custom_logo');
                             echo $logo_id
-                                ? wp_get_attachment_image($logo_id, 'full', false, ['class' => 'dz-home2-brand-logo', 'alt' => get_bloginfo('name') ?: 'DigiZap'])
+                                ? wp_get_attachment_image($logo_id, 'full', false, ['class' => 'dz-home2-brand-logo', 'alt' => get_bloginfo('name') ?: 'HotWhats'])
                                 : '';
                             ?>
                         <?php else : ?>
-                            <img decoding="async" width="300" height="78" src="https://digizap.com.br/wp-content/uploads/2026/05/DigiZap-Logo-300x78.png" class="attachment-medium size-medium" style="width: 160px; margin-top: 7px" alt="" srcset="https://digizap.com.br/wp-content/uploads/2026/05/DigiZap-Logo-300x78.png 300w, https://digizap.com.br/wp-content/uploads/2026/05/DigiZap-Logo.png 572w" sizes="(max-width: 300px) 100vw, 300px">
-                            <span class="dz-home2-brand-name" style="display: none"><?php echo esc_html(get_bloginfo('name') ?: 'DigiZap'); ?></span>
+                            <img decoding="async" width="300" height="78" src="https://hotwhats.com.br/wp-content/uploads/2026/05/HotWhats-Logo-300x78.png" class="attachment-medium size-medium" style="width: 160px; margin-top: 7px" alt="" srcset="https://hotwhats.com.br/wp-content/uploads/2026/05/HotWhats-Logo-300x78.png 300w, https://hotwhats.com.br/wp-content/uploads/2026/05/HotWhats-Logo.png 572w" sizes="(max-width: 300px) 100vw, 300px">
+                            <span class="dz-home2-brand-name" style="display: none"><?php echo esc_html(get_bloginfo('name') ?: 'HotWhats'); ?></span>
                         <?php endif; ?>
                     </a>
                 </div>
@@ -95,3 +95,4 @@ if (!function_exists('dzhome2_render_directory_header')) {
         return trim(ob_get_clean());
     }
 }
+

@@ -1,11 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg-primary: #09090b;
-  --bg-secondary: #121214;
-  --bg-tertiary: #18181b;
-  --accent-primary: #3b82f6;
-  --accent-glow: rgba(59, 130, 246, 0.15);
+  --bg-primary: #09271b;
+  --bg-secondary: #0c1f15;
+  --bg-tertiary: #10301f;
+  --accent-primary: #5db72c;
+  --accent-glow: rgba(93, 183, 44, 0.16);
   --text-primary: #fdfdff;
   --text-secondary: #a1a1aa;
   --text-muted: #71717a;
@@ -292,7 +292,7 @@ table tr:hover {
 }
 
 .kanban-container::-webkit-scrollbar-thumb:hover {
-  background: #2563eb;
+  background: #4ea11f;
 }
 
 

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 if (!defined('ABSPATH')) {
     exit;
@@ -12,7 +12,7 @@ if (!function_exists('dzhome2_render_directory_footer_nav')) {
             'homeUrl' => home_url('/'),
             'restaurantsUrl' => dzhome2_restaurants_url(),
             'blogUrl' => dzhome2_blog_url(),
-            'loginUrl' => 'https://dash.digizap.com.br/login',
+            'loginUrl' => 'https://dash.hotwhats.com.br/login',
             'registerUrl' => home_url('/comprar/'),
         ], $args);
 
@@ -65,3 +65,4 @@ if (!function_exists('dzhome2_render_directory_footer_nav')) {
         return trim((string) ob_get_clean());
     }
 }
+

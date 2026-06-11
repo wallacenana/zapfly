@@ -31,7 +31,7 @@ const FullScreenLoader = () => (
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: '#09090b',
+    background: 'var(--bg-primary)',
     color: '#f4f4f5',
     fontSize: '14px',
   }}>

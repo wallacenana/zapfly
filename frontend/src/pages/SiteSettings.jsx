@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Palette, Layout as LayoutIcon, Globe, Upload, Save, Eye, CheckCircle, RefreshCw } from 'lucide-react';
 import { api, API_URL } from '../api';
 import axios from 'axios';
@@ -119,8 +119,8 @@ const SiteSettings = () => {
                 }));
             }
         } catch (err) {
-            console.error('Erro ao carregar configurações:', err);
-            toast.error('Erro ao carregar as configurações do site.');
+            console.error('Erro ao carregar configuraÃ§Ãµes:', err);
+            toast.error('Erro ao carregar as configuraÃ§Ãµes do site.');
         } finally {
             setLoading(false);
         }
@@ -233,7 +233,7 @@ const SiteSettings = () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        const tId = toast.loading(`Otimizando e enviando ${type === 'logo' ? 'Logo' : 'Ícone'}...`);
+        const tId = toast.loading(`Otimizando e enviando ${type === 'logo' ? 'Logo' : 'Ãcone'}...`);
 
         try {
             const compressedFile = await compressImage(file);
@@ -245,19 +245,19 @@ const SiteSettings = () => {
             formData.append('size', type === 'logo' ? '200' : '64');
 
             // Upload direto para o servidor de arquivos PHP
-            const res = await axios.post('https://files.digizap.com.br/upload.php', formData, {
+            const res = await axios.post('https://files.hotwhats.com.br/upload.php', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
             if (res.data.success) {
                 setSettings(prev => ({ ...prev, [type === 'logo' ? 'logoUrl' : 'faviconUrl']: res.data.url }));
-                toast.success(`${type === 'logo' ? 'Logo' : 'Ícone'} atualizado!`, { id: tId });
+                toast.success(`${type === 'logo' ? 'Logo' : 'Ãcone'} atualizado!`, { id: tId });
             } else {
                 throw new Error(res.data.error || 'Erro desconhecido');
             }
         } catch (err) {
             console.error('Erro no upload:', err);
-            toast.error('Erro no upload: ' + (err.message || 'Falha na conexão'), { id: tId });
+            toast.error('Erro no upload: ' + (err.message || 'Falha na conexÃ£o'), { id: tId });
         }
     };
 
@@ -278,7 +278,7 @@ const SiteSettings = () => {
                 <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     Identidade Visual do Site
                 </h1>
-                <p style={{ color: 'var(--text-secondary)', marginTop: '5px' }}>Personalize as cores e mídias do seu cardápio digital público.</p>
+                <p style={{ color: 'var(--text-secondary)', marginTop: '5px' }}>Personalize as cores e mÃ­dias do seu cardÃ¡pio digital pÃºblico.</p>
             </header>
             <label style={labelStyle}>
                 <button
@@ -321,7 +321,7 @@ const SiteSettings = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '30px' }}>
 
-                {/* CONFIGURAÇÕES */}
+                {/* CONFIGURAÃ‡Ã•ES */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
 
                     <section className="card" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)' }}>
@@ -366,13 +366,13 @@ const SiteSettings = () => {
                     <section className="card" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <CheckCircle size={18} color="var(--accent-primary)" />
-                            Cardápio Público
+                            CardÃ¡pio PÃºblico
                         </h3>
 
-                        <label style={labelStyle}>🔗 Link do Cardápio (Slug)</label>
+                        <label style={labelStyle}>ðŸ”— Link do CardÃ¡pio (Slug)</label>
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: '14px', flexShrink: 0 }}>
-                                digizap.com.br/
+                                hotwhats.com.br/
                             </div>
                             <input
                                 style={{ ...inputStyle, flex: '1 1 280px' }}
@@ -390,7 +390,7 @@ const SiteSettings = () => {
                             </button>
                             {settings.slug && slugStatus.available === true && (
                                 <a
-                                    href={`https://digizap.com.br/${settings.slug}`}
+                                    href={`https://hotwhats.com.br/${settings.slug}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="btn btn-primary"
@@ -400,14 +400,14 @@ const SiteSettings = () => {
                                 </a>
                             )}
                         </div>
-                        {slugStatus.available === true && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '8px', fontWeight: 800 }}>✓ Link disponível!</p>}
+                        {slugStatus.available === true && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '8px', fontWeight: 800 }}>âœ“ Link disponÃ­vel!</p>}
                         {slugStatus.available === false && (
                             <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '8px', fontWeight: 700 }}>
-                                ✗ Este link já está em uso. {slugStatus.suggestion && <>Sugestão: <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#3b82f6' }} onClick={() => { setSettings({ ...settings, slug: slugStatus.suggestion }); setSlugStatus({ available: true, suggestion: '' }); }}>{slugStatus.suggestion}</span></>}
+                                âœ— Este link jÃ¡ estÃ¡ em uso. {slugStatus.suggestion && <>SugestÃ£o: <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#3b82f6' }} onClick={() => { setSettings({ ...settings, slug: slugStatus.suggestion }); setSlugStatus({ available: true, suggestion: '' }); }}>{slugStatus.suggestion}</span></>}
                             </p>
                         )}
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                            Esse endereço será usado no cardápio público e na home do diretório.
+                            Esse endereÃ§o serÃ¡ usado no cardÃ¡pio pÃºblico e na home do diretÃ³rio.
                         </p>
 
                         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '18px', cursor: 'pointer' }}>
@@ -417,24 +417,24 @@ const SiteSettings = () => {
                                 onChange={(e) => setSettings({ ...settings, active: e.target.checked })}
                                 style={{ width: '16px', height: '16px', accentColor: '#22c55e' }}
                             />
-                            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Loja ativa no diretório</span>
+                            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Loja ativa no diretÃ³rio</span>
                         </label>
                         <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                            Se desativar, a loja sai da home e da lista pública.
+                            Se desativar, a loja sai da home e da lista pÃºblica.
                         </p>
                     </section>
 
-                    {/* Sessão de Imagens */}
+                    {/* SessÃ£o de Imagens */}
                     <section className="card" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <LayoutIcon size={18} color="var(--accent-primary)" />
-                            Mídias Principais
+                            MÃ­dias Principais
                         </h3>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
                             {/* Logo */}
                             <div>
-                                <label style={labelStyle}>Logo do Cardápio</label>
+                                <label style={labelStyle}>Logo do CardÃ¡pio</label>
                                 <div style={uploadBox}>
                                     {settings.logoUrl ? (
                                         <img src={settings.logoUrl} style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} alt="Logo" />
@@ -448,7 +448,7 @@ const SiteSettings = () => {
 
                             {/* Favicon */}
                             <div>
-                                <label style={labelStyle}>Ícone da Aba (Favicon)</label>
+                                <label style={labelStyle}>Ãcone da Aba (Favicon)</label>
                                 <div style={uploadBox}>
                                     {settings.faviconUrl ? (
                                         <img src={settings.faviconUrl} style={{ width: '48px', height: '48px', objectFit: 'contain' }} alt="Favicon" />
@@ -462,7 +462,7 @@ const SiteSettings = () => {
                         </div>
                     </section>
 
-                    {/* Sessão de Cores */}
+                    {/* SessÃ£o de Cores */}
                     <section className="card" style={{ padding: '30px', borderLeft: '5px solid #10b981' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <Palette size={18} color="#10b981" />
@@ -470,13 +470,13 @@ const SiteSettings = () => {
                         </h3>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            {/* Sessão Delivery */}
+                            {/* SessÃ£o Delivery */}
                             <div>
                                 <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#10b981', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '1px' }}>Cores Aba Delivery (Entrega)</h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {[
-                                        { id: 'accentColor', label: 'Cor de Destaque', desc: 'Preços e ícones' },
-                                        { id: 'buttonColor', label: 'Cor do Botão', desc: 'Botão finalizar' },
+                                        { id: 'accentColor', label: 'Cor de Destaque', desc: 'PreÃ§os e Ã­cones' },
+                                        { id: 'buttonColor', label: 'Cor do BotÃ£o', desc: 'BotÃ£o finalizar' },
                                     ].map(item => (
                                         <div key={item.id} style={colorRow}>
                                             <div>
@@ -499,13 +499,13 @@ const SiteSettings = () => {
                                 </div>
                             </div>
 
-                            {/* Sessão Encomendas */}
+                            {/* SessÃ£o Encomendas */}
                             <div>
                                 <h4 style={{ fontSize: '14px', fontWeight: 800, color: '#4a2c2a', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '1px' }}>Cores Aba Encomendas</h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {[
-                                        { id: 'accentColorOrders', label: 'Cor de Destaque (Encomendas)', desc: 'Preços e ícones' },
-                                        { id: 'buttonColorOrders', label: 'Cor do Botão (Encomendas)', desc: 'Botão finalizar' },
+                                        { id: 'accentColorOrders', label: 'Cor de Destaque (Encomendas)', desc: 'PreÃ§os e Ã­cones' },
+                                        { id: 'buttonColorOrders', label: 'Cor do BotÃ£o (Encomendas)', desc: 'BotÃ£o finalizar' },
                                     ].map(item => (
                                         <div key={item.id} style={colorRow}>
                                             <div>
@@ -528,14 +528,14 @@ const SiteSettings = () => {
                                 </div>
                             </div>
 
-                            {/* Sessão Geral */}
+                            {/* SessÃ£o Geral */}
                             <div>
                                 <h4 style={{ fontSize: '14px', fontWeight: 800, color: 'var(--accent-primary)', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '1px' }}>Cores Gerais</h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {[
-                                        { id: 'buttonTextColor', label: 'Texto do Botão', desc: 'Cor do texto no botão' },
-                                        { id: 'backgroundColor', label: 'Fundo do Site', desc: 'Fundo do cardápio' },
-                                        { id: 'textColor', label: 'Cor dos Textos', desc: 'Nomes e descrições' },
+                                        { id: 'buttonTextColor', label: 'Texto do BotÃ£o', desc: 'Cor do texto no botÃ£o' },
+                                        { id: 'backgroundColor', label: 'Fundo do Site', desc: 'Fundo do cardÃ¡pio' },
+                                        { id: 'textColor', label: 'Cor dos Textos', desc: 'Nomes e descriÃ§Ãµes' },
                                     ].map(item => (
                                         <div key={item.id} style={colorRow}>
                                             <div>
@@ -560,7 +560,7 @@ const SiteSettings = () => {
                         </div>
                     </section>
 
-                    {/* Sessão de Tracking e SEO */}
+                    {/* SessÃ£o de Tracking e SEO */}
                     <section className="card" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)', marginTop: '25px' }}>
                         <h3 style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <Globe size={18} color="var(--accent-primary)" />
@@ -568,14 +568,14 @@ const SiteSettings = () => {
                         </h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div>
-                                <label style={labelStyle}>Descrição do Cardápio (Google e WhatsApp)</label>
+                                <label style={labelStyle}>DescriÃ§Ã£o do CardÃ¡pio (Google e WhatsApp)</label>
                                 <textarea
                                     style={{ ...inputStyle, minHeight: '80px', resize: 'none' }}
                                     value={settings.seoDescription || ''}
                                     onChange={e => setSettings({ ...settings, seoDescription: e.target.value })}
-                                    placeholder="Ex: Peça online as melhores pizzas da cidade. Entrega rápida!"
+                                    placeholder="Ex: PeÃ§a online as melhores pizzas da cidade. Entrega rÃ¡pida!"
                                 />
-                                <p style={hintStyle}>Aparece na busca do Google e na prévia de links do WhatsApp.</p>
+                                <p style={hintStyle}>Aparece na busca do Google e na prÃ©via de links do WhatsApp.</p>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
                                 <div>
@@ -709,3 +709,4 @@ const phoneNotch = { position: 'absolute', top: 0, left: '50%', transform: 'tran
 const phoneScreen = { width: '100%', height: '100%', overflow: 'hidden', position: 'relative' };
 
 export default SiteSettings;
+

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
@@ -10,14 +10,22 @@ const { getSettings } = require('../lib/cache');
 const { authenticate, requireRole, normalizeRole } = require('../middleware/auth');
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'zapfly-secret-key-super-safe';
-const APP_NAME = 'DigiZap';
+const JWT_SECRET = process.env.JWT_SECRET || 'hotwhats-secret-key-super-safe';
+const APP_NAME = 'HotWhats';
 const maskEmail = (email = '') => {
   const value = String(email || '').trim().toLowerCase();
   if (!value.includes('@')) return value;
   const [name, domain] = value.split('@');
   const safeName = name.length <= 2 ? `${name[0] || '*'}*` : `${name.slice(0, 2)}***`;
   return `${safeName}@${domain}`;
+};
+
+const maskLoginIdentifier = (value = '') => {
+  const clean = String(value || '').trim();
+  if (!clean) return '';
+  if (clean.includes('@')) return maskEmail(clean);
+  if (clean.length <= 2) return `${clean[0] || '*'}*`;
+  return `${clean.slice(0, 2)}***`;
 };
 
 const authLog = (level, step, message, extra = {}) => {
@@ -28,11 +36,11 @@ const authLog = (level, step, message, extra = {}) => {
   else console.log(line);
 };
 
-// ─── Mailer map (userId -> transporter)
+// â”€â”€â”€ Mailer map (userId -> transporter)
 let mailerInstances = {};
 
 const getMailer = async (userId) => {
-  console.log(`[AUTH-DEBUG] 🔍 Iniciando getMailer para o usuário: ${userId}`);
+  console.log(`[AUTH-DEBUG] ðŸ” Iniciando getMailer para o usuÃ¡rio: ${userId}`);
 
   const envHost = process.env.SMTP_HOST;
   const envPort = process.env.SMTP_PORT;
@@ -40,10 +48,10 @@ const getMailer = async (userId) => {
   // Remove aspas simples/duplas ao redor da senha se o .env tiver colocado
   const envPass = (process.env.SMTP_PASS || '').replace(/^['"]+|['"]+$/g, '');
 
-  console.log(`[AUTH-DEBUG] 🚀 FINAL: Host=${envHost}, Port=${envPort}, User=${envUser}, Secure=${envPort === 465}`);
+  console.log(`[AUTH-DEBUG] ðŸš€ FINAL: Host=${envHost}, Port=${envPort}, User=${envUser}, Secure=${envPort === 465}`);
 
   if (!envHost || !envUser || !envPass) {
-    console.log('[AUTH-DEBUG] ❌ Erro: Faltam dados de SMTP.');
+    console.log('[AUTH-DEBUG] âŒ Erro: Faltam dados de SMTP.');
     return null;
   }
 
@@ -52,7 +60,7 @@ const getMailer = async (userId) => {
     const transporter = nodemailer.createTransport({
       host: envHost,
       port: portNum,
-      secure: portNum === 465,       // true só para 465 (SSL direto)
+      secure: portNum === 465,       // true sÃ³ para 465 (SSL direto)
       requireTLS: portNum === 587,   // true para 587 (STARTTLS)
       auth: {
         user: envUser,
@@ -64,7 +72,7 @@ const getMailer = async (userId) => {
     console.log(`[AUTH-DEBUG] Transporter criado com sucesso (${portNum === 465 ? 'SSL' : 'STARTTLS'})`);
     return transporter;
   } catch (e) {
-    console.error('[AUTH-DEBUG] ❌ Erro ao criar o transporter:', e.message);
+    console.error('[AUTH-DEBUG] âŒ Erro ao criar o transporter:', e.message);
     return null;
   }
 };
@@ -79,40 +87,40 @@ const sendOtpEmail = async (userId, toEmail, code, userName) => {
     const businessName = settings?.businessName || APP_NAME;
 
     if (!mailer) {
-      console.log(`[AUTH-DEBUG] ⚠️ Abortando: Mailer não pôde ser criado para ${toEmail}`);
+      console.log(`[AUTH-DEBUG] âš ï¸ Abortando: Mailer nÃ£o pÃ´de ser criado para ${toEmail}`);
       return;
     }
 
-    console.log(`[AUTH-DEBUG] 📧 Tentando disparar e-mail para ${toEmail}...`);
+    console.log(`[AUTH-DEBUG] ðŸ“§ Tentando disparar e-mail para ${toEmail}...`);
 
     const info = await mailer.sendMail({
       from: `"${businessName}" <${fromEmail}>`,
       to: toEmail,
-      subject: `🔐 Seu código de acesso ${APP_NAME}: ${code}`,
+      subject: `ðŸ” Seu cÃ³digo de acesso ${APP_NAME}: ${code}`,
       html: `
         <div style="font-family:Inter,sans-serif;background:#09090b;color:#f4f4f5;padding:40px;max-width:480px;margin:auto;border-radius:16px">
           <h2 style="color:#3b82f6;margin-bottom:8px">${APP_NAME}</h2>
-          <p style="color:#a1a1aa;margin-bottom:32px">Verificação em 2 etapas</p>
-          <p>Olá, <strong>${userName}</strong>!</p>
-          <p style="color:#a1a1aa">Seu código de verificação é:</p>
+          <p style="color:#a1a1aa;margin-bottom:32px">VerificaÃ§Ã£o em 2 etapas</p>
+          <p>OlÃ¡, <strong>${userName}</strong>!</p>
+          <p style="color:#a1a1aa">Seu cÃ³digo de verificaÃ§Ã£o Ã©:</p>
           <div style="background:#18181b;border:1px solid #27272a;border-radius:12px;padding:24px;text-align:center;margin:24px 0">
             <span style="font-size:40px;font-weight:800;letter-spacing:12px;color:#3b82f6">${code}</span>
           </div>
-          <p style="color:#71717a;font-size:13px">Este código expira em <strong>10 minutos</strong>. Se não foi você, ignore este email.</p>
+          <p style="color:#71717a;font-size:13px">Este cÃ³digo expira em <strong>10 minutos</strong>. Se nÃ£o foi vocÃª, ignore este email.</p>
         </div>
       `,
     });
 
-    console.log(`[AUTH-DEBUG] ✅ SUCESSO: E-mail enviado para ${toEmail}. Resposta: ${info.response}`);
+    console.log(`[AUTH-DEBUG] âœ… SUCESSO: E-mail enviado para ${toEmail}. Resposta: ${info.response}`);
   } catch (err) {
-    console.error(`[AUTH-DEBUG] ❌ ERRO NO SMTP: Falha ao enviar para ${toEmail}`);
+    console.error(`[AUTH-DEBUG] âŒ ERRO NO SMTP: Falha ao enviar para ${toEmail}`);
     console.error(`[AUTH-DEBUG] Motivo: ${err.message}`);
-    if (err.code) console.error(`[AUTH-DEBUG] Código do Erro: ${err.code}`);
+    if (err.code) console.error(`[AUTH-DEBUG] CÃ³digo do Erro: ${err.code}`);
     if (err.command) console.error(`[AUTH-DEBUG] Comando SMTP: ${err.command}`);
   }
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const makeToken = (payload, expiresIn = '10m') =>
   jwt.sign(payload, JWT_SECRET, { expiresIn });
 
@@ -167,15 +175,15 @@ const sendCredentialsEmail = async ({ userId, toEmail, userName, loginEmail, tem
       <div style="font-family:Inter,Arial,sans-serif;background:#09090b;color:#f4f4f5;padding:32px;max-width:560px;margin:auto;border-radius:16px">
         <h2 style="margin:0 0 8px;color:#22c55e">${businessName}</h2>
         <p style="margin:0 0 24px;color:#a1a1aa">Sua conta foi criada com sucesso.</p>
-        <p>Olá, <strong>${userName}</strong>.</p>
-        <p style="color:#d4d4d8">Aqui estão suas credenciais de acesso:</p>
+        <p>OlÃ¡, <strong>${userName}</strong>.</p>
+        <p style="color:#d4d4d8">Aqui estÃ£o suas credenciais de acesso:</p>
         <div style="background:#18181b;border:1px solid #27272a;border-radius:12px;padding:20px;margin:20px 0">
           <p style="margin:0 0 10px"><strong>E-mail:</strong> ${loginEmail}</p>
-          <p style="margin:0 0 10px"><strong>Senha provisória:</strong> ${tempPassword}</p>
-          <p style="margin:0"><strong>Nível:</strong> ${role}</p>
+          <p style="margin:0 0 10px"><strong>Senha provisÃ³ria:</strong> ${tempPassword}</p>
+          <p style="margin:0"><strong>NÃ­vel:</strong> ${role}</p>
         </div>
-        <p style="color:#a1a1aa">No primeiro acesso, a senha será alterada e as configurações de acesso serão concluídas.</p>
-        <p style="margin-top:24px"><a href="https://dash.digizap.com.br/login" style="display:inline-block;background:#22c55e;color:#fff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700">Acessar painel</a></p>
+        <p style="color:#a1a1aa">No primeiro acesso, a senha serÃ¡ alterada e as configuraÃ§Ãµes de acesso serÃ£o concluÃ­das.</p>
+        <p style="margin-top:24px"><a href="https://dash.hotwhats.com.br/login" style="display:inline-block;background:#22c55e;color:#fff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700">Acessar painel</a></p>
       </div>
     `,
   });
@@ -370,7 +378,7 @@ router.patch('/users/:id', authenticate, requireRole('superadmin'), async (req, 
         where: { email: cleanEmail, NOT: { id: userId } },
         select: { id: true },
       });
-      if (emailOwner) return res.status(409).json({ error: 'Este e-mail já está em uso.' });
+      if (emailOwner) return res.status(409).json({ error: 'Este e-mail jÃ¡ estÃ¡ em uso.' });
       data.email = cleanEmail;
     }
     if (typeof active === 'boolean') data.active = active;
@@ -473,19 +481,28 @@ router.delete('/users/:id', authenticate, requireRole('superadmin'), async (req,
   }
 });
 
-// ─── POST /auth/login ─────────────────────────────────────────────────────────
+// â”€â”€â”€ POST /auth/login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
-    authLog('info', 'login:start', 'Login iniciado', { email: maskEmail(email) });
-    const user = await prisma.user.findUnique({ where: { email } });
+    const loginValue = String(email || '').trim();
+    const normalizedEmail = loginValue.toLowerCase();
+    authLog('info', 'login:start', 'Login iniciado', { login: maskLoginIdentifier(loginValue) });
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: normalizedEmail },
+          { slug: loginValue },
+        ],
+      },
+    });
     if (!user) {
-      authLog('warn', 'login:user-not-found', 'Usuario nao encontrado', { email: maskEmail(email) });
-      return res.status(401).json({ error: 'Credenciais inválidas ou usuário inativo.' });
+      authLog('warn', 'login:user-not-found', 'Usuario nao encontrado', { login: maskLoginIdentifier(loginValue) });
+      return res.status(401).json({ error: 'Credenciais invÃ¡lidas ou usuÃ¡rio inativo.' });
     }
     if (!user.active) {
       authLog('warn', 'login:user-inactive', 'Usuario inativo', { userId: user.id, email: maskEmail(user.email) });
-      return res.status(401).json({ error: 'Credenciais inválidas ou usuário inativo.' });
+      return res.status(401).json({ error: 'Credenciais invÃ¡lidas ou usuÃ¡rio inativo.' });
     }
 
     const valid = await bcrypt.compare(password, user.password);
@@ -511,14 +528,14 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Ainda não configurou 2FA
+    // Ainda nÃ£o configurou 2FA
     if (!user.twoFactorVerified) {
       authLog('info', 'login:setup-2fa', 'Usuario precisa configurar 2FA', { userId: user.id, email: maskEmail(user.email) });
       const setupToken = makeToken({ id: user.id, setupStep: 'setup_2fa' }, '30m');
       return res.json({ requiresSetup: true, step: 'setup_2fa', setupToken });
     }
 
-    // Fluxo normal: envia 2FA pelo método do usuário
+    // Fluxo normal: envia 2FA pelo mÃ©todo do usuÃ¡rio
     if (user.twoFactorMethod === 'email') {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       authLog('info', 'login:otp-email', 'Gerando OTP por email', { userId: user.id, email: maskEmail(user.email) });
@@ -526,7 +543,7 @@ router.post('/login', async (req, res) => {
       await sendOtpEmail(user.id, user.email, code, user.name);
       authLog('info', 'login:otp-email-sent', 'OTP por email disparado', { userId: user.id, email: maskEmail(user.email) });
     }
-    // Para TOTP (Google Auth), não precisa enviar nada, o usuário abre o app
+    // Para TOTP (Google Auth), nÃ£o precisa enviar nada, o usuÃ¡rio abre o app
 
     const tempToken = makeToken({ id: user.id, twoFactorMethod: user.twoFactorMethod, pendingOTP: true });
     authLog('info', 'login:otp-pending', 'Login aguardando verificacao OTP', { userId: user.id, email: maskEmail(user.email), method: user.twoFactorMethod });
@@ -537,13 +554,13 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ─── POST /auth/setup-password ────────────────────────────────────────────────
+// â”€â”€â”€ POST /auth/setup-password â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.post('/setup-password', async (req, res) => {
   const { setupToken, newPassword } = req.body;
   try {
     const decoded = jwt.verify(setupToken, JWT_SECRET);
     if (decoded.setupStep !== 'change_password')
-      return res.status(400).json({ error: 'Token inválido para esta etapa.' });
+      return res.status(400).json({ error: 'Token invÃ¡lido para esta etapa.' });
 
     if (!newPassword || newPassword.length < 8)
       return res.status(400).json({ error: 'A senha deve ter pelo menos 8 caracteres.' });
@@ -554,31 +571,31 @@ router.post('/setup-password', async (req, res) => {
       data: { password: hash, mustChangePassword: false },
     });
 
-    // Se ainda não configurou 2FA, manda para esse setup
+    // Se ainda nÃ£o configurou 2FA, manda para esse setup
     if (!user.twoFactorVerified) {
       const setupToken2fa = makeToken({ id: user.id, setupStep: 'setup_2fa' }, '30m');
       return res.json({ requiresSetup: true, step: 'setup_2fa', setupToken: setupToken2fa });
     }
 
-    // Já tem 2FA configurado (improvável no primeiro login, mas cobre edge cases)
+    // JÃ¡ tem 2FA configurado (improvÃ¡vel no primeiro login, mas cobre edge cases)
     const tempToken = makeToken({ id: user.id, twoFactorMethod: user.twoFactorMethod, pendingOTP: true });
     res.json({ tempToken, twoFactorMethod: user.twoFactorMethod });
   } catch (err) {
-    res.status(401).json({ error: 'Token expirado ou inválido.' });
+    res.status(401).json({ error: 'Token expirado ou invÃ¡lido.' });
   }
 });
 
-// ─── POST /auth/setup-2fa ─────────────────────────────────────────────────────
+// â”€â”€â”€ POST /auth/setup-2fa â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Inicia o setup: gera secret TOTP ou envia email OTP
 router.post('/setup-2fa', async (req, res) => {
   const { setupToken, method } = req.body;
   try {
     const decoded = jwt.verify(setupToken, JWT_SECRET);
     if (decoded.setupStep !== 'setup_2fa')
-      return res.status(400).json({ error: 'Token inválido para esta etapa.' });
+      return res.status(400).json({ error: 'Token invÃ¡lido para esta etapa.' });
 
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
-    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado.' });
 
     if (method === 'totp') {
       const secret = speakeasy.generateSecret({ name: `${APP_NAME} (${user.email})`, length: 20 });
@@ -589,28 +606,28 @@ router.post('/setup-2fa', async (req, res) => {
 
     if (method === 'email') {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
-      console.log(`[AUTH-DEBUG] Gerado código ${code} para ${user.email}`);
+      console.log(`[AUTH-DEBUG] Gerado cÃ³digo ${code} para ${user.email}`);
       await prisma.user.update({ where: { id: user.id }, data: { otpSecret: code } });
 
       console.log('[AUTH-DEBUG] Disparando sendOtpEmail...');
       sendOtpEmail(user.id, user.email, code, user.name).catch(e => {
-        console.error('[AUTH-ERROR] ❌ Erro fatal no envio:', e.message);
+        console.error('[AUTH-ERROR] âŒ Erro fatal no envio:', e.message);
         console.error(e);
       });
 
       return res.json({ method: 'email' });
     }
 
-    console.log(`[AUTH-DEBUG] ❌ Método inválido recebido: ${method}`);
-    res.status(400).json({ error: 'Método inválido. Use "email" ou "totp".' });
+    console.log(`[AUTH-DEBUG] âŒ MÃ©todo invÃ¡lido recebido: ${method}`);
+    res.status(400).json({ error: 'MÃ©todo invÃ¡lido. Use "email" ou "totp".' });
   } catch (err) {
-    console.error('[AUTH-ERROR] ❌ Erro no catch do setup-2fa:', err.message);
-    res.status(401).json({ error: 'Token expirado ou inválido.' });
+    console.error('[AUTH-ERROR] âŒ Erro no catch do setup-2fa:', err.message);
+    res.status(401).json({ error: 'Token expirado ou invÃ¡lido.' });
   }
 });
 
-// ─── POST /auth/setup-2fa/verify ─────────────────────────────────────────────
-// Verifica o código e marca o 2FA como configurado
+// â”€â”€â”€ POST /auth/setup-2fa/verify â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Verifica o cÃ³digo e marca o 2FA como configurado
 router.post('/setup-2fa/verify', async (req, res) => {
   const { setupToken, method, code } = req.body;
   console.log(`[2FA-VERIFY] Recebido: method=${method}, code=${code}`);
@@ -618,10 +635,10 @@ router.post('/setup-2fa/verify', async (req, res) => {
     const decoded = jwt.verify(setupToken, JWT_SECRET);
     console.log(`[2FA-VERIFY] Token decodificado: setupStep=${decoded.setupStep}, userId=${decoded.id}`);
     if (decoded.setupStep !== 'setup_2fa')
-      return res.status(400).json({ error: 'Token inválido para esta etapa.' });
+      return res.status(400).json({ error: 'Token invÃ¡lido para esta etapa.' });
 
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
-    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+    if (!user) return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado.' });
 
     console.log(`[2FA-VERIFY] User encontrado: ${user.email}, otpSecret=${user.otpSecret ? 'existe' : 'VAZIO'}`);
 
@@ -633,13 +650,13 @@ router.post('/setup-2fa/verify', async (req, res) => {
         token: code,
         window: 2,
       });
-      console.log(`[2FA-VERIFY] Resultado TOTP: ${valid ? '✅ VÁLIDO' : '❌ INVÁLIDO'}`);
+      console.log(`[2FA-VERIFY] Resultado TOTP: ${valid ? 'âœ… VÃLIDO' : 'âŒ INVÃLIDO'}`);
     } else if (method === 'email') {
       valid = user.otpSecret === code;
       console.log(`[2FA-VERIFY] Resultado EMAIL: esperado=${user.otpSecret}, recebido=${code}, match=${valid}`);
     }
 
-    if (!valid) return res.status(401).json({ error: 'Código inválido. Tente novamente.' });
+    if (!valid) return res.status(401).json({ error: 'CÃ³digo invÃ¡lido. Tente novamente.' });
 
     await prisma.user.update({
       where: { id: user.id },
@@ -650,18 +667,18 @@ router.post('/setup-2fa/verify', async (req, res) => {
       },
     });
 
-    console.log(`[2FA-VERIFY] ✅ 2FA configurado com sucesso para ${user.email}`);
+    console.log(`[2FA-VERIFY] âœ… 2FA configurado com sucesso para ${user.email}`);
     const finalToken = makeToken({ id: user.id, role: user.role, slug: user.slug }, '7d');
     res.json({
       token: finalToken,
       user: { id: user.id, name: user.name, email: user.email, role: user.role, slug: user.slug },
     });
   } catch (err) {
-    res.status(401).json({ error: 'Token expirado ou inválido.' });
+    res.status(401).json({ error: 'Token expirado ou invÃ¡lido.' });
   }
 });
 
-// ─── POST /auth/verify ────────────────────────────────────────────────────────
+// â”€â”€â”€ POST /auth/verify â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Verifica o 2FA no login normal
 router.post('/verify', async (req, res) => {
   const { tempToken, code } = req.body;
@@ -669,18 +686,18 @@ router.post('/verify', async (req, res) => {
     authLog('info', 'verify:start', 'Verificacao OTP iniciada');
     if (!tempToken) {
       authLog('warn', 'verify:missing-temp-token', 'TempToken ausente no request');
-      return res.status(400).json({ error: 'Sessão de verificação ausente. Faça login novamente.' });
+      return res.status(400).json({ error: 'SessÃ£o de verificaÃ§Ã£o ausente. FaÃ§a login novamente.' });
     }
     const decoded = jwt.verify(tempToken, JWT_SECRET);
     if (!decoded.pendingOTP) {
       authLog('warn', 'verify:invalid-token', 'Token sem pendingOTP');
-      return res.status(400).json({ error: 'Token inválido.' });
+      return res.status(400).json({ error: 'Token invÃ¡lido.' });
     }
 
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
     if (!user) {
       authLog('warn', 'verify:user-not-found', 'Usuario nao encontrado', { userId: decoded.id });
-      return res.status(404).json({ error: 'Usuário não encontrado.' });
+      return res.status(404).json({ error: 'UsuÃ¡rio nÃ£o encontrado.' });
     }
 
     let valid = false;
@@ -702,7 +719,7 @@ router.post('/verify', async (req, res) => {
 
     if (!valid) {
       authLog('warn', 'verify:invalid-code', 'Codigo invalido ou expirado', { userId: user.id, email: maskEmail(user.email) });
-      return res.status(401).json({ error: 'Código inválido ou expirado.' });
+      return res.status(401).json({ error: 'CÃ³digo invÃ¡lido ou expirado.' });
     }
 
     const finalToken = makeToken({ id: user.id, role: user.role, slug: user.slug }, '7d');
@@ -713,29 +730,29 @@ router.post('/verify', async (req, res) => {
     });
   } catch (err) {
     authLog('error', 'verify:exception', err.message);
-    res.status(401).json({ error: 'Token expirado ou inválido.' });
+    res.status(401).json({ error: 'Token expirado ou invÃ¡lido.' });
   }
 });
 
-// ─── POST /auth/resend-otp ────────────────────────────────────────────────────
+// â”€â”€â”€ POST /auth/resend-otp â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.post('/resend-otp', async (req, res) => {
   const { tempToken } = req.body;
   try {
     const decoded = jwt.verify(tempToken, JWT_SECRET);
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
     if (!user || user.twoFactorMethod !== 'email')
-      return res.status(400).json({ error: 'Reenvio disponível apenas para o método de email.' });
+      return res.status(400).json({ error: 'Reenvio disponÃ­vel apenas para o mÃ©todo de email.' });
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     await prisma.user.update({ where: { id: user.id }, data: { otpSecret: code } });
     await sendOtpEmail(user.id, user.email, code, user.name);
-    res.json({ message: 'Código reenviado.' });
+    res.json({ message: 'CÃ³digo reenviado.' });
   } catch (err) {
-    res.status(401).json({ error: 'Token expirado ou inválido.' });
+    res.status(401).json({ error: 'Token expirado ou invÃ¡lido.' });
   }
 });
 
-// ─── POST /auth/test-email ────────────────────────────────────────────────────
+// â”€â”€â”€ POST /auth/test-email â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.post('/test-email', async (req, res) => {
   const { to } = req.body;
   // This one is tricky since it's used BEFORE login sometimes, or for testing.
@@ -746,10 +763,10 @@ router.post('/test-email', async (req, res) => {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const userId = decoded.id;
-    if (!to) return res.status(400).json({ error: 'Destinatário não informado.' });
+    if (!to) return res.status(400).json({ error: 'DestinatÃ¡rio nÃ£o informado.' });
 
     const mailer = await getMailer(userId);
-    if (!mailer) return res.status(400).json({ error: 'SMTP global não configurado no servidor (.env).' });
+    if (!mailer) return res.status(400).json({ error: 'SMTP global nÃ£o configurado no servidor (.env).' });
 
     const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
     const settings = await getSettings(userId);
@@ -757,8 +774,8 @@ router.post('/test-email', async (req, res) => {
     await mailer.sendMail({
       from: `"${settings?.businessName || APP_NAME}" <${fromEmail}>`,
       to,
-      subject: '✅ Teste de Email - DigiZap',
-      html: `<div style="font-family:sans-serif;padding:30px;background:#09090b;color:#f4f4f5;border-radius:12px"><h2 style="color:#10b981">Funcionou! 🎉</h2><p>Seu servidor SMTP global está configurado corretamente.</p></div>`,
+      subject: 'âœ… Teste de Email - HotWhats',
+      html: `<div style="font-family:sans-serif;padding:30px;background:#09090b;color:#f4f4f5;border-radius:12px"><h2 style="color:#10b981">Funcionou! ðŸŽ‰</h2><p>Seu servidor SMTP global estÃ¡ configurado corretamente.</p></div>`,
     });
     res.json({ message: 'Email de teste enviado com sucesso.' });
   } catch (err) {
@@ -771,3 +788,4 @@ module.exports.invalidateMailer = (userId) => {
   if (userId) delete mailerInstances[userId];
   else mailerInstances = {};
 };
+

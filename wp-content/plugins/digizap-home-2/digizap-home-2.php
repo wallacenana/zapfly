@@ -1,9 +1,9 @@
 <?php
 /**
- * Plugin Name: DigiZap Home 2
+ * Plugin Name: HotWhats Home 2
  * Description: Home LP com header e hero em modo endereco -> catalogo.
  * Version: 1.0.0
- * Author: DigiZap
+ * Author: HotWhats
  */
 
 if (!defined('ABSPATH')) {

@@ -561,6 +561,37 @@ h3 {
     color: var(--text-black);
 }
 
+.category-nav-shell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.category-nav-shell .category-nav-scroll {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.category-search-toggle {
+    appearance: none;
+    border: 1px solid var(--border-color);
+    background: color-mix(in srgb, var(--bg-color) 92%, #ffffff 8%);
+    color: var(--text-main);
+    border-radius: 14px;
+    width: 42px;
+    height: 42px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.category-search-toggle i {
+    width: 18px;
+    height: 18px;
+}
+
 /* Menu Sections */
 .main-menu {
     padding-bottom: 100px;
@@ -1403,6 +1434,94 @@ body.theme-dark .delivery-fee-badge {
 }
 
 @media (max-width: 599px) {
+    .nav-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .store-info {
+        width: 100%;
+        align-items: flex-start;
+    }
+
+    .store-details {
+        width: 100%;
+    }
+
+    .store-name-row {
+        width: 100%;
+        align-items: flex-start;
+    }
+
+    .store-header-actions {
+        width: 100%;
+        margin-left: 0;
+        justify-content: flex-end;
+        order: 2;
+        gap: 8px;
+    }
+
+    .header-divider {
+        display: none;
+    }
+
+    .category-tabs {
+        position: static;
+    }
+
+    .search-container {
+        display: none;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        margin-bottom: 6px;
+        background: #ffffff;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .search-container.is-open {
+        display: block;
+    }
+
+    .search-box {
+        background: #ffffff;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .search-box input {
+        color: #111111;
+    }
+
+    .search-box input::placeholder {
+        color: rgba(17, 17, 17, 0.52);
+    }
+
+    .category-nav {
+        top: 0 !important;
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    .category-nav-shell {
+        gap: 8px;
+    }
+
+    .category-search-toggle {
+        display: inline-flex;
+    }
+
+    .more-link-btn {
+        gap: 0;
+        padding: 4px;
+        min-width: 36px;
+        min-height: 36px;
+    }
+
+    .more-link-text {
+        display: none;
+    }
+
     .tabs-scroll {
         overflow-x: visible;
         gap: 10px;

@@ -1,5 +1,5 @@
-// Configurações
-const BASE_DOMAIN = 'digizap.com.br';
+﻿// ConfiguraÃ§Ãµes
+const BASE_DOMAIN = 'hotwhats.com.br';
 
 // Detecta se estamos na HOME exatamente
 const isHome = (window.location.hostname === BASE_DOMAIN || window.location.hostname === 'www.' + BASE_DOMAIN) &&
@@ -10,7 +10,7 @@ const pathSegments = window.location.pathname.split('/').filter(p => p);
 const querySlug = new URLSearchParams(window.location.search).get('loja') || '';
 const STORE_SLUG = isHome ? '' : (querySlug || pathSegments[0] || '');
 
-// Função auxiliar para alertas bonitos
+// FunÃ§Ã£o auxiliar para alertas bonitos
 const showAlert = (title, text, icon = 'warning') => {
     Swal.fire({
         title: title,
@@ -21,7 +21,7 @@ const showAlert = (title, text, icon = 'warning') => {
     });
 };
 
-// Estado da Aplicação
+// Estado da AplicaÃ§Ã£o
 let state = {
     products: [],
     activeTab: 'delivery',
@@ -32,7 +32,7 @@ let state = {
     currentItem: null,
     currentQty: 1,
     currentVariation: null,
-    userInfo: JSON.parse(localStorage.getItem('zapfly_user') || '{"name":"","phone":"","address":""}'),
+    userInfo: JSON.parse(localStorage.getItem('hotwhats_user') || '{"name":"","phone":"","address":""}'),
     publicSettings: { googleApiKey: '', deliveryRules: [], businessName: 'Carregando...' },
     currentStep: 1,
     geocoder: null,
@@ -57,13 +57,13 @@ function parseImages(imgField) {
 }
 
 /**
- * Seleciona a versão correta da imagem gerada pelo upload.php
+ * Seleciona a versÃ£o correta da imagem gerada pelo upload.php
  * @param {string} url - URL original
  * @param {'thumb'|'medium'|'full'} size - Tamanho desejado
  */
 function getImg(url, size = 'full') {
     if (!url) return url;
-    if (!url.includes('files.digizap.com.br')) return url; // Só funciona para o nosso servidor
+    if (!url.includes('files.hotwhats.com.br')) return url; // SÃ³ funciona para o nosso servidor
 
     if (size === 'thumb') return url.replace('.webp', '_90.webp');
     if (size === 'medium') return url.replace('.webp', '_550.webp');
@@ -97,7 +97,7 @@ function loadCart() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Carrega o cardápio (o servidor já garantiu que temos um slug válido aqui)
+    // Carrega o cardÃ¡pio (o servidor jÃ¡ garantiu que temos um slug vÃ¡lido aqui)
     loadCart();
     lucide.createIcons();
 
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function fetchPublicSettings() {
     try {
         const response = await fetch(`${API_BASE}/public/menu/${STORE_SLUG}`);
-        if (!response.ok) throw new Error('Loja não encontrada');
+        if (!response.ok) throw new Error('Loja nÃ£o encontrada');
         const data = await response.json();
 
         state.publicSettings = {
@@ -126,7 +126,7 @@ async function fetchPublicSettings() {
         state.products = data.products || [];
         state.availableSlots = data.availableSlots || [];
 
-        // Remove Skeletons e mostra o conteúdo real
+        // Remove Skeletons e mostra o conteÃºdo real
         const loader = document.getElementById('skeleton-loader');
         if (loader) loader.remove();
         const content = document.getElementById('actual-menu-content');
@@ -150,13 +150,13 @@ async function fetchPublicSettings() {
         }
 
         updateTheme(); // Aplica o tema inicial
-        // SEO Injection Dinâmico (Lido pelo Google JS Engine)
-        const titleText = data.businessName ? `${data.businessName} | Cardápio Digital DigiZap` : 'Cardápio Digital DigiZap';
+        // SEO Injection DinÃ¢mico (Lido pelo Google JS Engine)
+        const titleText = data.businessName ? `${data.businessName} | CardÃ¡pio Digital HotWhats` : 'CardÃ¡pio Digital HotWhats';
         document.title = titleText;
         const ogTitle = document.querySelector('meta[property="og:title"]');
         if (ogTitle) ogTitle.setAttribute('content', titleText);
 
-        const descText = data.seoDescription || `Confira o cardápio digital de ${data.businessName || 'nossa loja'} e faça seu pedido online.`;
+        const descText = data.seoDescription || `Confira o cardÃ¡pio digital de ${data.businessName || 'nossa loja'} e faÃ§a seu pedido online.`;
         const metaDesc = document.querySelector('meta[name="description"]');
         if (metaDesc) metaDesc.setAttribute('content', descText);
         const ogDesc = document.querySelector('meta[property="og:description"]');
@@ -223,7 +223,7 @@ async function fetchPublicSettings() {
             if (placeholder) placeholder.style.display = 'none';
         }
 
-        // Atualiza o título e nome na página
+        // Atualiza o tÃ­tulo e nome na pÃ¡gina
         const nameEl = document.getElementById('store-name');
         if (nameEl) nameEl.innerText = data.businessName;
 
@@ -234,10 +234,10 @@ async function fetchPublicSettings() {
             setInterval(checkStoreStatus, 60000);
         }
     } catch (err) {
-        console.error('Erro ao carregar configurações:', err);
+        console.error('Erro ao carregar configuraÃ§Ãµes:', err);
         document.body.innerHTML = `
             <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100vh; font-family:sans-serif;">
-                <h1>Loja não encontrada</h1>
+                <h1>Loja nÃ£o encontrada</h1>
                 <p>Verifique o link e tente novamente.</p>
             </div>
         `;
@@ -260,7 +260,7 @@ function checkStoreStatus() {
 
     const statusEl = document.getElementById('store-status-badge');
     if (statusEl) {
-        statusEl.innerText = state.isOpen ? '● Aberto agora' : '● Fechado (Apenas encomendas)';
+        statusEl.innerText = state.isOpen ? 'â— Aberto agora' : 'â— Fechado (Apenas encomendas)';
         statusEl.className = state.isOpen ? 'status-badge open' : 'status-badge closed';
     }
 }
@@ -342,7 +342,7 @@ function updateLocation(location, address = null) {
     if (address) {
         document.getElementById('user-address').value = address;
         state.userInfo.address = address;
-        localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
+        localStorage.setItem('hotwhats_user', JSON.stringify(state.userInfo));
         calculateDeliveryFee(address);
     }
 }
@@ -377,7 +377,7 @@ async function calculateDeliveryFee(address) {
             state.allowCash = false;
             if (display) {
                 display.style.display = 'block';
-                display.innerHTML = `⚠️ ${data.error}`;
+                display.innerHTML = `âš ï¸ ${data.error}`;
                 display.style.background = '#fef2f2';
                 display.style.color = '#991b1b';
                 display.style.border = '1px solid #fee2e2';
@@ -472,7 +472,7 @@ function renderMenu() {
         if (p.active === false) return false;
         if (p.category === 'Adicionais' || p.type === 'addon') return false;
 
-        // Verificar se tem variações e se todas estão escondidas
+        // Verificar se tem variaÃ§Ãµes e se todas estÃ£o escondidas
         const variations = JSON.parse(p.variations || '[]');
         if (variations.length > 0) {
             const hasVisibleVar = variations.some(v => !v.hidden);
@@ -484,7 +484,7 @@ function renderMenu() {
         return matchesTab && matchesSearch;
     });
 
-    // Separar destaques (apenas se não houver busca ativa)
+    // Separar destaques (apenas se nÃ£o houver busca ativa)
     const featured = query ? [] : filtered.filter(p => p.featured).sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     const nonFeatured = query ? filtered : filtered.filter(p => !p.featured);
 
@@ -506,13 +506,13 @@ function renderMenu() {
         grouped[cat].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
     });
 
-    // Ordenar pela propriedade 'order' que já vem do banco de dados
+    // Ordenar pela propriedade 'order' que jÃ¡ vem do banco de dados
     const sortedCategories = [];
     const orderedCats = [...(state.categories || [])].sort((a, b) => (a.order || 0) - (b.order || 0));
     orderedCats.forEach(c => {
         if (grouped[c.name]) sortedCategories.push(c.name);
     });
-    // Adiciona categorias legadas ('Geral') que não existem em state.categories
+    // Adiciona categorias legadas ('Geral') que nÃ£o existem em state.categories
     Object.keys(grouped).forEach(catName => {
         if (!sortedCategories.includes(catName)) sortedCategories.push(catName);
     });
@@ -549,7 +549,7 @@ function renderMenu() {
     renderCategoryNav(sortedCategories);
     lucide.createIcons();
 
-    // Troca a visibilidade SOMENTE APÓS o DOM estar completamente pronto
+    // Troca a visibilidade SOMENTE APÃ“S o DOM estar completamente pronto
     if (skeletonContainer) skeletonContainer.classList.add('hidden');
     if (actualContainer) actualContainer.classList.remove('hidden');
 }
@@ -673,7 +673,7 @@ function openItemDetail(productId) {
                     </div>
                     ${images.length > 1 ? `
                         <button class="carousel-btn carousel-prev" onclick="moveCarousel(-1)" aria-label="Imagem Anterior"><i data-lucide="chevron-left"></i></button>
-                        <button class="carousel-btn carousel-next" onclick="moveCarousel(1)" aria-label="Próxima Imagem"><i data-lucide="chevron-right"></i></button>
+                        <button class="carousel-btn carousel-next" onclick="moveCarousel(1)" aria-label="PrÃ³xima Imagem"><i data-lucide="chevron-right"></i></button>
                         <div class="carousel-dots">
                             ${images.map((_, i) => `<div class="carousel-dot ${i === 0 ? 'active' : ''}"></div>`).join('')}
                         </div>
@@ -685,7 +685,7 @@ function openItemDetail(productId) {
                 <p>${item.description || ''}</p>
                 ${variations.length === 0 ? `<div class="price">R$ ${parseFloat(item.price).toFixed(2)}</div>` : ''}
             </div>
-            ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opção</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
+            ${variations.length > 0 ? `<div class="variation-section"><h4>Escolha uma opÃ§Ã£o</h4>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price).toFixed(2)}</div></div>`).join('')}</div>` : ''}
                                                                                     `;
         updateDetailFooter();
         lucide.createIcons();
@@ -778,7 +778,7 @@ function initEventListeners() {
     document.getElementById('next-step-btn').addEventListener('click', handleNextStep);
     document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
 
-    // Listener para carregar horários disponíveis ao selecionar data
+    // Listener para carregar horÃ¡rios disponÃ­veis ao selecionar data
     document.getElementById('order-date').addEventListener('change', (e) => {
         const dateStr = e.target.value;
         if (!dateStr) return;
@@ -789,7 +789,7 @@ function initEventListeners() {
         const slots = state.availableSlots.filter(s => s.dayOfWeek === dayOfWeek);
         const timeSelect = document.getElementById('order-time');
 
-        timeSelect.innerHTML = `<option value="">Horário</option>` + slots.map(s => `<option value="${s.startTime}">${s.startTime}</option>`).join('');
+        timeSelect.innerHTML = `<option value="">HorÃ¡rio</option>` + slots.map(s => `<option value="${s.startTime}">${s.startTime}</option>`).join('');
     });
 
     document.getElementById('user-name').value = state.userInfo.name || '';
@@ -801,7 +801,7 @@ function initEventListeners() {
         phoneInput.addEventListener('input', (e) => {
             e.target.value = maskPhone(e.target.value);
             state.userInfo.phone = e.target.value;
-            localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
+            localStorage.setItem('hotwhats_user', JSON.stringify(state.userInfo));
         });
     }
 
@@ -810,7 +810,7 @@ function initEventListeners() {
         if (el) {
             el.addEventListener('input', (e) => {
                 state.userInfo[id.split('-')[1]] = e.target.value;
-                localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
+                localStorage.setItem('hotwhats_user', JSON.stringify(state.userInfo));
             });
         }
     });
@@ -819,7 +819,7 @@ function initEventListeners() {
 function goToStep(step) {
     state.currentStep = step;
 
-    // Esconde todos os passos explicitamente por ID para não ter erro
+    // Esconde todos os passos explicitamente por ID para nÃ£o ter erro
     document.getElementById('step-1')?.classList.add('hidden');
     document.getElementById('step-2')?.classList.add('hidden');
     document.getElementById('step-3')?.classList.add('hidden');
@@ -858,7 +858,7 @@ function renderStep1() {
     const cart = getActiveCart();
     const list = document.getElementById('checkout-items-list');
     if (cart.length === 0) {
-        list.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-gray);">Sua sacola está vazia.</p>`;
+        list.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-gray);">Sua sacola estÃ¡ vazia.</p>`;
         document.getElementById('next-step-btn').disabled = true;
         return;
     }
@@ -917,7 +917,7 @@ function renderStep2() {
     if (orderContent) orderContent.classList.toggle('hidden', isDelivery);
 
     if (isDelivery) {
-        // Se o Google Maps carregou mas o mapa ainda não foi criado, cria agora
+        // Se o Google Maps carregou mas o mapa ainda nÃ£o foi criado, cria agora
         if (window.google && !state.googleMap) {
             initMapsAutocomplete();
             initDeliveryMap();
@@ -953,7 +953,7 @@ function renderStep3() {
         <div class="payment-card ${state.paymentMethod === 'mercadopago' ? 'selected' : ''}" data-method="mercadopago" onclick="selectPaymentMethod('mercadopago')">
             <div class="payment-icon" style="background:#e0f2fe; color:#0284c7;"><i data-lucide="credit-card"></i></div>
             <div class="payment-info">
-                <h4>Pix ou Crédito</h4>
+                <h4>Pix ou CrÃ©dito</h4>
                 <p>Pagamento online 100% seguro via Mercado Pago.</p>
             </div>
         </div>
@@ -975,7 +975,7 @@ function renderStep3() {
                 <div class="payment-icon" style="background:#f3f4f6; color:#9ca3af;"><i data-lucide="banknote"></i></div>
                 <div class="payment-info">
                     <h4 style="color:#9ca3af;">Dinheiro</h4>
-                    <p style="color:#ef4444; font-weight:600;">⚠️ Não disponível para este endereço de entrega.</p>
+                    <p style="color:#ef4444; font-weight:600;">âš ï¸ NÃ£o disponÃ­vel para este endereÃ§o de entrega.</p>
                 </div>
             </div>
         `;
@@ -991,20 +991,20 @@ function handleNextStep() {
     if (state.currentStep === 1) {
         const nameVal = document.getElementById('user-name')?.value;
         const phoneVal = document.getElementById('user-phone')?.value;
-        if (!nameVal || !phoneVal || phoneVal.length < 14) return showAlert('Ops!', 'Preencha seu nome e um WhatsApp válido.');
+        if (!nameVal || !phoneVal || phoneVal.length < 14) return showAlert('Ops!', 'Preencha seu nome e um WhatsApp vÃ¡lido.');
         state.userInfo.name = nameVal;
         state.userInfo.phone = phoneVal;
         if (state.activeTab === 'delivery' && !state.isOpen) return showAlert('Loja Fechada', 'Estamos fechados para pronta entrega no momento. Por favor, utilize a aba de Encomendas para agendar seu pedido.');
         goToStep(2);
     } else if (state.currentStep === 2) {
-        if (state.activeTab === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
-        if (state.activeTab === 'order' && (!document.getElementById('order-date').value || !document.getElementById('order-time').value)) return showAlert('Horário Ausente', 'Escolha uma data e um horário para sua encomenda.');
+        if (state.activeTab === 'delivery' && !state.userInfo.address) return showAlert('EndereÃ§o Ausente', 'Por favor, selecione seu endereÃ§o no mapa.');
+        if (state.activeTab === 'order' && (!document.getElementById('order-date').value || !document.getElementById('order-time').value)) return showAlert('HorÃ¡rio Ausente', 'Escolha uma data e um horÃ¡rio para sua encomenda.');
         if (state.deliveryFee === 0 && state.activeTab === 'delivery' && state.userInfo.address) {
-            return showAlert('Taxa Indisponível', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereço está no raio de entrega.');
+            return showAlert('Taxa IndisponÃ­vel', 'Por favor, aguarde o cÃ¡lculo da taxa de entrega ou verifique se o endereÃ§o estÃ¡ no raio de entrega.');
         }
         goToStep(3);
     } else if (state.currentStep === 3) {
-        if (!state.paymentMethod) return showAlert('Atenção', 'Selecione uma forma de pagamento.');
+        if (!state.paymentMethod) return showAlert('AtenÃ§Ã£o', 'Selecione uma forma de pagamento.');
         goToStep(4);
     }
 }
@@ -1028,7 +1028,7 @@ function updateStep4Summary() {
             paymentSummaryEl.style.background = '#fef3c7';
             paymentSummaryEl.style.color = '#d97706';
         } else {
-            paymentSummaryEl.innerHTML = '<i data-lucide="credit-card" style="vertical-align: middle; margin-right: 5px;"></i> Pix ou Crédito (Online)';
+            paymentSummaryEl.innerHTML = '<i data-lucide="credit-card" style="vertical-align: middle; margin-right: 5px;"></i> Pix ou CrÃ©dito (Online)';
             paymentSummaryEl.style.background = '#f0fdf4';
             paymentSummaryEl.style.color = '#166534';
         }
@@ -1052,7 +1052,7 @@ function addToCart() {
     }
     const variation = state.currentVariation;
     const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
-    if (variations.length > 0 && !variation) return showAlert('Quase lá...', 'Por favor, selecione uma opção para continuar.');
+    if (variations.length > 0 && !variation) return showAlert('Quase lÃ¡...', 'Por favor, selecione uma opÃ§Ã£o para continuar.');
     const itemKey = variation ? `${item.id}-${variation.name}` : item.id;
     let cart = getActiveCart();
     const existing = cart.find(c => c.itemKey === itemKey);
@@ -1161,7 +1161,7 @@ async function handlePlaceOrder() {
             if (state.paymentMethod === 'dinheiro') {
                 Swal.fire({
                     title: 'Pedido Recebido!',
-                    text: 'Seu pedido foi registrado e está aguardando confirmação.',
+                    text: 'Seu pedido foi registrado e estÃ¡ aguardando confirmaÃ§Ã£o.',
                     icon: 'success',
                     confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#ff4d6d',
                     confirmButtonText: 'Ver meus pedidos'
@@ -1204,11 +1204,11 @@ function renderPreviousOrders() {
     if (!list) return;
 
     if (!Array.isArray(state.previousOrders) || state.previousOrders.length === 0) {
-        list.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-gray);">Você ainda não possui pedidos anteriores.</p>`;
+        list.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-gray);">VocÃª ainda nÃ£o possui pedidos anteriores.</p>`;
         return;
     }
 
-    // Pegar apenas itens únicos para não repetir
+    // Pegar apenas itens Ãºnicos para nÃ£o repetir
     const uniqueItems = [];
     const seen = new Set();
     state.previousOrders.forEach(o => {
@@ -1250,7 +1250,7 @@ function reorderItem(orderId) {
         closeWithAnimation('history-modal');
         goToStep(1);
     } else {
-        showAlert('Produto Indisponível', 'Este produto não está mais disponível no cardápio no momento.', 'error');
+        showAlert('Produto IndisponÃ­vel', 'Este produto nÃ£o estÃ¡ mais disponÃ­vel no cardÃ¡pio no momento.', 'error');
     }
 }
 
@@ -1298,6 +1298,7 @@ function updateTheme() {
     root.style.setProperty('--text-gray', `${data.textColor || (useDarkTheme ? '#ffffff' : '#333333')}99`);
 }
 
-// Inicialização imediata de elementos visuais síncronos
+// InicializaÃ§Ã£o imediata de elementos visuais sÃ­ncronos
 renderMenu(); // Mostra o skeleton imediatamente
 updateUI();
+

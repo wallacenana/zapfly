@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
     };
 
-    window.addEventListener('digizap:auth-expired', handleAuthExpired);
+    window.addEventListener('hotwhats:auth-expired', handleAuthExpired);
 
     const token = localStorage.getItem(TOKEN_KEY);
     const storedUser = localStorage.getItem(USER_KEY);
@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
     return () => {
       clearExpiryTimer();
-      window.removeEventListener('digizap:auth-expired', handleAuthExpired);
+      window.removeEventListener('hotwhats:auth-expired', handleAuthExpired);
     };
   }, [clearExpiryTimer]);
 

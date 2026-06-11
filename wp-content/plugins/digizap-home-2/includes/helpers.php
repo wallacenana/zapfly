@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 if (!defined('ABSPATH')) {
     exit;
@@ -29,7 +29,7 @@ if (!function_exists('dzhome2_asset_version')) {
 if (!function_exists('dzhome2_api_base')) {
     function dzhome2_api_base()
     {
-        return untrailingslashit((string) apply_filters('digizap_home2_api_base', 'https://api.digizap.com.br'));
+        return untrailingslashit((string) apply_filters('digizap_home2_api_base', 'https://api.hotwhats.com.br'));
     }
 }
 
@@ -51,7 +51,7 @@ if (!function_exists('dzhome2_enqueue_assets')) {
             'apiBase' => dzhome2_api_base(),
             'homeUrl' => home_url('/'),
             'restaurantsUrl' => dzhome2_restaurants_url(),
-            'loginUrl' => 'https://dash.digizap.com.br/login',
+            'loginUrl' => 'https://dash.hotwhats.com.br/login',
             'registerUrl' => home_url('/comprar/'),
             'blogUrl' => dzhome2_blog_url(),
             'categoryImageBaseUrl' => dzhome2_asset_url('assets/img/'),
@@ -59,8 +59,8 @@ if (!function_exists('dzhome2_enqueue_assets')) {
             'storageKey' => 'dz_home2_address',
             'searchLabel' => 'Buscar loja ou item',
             'continueLabel' => 'Continuar',
-            'editLabel' => 'Alterar endereço',
-            'addressPlaceholder' => 'Digite seu endereço completo',
+            'editLabel' => 'Alterar endereÃ§o',
+            'addressPlaceholder' => 'Digite seu endereÃ§o completo',
         ]);
 
         $loaded = true;
@@ -146,7 +146,7 @@ if (!function_exists('dzhome2_category_image_rules')) {
         return [
             ['match' => 'doces bolos', 'file' => 'bolos.png'],
             ['match' => 'doces e bolos', 'file' => 'bolos.png'],
-            ['match' => 'acai', 'file' => 'açai.png'],
+            ['match' => 'acai', 'file' => 'aÃ§ai.png'],
             ['match' => 'bebidas', 'file' => 'bebidas.png'],
             ['match' => 'bolos', 'file' => 'bolos.png'],
             ['match' => 'doces', 'file' => 'doces.png'],
@@ -448,10 +448,10 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
             $name = isset($store['name']) ? (string) $store['name'] : 'Restaurante';
             $slug = isset($store['slug']) ? (string) $store['slug'] : '';
             $category = isset($store['category']) ? (string) $store['category'] : '';
-            $address = !empty($store['address']) ? (string) $store['address'] : 'Endereço não informado';
+            $address = !empty($store['address']) ? (string) $store['address'] : 'EndereÃ§o nÃ£o informado';
             $logoUrl = !empty($store['logoUrl']) ? (string) $store['logoUrl'] : dzhome2_placeholder_logo($name, $store['accentColor'] ?? '#e11d48');
             $featuredLine = !empty($store['featuredProducts'])
-                ? implode(' · ', array_map(static fn($item) => isset($item['name']) ? (string) $item['name'] : '', $store['featuredProducts']))
+                ? implode(' Â· ', array_map(static fn($item) => isset($item['name']) ? (string) $item['name'] : '', $store['featuredProducts']))
                 : 'Sem destaques cadastrados';
             $schedule = dzhome2_store_schedule_state($store);
             $count = isset($store['productsCount']) ? absint($store['productsCount']) : 0;
@@ -516,14 +516,14 @@ if (!function_exists('dzhome2_render_restaurants_block')) {
             <div class="dz-home2-catalog-head">
                 <div>
                     <h2>Restaurantes</h2>
-                    <p><?php echo esc_html($total > 0 ? ($total === 1 ? '1 restaurante disponível' : sprintf('%d restaurantes disponíveis', $total)) : 'Nenhum restaurante encontrado.'); ?></p>
+                    <p><?php echo esc_html($total > 0 ? ($total === 1 ? '1 restaurante disponÃ­vel' : sprintf('%d restaurantes disponÃ­veis', $total)) : 'Nenhum restaurante encontrado.'); ?></p>
                 </div>
                 <span class="dz-home2-catalog-count"><?php echo esc_html((string) $total); ?></span>
             </div>
 
             <?php echo dzhome2_render_store_rail_section('Destaques', $featured, '', 'featured', empty($featured)); ?>
-            <?php echo dzhome2_render_store_rail_section('Frete grátis', $freeDelivery, '', 'freeDelivery', empty($freeDelivery)); ?>
-            <?php echo dzhome2_render_store_rail_section('Em promoção', $promo, '', 'promo', empty($promo)); ?>
+            <?php echo dzhome2_render_store_rail_section('Frete grÃ¡tis', $freeDelivery, '', 'freeDelivery', empty($freeDelivery)); ?>
+            <?php echo dzhome2_render_store_rail_section('Em promoÃ§Ã£o', $promo, '', 'promo', empty($promo)); ?>
 
             <div class="dz-home2-restaurants-grid">
                 <?php echo dzhome2_render_restaurant_cards($restaurants); ?>
@@ -644,14 +644,14 @@ if (!function_exists('dzhome2_render_directory_skeleton')) {
 if (!function_exists('dzhome2_hero_artwork_url')) {
     function dzhome2_hero_artwork_url()
     {
-        return 'https://digizap.com.br/wp-content/uploads/2026/05/mockup-digizap.png';
+        return 'https://hotwhats.com.br/wp-content/uploads/2026/05/mockup-digizap.png';
     }
 }
 
 if (!function_exists('dzhome2_restaurants_hero_artwork_url')) {
     function dzhome2_restaurants_hero_artwork_url()
     {
-        return 'https://digizap.com.br/wp-content/uploads/2026/05/ChatGPT-Image-27-de-mai.-de-2026-09_27_58-768x512.png';
+        return 'https://hotwhats.com.br/wp-content/uploads/2026/05/ChatGPT-Image-27-de-mai.-de-2026-09_27_58-768x512.png';
     }
 }
 
@@ -680,8 +680,8 @@ if (!function_exists('dzhome2_short_address')) {
             'estrada' => 'Est.',
             'alameda' => 'Al.',
             'rodovia' => 'Rod.',
-            'praça' => 'Pç.',
-            'praca' => 'Pç.',
+            'praÃ§a' => 'PÃ§.',
+            'praca' => 'PÃ§.',
             'viela' => 'Vl.',
             'beco' => 'Bc.',
             'ladeira' => 'Ld.',
@@ -758,7 +758,7 @@ if (!function_exists('dzhome2_short_address')) {
 if (!function_exists('dzhome2_maps_key')) {
     function dzhome2_maps_key($fallback = '')
     {
-        $option = trim((string) get_option('digizap_home2_maps_key', ''));
+        $option = trim((string) get_option('hotwhats_home2_maps_key', ''));
         if ($option !== '') {
             return $option;
         }
@@ -814,3 +814,4 @@ add_action('elementor/query/jornada_conhecer_ferramentas', function ($query) {
         ],
     ]);
 });
+

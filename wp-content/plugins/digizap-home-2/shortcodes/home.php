@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 if (!defined('ABSPATH')) {
     exit;
@@ -9,7 +9,7 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
     {
         $atts = shortcode_atts([
             'title' => 'Tudo pra facilitar seu dia a dia',
-            'description' => 'Digite seu endereço para começar.',
+            'description' => 'Digite seu endereÃ§o para comeÃ§ar.',
             'limit' => 18,
             'key' => 'home2',
             'maps_key' => ''
@@ -51,7 +51,7 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
             data-api-base="<?php echo esc_attr(dzhome2_api_base()); ?>"
             data-home-url="<?php echo esc_attr(home_url('/')); ?>"
             data-restaurants-url="<?php echo esc_attr(dzhome2_restaurants_url()); ?>"
-            data-login-url="<?php echo esc_attr('https://dash.digizap.com.br/login'); ?>"
+            data-login-url="<?php echo esc_attr('https://dash.hotwhats.com.br/login'); ?>"
             data-register-url="<?php echo esc_attr(home_url('/comprar/')); ?>"
             data-blog-url="<?php echo esc_attr(dzhome2_blog_url()); ?>"
             data-storage-key="dz_home2_address"
@@ -62,7 +62,7 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
                 'homeUrl' => home_url('/'),
                 'restaurantsUrl' => dzhome2_restaurants_url(),
                 'blogUrl' => dzhome2_blog_url(),
-                'loginUrl' => 'https://dash.digizap.com.br/login',
+                'loginUrl' => 'https://dash.hotwhats.com.br/login',
                 'registerUrl' => home_url('/comprar/'),
                 'hasSelectedAddress' => $hasSelectedAddress,
                 'initialAddressLabel' => $initialAddressLabel,
@@ -75,8 +75,8 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
                     <div class="dz-home2-landing-grid">
                         <div class="dz-home2-landing-copy">
                             <span class="dz-home2-landing-badge">
-                                <span aria-hidden="true">⚡</span>
-                                <span>Cardápio digital inteligente</span>
+                                <span aria-hidden="true">âš¡</span>
+                                <span>CardÃ¡pio digital inteligente</span>
                             </span>
                             <h1><?php echo esc_html($atts['title']); ?></h1>
                             <p><?php echo esc_html($atts['description']); ?></p>
@@ -85,7 +85,7 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
                                 <input
                                     type="text"
                                     data-address-input
-                                    placeholder="<?php echo esc_attr('Digite seu endereço completo'); ?>"
+                                    placeholder="<?php echo esc_attr('Digite seu endereÃ§o completo'); ?>"
                                     autocomplete="off"
                                     spellcheck="false"
                                     inputmode="text">
@@ -137,17 +137,17 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
                     </div>
 
                     <div class="dz-home2-directory-toolbar" data-directory-controls>
-                        <div class="dz-home2-directory-filters" role="tablist" aria-label="Filtros do diretório">
+                        <div class="dz-home2-directory-filters" role="tablist" aria-label="Filtros do diretÃ³rio">
                             <button class="dz-home2-directory-filter is-active" type="button" data-filter-pill="all">Todos</button>
                             <button class="dz-home2-directory-filter" type="button" data-filter-pill="featured">Destaques</button>
-                            <button class="dz-home2-directory-filter" type="button" data-filter-pill="freeDelivery">Frete grátis</button>
-                            <button class="dz-home2-directory-filter" type="button" data-filter-pill="promo">Em promoção</button>
+                            <button class="dz-home2-directory-filter" type="button" data-filter-pill="freeDelivery">Frete grÃ¡tis</button>
+                            <button class="dz-home2-directory-filter" type="button" data-filter-pill="promo">Em promoÃ§Ã£o</button>
                             <button class="dz-home2-directory-filter" type="button" data-filter-pill="open">Aberto agora</button>
                         </div>
                         <label class="dz-home2-directory-sort">
                             <span>Ordenar</span>
                             <select data-sort-select>
-                                <option value="recommended">Relevância</option>
+                                <option value="recommended">RelevÃ¢ncia</option>
                                 <option value="orders">Mais pedidos</option>
                                 <option value="rating">Melhor avaliados</option>
                                 <option value="az">A-Z</option>
@@ -156,12 +156,12 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
                     </div>
 
                     <?php echo dzhome2_render_store_rail_section('Destaques', $initialData['featuredStores'] ?? [], dzhome2_restaurants_url(), 'featured', empty($initialData['featuredStores'])); ?>
-                    <?php echo dzhome2_render_store_rail_section('Frete grátis', $initialData['freeDeliveryStores'] ?? [], dzhome2_restaurants_url(), 'freeDelivery', empty($initialData['freeDeliveryStores'])); ?>
-                    <?php echo dzhome2_render_store_rail_section('Em promoção', $initialData['promoStores'] ?? [], dzhome2_restaurants_url(), 'promo', empty($initialData['promoStores'])); ?>
+                    <?php echo dzhome2_render_store_rail_section('Frete grÃ¡tis', $initialData['freeDeliveryStores'] ?? [], dzhome2_restaurants_url(), 'freeDelivery', empty($initialData['freeDeliveryStores'])); ?>
+                    <?php echo dzhome2_render_store_rail_section('Em promoÃ§Ã£o', $initialData['promoStores'] ?? [], dzhome2_restaurants_url(), 'promo', empty($initialData['promoStores'])); ?>
 
                     <div class="dz-home2-catalog-head">
                         <div>
-                            <h2>Restaurantes perto de você</h2>
+                            <h2>Restaurantes perto de vocÃª</h2>
                         </div>
                         <a class="dz-home2-catalog-action" href="<?php echo esc_url(dzhome2_restaurants_url()); ?>">Ver mais</a>
                     </div>
@@ -187,7 +187,7 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
                 'homeUrl' => home_url('/'),
                 'restaurantsUrl' => dzhome2_restaurants_url(),
                 'blogUrl' => dzhome2_blog_url(),
-                'loginUrl' => 'https://dash.digizap.com.br/login',
+                'loginUrl' => 'https://dash.hotwhats.com.br/login',
                 'registerUrl' => home_url('/comprar/'),
             ]); ?>
         </div>
@@ -197,3 +197,4 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
 }
 
 add_shortcode('digizap_home_2', 'dzhome2_render_home_shortcode');
+

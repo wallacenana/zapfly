@@ -20,7 +20,7 @@ const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const multer = require('multer');
 const axios = require('axios');
 const { MercadoPagoConfig, Payment: MercadoPagoPayment } = require('mercadopago');
-const { authenticate } = require('./middleware/auth');
+const { authenticate, requireAdmin } = require('./middleware/auth');
 
 
 // Dynamic JID canonicalization helper for Brazilian phone numbers
@@ -250,9 +250,463 @@ app.post('/settings', authenticate, async (req, res) => {
     }
 });
 
+app.get('/dashboard/summary', authenticate, requireAdmin, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const now = new Date();
+        const brazilDateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' });
+        const getBrazilDateString = (date = new Date()) => brazilDateFormatter.format(date);
+
+        const today = getBrazilDateString(now);
+        const todayStart = new Date(`${today}T00:00:00-03:00`);
+        const todayEnd = new Date(`${today}T23:59:59.999-03:00`);
+
+        const sevenDays = [];
+        for (let i = 6; i >= 0; i -= 1) {
+            const day = new Date(now);
+            day.setDate(day.getDate() - i);
+            const key = getBrazilDateString(day);
+            sevenDays.push({ key, label: new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit' }).format(day) });
+        }
+
+        const [user, settings, storeProfile, products, categories, reviewsSummary, stockItems, instances, flows, customers, ordersToday, recentOrders, last7DaysOrders, topOrderGroups, orderStatusGroups, paymentStatusGroups, availableSlots, recentReviews, upcomingOrders] = await Promise.all([
+            prisma.user.findUnique({
+                where: { id: userId },
+                select: { id: true, name: true, email: true, slug: true, role: true, active: true, createdAt: true, updatedAt: true }
+            }),
+            getSettings(userId),
+            prisma.storeProfile.findUnique({ where: { userId } }),
+            prisma.product.findMany({
+                where: { userId },
+                select: {
+                    id: true,
+                    name: true,
+                    price: true,
+                    promoPrice: true,
+                    featured: true,
+                    promotion: true,
+                    displayOrder: true,
+                    trackStock: true,
+                    stock: true,
+                    imageUrl: true,
+                    image: true,
+                    categoryId: true,
+                    categoryName: true,
+                    createdAt: true,
+                }
+            }),
+            prisma.category.findMany({
+                where: { userId },
+                select: { id: true, name: true, order: true, createdAt: true },
+                orderBy: [{ order: 'asc' }, { name: 'asc' }]
+            }),
+            prisma.storeReview.aggregate({
+                where: { userId },
+                _avg: { rating: true },
+                _count: { _all: true }
+            }),
+            prisma.stockItem.findMany({
+                where: { userId },
+                select: { id: true, name: true, quantity: true, minQuantity: true, unit: true, createdAt: true },
+                orderBy: [{ quantity: 'asc' }, { name: 'asc' }]
+            }),
+            prisma.instance.findMany({
+                where: { userId },
+                select: { id: true, name: true, status: true, updatedAt: true, createdAt: true },
+                orderBy: [{ updatedAt: 'desc' }, { createdAt: 'desc' }]
+            }),
+            prisma.flow.findMany({
+                where: { userId },
+                select: { id: true, name: true, status: true, trigger: true, updatedAt: true, createdAt: true },
+                orderBy: [{ updatedAt: 'desc' }]
+            }),
+            prisma.customer.count({ where: { userId } }),
+            prisma.order.count({
+                where: {
+                    userId,
+                    createdAt: { gte: todayStart, lte: todayEnd },
+                    NOT: { status: { in: ['cancelled', 'canceled'] } }
+                }
+            }),
+            prisma.order.findMany({
+                where: { userId },
+                orderBy: { createdAt: 'desc' },
+                take: 8,
+                select: {
+                    id: true,
+                    product: true,
+                    variation: true,
+                    clientName: true,
+                    status: true,
+                    type: true,
+                    totalValue: true,
+                    scheduledDate: true,
+                    scheduledTime: true,
+                    createdAt: true,
+                    paymentStatus: true,
+                    deliveryFee: true,
+                    productId: true,
+                    productRelation: {
+                        select: { id: true, name: true, imageUrl: true, image: true }
+                    }
+                }
+            }),
+            prisma.order.findMany({
+                where: {
+                    userId,
+                    createdAt: { gte: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000) },
+                    NOT: { status: { in: ['cancelled', 'canceled'] } }
+                },
+                select: { createdAt: true, totalValue: true, status: true }
+            }),
+            prisma.order.groupBy({
+                by: ['productId'],
+                where: {
+                    userId,
+                    productId: { not: null },
+                    NOT: { status: { in: ['cancelled', 'canceled'] } }
+                },
+                _count: { _all: true },
+                _sum: { totalValue: true },
+                orderBy: { _count: { productId: 'desc' } },
+                take: 5
+            }),
+            prisma.message.count({
+                where: {
+                    instanceId: { in: instances.map((item) => item.id) },
+                    timestamp: { gte: todayStart, lte: todayEnd }
+                }
+            }),
+            prisma.order.groupBy({
+                by: ['status'],
+                where: {
+                    userId,
+                    createdAt: { gte: todayStart, lte: todayEnd }
+                },
+                _count: { _all: true }
+            }),
+            prisma.order.groupBy({
+                by: ['paymentStatus'],
+                where: {
+                    userId,
+                    NOT: { status: { in: ['cancelled', 'canceled'] } }
+                },
+                _count: { _all: true }
+            }),
+            prisma.availableSlot.findMany({
+                where: { userId },
+                select: { id: true, dayOfWeek: true, startTime: true, endTime: true, maxOrders: true },
+                orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }]
+            }),
+            prisma.storeReview.findMany({
+                where: { userId },
+                orderBy: { createdAt: 'desc' },
+                take: 5,
+                select: {
+                    id: true,
+                    rating: true,
+                    comment: true,
+                    clientName: true,
+                    createdAt: true,
+                    order: {
+                        select: { product: true, variation: true }
+                    }
+                }
+            }),
+            prisma.order.findMany({
+                where: {
+                    userId,
+                    NOT: { status: { in: ['cancelled', 'canceled'] } },
+                    scheduledDate: { gte: today }
+                },
+                orderBy: [{ scheduledDate: 'asc' }, { scheduledTime: 'asc' }],
+                take: 6,
+                select: {
+                    id: true,
+                    product: true,
+                    variation: true,
+                    scheduledDate: true,
+                    scheduledTime: true,
+                    status: true,
+                    type: true,
+                    clientName: true,
+                    deliveryAddress: true,
+                    productRelation: { select: { name: true, imageUrl: true, image: true } }
+                }
+            })
+        ]);
+
+        const messagesToday = instances.length > 0
+            ? await prisma.message.count({
+                where: {
+                    instanceId: { in: instances.map((item) => item.id) },
+                    timestamp: { gte: todayStart, lte: todayEnd }
+                }
+            })
+            : 0;
+
+        const upcomingOrdersFiltered = upcomingOrders.filter((order) => order?.scheduledDate && order.scheduledDate >= today);
+
+        const productIds = topOrderGroups.map((item) => item.productId).filter(Boolean);
+        const topProductsMap = productIds.length > 0
+            ? new Map((await prisma.product.findMany({
+                where: { userId, id: { in: productIds } },
+                select: { id: true, name: true, imageUrl: true, image: true, price: true, promoPrice: true, featured: true, promotion: true }
+            })).map((product) => [product.id, product]))
+            : new Map();
+
+        const todayOrdersValue = ordersToday.reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
+        const completedOrdersTodayValue = ordersToday
+            .filter((order) => String(order.status || '').toLowerCase() === 'completed')
+            .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
+        const totalOrdersValue = await prisma.order.aggregate({
+            where: { userId, NOT: { status: { in: ['cancelled', 'canceled'] } } },
+            _sum: { totalValue: true }
+        });
+        const completedOrdersCount = await prisma.order.count({
+            where: { userId, status: 'completed' }
+        });
+        const pendingOrdersCount = await prisma.order.count({
+            where: { userId, status: { in: ['pending', 'waiting_payment'] } }
+        });
+        const acceptedOrdersCount = await prisma.order.count({
+            where: { userId, status: 'accepted' }
+        });
+        const productionOrdersCount = await prisma.order.count({
+            where: { userId, status: 'production' }
+        });
+        const readyOrdersCount = await prisma.order.count({
+            where: { userId, status: 'ready' }
+        });
+        const cancelledOrdersCount = await prisma.order.count({
+            where: { userId, status: { in: ['cancelled', 'canceled'] } }
+        });
+        const connectedInstancesCount = instances.filter((item) => String(item.status || '').toLowerCase() === 'connected').length;
+        const activeFlowsCount = flows.filter((item) => String(item.status || '').toLowerCase() !== 'rascunho').length;
+        const featuredProductsCount = products.filter((item) => item.featured).length;
+        const promotionProductsCount = products.filter((item) => item.promotion || (item.promoPrice !== null && item.promoPrice !== undefined && Number(item.promoPrice) > 0)).length;
+        const variationProductsCount = products.filter((item) => {
+            if (!item?.variations) return false;
+            if (Array.isArray(item.variations)) return item.variations.length > 0;
+            if (typeof item.variations !== 'string') return false;
+            try {
+                return Array.isArray(JSON.parse(item.variations)) && JSON.parse(item.variations).length > 0;
+            } catch (err) {
+                return false;
+            }
+        }).length;
+        const lowStockItems = stockItems.filter((item) => Number(item.quantity) <= Number(item.minQuantity));
+        const paymentBreakdown = paymentStatusGroups.map((item) => ({
+            paymentStatus: item.paymentStatus || 'pending',
+            count: Number(item._count._all || 0)
+        }));
+        const slotsByDay = availableSlots.reduce((acc, slot) => {
+            const key = String(slot.dayOfWeek);
+            if (!acc[key]) {
+                acc[key] = { dayOfWeek: slot.dayOfWeek, count: 0, totalCapacity: 0 };
+            }
+            acc[key].count += 1;
+            acc[key].totalCapacity += Number(slot.maxOrders || 0);
+            return acc;
+        }, {});
+        const recentSlots = availableSlots.slice(0, 6).map((slot) => ({
+            id: slot.id,
+            dayOfWeek: slot.dayOfWeek,
+            startTime: slot.startTime,
+            endTime: slot.endTime,
+            maxOrders: Number(slot.maxOrders || 0)
+        }));
+        const configIssues = [
+            !storeProfile?.businessName && !settings?.businessName ? 'Nome da loja não definido.' : null,
+            !user?.slug ? 'Slug público não configurado.' : null,
+            !storeProfile?.businessCategory && !settings?.businessCategory ? 'Categoria principal não informada.' : null,
+            !storeProfile?.businessAddress && !settings?.businessAddress ? 'Endereço público não informado.' : null,
+            !storeProfile?.prepTime && !settings?.prepTime ? 'Tempo de preparo não informado.' : null,
+            !storeProfile?.logoUrl && !settings?.logoUrl ? 'Logo pública não configurada.' : null,
+            !settings?.acceptOrders && !storeProfile?.acceptOrders ? 'Loja fechada para pedidos.' : null,
+            !availableSlots.length ? 'Não há horários de atendimento cadastrados.' : null,
+        ].filter(Boolean);
+        const categoryProductStats = categories.map((category) => {
+            const total = products.filter((product) => product.categoryId === category.id || String(product.categoryName || '').toLowerCase() === String(category.name || '').toLowerCase()).length;
+            return {
+                id: category.id,
+                name: category.name,
+                order: category.order,
+                total
+            };
+        }).sort((a, b) => b.total - a.total || a.order - b.order);
+        const orderTypeBreakdown = {
+            delivery: await prisma.order.count({ where: { userId, type: 'delivery', NOT: { status: { in: ['cancelled', 'canceled'] } } } }),
+            order: await prisma.order.count({ where: { userId, type: 'order', NOT: { status: { in: ['cancelled', 'canceled'] } } } }),
+        };
+
+        const ordersByDay = sevenDays.map((day) => {
+            const dayOrders = last7DaysOrders.filter((order) => getBrazilDateString(order.createdAt) === day.key);
+            const total = dayOrders.reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
+            return {
+                date: day.key,
+                label: day.label,
+                count: dayOrders.length,
+                total: Number(total.toFixed(2))
+            };
+        });
+
+        const normalizedRecentOrders = recentOrders.map((order) => ({
+            id: order.id,
+            product: order.productRelation?.name || order.product || 'Produto',
+            variation: order.variation || '',
+            clientName: order.clientName || 'Cliente',
+            status: order.status,
+            type: order.type,
+            totalValue: Number(order.totalValue || 0),
+            scheduledDate: order.scheduledDate || '',
+            scheduledTime: order.scheduledTime || '',
+            paymentStatus: order.paymentStatus || 'pending',
+            createdAt: order.createdAt,
+            deliveryFee: Number(order.deliveryFee || 0),
+            imageUrl: order.productRelation?.imageUrl || order.productRelation?.image || '',
+        }));
+
+        const topProducts = topOrderGroups.map((item) => {
+            const product = topProductsMap.get(item.productId);
+            return {
+                id: item.productId,
+                name: product?.name || 'Produto',
+                count: Number(item._count._all || 0),
+                totalValue: Number(item._sum.totalValue || 0),
+                featured: Boolean(product?.featured),
+                promotion: Boolean(product?.promotion),
+                price: Number(product?.price || 0),
+                promoPrice: product?.promoPrice !== null && product?.promoPrice !== undefined ? Number(product.promoPrice) : null,
+                imageUrl: product?.imageUrl || product?.image || ''
+            };
+        });
+
+        res.json({
+            store: {
+                id: user?.id || userId,
+                name: settings?.businessName || storeProfile?.businessName || user?.name || 'HotWhats',
+                slug: user?.slug || '',
+                role: user?.role || '',
+                active: user?.active ?? true,
+                category: settings?.businessCategory || storeProfile?.businessCategory || '',
+                address: settings?.businessAddress || storeProfile?.businessAddress || '',
+                prepTime: settings?.prepTime || storeProfile?.prepTime || '',
+                menuTheme: settings?.menuTheme || storeProfile?.menuTheme || 'dark',
+                acceptOrders: settings?.acceptOrders ?? storeProfile?.acceptOrders ?? true,
+                deliveryMode: settings?.deliveryMode || storeProfile?.deliveryMode || 'hibrido',
+                freeDeliveryEnabled: settings?.freeDeliveryEnabled ?? storeProfile?.freeDeliveryEnabled ?? false,
+                freeDeliveryKm: settings?.freeDeliveryKm ?? storeProfile?.freeDeliveryKm ?? null,
+                maxDeliveryKm: settings?.maxDeliveryKm ?? storeProfile?.maxDeliveryKm ?? 15,
+                logoUrl: settings?.logoUrl || storeProfile?.logoUrl || '',
+                faviconUrl: settings?.faviconUrl || storeProfile?.faviconUrl || '',
+                backgroundColor: settings?.backgroundColor || storeProfile?.backgroundColor || '#ffffff',
+                textColor: settings?.textColor || storeProfile?.textColor || '#333333',
+                accentColor: settings?.accentColor || storeProfile?.accentColor || '#ff4d6d',
+                buttonColor: settings?.buttonColor || storeProfile?.buttonColor || '#ff4d6d',
+            },
+            metrics: {
+                totalOrders: await prisma.order.count({ where: { userId, NOT: { status: { in: ['cancelled', 'canceled'] } } } }),
+                ordersTodayCount,
+                pendingOrdersCount,
+                acceptedOrdersCount,
+                productionOrdersCount,
+                readyOrdersCount,
+                completedOrdersCount,
+                cancelledOrdersCount,
+                todayOrdersValue: Number(todayOrdersValue.toFixed(2)),
+                completedOrdersTodayValue: Number(completedOrdersTodayValue.toFixed(2)),
+                totalOrdersValue: Number((totalOrdersValue?._sum?.totalValue || 0).toFixed(2)),
+                averageTicketToday: ordersTodayCount > 0 ? Number((todayOrdersValue / ordersTodayCount).toFixed(2)) : 0,
+                productsCount: products.length,
+                featuredProductsCount,
+                promotionProductsCount,
+                categoriesCount: categories.length,
+                addonGroupsCount: await prisma.addonGroup.count({ where: { userId } }),
+                stockItemsCount: stockItems.length,
+                lowStockCount: lowStockItems.length,
+                reviewsCount: Number(reviewsSummary._count._all || 0),
+                reviewsAverage: reviewsSummary._avg.rating !== null && reviewsSummary._avg.rating !== undefined ? Number(reviewsSummary._avg.rating) : 0,
+                messagesTodayCount: messagesToday,
+                instancesCount: instances.length,
+                connectedInstancesCount,
+                disconnectedInstancesCount: Math.max(instances.length - connectedInstancesCount, 0),
+                flowsCount: flows.length,
+                activeFlowsCount,
+                customersCount: customers,
+                paymentConfirmedCount: paymentStatusGroups.find((item) => String(item.paymentStatus || '').toLowerCase() === 'confirmed')?._count?._all || 0,
+                paymentPendingCount: paymentStatusGroups.find((item) => String(item.paymentStatus || '').toLowerCase() === 'pending')?._count?._all || 0,
+                paymentPaidCount: paymentStatusGroups.find((item) => String(item.paymentStatus || '').toLowerCase() === 'paid')?._count?._all || 0,
+                paymentBreakdownTotal: paymentStatusGroups.reduce((sum, item) => sum + Number(item._count._all || 0), 0),
+                slotsCount: availableSlots.length,
+                averagePrepTime: products.length > 0 ? Number((products.reduce((sum, item) => sum + (Number(item.prepTime || 0)), 0) / products.length).toFixed(1)) : 0,
+                deliveryCapableProducts: products.filter((item) => String(item.type || '').toLowerCase() === 'delivery').length,
+                variationProductsCount
+            },
+            charts: {
+                ordersByDay,
+                statusBreakdown: orderStatusGroups.map((item) => ({
+                    status: item.status,
+                    count: Number(item._count._all || 0)
+                })),
+                paymentBreakdown,
+                orderTypeBreakdown
+            },
+            lists: {
+                recentOrders: normalizedRecentOrders,
+                lowStockItems: lowStockItems.slice(0, 8).map((item) => ({
+                    id: item.id,
+                    name: item.name,
+                    quantity: Number(item.quantity || 0),
+                    minQuantity: Number(item.minQuantity || 0),
+                    unit: item.unit || 'un'
+                })),
+                topProducts,
+                instances: instances.map((item) => ({
+                    id: item.id,
+                    name: item.name,
+                    status: item.status
+                })),
+                categories: categories.map((item) => ({
+                    id: item.id,
+                    name: item.name,
+                    order: item.order
+                })),
+                recentReviews: recentReviews.map((review) => ({
+                    id: review.id,
+                    rating: Number(review.rating || 0),
+                    comment: review.comment || '',
+                    clientName: review.clientName || 'Cliente',
+                    createdAt: review.createdAt,
+                    product: review.order?.product || '',
+                    variation: review.order?.variation || ''
+                })),
+                upcomingOrders: upcomingOrdersFiltered.map((order) => ({
+                    id: order.id,
+                    product: order.productRelation?.name || order.product || 'Produto',
+                    variation: order.variation || '',
+                    scheduledDate: order.scheduledDate || '',
+                    scheduledTime: order.scheduledTime || '',
+                    status: order.status || 'pending',
+                    type: order.type || 'order',
+                    clientName: order.clientName || 'Cliente',
+                    deliveryAddress: order.deliveryAddress || ''
+                })),
+                recentSlots,
+                configIssues,
+                categoryProductStats,
+                slotsByDay: Object.values(slotsByDay)
+            }
+        });
+    } catch (err) {
+        console.error('[Dashboard Summary] Error:', err);
+        res.status(500).json({ error: err.message || 'Falha ao carregar dashboard.' });
+    }
+});
+
 app.post('/marketing/upload', authenticate, uploadMarketing.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
-    const fileUrl = `https://files.digizap.com.br/marketing/${req.file.filename}`;
+    const fileUrl = `https://files.hotwhats.com.br/marketing/${req.file.filename}`;
     res.json({ url: fileUrl });
 });
 
@@ -275,7 +729,7 @@ app.get('/', async (req, res) => {
                     window.opener.location.reload();
                     window.close();
                 } else {
-                    window.location.href = '${process.env.FRONTEND_URL || 'https://dash.digizap.com.br'}/settings';
+                    window.location.href = '${process.env.FRONTEND_URL || 'https://dash.hotwhats.com.br'}/settings';
                 }
             </script>
         `);
@@ -284,8 +738,8 @@ app.get('/', async (req, res) => {
         const homeData = await buildHomeDirectoryData({ limit: 24 });
         console.log(homeData);
         const template = fs.readFileSync(path.join(__dirname, 'public', 'home.html'), 'utf8');
-        const title = 'DigiZap | Restaurantes, entregas e encomendas';
-        const description = 'Descubra restaurantes, encomendas e ofertas perto de voce com a experiencia iFood da DigiZap.';
+        const title = 'HotWhats | Restaurantes, entregas e encomendas';
+        const description = 'Descubra restaurantes, encomendas e ofertas perto de voce com a experiencia iFood da HotWhats.';
         const safeJson = JSON.stringify(homeData).replace(/</g, '\\u003c');
 
         const html = template
@@ -304,8 +758,8 @@ app.get('/', async (req, res) => {
             const template = fs.readFileSync(path.join(__dirname, 'public', 'home.html'), 'utf8');
             const fallbackData = { search: '', category: '', total: 0, categories: [], featuredStores: [], restaurants: [] };
             const html = template
-                .replaceAll('__HOME_TITLE__', escapeHtml('DigiZap | Restaurantes, entregas e encomendas'))
-                .replaceAll('__HOME_DESCRIPTION__', escapeHtml('Descubra restaurantes, encomendas e ofertas perto de voce com a experiencia iFood da DigiZap.'))
+                .replaceAll('__HOME_TITLE__', escapeHtml('HotWhats | Restaurantes, entregas e encomendas'))
+                .replaceAll('__HOME_DESCRIPTION__', escapeHtml('Descubra restaurantes, encomendas e ofertas perto de voce com a experiencia iFood da HotWhats.'))
                 .replace('<!--HOME_FEATURED_CARDS-->', renderHeroRestaurants([]))
                 .replace('<!--HOME_CATEGORY_CARDS-->', renderCategoryCards([]))
                 .replace('<!--HOME_RESTAURANT_CARDS-->', renderRestaurantCards([]))
@@ -531,7 +985,7 @@ app.post('/marketing-assets', authenticate, uploadMarketing.single('file'), asyn
 
         // Se o frontend já mandou a URL do bucket PHP, usamos ela. 
             // Caso contrario, usamos o dominio de arquivos correto.
-        const finalUrl = url || (req.file ? `https://files.digizap.com.br/marketing/${req.file.filename}` : null);
+        const finalUrl = url || (req.file ? `https://files.hotwhats.com.br/marketing/${req.file.filename}` : null);
 
         if (!finalUrl) {
             return res.status(400).json({ error: "Nenhum arquivo ou URL fornecida" });
@@ -771,7 +1225,7 @@ async function initInstance(instanceId) {
         version,
         auth: state,
         printQRInTerminal: false,
-        browser: ['DigiZap', 'Chrome', '1.0.0'],
+        browser: ['HotWhats', 'Chrome', '1.0.0'],
         logger: pino({ level: 'silent' }),
         syncFullHistory: false,            // true consome muita memoria e pode causar desconexoes
         keepAliveIntervalMs: 30000,        // envia ping a cada 30s para manter a conexão viva
@@ -1507,7 +1961,7 @@ async function initInstance(instanceId) {
                                                         const internalBase = `http://127.0.0.1:${process.env.PORT || 3001}`;
                                                         const res = await axios.patch(`${internalBase}/orders/${targetOrder.id}`, updateData, {
                                                             headers: {
-                                                                'x-internal-token': process.env.INTERNAL_TOKEN || 'zapfly-internal-bypass-key',
+                                                                'x-internal-token': process.env.INTERNAL_TOKEN || 'hotwhats-internal-bypass-key',
                                                                 'x-user-id': settings.userId
                                                             }
                                                         });
@@ -2610,7 +3064,7 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
 app.post('/upload/product', uploadProduct.single('image'), (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada' });
-        const imageUrl = `https://files.digizap.com.br/products/${req.file.filename}`;
+        const imageUrl = `https://files.hotwhats.com.br/products/${req.file.filename}`;
         res.json({ url: imageUrl });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -2859,7 +3313,7 @@ app.get(['/', '/:slug'], async (req, res) => {
 
             const title = settings.businessName ? `${settings.businessName} - Cardápio Digital` : 'Cardápio Digital';
             const description = settings.seoDescription || `Confira o cardapio digital de ${settings.businessName || 'nossa loja'} e faca seu pedido online.`;
-            const image = settings.logoUrl || 'https://digizap.com.br/default-logo.png';
+            const image = settings.logoUrl || 'https://hotwhats.com.br/default-logo.png';
 
             const metaTags = `
                 <title>${title}</title>
@@ -2920,3 +3374,4 @@ app.get(['/', '/:slug'], async (req, res) => {
         res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
     }
 });
+

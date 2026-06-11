@@ -1,7 +1,7 @@
 ﻿<?php
 
 /**
- * DigiZap - Cardápio All-in-One (Versão Checkout 2.0)
+ * HotWhats - Cardápio All-in-One (Versão Checkout 2.0)
  */
 
 if (php_sapi_name() === 'cli-server') {
@@ -222,6 +222,7 @@ try {
     $deliveryMenuOptions = parseDailyDeliveryItemsValue($store['dailyDeliveryItems'] ?? null);
     $showDeliveryTab = !empty($deliveryMenuOptions['orderTypes']['delivery']);
     $showOrderTab = $acceptOrders && !empty($deliveryMenuOptions['orderTypes']['order']);
+    $showOrderTabsNav = $showDeliveryTab && $showOrderTab;
 
     $stmt = $pdo->prepare("SELECT sr.id, sr.orderId, sr.clientName, sr.rating, sr.comment, sr.createdAt, o.product, o.variation FROM store_review sr LEFT JOIN `order` o ON o.id = sr.orderId WHERE sr.userId = ? ORDER BY sr.createdAt DESC LIMIT 6");
     $stmt->execute([$store['id']]);
@@ -278,7 +279,7 @@ try {
         <?php if (!empty($store['seoDescription'])): ?>
             <meta name="description" content="<?php echo htmlspecialchars($store['seoDescription']); ?>">
         <?php endif; ?>
-        <title><?php echo $businessName; ?> | Cardápio Digital DigiZap</title>
+        <title><?php echo $businessName; ?> | Cardápio Digital HotWhats</title>
         <link rel="icon" type="image/x-icon" href="<?php echo $faviconUrl; ?>">
         <link rel="preconnect" href="https://maps.googleapis.com" crossorigin>
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -287,7 +288,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://digizap.com.br/cardapio/style.css?v=3.42">
+        <link rel="stylesheet" href="https://hotwhats.com.br/cardapio/style.css?v=3.42">
         <style>
             :root {
                 --primary-color:
@@ -580,14 +581,14 @@ try {
                 </div>
                 <div class="store-header-actions">
                     <button class="more-link-btn" id="history-toggle-btn" aria-label="Ver mais sobre a loja">
-                        Ver mais <i data-lucide="chevron-down"></i>
+                        <span class="more-link-text">Ver mais</span><i data-lucide="chevron-down"></i>
                     </button>
                     <div class="header-divider" aria-hidden="true"></div>
                 </div>
             </div>
         </header>
 
-        <nav id="order-tabs-nav" class="category-tabs <?php echo ($showDeliveryTab || $showOrderTab) ? '' : 'hidden'; ?>">
+        <nav id="order-tabs-nav" class="category-tabs <?php echo $showOrderTabsNav ? '' : 'hidden'; ?>">
             <div class="container tabs-scroll">
                 <?php if ($showDeliveryTab): ?>
                     <button class="cat-tab active" data-tab="delivery">Entrega</button>
@@ -598,16 +599,21 @@ try {
             </div>
         </nav>
 
-        <div class="container search-container">
+        <nav class="category-nav hidden">
+            <div class="container category-nav-shell">
+                <div class="category-nav-scroll" id="category-nav-scroll"></div>
+                <button type="button" class="category-search-toggle" id="mobile-search-toggle" aria-label="Abrir busca">
+                    <i data-lucide="search"></i>
+                </button>
+            </div>
+        </nav>
+
+        <div class="container search-container" id="search-container">
             <div class="search-box">
                 <i data-lucide="search"></i>
                 <input type="text" id="search-input" placeholder="Buscar no cardápio">
             </div>
         </div>
-
-        <nav class="category-nav hidden">
-            <div class="container category-nav-scroll" id="category-nav-scroll"></div>
-        </nav>
 
         <main class="container main-menu">
             <div id="menu-sections">
@@ -1044,11 +1050,11 @@ try {
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
         <script>
-            const API_BASE = 'https://api.digizap.com.br';
+            const API_BASE = 'https://api.hotwhats.com.br';
         </script>
         <script>
             // Configurações
-            const BASE_DOMAIN = 'digizap.com.br';
+            const BASE_DOMAIN = 'hotwhats.com.br';
 
             // Detecta se estamos na HOME exatamente
             const isHome = (window.location.hostname === BASE_DOMAIN || window.location.hostname === 'www.' + BASE_DOMAIN) &&
@@ -1081,7 +1087,7 @@ try {
                 currentQty: 1,
                 currentVariation: null,
                 orderBumpSelected: false,
-                userInfo: JSON.parse(localStorage.getItem('zapfly_user') || '{"name":"","phone":"","address":""}'),
+                userInfo: JSON.parse(localStorage.getItem('hotwhats_user') || '{"name":"","phone":"","address":""}'),
                 publicSettings: {
                     googleApiKey: '',
                     deliveryRules: [],
@@ -1215,7 +1221,7 @@ try {
              */
             function getImg(url, size = 'full') {
                 if (!url) return url;
-                if (!url.includes('files.digizap.com.br')) return url; // Só funciona para o nosso servidor
+                if (!url.includes('files.hotwhats.com.br')) return url; // Só funciona para o nosso servidor
 
                 if (size === 'thumb') return url.replace('.webp', '_550.webp');
                 if (size === 'medium') return url.replace('.webp', '_550.webp');
@@ -1726,6 +1732,7 @@ try {
                 if (!input) return;
 
                 try {
+                    input.dataset.placeSelected = '0';
                     const autocomplete = new google.maps.places.Autocomplete(input);
                     autocomplete.setComponentRestrictions({
                         country: 'br'
@@ -1735,7 +1742,33 @@ try {
                     autocomplete.addListener('place_changed', () => {
                         const place = autocomplete.getPlace();
                         if (!place.geometry) return;
+                        input.dataset.placeSelected = '1';
                         updateLocation(place.geometry.location, place.formatted_address);
+                    });
+
+                    input.addEventListener('input', () => {
+                        input.dataset.placeSelected = '0';
+                    }, { passive: true });
+
+                    input.addEventListener('change', () => {
+                        const value = input.value.trim();
+                        if (!value || input.dataset.placeSelected === '1') return;
+                        setTimeout(() => geocodeAddress(value), 120);
+                    });
+
+                    input.addEventListener('blur', () => {
+                        const value = input.value.trim();
+                        if (!value || input.dataset.placeSelected === '1') return;
+                        setTimeout(() => geocodeAddress(value), 120);
+                    });
+
+                    input.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const value = input.value.trim();
+                            if (value) geocodeAddress(value);
+                            input.blur();
+                        }
                     });
                 } catch (e) {
                     console.error('Autocomplete init error:', e);
@@ -1796,7 +1829,7 @@ try {
                 if (address) {
                     document.getElementById('user-address').value = address;
                     state.userInfo.address = address;
-                    localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
+                    localStorage.setItem('hotwhats_user', JSON.stringify(state.userInfo));
                     calculateDeliveryFee(address);
                 }
             }
@@ -1920,7 +1953,7 @@ try {
                     formData.append('secret', 'BlinkMediaSecret123!');
                     formData.append('size', '500');
 
-                    const res = await fetch('https://files.digizap.com.br/upload.php', {
+                    const res = await fetch('https://files.hotwhats.com.br/upload.php', {
                         method: 'POST',
                         body: formData
                     });
@@ -2167,7 +2200,7 @@ try {
                 navContainer.innerHTML = categories.map(cat => `
         <button class="nav-cat-btn" onclick="scrollToCategory('cat-${cat.replace(/\s+/g, '-')}')">${cat}</button>
     `).join('');
-                syncCategoryNavOffset();
+                syncStickyOffsets();
             }
 
             function scrollToCategory(id) {
@@ -2871,25 +2904,44 @@ try {
             let tabsNavScrollY = window.scrollY || window.pageYOffset || 0;
             let tabsNavScrollTicking = false;
 
-            function syncCategoryNavOffset() {
+            function syncStickyOffsets() {
                 const categoryNav = document.querySelector('.category-nav');
                 const orderNav = document.getElementById('order-tabs-nav');
+                const searchContainer = document.querySelector('.search-container');
                 if (!categoryNav) return;
+
+                const isMobile = window.innerWidth <= 599;
+                if (isMobile) {
+                    categoryNav.style.setProperty('--category-nav-top', '0px');
+                    if (searchContainer) {
+                        searchContainer.style.setProperty('--search-container-top', '56px');
+                    }
+                    return;
+                }
 
                 const shouldOffset = !!orderNav && !orderNav.classList.contains('hidden') && !orderNav.classList.contains('is-hidden');
                 const offset = shouldOffset ? `${orderNav.offsetHeight || 0}px` : '0px';
                 categoryNav.style.setProperty('--category-nav-top', offset);
+                if (searchContainer) {
+                    searchContainer.style.setProperty('--search-container-top', '0px');
+                }
             }
 
             function updateOrderTabsVisibility(forceSync = false) {
                 const nav = document.getElementById('order-tabs-nav');
                 if (!nav || nav.classList.contains('hidden')) return;
 
+                if (window.innerWidth <= 599) {
+                    nav.classList.remove('is-hidden');
+                    syncStickyOffsets();
+                    return;
+                }
+
                 const currentY = window.scrollY || window.pageYOffset || 0;
                 if (forceSync) {
                     nav.classList.remove('is-hidden');
                     tabsNavScrollY = currentY;
-                    syncCategoryNavOffset();
+                    syncStickyOffsets();
                     return;
                 }
 
@@ -2900,14 +2952,30 @@ try {
                     nav.classList.add('is-hidden');
                 }
                 tabsNavScrollY = currentY;
-                syncCategoryNavOffset();
+                syncStickyOffsets();
             }
 
             function initEventListeners() {
-                document.getElementById('search-input').addEventListener('input', (e) => {
-                    state.searchQuery = e.target.value;
-                    renderMenu();
-                });
+                const searchInput = document.getElementById('search-input');
+                const mobileSearchToggle = document.getElementById('mobile-search-toggle');
+                const searchContainer = document.getElementById('search-container');
+
+                if (searchInput) {
+                    searchInput.addEventListener('input', (e) => {
+                        state.searchQuery = e.target.value;
+                        renderMenu();
+                    });
+                }
+
+                if (mobileSearchToggle && searchContainer && searchInput) {
+                    mobileSearchToggle.addEventListener('click', () => {
+                        const isOpen = searchContainer.classList.toggle('is-open');
+                        mobileSearchToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                        if (isOpen) {
+                            searchInput.focus();
+                        }
+                    });
+                }
                 document.querySelectorAll('.cat-tab').forEach(btn => {
                     btn.addEventListener('click', () => {
                         if (btn.dataset.tab === 'order' && !isOrderEnabled()) return;
@@ -2967,12 +3035,10 @@ try {
                         updateOrderTabsVisibility(false);
                         tabsNavScrollTicking = false;
                     });
-                }, {
-                    passive: true
-                });
+                }, { passive: true });
 
                 window.addEventListener('resize', () => {
-                    syncCategoryNavOffset();
+                    syncStickyOffsets();
                     updateFeaturedCardSizing();
                     updateFeaturedCarouselControls();
                 }, {
@@ -3023,7 +3089,7 @@ try {
                     phoneInput.addEventListener('input', (e) => {
                         e.target.value = maskPhone(e.target.value);
                         state.userInfo.phone = e.target.value;
-                        localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
+                        localStorage.setItem('hotwhats_user', JSON.stringify(state.userInfo));
                     });
                 }
 
@@ -3032,7 +3098,7 @@ try {
                     if (el) {
                         el.addEventListener('input', (e) => {
                             state.userInfo[id.split('-')[1]] = e.target.value;
-                            localStorage.setItem('zapfly_user', JSON.stringify(state.userInfo));
+                            localStorage.setItem('hotwhats_user', JSON.stringify(state.userInfo));
                         });
                     }
                 });
@@ -3091,19 +3157,19 @@ try {
                     expires: Date.now() + (24 * 60 * 60 * 1000)
                 };
                 try {
-                    localStorage.setItem('zapfly_checkout', JSON.stringify(payload));
+                    localStorage.setItem('hotwhats_checkout', JSON.stringify(payload));
                 } catch (e) {}
             }
 
             function restoreCheckoutState() {
                 let saved;
                 try {
-                    saved = JSON.parse(localStorage.getItem('zapfly_checkout') || 'null');
+                    saved = JSON.parse(localStorage.getItem('hotwhats_checkout') || 'null');
                 } catch (e) {
                     saved = null;
                 }
                 if (!saved || (saved.expires && saved.expires < Date.now())) {
-                    localStorage.removeItem('zapfly_checkout');
+                    localStorage.removeItem('hotwhats_checkout');
                     return;
                 }
                 // Only restore if the saved progress matches the cart the user is currently looking at
@@ -3132,7 +3198,7 @@ try {
 
                 let saved;
                 try {
-                    saved = JSON.parse(localStorage.getItem('zapfly_checkout') || 'null');
+                    saved = JSON.parse(localStorage.getItem('hotwhats_checkout') || 'null');
                 } catch (e) {
                     saved = null;
                 }
@@ -4079,3 +4145,4 @@ try {
 } catch (Exception $e) {
     die("Erro: " . $e->getMessage());
 }
+

@@ -288,7 +288,7 @@ const Estoque = () => {
       formData.append('secret', 'BlinkMediaSecret123!');
       formData.append('size', '500'); // Tamanho ideal para produtos (carrossel + listagem)
 
-      const res = await axios.post('https://files.digizap.com.br/upload.php', formData);
+      const res = await axios.post('https://files.hotwhats.com.br/upload.php', formData);
       Swal.close();
       return res.data.url;
     } catch (err) {
@@ -1886,4 +1886,5 @@ const sectionTitle = { fontSize: '12px', fontWeight: 700, display: 'flex', align
 const varGroupStyle = { backgroundColor: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', marginBottom: '15px', border: '1px solid rgba(255,255,255,0.05)' };
 
 export default Estoque;
+
 

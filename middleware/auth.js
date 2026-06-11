@@ -1,12 +1,12 @@
 const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'zapfly-secret-key-super-safe';
+const JWT_SECRET = process.env.JWT_SECRET || 'hotwhats-secret-key-super-safe';
 
 const normalizeRole = (role) => String(role || '').trim().toLowerCase();
 
 const authenticate = (req, res, next) => {
   // Bypassa autenticação para chamadas internas da IA se o token conferir
   const internalToken = req.headers['x-internal-token'];
-  const internalSecret = process.env.INTERNAL_TOKEN || 'zapfly-internal-bypass-key';
+  const internalSecret = process.env.INTERNAL_TOKEN || 'hotwhats-internal-bypass-key';
   
   if (internalToken && internalToken === internalSecret) {
     const userId = req.headers['x-user-id'];

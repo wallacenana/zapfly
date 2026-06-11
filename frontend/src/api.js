@@ -1,8 +1,8 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 import { io } from 'socket.io-client';
 
-export const TOKEN_KEY = 'digizap_token';
-export const USER_KEY = 'digizap_user';
+export const TOKEN_KEY = 'hotwhats_token';
+export const USER_KEY = 'hotwhats_user';
 
 const PUBLIC_AUTH_PATHS = new Set([
   '/auth/login',
@@ -19,7 +19,7 @@ const getBaseUrl = () => {
     if (host === 'localhost' || host === '127.0.0.1') {
       return 'http://localhost:3001';
     }
-    return 'https://api.digizap.com.br';
+    return 'https://api.hotwhats.com.br';
   }
   return 'http://localhost:3001';
 };
@@ -76,7 +76,7 @@ export const isPublicAuthRequest = (url = '') => PUBLIC_AUTH_PATHS.has(getReques
 
 export const emitAuthExpired = () => {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new Event('digizap:auth-expired'));
+  window.dispatchEvent(new Event('hotwhats:auth-expired'));
 };
 
 export const API_URL = getBaseUrl();
@@ -128,7 +128,7 @@ api.interceptors.request.use((config) => {
 
     if (!isPublicAuth) {
       redirectToLogin();
-      const authError = new Error('Sessão expirada.');
+      const authError = new Error('SessÃ£o expirada.');
       authError.code = 'AUTH_EXPIRED';
       return Promise.reject(authError);
     }
@@ -157,3 +157,4 @@ api.interceptors.response.use((response) => response, (error) => {
 
   return Promise.reject(error);
 });
+

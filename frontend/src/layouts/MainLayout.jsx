@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -23,7 +23,8 @@ const MainLayout = () => {
   const { logout, user } = useAuth();
   const isSuperAdmin = String(user?.role || '').toLowerCase() === 'superadmin';
   const storeSlug = String(user?.slug || '').trim();
-  const storeUrl = storeSlug ? `https://digizap.com.br/${storeSlug}` : '';
+  const storeUrl = storeSlug ? `https://hotwhats.com.br/${storeSlug}` : '';
+  const brandLogo = '/logo%20HotWhats.png';
 
   const menuItems = [
     { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
@@ -45,54 +46,58 @@ const MainLayout = () => {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', backgroundColor: '#09090b', color: '#fff', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', height: '100vh', backgroundColor: 'var(--bg-primary)', color: '#fff', overflow: 'hidden' }}>
       <div
         style={{
           width: '260px',
-          backgroundColor: '#111113',
-          borderRight: '1px solid #1f1f22',
+          backgroundColor: '#020c00',
+          borderRight: '1px solid var(--border-color)',
           display: 'flex',
           flexDirection: 'column',
           padding: '20px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '40px', padding: '0 10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '40px', padding: '0 8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
               style={{
-                width: '32px',
-                height: '32px',
-                backgroundColor: '#3b82f6',
-                borderRadius: '8px',
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                backgroundColor: 'rgb(255 255 255 / 13%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                overflow: 'hidden',
+                flexShrink: 0,
               }}
             >
-              <Zap size={20} color="#fff" />
+              <img src={brandLogo} alt="HotWhats" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px' }} />
             </div>
-            <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px' }}>DigiZap</span>
+            <span style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: '#ffffff' }}>HotWhats</span>
           </div>
           {storeUrl ? (
             <a
               href={storeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              title="Abrir loja pública"
+              title="Abrir loja p?blica"
               style={{
-                width: '32px',
-                height: '32px',
+                width: '28px',
+                height: '28px',
                 borderRadius: '8px',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: '#a1a1aa',
-                backgroundColor: '#18181b',
-                border: '1px solid #27272a',
+                color: 'var(--accent-primary)',
+                backgroundColor: 'transparent',
+                border: 'none',
+                padding: '2px',
                 textDecoration: 'none',
+                transition: 'color 0.15s ease, transform 0.15s ease',
               }}
             >
-              <ExternalLink size={16} />
+              <ExternalLink size={16} color="currentColor" />
             </a>
           ) : null}
         </div>
@@ -111,10 +116,10 @@ const MainLayout = () => {
                   padding: '12px 16px',
                   borderRadius: '10px',
                   textDecoration: 'none',
-                  color: isActive ? '#fff' : '#71717a',
-                  backgroundColor: isActive ? '#1f1f22' : 'transparent',
+                  color: isActive ? '#ffffff' : 'rgba(255,255,255,0.72)',
+                  backgroundColor: isActive ? 'var(--accent-primary)' : 'transparent',
                   transition: 'all 0.2s ease',
-                  fontWeight: isActive ? 600 : 500,
+                  fontWeight: isActive ? 700 : 500,
                   fontSize: '14px',
                 }}
               >
@@ -135,7 +140,7 @@ const MainLayout = () => {
             borderRadius: '10px',
             border: 'none',
             backgroundColor: 'transparent',
-            color: '#ef4444',
+            color: '#ffffff',
             cursor: 'pointer',
             fontSize: '14px',
             fontWeight: 500,
@@ -155,3 +160,4 @@ const MainLayout = () => {
 };
 
 export default MainLayout;
+
