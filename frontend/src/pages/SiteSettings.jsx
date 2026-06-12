@@ -119,8 +119,8 @@ const SiteSettings = () => {
                 }));
             }
         } catch (err) {
-            console.error('Erro ao carregar configuraÃ§Ãµes:', err);
-            toast.error('Erro ao carregar as configuraÃ§Ãµes do site.');
+            console.error('Erro ao carregar configurações:', err);
+            toast.error('Erro ao carregar as configurações do site.');
         } finally {
             setLoading(false);
         }
@@ -233,7 +233,7 @@ const SiteSettings = () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        const tId = toast.loading(`Otimizando e enviando ${type === 'logo' ? 'Logo' : 'Ãcone'}...`);
+        const tId = toast.loading(`Otimizando e enviando ${type === 'logo' ? 'Logo' : 'Ícone'}...`);
 
         try {
             const compressedFile = await compressImage(file);
@@ -251,13 +251,13 @@ const SiteSettings = () => {
 
             if (res.data.success) {
                 setSettings(prev => ({ ...prev, [type === 'logo' ? 'logoUrl' : 'faviconUrl']: res.data.url }));
-                toast.success(`${type === 'logo' ? 'Logo' : 'Ãcone'} atualizado!`, { id: tId });
+                toast.success(`${type === 'logo' ? 'Logo' : 'Ícone'} atualizado!`, { id: tId });
             } else {
                 throw new Error(res.data.error || 'Erro desconhecido');
             }
         } catch (err) {
             console.error('Erro no upload:', err);
-            toast.error('Erro no upload: ' + (err.message || 'Falha na conexÃ£o'), { id: tId });
+            toast.error('Erro no upload: ' + (err.message || 'Falha na conexão'), { id: tId });
         }
     };
 
@@ -276,10 +276,10 @@ const SiteSettings = () => {
             style={{ maxWidth: '1100px', margin: '0 auto', padding: '30px' }}
         >
             <header className="site-settings-header" style={{ marginBottom: '35px' }}>
-                <h1 className="site-settings-title" style={{ fontSize: '28px', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <h1 className="site-settings-title" style={{ fontSize: '28px', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '12px' }}>
                     Identidade Visual do Site
                 </h1>
-                <p className="site-settings-muted" style={{ color: 'var(--text-secondary)', marginTop: '5px' }}>Personalize as cores e mÃ­dias do seu cardÃ¡pio digital pÃºblico.</p>
+                <p className="site-settings-muted" style={{ color: 'var(--text-secondary)', marginTop: '5px' }}>Personalize as cores e mídias do seu cardápio digital público.</p>
             </header>
             <label className="site-settings-theme-toggle-wrap" style={labelStyle}>
                 <button
@@ -292,7 +292,7 @@ const SiteSettings = () => {
                         gap: '12px',
                         borderRadius: '14px',
                         border: 'none',
-                        background: 'rgba(255,255,255,0.04)',
+                        background: 'transparent',
                         color: 'var(--text-primary)',
                         cursor: 'pointer',
                         fontWeight: 700
@@ -304,8 +304,8 @@ const SiteSettings = () => {
                         height: '28px',
                         borderRadius: '999px',
                         padding: '3px',
-                        background: (settings.menuTheme || 'dark') === 'dark' ? 'rgba(108,182,73,0.25)' : 'rgba(255,255,255,0.12)',
-                        border: '1px solid rgba(255,255,255,0.08)',
+                        background: 'transparent',
+                        border: '1px solid rgba(15,23,42,0.10)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: (settings.menuTheme || 'dark') === 'dark' ? 'flex-end' : 'flex-start'
@@ -323,7 +323,7 @@ const SiteSettings = () => {
 
             <div className="site-settings-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '30px' }}>
 
-                {/* CONFIGURAÃ‡Ã•ES */}
+                {/* CONFIGURAÇÕES */}
                 <div className="site-settings-content" style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
 
                     <section className="card site-settings-section site-settings-span-2" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)' }}>
@@ -368,10 +368,10 @@ const SiteSettings = () => {
                     <section className="card site-settings-section site-settings-span-2" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)' }}>
                         <h3 className="site-settings-section-title" style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <CheckCircle size={18} color="var(--accent-primary)" />
-                            CardÃ¡pio PÃºblico
+                            Cardápio Público
                         </h3>
 
-                        <label className="site-settings-field-label" style={labelStyle}>ðŸ”— Link do CardÃ¡pio (Slug)</label>
+                        <label className="site-settings-field-label" style={labelStyle}>🔗 Link do Cardápio (Slug)</label>
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: '14px', flexShrink: 0 }}>
                                 hotwhats.com.br/
@@ -402,14 +402,14 @@ const SiteSettings = () => {
                                 </a>
                             )}
                         </div>
-                        {slugStatus.available === true && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '8px', fontWeight: 800 }}>âœ“ Link disponÃ­vel!</p>}
+                        {slugStatus.available === true && <p style={{ fontSize: '12px', color: '#10b981', marginTop: '8px', fontWeight: 800 }}>✓ Link disponível!</p>}
                         {slugStatus.available === false && (
                             <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '8px', fontWeight: 700 }}>
-                                âœ— Este link jÃ¡ estÃ¡ em uso. {slugStatus.suggestion && <>SugestÃ£o: <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#3b82f6' }} onClick={() => { setSettings({ ...settings, slug: slugStatus.suggestion }); setSlugStatus({ available: true, suggestion: '' }); }}>{slugStatus.suggestion}</span></>}
+                                ✕ Este link já está em uso. {slugStatus.suggestion && <>Sugestão: <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#3b82f6' }} onClick={() => { setSettings({ ...settings, slug: slugStatus.suggestion }); setSlugStatus({ available: true, suggestion: '' }); }}>{slugStatus.suggestion}</span></>}
                             </p>
                         )}
                         <p className="site-settings-muted" style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                            Esse endereÃ§o serÃ¡ usado no cardÃ¡pio pÃºblico e na home do diretÃ³rio.
+                            Esse endereço será usado no cardápio público e na home do diretório.
                         </p>
 
                         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '18px', cursor: 'pointer' }}>
@@ -419,24 +419,24 @@ const SiteSettings = () => {
                                 onChange={(e) => setSettings({ ...settings, active: e.target.checked })}
                                 style={{ width: '16px', height: '16px', accentColor: '#22c55e' }}
                             />
-                            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Loja ativa no diretÃ³rio</span>
+                            <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Loja ativa no diretório</span>
                         </label>
                         <p className="site-settings-muted" style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                            Se desativar, a loja sai da home e da lista pÃºblica.
+                            Se desativar, a loja sai da home e da lista pública.
                         </p>
                     </section>
 
-                    {/* SessÃ£o de Imagens */}
+                    {/* Sessão de Imagens */}
                     <section className="card site-settings-section" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)' }}>
                         <h3 className="site-settings-section-title" style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <LayoutIcon size={18} color="var(--accent-primary)" />
-                            MÃ­dias Principais
+                            Mídias Principais
                         </h3>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
                             {/* Logo */}
                             <div>
-                                <label className="site-settings-field-label" style={labelStyle}>Logo do CardÃ¡pio</label>
+                                <label className="site-settings-field-label" style={labelStyle}>Logo do Cardápio</label>
                                 <div style={uploadBox}>
                                     {settings.logoUrl ? (
                                         <img src={settings.logoUrl} style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} alt="Logo" />
@@ -450,7 +450,7 @@ const SiteSettings = () => {
 
                             {/* Favicon */}
                             <div>
-                                <label className="site-settings-field-label" style={labelStyle}>Ãcone da Aba (Favicon)</label>
+                                <label className="site-settings-field-label" style={labelStyle}>Ícone da Aba (Favicon)</label>
                                 <div style={uploadBox}>
                                     {settings.faviconUrl ? (
                                         <img src={settings.faviconUrl} style={{ width: '48px', height: '48px', objectFit: 'contain' }} alt="Favicon" />
@@ -464,7 +464,7 @@ const SiteSettings = () => {
                         </div>
                     </section>
 
-                    {/* SessÃ£o de Cores */}
+                    {/* Sessão de Cores */}
                     <section className="card site-settings-section" style={{ padding: '30px', borderLeft: '5px solid #10b981' }}>
                         <h3 className="site-settings-section-title" style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <Palette size={18} color="#10b981" />
@@ -472,13 +472,13 @@ const SiteSettings = () => {
                         </h3>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                            {/* SessÃ£o Delivery */}
+                            {/* Sessão Delivery */}
                             <div>
                                 <h4 className="site-settings-section-subtitle" style={{ fontSize: '14px', fontWeight: 800, color: '#10b981', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '1px' }}>Cores Aba Delivery (Entrega)</h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {[
-                                        { id: 'accentColor', label: 'Cor de Destaque', desc: 'PreÃ§os e Ã­cones' },
-                                        { id: 'buttonColor', label: 'Cor do BotÃ£o', desc: 'BotÃ£o finalizar' },
+                                        { id: 'accentColor', label: 'Cor de Destaque', desc: 'Preços e ícones' },
+                                        { id: 'buttonColor', label: 'Cor do Botão', desc: 'Botão finalizar' },
                                     ].map(item => (
                                         <div key={item.id} style={colorRow}>
                                             <div>
@@ -501,13 +501,13 @@ const SiteSettings = () => {
                                 </div>
                             </div>
 
-                            {/* SessÃ£o Encomendas */}
+                            {/* Sessão Encomendas */}
                             <div>
                                 <h4 className="site-settings-section-subtitle" style={{ fontSize: '14px', fontWeight: 800, color: '#4a2c2a', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '1px' }}>Cores Aba Encomendas</h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {[
-                                        { id: 'accentColorOrders', label: 'Cor de Destaque (Encomendas)', desc: 'PreÃ§os e Ã­cones' },
-                                        { id: 'buttonColorOrders', label: 'Cor do BotÃ£o (Encomendas)', desc: 'BotÃ£o finalizar' },
+                                        { id: 'accentColorOrders', label: 'Cor de Destaque (Encomendas)', desc: 'Preços e ícones' },
+                                        { id: 'buttonColorOrders', label: 'Cor do Botão (Encomendas)', desc: 'Botão finalizar' },
                                     ].map(item => (
                                         <div key={item.id} style={colorRow}>
                                             <div>
@@ -530,14 +530,14 @@ const SiteSettings = () => {
                                 </div>
                             </div>
 
-                            {/* SessÃ£o Geral */}
+                            {/* Sessão Geral */}
                             <div>
                                 <h4 className="site-settings-section-subtitle" style={{ fontSize: '14px', fontWeight: 800, color: 'var(--accent-primary)', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '1px' }}>Cores Gerais</h4>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                                     {[
-                                        { id: 'buttonTextColor', label: 'Texto do BotÃ£o', desc: 'Cor do texto no botÃ£o' },
-                                        { id: 'backgroundColor', label: 'Fundo do Site', desc: 'Fundo do cardÃ¡pio' },
-                                        { id: 'textColor', label: 'Cor dos Textos', desc: 'Nomes e descriÃ§Ãµes' },
+                                        { id: 'buttonTextColor', label: 'Texto do Botão', desc: 'Cor do texto no botão' },
+                                        { id: 'backgroundColor', label: 'Fundo do Site', desc: 'Fundo do cardápio' },
+                                        { id: 'textColor', label: 'Cor dos Textos', desc: 'Nomes e descrições' },
                                     ].map(item => (
                                         <div key={item.id} style={colorRow}>
                                             <div>
@@ -562,7 +562,7 @@ const SiteSettings = () => {
                         </div>
                     </section>
 
-                    {/* SessÃ£o de Tracking e SEO */}
+                    {/* Sessão de Tracking e SEO */}
                     <section className="card site-settings-section site-settings-span-2" style={{ padding: '30px', borderLeft: '5px solid var(--accent-primary)', marginTop: '25px' }}>
                         <h3 className="site-settings-section-title" style={{ fontSize: '18px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <Globe size={18} color="var(--accent-primary)" />
@@ -570,14 +570,14 @@ const SiteSettings = () => {
                         </h3>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                             <div>
-                                <label className="site-settings-field-label" style={labelStyle}>DescriÃ§Ã£o do CardÃ¡pio (Google e WhatsApp)</label>
+                                <label className="site-settings-field-label" style={labelStyle}>Descrição do Cardápio (Google e WhatsApp)</label>
                                 <textarea
                                     style={{ ...inputStyle, minHeight: '80px', resize: 'none' }}
                                     value={settings.seoDescription || ''}
                                     onChange={e => setSettings({ ...settings, seoDescription: e.target.value })}
-                                    placeholder="Ex: PeÃ§a online as melhores pizzas da cidade. Entrega rÃ¡pida!"
+                                    placeholder="Ex: Peça online as melhores pizzas da cidade. Entrega rápida!"
                                 />
-                                <p className="site-settings-muted" style={hintStyle}>Aparece na busca do Google e na prÃ©via de links do WhatsApp.</p>
+                                <p className="site-settings-muted" style={hintStyle}>Aparece na busca do Google e na prévia de links do WhatsApp.</p>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
                                 <div>
@@ -701,6 +701,12 @@ const SiteSettings = () => {
                   padding: 28px 24px 40px !important;
                 }
 
+                .site-settings-page .site-settings-header .site-settings-title,
+                .site-settings-page .site-settings-header .site-settings-muted,
+                .site-settings-page .site-settings-preview-title {
+                  color: #0f172a !important;
+                }
+
                 .site-settings-layout {
                   grid-template-columns: minmax(0, 1fr) 360px !important;
                   gap: 24px !important;
@@ -729,36 +735,40 @@ const SiteSettings = () => {
                 .site-settings-content .site-settings-field-label,
                 .site-settings-content .site-settings-color-label,
                 .site-settings-content .site-settings-theme-toggle,
-                .site-settings-content .site-settings-save,
                 .site-settings-content .site-settings-preview-title,
                 .site-settings-content h1,
                 .site-settings-content h3,
                 .site-settings-content h4,
-                .site-settings-content label,
-                .site-settings-content button {
-                  color: var(--text-primary) !important;
+                .site-settings-content label {
+                  color: #0f172a !important;
+                }
+
+                .site-settings-save {
+                  color: #ffffff !important;
                 }
 
                 .site-settings-content .site-settings-muted,
                 .site-settings-content p {
-                  color: var(--text-secondary) !important;
+                  color: #475569 !important;
                 }
 
                 .site-settings-content input,
                 .site-settings-content textarea,
                 .site-settings-content select {
                   background: #ffffff !important;
-                  color: var(--text-primary) !important;
+                  color: #0f172a !important;
                   border-color: rgba(15, 23, 42, 0.12) !important;
                 }
 
                 .site-settings-theme-toggle {
-                  background: #ffffff !important;
-                  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+                  background: transparent !important;
+                  border: 1px solid rgba(15, 23, 42, 0.12) !important;
+                  box-shadow: none !important;
+                  color: #0f172a !important;
                 }
 
                 .site-settings-theme-toggle > span:first-child {
-                  color: var(--text-primary) !important;
+                  color: #0f172a !important;
                 }
 
                 .site-settings-save {
