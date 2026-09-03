@@ -190,7 +190,7 @@ export default function Login() {
       ).trim();
 
       if (!currentTempToken) {
-        setError("Sessao de verificacao perdida. Faça login novamente.");
+        setError("Sessão de verificação perdida. Faça login novamente.");
 
         setTempToken("");
 
