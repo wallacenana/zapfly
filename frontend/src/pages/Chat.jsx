@@ -20,7 +20,6 @@ import {
   Trash2,
   Zap
 } from 'lucide-react';
-import axios from 'axios';
 import { api, API_URL, socket } from '../api';
 import Swal from 'sweetalert2';
 
@@ -118,7 +117,6 @@ const Chat = () => {
       const canonicalTargetJid = getFrontendCanonicalJid(targetJid);
 
       // If we already selected this canonical JID and the active contact is NOT virtual (or we already tried promoting it), return early
-      const isCurrentlyActiveJidSame = activeContact && areJidsSame(activeContact.jid, canonicalTargetJid);
       const isCurrentlyActiveReal = activeContact && !activeContact.id?.startsWith('virtual-');
       
       if (lastAutoSelectedJid.current === canonicalTargetJid && (isCurrentlyActiveReal || contacts.length === 0)) {

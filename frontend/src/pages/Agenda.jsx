@@ -390,7 +390,7 @@ function OrderCard({ order, onUpdate }) {
               background: '#111827',
               color: '#fff'
             });
-            refresh();
+            onUpdate();
           } catch (err) {
             Swal.fire({
               title: 'Erro!',

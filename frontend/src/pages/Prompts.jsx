@@ -28,12 +28,6 @@ const Prompts = () => {
   const [formKnowledge, setFormKnowledge] = useState([]);
   const [showCopySuccess, setShowCopySuccess] = useState(false);
 
-  // Trainer State
-  const [testQuestion, setTestQuestion] = useState('');
-  const [aiResponse, setAiResponse] = useState('');
-  const [isSimulating, setIsSimulating] = useState(false);
-  const [correctedResponse, setCorrectedResponse] = useState('');
-
   useEffect(() => {
     fetchInstances();
   }, []);
@@ -57,9 +51,6 @@ const Prompts = () => {
     setActiveInstance(inst);
     setFormPrompt(inst.botPrompt || '');
     setFormKnowledge(JSON.parse(inst.knowledge || '[]'));
-    setAiResponse('');
-    setTestQuestion('');
-    setCorrectedResponse('');
   };
 
   const handleSave = async () => {
@@ -88,34 +79,6 @@ const Prompts = () => {
       setShowCopySuccess(true);
       setTimeout(() => setShowCopySuccess(false), 2000);
     }
-  };
-
-  const handleSimulate = async () => {
-    if (!testQuestion.trim()) return;
-    setIsSimulating(true);
-    setAiResponse('');
-    try {
-      const res = await api.post(`/instances/${activeInstance.id}/ai-test`, {
-        question: testQuestion,
-        botPrompt: formPrompt,
-        knowledge: JSON.stringify(formKnowledge)
-      });
-      setAiResponse(res.data.answer);
-      setCorrectedResponse(res.data.answer); // Default correction to the AI's answer
-    } catch (err) {
-      Toast.fire({ icon: 'error', title: 'Erro na simulação' });
-    } finally {
-      setIsSimulating(false);
-    }
-  };
-
-  const handleAddToKnowledge = () => {
-    if (!testQuestion.trim() || !correctedResponse.trim()) return;
-    setFormKnowledge([{ q: testQuestion, a: correctedResponse }, ...formKnowledge]);
-    setTestQuestion('');
-    setAiResponse('');
-    setCorrectedResponse('');
-    Toast.fire({ icon: 'success', title: 'Adicionado à base de conhecimento!' });
   };
 
   const handleLoadDefaultFaq = () => {

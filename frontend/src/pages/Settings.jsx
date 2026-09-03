@@ -203,7 +203,7 @@ const Settings = () => {
     allowCashOnDelivery: true
   });
   const [slots, setSlots] = useState([]);
-  const [loadingSlots, setLoadingSlots] = useState(true);
+  const [, setLoadingSlots] = useState(true);
   const [marketingAssets, setMarketingAssets] = useState([]);
   const [uploadName, setUploadName] = useState('');
   const fileInputRef = useRef(null);

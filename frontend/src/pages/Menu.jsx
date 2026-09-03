@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api, API_URL } from '../api';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion as Motion, AnimatePresence } from 'framer-motion';
 import { 
   ShoppingBag, 
   Clock, 
@@ -139,7 +139,7 @@ const Menu = () => {
   if (orderComplete) {
     return (
       <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
-        <motion.div 
+        <Motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           className="max-w-md w-full bg-slate-900 border border-slate-800 p-8 rounded-3xl text-center"
@@ -169,7 +169,7 @@ const Menu = () => {
           >
             Fazer outro pedido
           </button>
-        </motion.div>
+        </Motion.div>
       </div>
     );
   }
@@ -182,7 +182,7 @@ const Menu = () => {
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
         
         <div className="relative z-10 text-center px-4">
-          <motion.div
+          <Motion.div
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
           >
@@ -191,7 +191,7 @@ const Menu = () => {
             </div>
             <h1 className="text-4xl font-black text-white tracking-tight mb-1">{storeInfo.name}</h1>
             <p className="text-pink-300 font-medium uppercase tracking-widest text-xs">Confeitaria Artesanal</p>
-          </motion.div>
+          </Motion.div>
         </div>
       </header>
 
@@ -233,7 +233,7 @@ const Menu = () => {
                 const variations = typeof product.variations === 'string' ? JSON.parse(product.variations || '[]') : (product.variations || []);
                 
                 return (
-                  <motion.div
+                  <Motion.div
                     key={product.id}
                     layout
                     initial={{ opacity: 0, scale: 0.95 }}
@@ -282,7 +282,7 @@ const Menu = () => {
                         </button>
                       )}
                     </div>
-                  </motion.div>
+                  </Motion.div>
                 );
               })
             )}
@@ -293,7 +293,7 @@ const Menu = () => {
       {/* Floating Cart Button */}
       <AnimatePresence>
         {cart.length > 0 && !isCheckoutOpen && (
-          <motion.div
+          <Motion.div
             initial={{ y: 100 }}
             animate={{ y: 0 }}
             exit={{ y: 100 }}
@@ -314,7 +314,7 @@ const Menu = () => {
                 <ChevronRight size={20} />
               </div>
             </button>
-          </motion.div>
+          </Motion.div>
         )}
       </AnimatePresence>
 
@@ -322,7 +322,7 @@ const Menu = () => {
       <AnimatePresence>
         {isCheckoutOpen && (
           <div className="fixed inset-0 z-[60] flex items-end justify-center md:items-center p-0 md:p-4">
-            <motion.div 
+            <Motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -330,7 +330,7 @@ const Menu = () => {
               className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
             />
             
-            <motion.div
+            <Motion.div
               initial={{ y: "100%" }}
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
@@ -457,7 +457,7 @@ const Menu = () => {
                   )}
                 </button>
               </div>
-            </motion.div>
+            </Motion.div>
           </div>
         )}
       </AnimatePresence>

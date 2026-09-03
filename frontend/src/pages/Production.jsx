@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { Package, Clock, CheckCircle, Search, Truck, XCircle, ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, CreditCard } from 'lucide-react';
 import { api } from '../api';
 import { socket } from '../api';
@@ -14,10 +13,6 @@ const Production = () => {
   const [activeType, setActiveType] = useState(localStorage.getItem('kanban_activeType') || 'order');
   const [selectedDate, setSelectedDate] = useState(localStorage.getItem('kanban_selectedDate') || new Date().toISOString().split('T')[0]);
   const [showWaitingDrawer, setShowWaitingDrawer] = useState(false);
-  const scrollRef = useRef(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeftState, setScrollLeftState] = useState(0);
 
   // Persistência de estado
   useEffect(() => {
@@ -41,23 +36,6 @@ const Production = () => {
     if (dateStr === today) return "Hoje";
     return d.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric' });
   };
-
-  const handleMouseDown = (e) => {
-    if (e.target.closest('.kanban-card') || e.target.closest('.date-pill')) return;
-    setIsDragging(true);
-    setStartX(e.pageX - scrollRef.current.offsetLeft);
-    setScrollLeftState(scrollRef.current.scrollLeft);
-  };
-
-  const handleMouseMove = (e) => {
-    if (!isDragging) return;
-    e.preventDefault();
-    const x = e.pageX - scrollRef.current.offsetLeft;
-    const walk = (x - startX) * 2;
-    scrollRef.current.scrollLeft = scrollLeftState - walk;
-  };
-
-  const handleMouseUp = () => setIsDragging(false);
 
   const columns = [
     { id: 'waiting_payment', title: 'Aguardando', color: '#9ca3af', icon: <CreditCard size={18} /> },
@@ -872,7 +850,6 @@ const KanbanColumn = ({ col, orders, updateStatus, openDetails, height = '100%' 
 };
 
 const tabBtn = { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 20px', borderRadius: '10px', border: 'none', fontSize: '13px', fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' };
-const btnMini = { flex: 1, padding: '8px', borderRadius: '8px', fontSize: '12px', border: 'none', backgroundColor: 'var(--bg-tertiary)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 800 };
 const badgeStyle = {
   position: 'absolute',
   top: '-5px',

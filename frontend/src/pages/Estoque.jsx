@@ -94,7 +94,7 @@ const Estoque = () => {
   const [showSeasonalModal, setShowSeasonalModal] = useState(false);
   const [seasonalForm, setSeasonalForm] = useState({ name: '', eventDate: '', preStartDays: 15, postEndDays: 2, description: '', items: [], maxOrders: 0, onlySeasonalOnEventDay: false, active: true });
   const [editingSeasonal, setEditingSeasonal] = useState(null);
-  const [showHidden, setShowHidden] = useState(false);
+  const [showHidden] = useState(false);
 
   const [categories, setCategories] = useState([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -1021,7 +1021,7 @@ const Estoque = () => {
                             i[idx].price = floatVal;
                             setSeasonalForm(f => ({ ...f, items: i }));
                           }}
-                          onBlur={e => {
+                          onBlur={() => {
                             const i = [...seasonalForm.items];
                             i[idx].price = parseFloat(i[idx].price || 0).toFixed(2);
                             setSeasonalForm(f => ({ ...f, items: i }));
@@ -1893,7 +1893,6 @@ const modalContent = { width: '100%', maxWidth: '960px', maxHeight: '90vh', padd
 const closeBtn = { background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' };
 const sectionBox = { backgroundColor: '#fafaf8', padding: '20px', borderRadius: '12px', border: '1px dashed #d8e0d7', marginTop: '20px' };
 const sectionTitle = { fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' };
-const varGroupStyle = { backgroundColor: '#fafaf8', padding: '15px', borderRadius: '12px', marginBottom: '15px', border: '1px solid #d8e0d7' };
 
 export default Estoque;
 

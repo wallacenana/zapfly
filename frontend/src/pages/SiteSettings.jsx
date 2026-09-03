@@ -3,7 +3,7 @@ import { Palette, Layout as LayoutIcon, Globe, Upload, Save, Eye, CheckCircle, R
 import { api, API_URL } from '../api';
 import axios from 'axios';
 import toast from 'react-hot-toast';
-import { motion } from 'framer-motion';
+import { motion as Motion } from 'framer-motion';
 
 const COLOR_FIELDS = [
     'accentColor',
@@ -269,7 +269,7 @@ const SiteSettings = () => {
     );
 
     return (
-        <motion.div
+        <Motion.div
             className="site-settings-page"
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
@@ -772,7 +772,7 @@ const SiteSettings = () => {
                 }
               }
             `}</style>
-        </motion.div>
+        </Motion.div>
     );
 };
 

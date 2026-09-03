@@ -227,7 +227,7 @@ export default function FirstLoginSetup({ setupToken: initialToken, startStep })
         {[
           { method: 'totp', icon: <Smartphone size={22} />, title: 'Google Authenticator (Recomendado)', desc: 'Use um app de autenticação (Google Auth, Authy). Funciona sem internet.', color: '#10b981', glow: 'rgba(16,185,129,0.2)' },
           { method: 'email', icon: <Mail size={22} />, title: 'Código por E-mail', desc: 'Receba um código de 6 dígitos no seu email a cada login.', color: '#3b82f6', glow: 'rgba(59,130,246,0.2)' },
-        ].map(({ method, icon, title, desc, color, glow }) => (
+        ].map(({ method, icon, title, desc, color }) => (
           <button key={method} onClick={() => handleChooseMethod(method)} disabled={loading} style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', padding: '20px', borderRadius: '14px', background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.07)`, cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s', width: '100%' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = color; e.currentTarget.style.background = `rgba(${color === '#10b981' ? '16,185,129' : '59,130,246'},0.05)`; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}>
