@@ -208,6 +208,11 @@ h4 {
   color: var(--text-primary);
 }
 
+.settings-main-card select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
 /* Badges & Labels */
 .badge {
   padding: 4px 12px;

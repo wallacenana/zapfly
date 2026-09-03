@@ -1030,9 +1030,9 @@ const Settings = () => {
 
                 <label style={microLabel}>Agenda para Gravar Pedidos</label>
                 <select {...inp} value={settings.gcalCalendarId} onChange={e => setSettings({ ...settings, gcalCalendarId: e.target.value })}>
-                  <option value="" style={{ backgroundColor: '#18181b' }}>Selecione um calendário...</option>
+                  <option value="">Selecione um calendário...</option>
                   {calendars.map(c => (
-                    <option key={c.id} value={c.id} style={{ backgroundColor: '#18181b' }}>
+                    <option key={c.id} value={c.id}>
                       {c.name} {c.primary ? '(Principal)' : ''}
                     </option>
                   ))}
@@ -1485,6 +1485,11 @@ const Settings = () => {
             background: #ffffff !important;
             color: #0f172a !important;
             border-color: rgba(15, 23, 42, 0.12) !important;
+          }
+
+          .settings-main-card select option {
+            background: #ffffff !important;
+            color: #0f172a !important;
           }
 
         }
