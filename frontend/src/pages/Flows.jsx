@@ -176,11 +176,11 @@ const Flows = () => {
           style={{
             padding: '8px 16px',
             borderRadius: '6px',
-            border: 'none',
-            backgroundColor: activeTab === 'all' ? 'var(--accent-glow)' : 'transparent',
+            border: '1px solid transparent',
+            backgroundColor: activeTab === 'all' ? 'rgba(16, 185, 129, 0.12)' : '#ffffff',
             color: activeTab === 'all' ? 'var(--accent-primary)' : 'var(--text-secondary)',
             cursor: 'pointer',
-            fontWeight: 500
+            fontWeight: 600
           }}
         >
           Todos os Fluxos
@@ -192,11 +192,11 @@ const Flows = () => {
             style={{
               padding: '8px 16px',
               borderRadius: '6px',
-              border: 'none',
-              backgroundColor: activeTab === inst.id ? 'var(--accent-glow)' : 'transparent',
+              border: '1px solid transparent',
+              backgroundColor: activeTab === inst.id ? 'rgba(16, 185, 129, 0.12)' : '#ffffff',
               color: activeTab === inst.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
               cursor: 'pointer',
-              fontWeight: 500,
+              fontWeight: 600,
               display: 'flex',
               alignItems: 'center',
               gap: '6px'
@@ -212,11 +212,11 @@ const Flows = () => {
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
           <thead>
-            <tr style={{ backgroundColor: 'rgba(23, 23, 23, 0.5)', borderBottom: '1px solid var(--border-color)' }}>
-              <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 500 }}>NOME DO FLUXO</th>
-              <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 500 }}>GATILHO (TRIGGER)</th>
-              <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 500 }}>STATUS</th>
-              <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 500 }}>ATUALIZADO EM</th>
+            <tr style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--border-color)' }}>
+              <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 700 }}>NOME DO FLUXO</th>
+              <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 700 }}>GATILHO (TRIGGER)</th>
+              <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 700 }}>STATUS</th>
+              <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 700 }}>ATUALIZADO EM</th>
               <th style={{ padding: '16px 20px', color: 'var(--text-secondary)', fontWeight: 500, textAlign: 'right' }}>AÇÕES</th>
             </tr>
           </thead>

@@ -33,6 +33,28 @@ if (!function_exists('dzhome2_api_base')) {
     }
 }
 
+if (!function_exists('dzhome2_login_url')) {
+    function dzhome2_login_url()
+    {
+        return untrailingslashit((string) apply_filters('digizap_home2_login_url', home_url('/login/')));
+    }
+}
+
+if (!function_exists('dzhome2_brand_logo_url')) {
+    function dzhome2_brand_logo_url()
+    {
+        $logo_id = (int) get_theme_mod('custom_logo');
+        if ($logo_id > 0) {
+            $logo_url = wp_get_attachment_image_url($logo_id, 'full');
+            if (!empty($logo_url)) {
+                return $logo_url;
+            }
+        }
+
+        return dzhome2_placeholder_logo(get_bloginfo('name') ?: 'DZ');
+    }
+}
+
 if (!function_exists('dzhome2_enqueue_assets')) {
     function dzhome2_enqueue_assets()
     {
@@ -51,7 +73,7 @@ if (!function_exists('dzhome2_enqueue_assets')) {
             'apiBase' => dzhome2_api_base(),
             'homeUrl' => home_url('/'),
             'restaurantsUrl' => dzhome2_restaurants_url(),
-            'loginUrl' => 'https://dash.hotwhats.com.br/login',
+            'loginUrl' => dzhome2_login_url(),
             'registerUrl' => home_url('/comprar/'),
             'blogUrl' => dzhome2_blog_url(),
             'categoryImageBaseUrl' => dzhome2_asset_url('assets/img/'),
@@ -644,14 +666,79 @@ if (!function_exists('dzhome2_render_directory_skeleton')) {
 if (!function_exists('dzhome2_hero_artwork_url')) {
     function dzhome2_hero_artwork_url()
     {
-        return 'https://hotwhats.com.br/wp-content/uploads/2026/05/mockup-digizap.png';
+        $svg = <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="720" viewBox="0 0 960 720" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ecfdf5"/>
+      <stop offset="100%" stop-color="#f8fafc"/>
+    </linearGradient>
+    <linearGradient id="device" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="720" rx="56" fill="url(#bg)"/>
+  <circle cx="760" cy="130" r="110" fill="rgba(34,197,94,0.12)"/>
+  <circle cx="170" cy="560" r="140" fill="rgba(34,197,94,0.08)"/>
+  <rect x="284" y="108" width="392" height="504" rx="42" fill="url(#device)" stroke="rgba(15,23,42,0.08)" stroke-width="2"/>
+  <rect x="318" y="144" width="324" height="22" rx="11" fill="rgba(15,23,42,0.10)"/>
+  <rect x="318" y="186" width="210" height="18" rx="9" fill="rgba(15,23,42,0.07)"/>
+  <rect x="318" y="240" width="324" height="124" rx="28" fill="url(#accent)"/>
+  <circle cx="394" cy="302" r="42" fill="rgba(255,255,255,0.18)"/>
+  <rect x="470" y="270" width="128" height="20" rx="10" fill="rgba(255,255,255,0.92)"/>
+  <rect x="470" y="304" width="84" height="14" rx="7" fill="rgba(255,255,255,0.72)"/>
+  <rect x="318" y="388" width="324" height="26" rx="13" fill="rgba(15,23,42,0.08)"/>
+  <rect x="318" y="430" width="236" height="18" rx="9" fill="rgba(15,23,42,0.06)"/>
+  <rect x="318" y="462" width="268" height="18" rx="9" fill="rgba(15,23,42,0.06)"/>
+  <rect x="318" y="504" width="152" height="46" rx="23" fill="#22c55e"/>
+  <rect x="486" y="504" width="156" height="46" rx="23" fill="rgba(15,23,42,0.06)"/>
+</svg>
+SVG;
+
+        return 'data:image/svg+xml;charset=UTF-8,' . rawurlencode(trim($svg));
     }
 }
 
 if (!function_exists('dzhome2_restaurants_hero_artwork_url')) {
     function dzhome2_restaurants_hero_artwork_url()
     {
-        return 'https://hotwhats.com.br/wp-content/uploads/2026/05/ChatGPT-Image-27-de-mai.-de-2026-09_27_58-768x512.png';
+        $svg = <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="720" viewBox="0 0 960 720" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f0fdf4"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+    <linearGradient id="plate" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f1f5f9"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#86efac"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="720" rx="56" fill="url(#bg)"/>
+  <circle cx="770" cy="160" r="120" fill="rgba(34,197,94,0.10)"/>
+  <circle cx="160" cy="540" r="150" fill="rgba(34,197,94,0.08)"/>
+  <rect x="154" y="172" width="652" height="388" rx="44" fill="url(#plate)" stroke="rgba(15,23,42,0.08)" stroke-width="2"/>
+  <rect x="206" y="224" width="180" height="20" rx="10" fill="rgba(15,23,42,0.08)"/>
+  <rect x="206" y="260" width="300" height="18" rx="9" fill="rgba(15,23,42,0.06)"/>
+  <rect x="206" y="314" width="548" height="186" rx="32" fill="url(#green)"/>
+  <circle cx="356" cy="408" r="72" fill="rgba(255,255,255,0.20)"/>
+  <circle cx="520" cy="382" r="48" fill="rgba(255,255,255,0.18)"/>
+  <circle cx="610" cy="442" r="36" fill="rgba(255,255,255,0.22)"/>
+  <rect x="206" y="530" width="180" height="18" rx="9" fill="rgba(15,23,42,0.08)"/>
+  <rect x="402" y="530" width="210" height="18" rx="9" fill="rgba(15,23,42,0.06)"/>
+</svg>
+SVG;
+
+        return 'data:image/svg+xml;charset=UTF-8,' . rawurlencode(trim($svg));
     }
 }
 

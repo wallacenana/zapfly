@@ -288,7 +288,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://hotwhats.com.br/cardapio/style.css?v=3.42">
+        <link rel="stylesheet" href="style.css?v=3.42">
         <style>
             :root {
                 --primary-color:

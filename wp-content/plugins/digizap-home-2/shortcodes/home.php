@@ -51,7 +51,7 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
             data-api-base="<?php echo esc_attr(dzhome2_api_base()); ?>"
             data-home-url="<?php echo esc_attr(home_url('/')); ?>"
             data-restaurants-url="<?php echo esc_attr(dzhome2_restaurants_url()); ?>"
-            data-login-url="<?php echo esc_attr('https://dash.hotwhats.com.br/login'); ?>"
+            data-login-url="<?php echo esc_attr(dzhome2_login_url()); ?>"
             data-register-url="<?php echo esc_attr(home_url('/comprar/')); ?>"
             data-blog-url="<?php echo esc_attr(dzhome2_blog_url()); ?>"
             data-storage-key="dz_home2_address"
@@ -62,7 +62,7 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
                 'homeUrl' => home_url('/'),
                 'restaurantsUrl' => dzhome2_restaurants_url(),
                 'blogUrl' => dzhome2_blog_url(),
-                'loginUrl' => 'https://dash.hotwhats.com.br/login',
+                'loginUrl' => dzhome2_login_url(),
                 'registerUrl' => home_url('/comprar/'),
                 'hasSelectedAddress' => $hasSelectedAddress,
                 'initialAddressLabel' => $initialAddressLabel,
@@ -187,7 +187,7 @@ if (!function_exists('dzhome2_render_home_shortcode')) {
                 'homeUrl' => home_url('/'),
                 'restaurantsUrl' => dzhome2_restaurants_url(),
                 'blogUrl' => dzhome2_blog_url(),
-                'loginUrl' => 'https://dash.hotwhats.com.br/login',
+                'loginUrl' => dzhome2_login_url(),
                 'registerUrl' => home_url('/comprar/'),
             ]); ?>
         </div>

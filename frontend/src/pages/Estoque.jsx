@@ -554,42 +554,42 @@ const Estoque = () => {
       return true;
     });
 
-    const getVariationPriceRange = (variations = []) => {
-      const prices = variations.flatMap((variation) => {
-        const subItems = Array.isArray(variation?.subItems) ? variation.subItems : [];
-        if (subItems.length > 0) {
-          return subItems
-            .map(subItem => parseMoneyInput(subItem?.promoPrice || subItem?.price))
-            .filter(value => Number.isFinite(value));
-        }
-        return [parseMoneyInput(variation?.promoPrice || variation?.price)]
+  const getVariationPriceRange = (variations = []) => {
+    const prices = variations.flatMap((variation) => {
+      const subItems = Array.isArray(variation?.subItems) ? variation.subItems : [];
+      if (subItems.length > 0) {
+        return subItems
+          .map(subItem => parseMoneyInput(subItem?.promoPrice || subItem?.price))
           .filter(value => Number.isFinite(value));
-      })
+      }
+      return [parseMoneyInput(variation?.promoPrice || variation?.price)]
         .filter(value => Number.isFinite(value));
-      const min = prices.length ? Math.min(...prices) : null;
-      const max = prices.length ? Math.max(...prices) : null;
-      return { min, max };
-    };
+    })
+      .filter(value => Number.isFinite(value));
+    const min = prices.length ? Math.min(...prices) : null;
+    const max = prices.length ? Math.max(...prices) : null;
+    return { min, max };
+  };
 
-    const getVariationStockSummary = (variations = []) => {
-      const total = variations.reduce((sum, variation) => {
-        const subItems = Array.isArray(variation?.subItems) ? variation.subItems : [];
-        if (subItems.length > 0) {
-          const subTotal = subItems.reduce((subSum, subItem) => {
-            const stock = Number.parseInt(subItem?.stock, 10);
-            return subSum + (Number.isFinite(stock) ? stock : 0);
-          }, 0);
-          return sum + subTotal;
-        }
-        const stock = Number.parseInt(variation?.stock, 10);
-        return sum + (Number.isFinite(stock) ? stock : 0);
-      }, 0);
-      return total;
-    };
+  const getVariationStockSummary = (variations = []) => {
+    const total = variations.reduce((sum, variation) => {
+      const subItems = Array.isArray(variation?.subItems) ? variation.subItems : [];
+      if (subItems.length > 0) {
+        const subTotal = subItems.reduce((subSum, subItem) => {
+          const stock = Number.parseInt(subItem?.stock, 10);
+          return subSum + (Number.isFinite(stock) ? stock : 0);
+        }, 0);
+        return sum + subTotal;
+      }
+      const stock = Number.parseInt(variation?.stock, 10);
+      return sum + (Number.isFinite(stock) ? stock : 0);
+    }, 0);
+    return total;
+  };
 
-    const groupedProducts = (() => {
-      const categoryNameById = new Map(categories.map(cat => [String(cat.id), cat.name]));
-      const buckets = [];
+  const groupedProducts = (() => {
+    const categoryNameById = new Map(categories.map(cat => [String(cat.id), cat.name]));
+    const buckets = [];
     const bucketMap = new Map();
 
     const resolveCategoryLabel = (product) => {
@@ -647,13 +647,13 @@ const Estoque = () => {
     }
   };
 
-  const inp = { style: { width: '100%', padding: '10px 14px', borderRadius: '10px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '14px', outline: 'none' } };
+  const inp = { style: { width: '100%', padding: '10px 14px', borderRadius: '10px', backgroundColor: '#f8fafc', border: '1px solid #d8e0d7', color: '#111827', fontSize: '14px', outline: 'none' } };
 
   return (
-    <div style={{ padding: '30px' }}>
+    <div style={{ padding: '30px', color: 'var(--text-primary)' }}>
       <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#fff' }}>Catálogo & Estoque</h2>
+          <h2 style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-primary)' }}>Catálogo & Estoque</h2>
           <p style={{ color: 'var(--text-secondary)' }}>Gerencie seus produtos e combos de {tab === 'delivery' ? 'Pronta Entrega' : 'Agendamento'}</p>
         </div>
       </div>
@@ -676,7 +676,7 @@ const Estoque = () => {
               <button className="btn btn-primary" onClick={() => openAdd(true)} >
                 <Plus size={20} /> Novo Combo
               </button>
-              <button className="btn btn-primary" onClick={() => setShowCategoryModal(true)} style={{ backgroundColor: 'transparent', border: '1px solid rgba(255,255,255,0.16)', color: '#fff' }}>
+              <button className="btn btn-primary" onClick={() => setShowCategoryModal(true)} style={{ backgroundColor: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}>
                 <Layers size={20} /> Categorias
               </button>
             </>
@@ -684,16 +684,16 @@ const Estoque = () => {
         </div>
 
         <div className="d-flex gap-10 tab-actions radius-8">
-          <button onClick={() => setTab('delivery')} style={{ ...tabBtn, backgroundColor: tab === 'delivery' ? '#161b29' : '#0F172A', fontWeight: tab === 'delivery' ? 700 : 400, color: tab === 'delivery' ? '#fff' : 'var(--text-secondary)' }}>
+          <button onClick={() => setTab('delivery')} style={{ ...tabBtn, backgroundColor: tab === 'delivery' ? 'rgba(93, 183, 44, 0.06)' : 'transparent', border: tab === 'delivery' ? '1px solid rgba(93, 183, 44, 0.12)' : '1px solid transparent', fontWeight: 600, color: tab === 'delivery' ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: 'none' }}>
             <ShoppingBag size={18} /> Pronta Entrega
           </button>
-          <button onClick={() => setTab('encomenda')} style={{ ...tabBtn, backgroundColor: tab === 'encomenda' ? '#161b29' : '#0F172A', fontWeight: tab === 'encomenda' ? 700 : 400, color: tab === 'encomenda' ? '#fff' : 'var(--text-secondary)' }}>
+          <button onClick={() => setTab('encomenda')} style={{ ...tabBtn, backgroundColor: tab === 'encomenda' ? 'rgba(93, 183, 44, 0.06)' : 'transparent', border: tab === 'encomenda' ? '1px solid rgba(93, 183, 44, 0.12)' : '1px solid transparent', fontWeight: 600, color: tab === 'encomenda' ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: 'none' }}>
             <Calendar size={18} /> Agendamentos
           </button>
-          <button onClick={() => setTab('addon')} style={{ ...tabBtn, backgroundColor: tab === 'addon' ? '#161b29' : '#0F172A', fontWeight: tab === 'addon' ? 700 : 400, color: tab === 'addon' ? '#fff' : 'var(--text-secondary)' }}>
+          <button onClick={() => setTab('addon')} style={{ ...tabBtn, backgroundColor: tab === 'addon' ? 'rgba(93, 183, 44, 0.06)' : 'transparent', border: tab === 'addon' ? '1px solid rgba(93, 183, 44, 0.12)' : '1px solid transparent', fontWeight: 600, color: tab === 'addon' ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: 'none' }}>
             <Plus size={18} /> Adicionais
           </button>
-          <button onClick={() => setTab('seasonal')} style={{ ...tabBtn, backgroundColor: tab === 'seasonal' ? '#161b29' : '#0F172A', fontWeight: tab === 'seasonal' ? 700 : 400, color: tab === 'seasonal' ? '#fff' : 'var(--text-secondary)' }}>
+          <button onClick={() => setTab('seasonal')} style={{ ...tabBtn, backgroundColor: tab === 'seasonal' ? 'rgba(93, 183, 44, 0.06)' : 'transparent', border: tab === 'seasonal' ? '1px solid rgba(93, 183, 44, 0.12)' : '1px solid transparent', fontWeight: 600, color: tab === 'seasonal' ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: 'none' }}>
             <Gift size={18} /> Datas Comemorativas
           </button>
         </div></div>
@@ -701,13 +701,13 @@ const Estoque = () => {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
         {tab === 'seasonal' ? (
           seasonalCatalogs.map(s => (
-            <div key={s.id} style={{ backgroundColor: '#18181b', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div key={s.id} style={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid var(--border-color)', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                 <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'rgba(236, 72, 153, 0.1)', color: '#ec4899', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Gift size={20} />
                 </div>
                 <div>
-                  <div style={{ fontWeight: 500, fontSize: '16px', color: '#fff' }}>{s.name}</div>
+                  <div style={{ fontWeight: 700, fontSize: '16px', color: 'var(--text-primary)' }}>{s.name}</div>
                   <div style={{ fontSize: '13px', color: 'var(--text-secondary)', display: 'flex', gap: '10px', marginTop: '4px' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={14} /> {new Date(s.eventDate + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={14} /> Antecedência: {s.preStartDays} dias</span>
@@ -735,7 +735,7 @@ const Estoque = () => {
         ) : (
           groupedProducts.map((group) => (
             <React.Fragment key={group.label}>
-              <div style={{ margin: '20px 2px 2px', fontSize: '15px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'capitalize' }}>
+              <div className="estoque-group-title" style={{ margin: '20px 2px 2px' }}>
                 {group.label}
               </div>
               {group.items.map((p) => {
@@ -750,7 +750,7 @@ const Estoque = () => {
                     onDragStart={(e) => handleProductDragStart(e, globalIndex)}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleProductDrop(e, globalIndex)}
-                    style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', overflow: 'hidden', transition: 'all 0.2s', cursor: 'grab' }}
+                    style={{ borderBottom: '1px solid var(--border-color)', overflow: 'hidden', transition: 'all 0.2s', cursor: 'grab' }}
                   >
                     <div
                       onClick={() => {
@@ -761,12 +761,12 @@ const Estoque = () => {
                         openEdit(p);
                       }}
                       onMouseEnter={(e) => {
-                        if (!isExpanded) e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.04)';
+                        if (!isExpanded) e.currentTarget.style.backgroundColor = 'rgba(93, 183, 44, 0.05)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent';
+                        e.currentTarget.style.backgroundColor = isExpanded ? 'rgba(93, 183, 44, 0.04)' : 'transparent';
                       }}
-                      style={{ padding: '20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent', borderBottom: isExpanded ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'background-color 0.18s ease, border-color 0.18s ease' }}
+                      style={{ padding: '20px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', backgroundColor: isExpanded ? 'rgba(93, 183, 44, 0.04)' : 'transparent', borderBottom: isExpanded ? '1px solid var(--border-color)' : 'none', transition: 'background-color 0.18s ease, border-color 0.18s ease' }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                         {canExpand ? (
@@ -776,42 +776,31 @@ const Estoque = () => {
                         )}
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ fontWeight: 800, fontSize: '15px', color: '#fff' }}>{p.name}</div>
-                            {isCombo && <span style={{ fontSize: '10px', backgroundColor: 'rgba(139, 92, 246, 0.2)', color: '#a78bfa', padding: '2px 8px', borderRadius: '4px', fontWeight: 900 }}>COMBO</span>}
-                            <span style={{ fontSize: '10px', backgroundColor: 'rgba(255,255,255,0.08)', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: '999px', fontWeight: 800 }}>#{p.displayOrder || globalIndex + 1}</span>
-                            {p.featured && <span style={{ fontSize: '10px', backgroundColor: 'rgba(59, 130, 246, 0.16)', color: '#60a5fa', padding: '2px 8px', borderRadius: '999px', fontWeight: 900 }}>DESTAQUE</span>}
-                            {Array.isArray(p.customFields) && p.customFields.length > 0 && <span style={{ fontSize: '10px', backgroundColor: 'rgba(245, 158, 11, 0.16)', color: '#f59e0b', padding: '2px 8px', borderRadius: '999px', fontWeight: 900 }}>EXTRAS</span>}
+                            <div className="estoque-product-name">{p.name}</div>
+                            {isCombo && <span className="estoque-product-badge estoque-product-badge--combo">COMBO</span>}
+                            <span className="estoque-product-badge estoque-product-badge--order">#{p.displayOrder || globalIndex + 1}</span>
+                            {p.featured && <span className="estoque-product-badge estoque-product-badge--featured">DESTAQUE</span>}
+                            {Array.isArray(p.customFields) && p.customFields.length > 0 && <span className="estoque-product-badge estoque-product-badge--extras">EXTRAS</span>}
                           </div>
-                          {!p.variations.length && !isCombo && <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.trackStock && `| Estoque: ${p.stock}`} {!p.trackStock && '| Estoque: Ilimitado'}</div>}
+                          {!p.variations.length && !isCombo && <div className="estoque-product-meta" style={{ marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.trackStock && `| Estoque: ${p.stock}`} {!p.trackStock && '| Estoque: Ilimitado'}</div>}
                           {p.variations.length > 0 && !isCombo && (() => {
                             const { min, max } = getVariationPriceRange(p.variations);
                             const stock = getVariationStockSummary(p.variations);
                             const stockLabel = p.trackStock ? ` | Estoque: ${stock}` : ' | Estoque: Ilimitado';
                             if (min !== null && max !== null) {
                               const priceLabel = min === max ? `R$ ${min.toFixed(2)}` : `R$ ${min.toFixed(2)} - R$ ${max.toFixed(2)}`;
-                              return <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>{priceLabel}{stockLabel}</div>;
+                              return <div className="estoque-product-meta" style={{ marginTop: '4px' }}>{priceLabel}{stockLabel}</div>;
                             }
-                            return <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>{p.price ? `R$ ${Number(p.price).toFixed(2)}` : 'Sem preço definido'}{stockLabel}</div>;
+                            return <div className="estoque-product-meta" style={{ marginTop: '4px' }}>{p.price ? `R$ ${Number(p.price).toFixed(2)}` : 'Sem preço definido'}{stockLabel}</div>;
                           })()}
-                          {isCombo && <div style={{ fontSize: '13px', color: '#8b5cf6', marginTop: '4px', fontWeight: 700 }}>R$ {p.price.toFixed(2)} | {p.comboItems.length} itens inclusos</div>}
+                          {isCombo && <div className="estoque-product-meta estoque-product-meta--combo" style={{ marginTop: '4px' }}>R$ {p.price.toFixed(2)} | {p.comboItems.length} itens inclusos</div>}
                           {!isCombo && Array.isArray(p.addonGroups) && p.addonGroups.length > 0 && (
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '8px' }}>
+                            <div className="estoque-product-tags" style={{ marginTop: '8px' }}>
                               {p.addonGroups.map(groupId => {
                                 const group = addonGroups.find(g => g.id === groupId);
                                 if (!group) return null;
                                 return (
-                                  <span
-                                    key={groupId}
-                                    style={{
-                                      fontSize: '10px',
-                                      padding: '3px 8px',
-                                      borderRadius: '999px',
-                                      backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                                      color: '#f59e0b',
-                                      fontWeight: 800,
-                                      letterSpacing: '0.04em'
-                                    }}
-                                  >
+                                  <span key={groupId} className="estoque-product-badge estoque-product-badge--addon">
                                     {group.name}
                                   </span>
                                 );
@@ -826,7 +815,7 @@ const Estoque = () => {
                             className="btn-icon"
                             disabled={globalIndex === 0}
                             title="Mover para cima"
-                            style={{  color: globalIndex === 0 ? 'rgba(255,255,255,0.25)' : '#fff', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', cursor: globalIndex === 0 ? 'not-allowed' : 'pointer' }}
+                            style={{ color: globalIndex === 0 ? 'rgba(15, 23, 42, 0.28)' : 'var(--text-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)', cursor: globalIndex === 0 ? 'not-allowed' : 'pointer', backgroundColor: '#ffffff' }}
                             onClick={(e) => { e.stopPropagation(); moveProductOrder(globalIndex, -1); }}
                           >
                             <ArrowUp size={14} />
@@ -835,7 +824,7 @@ const Estoque = () => {
                             className="btn-icon"
                             disabled={globalIndex === filtered.length - 1}
                             title="Mover para baixo"
-                            style={{  color: globalIndex === filtered.length - 1 ? 'rgba(255,255,255,0.25)' : '#fff', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)', cursor: globalIndex === filtered.length - 1 ? 'not-allowed' : 'pointer' }}
+                            style={{ color: globalIndex === filtered.length - 1 ? 'rgba(15, 23, 42, 0.28)' : 'var(--text-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)', cursor: globalIndex === filtered.length - 1 ? 'not-allowed' : 'pointer', backgroundColor: '#ffffff' }}
                             onClick={(e) => { e.stopPropagation(); moveProductOrder(globalIndex, 1); }}
                           >
                             <ArrowDown size={14} />
@@ -866,7 +855,7 @@ const Estoque = () => {
                       </div>
                     </div>
                     {canExpand && isExpanded && (
-                      <div style={{ padding: '0 10px 14px 30px', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                      <div style={{ padding: '0 10px 14px 30px', backgroundColor: '#ffffff' }}>
                         {isCombo ? (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingTop: '12px' }}>
                             {(p.comboItems || []).length === 0 ? (
@@ -905,14 +894,14 @@ const Estoque = () => {
                                 ? (min === max ? `R$ ${min.toFixed(2)}` : `R$ ${min.toFixed(2)} - R$ ${max.toFixed(2)}`)
                                 : 'Sem preço definido';
                               return (
-                                <div key={`${p.id}-var-${idx}`} style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px', backgroundColor: 'rgba(255,255,255,0.02)' }}>
+                                <div key={`${p.id}-var-${idx}`} style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px', backgroundColor: '#ffffff' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
                                     <div>
-                                      <div style={{ fontWeight: 800, color: '#fff', fontSize: '14px' }}>{variation?.name || `Variação ${idx + 1}`}</div>
+                                      <div style={{ fontWeight: 800, color: 'var(--text-primary)', fontSize: '14px' }}>{variation?.name || `Variação ${idx + 1}`}</div>
                                       {variation?.description && <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>{variation.description}</div>}
                                     </div>
                                     <div style={{ textAlign: 'right' }}>
-                                      <div style={{ fontSize: '13px', color: '#fff', fontWeight: 700 }}>{priceLabel}</div>
+                                      <div style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 700 }}>{priceLabel}</div>
                                       <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>Estoque: {variationStock}</div>
                                     </div>
                                   </div>
@@ -927,9 +916,9 @@ const Estoque = () => {
                                               fontSize: '11px',
                                               padding: '4px 10px',
                                               borderRadius: '999px',
-                                              backgroundColor: 'rgba(255,255,255,0.04)',
+                                              backgroundColor: 'rgba(93, 183, 44, 0.05)',
                                               color: 'var(--text-secondary)',
-                                              border: '1px solid rgba(255,255,255,0.06)'
+                                              border: '1px solid var(--border-color)'
                                             }}
                                           >
                                             {subItem?.name || `Subitem ${subIdx + 1}`}
@@ -957,7 +946,7 @@ const Estoque = () => {
 
       {showSeasonalModal && createPortal(
         <div style={modalOverlay}>
-          <div className="card" style={modalContent}>
+          <div className="card estoque-modal" style={modalContent}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
               <h3 style={{ fontWeight: 800 }}>{editingSeasonal ? 'Editar' : 'Novo'} Catálogo de Evento</h3>
               <button onClick={() => setShowSeasonalModal(false)} style={closeBtn}><X size={24} /></button>
@@ -1014,7 +1003,7 @@ const Estoque = () => {
                   <button className="btn btn-secondary" style={{ fontSize: '10px' }} onClick={() => setSeasonalForm(f => ({ ...f, items: [...f.items, { name: '', price: 0, description: '' }] }))}>+ Add Item</button>
                 </div>
                 {seasonalForm.items.map((item, idx) => (
-                  <div key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '10px', marginBottom: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div key={idx} style={{ backgroundColor: '#ffffff', padding: '15px', borderRadius: '10px', marginBottom: '10px', border: '1px solid var(--border-color)' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '10px', marginBottom: '10px' }}>
                       <input {...inp} placeholder="Nome do Produto Especial" value={item.name} onChange={e => { const i = [...seasonalForm.items]; i[idx].name = e.target.value; setSeasonalForm(f => ({ ...f, items: i })) }} />
                       <div style={{ position: 'relative' }}>
@@ -1058,7 +1047,7 @@ const Estoque = () => {
 
       {showModal && createPortal(
         <div style={modalOverlay}>
-          <div className="card" style={modalContent}>
+          <div className="card estoque-modal" style={modalContent}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
               <h3 style={{ fontWeight: 800 }}>{editing ? 'Editar' : 'Novo'} {isComboMode ? 'Combo' : 'Produto'}</h3>
               <button onClick={() => setShowModal(false)} style={closeBtn}><X size={24} /></button>
@@ -1138,7 +1127,7 @@ const Estoque = () => {
                             const filtered = imgs.filter((_, i) => i !== idx);
                             setForm(f => ({ ...f, image: JSON.stringify(filtered) }));
                           }}
-                          style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                          style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: '#ffffff', border: 'none', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
                         >
                           <X size={10} />
                         </button>
@@ -1164,10 +1153,10 @@ const Estoque = () => {
                 </div>
               </div>
 
-                {!isComboMode && !hasVariations && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
-                    <div>
-                      <label className="estoque-label">Preço normal (R$)</label>
+              {!isComboMode && !hasVariations && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+                  <div>
+                    <label className="estoque-label">Preço normal (R$)</label>
                     <input
                       {...inp}
                       type="text"
@@ -1187,63 +1176,63 @@ const Estoque = () => {
                       value={form.promoPrice}
                       onChange={e => setForm(f => ({ ...f, promoPrice: maskMoneyInput(e.target.value) }))}
                     />
-                    </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                {!isComboMode && !hasVariations && (
-                  <div style={{ marginBottom: '20px' }}>
-                    <label className="estoque-label">Estoque</label>
-                    <input
-                      {...inp}
-                      type="number"
-                      inputMode="numeric"
-                      placeholder="0"
-                      value={form.stock}
-                      onChange={e => setForm(f => ({ ...f, stock: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0 }))}
-                    />
-                  </div>
-                )}
+              {!isComboMode && !hasVariations && (
+                <div style={{ marginBottom: '20px' }}>
+                  <label className="estoque-label">Estoque</label>
+                  <input
+                    {...inp}
+                    type="number"
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={form.stock}
+                    onChange={e => setForm(f => ({ ...f, stock: e.target.value === '' ? '' : parseInt(e.target.value, 10) || 0 }))}
+                  />
+                </div>
+              )}
 
 
-                <div style={{ marginBottom: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ marginBottom: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div style={{ width: "100%", display: "flex", alignItems: "center", gap: "20px" }}>
                   <label htmlFor="trackStock" className="estoque-label estoque-label--switch">
-                    <span style={{ cursor: 'pointer', fontWeight: 700, fontSize: '13px', color: '#e5e7eb' }}>Controle de estoque</span>
-                    <span style={{ position: 'relative', width: '44px', height: '24px', borderRadius: '999px', backgroundColor: form.trackStock ? '#22c55e' : 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, transition: 'all 0.2s ease' }}>
+                    <span className="estoque-switch__text">Controle de estoque</span>
+                    <span className={`estoque-switch__track ${form.trackStock ? 'is-on' : ''}`}>
                       <input
                         type="checkbox"
                         id="trackStock"
                         checked={form.trackStock}
                         onChange={e => setForm(f => ({ ...f, trackStock: e.target.checked }))}
-                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                        className="estoque-switch__input"
                       />
-                      <span style={{ position: 'absolute', top: '2px', left: form.trackStock ? '21px' : '2px', width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.25)', transition: 'left 0.2s ease' }} />
+                      <span className="estoque-switch__thumb" />
                     </span>
                   </label>
 
                   <label htmlFor="featured" className="estoque-label estoque-label--switch">
-                    <span style={{ cursor: 'pointer', fontWeight: 700, fontSize: '13px' }}>Destaque no menu</span>
-                    <span style={{ position: 'relative', width: '44px', height: '24px', borderRadius: '999px', backgroundColor: form.featured ? '#3b82f6' : 'rgba(255,255,255,0.10)', border: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, transition: 'all 0.2s ease' }}>
+                    <span className="estoque-switch__text">Destaque no menu</span>
+                    <span className={`estoque-switch__track estoque-switch__track--blue ${form.featured ? 'is-on' : ''}`}>
                       <input
                         type="checkbox"
                         id="featured"
                         checked={form.featured}
                         onChange={e => setForm(f => ({ ...f, featured: e.target.checked }))}
-                        style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }}
+                        className="estoque-switch__input"
                       />
-                      <span style={{ position: 'absolute', top: '2px', left: form.featured ? '21px' : '2px', width: '18px', height: '18px', borderRadius: '50%', backgroundColor: '#fff', boxShadow: '0 2px 6px rgba(0,0,0,0.25)', transition: 'left 0.2s ease' }} />
+                      <span className="estoque-switch__thumb" />
                     </span>
                   </label>
                 </div>
                 {form.featured && (
-                  <div style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(59, 130, 246, 0.08)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.22)' }}>
+                  <div style={{ gridColumn: '1 / -1', backgroundColor: 'rgba(59, 130, 246, 0.06)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(59, 130, 246, 0.18)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
                       <div>
-                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>Banner do destaque</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Se tiver banner, ele aparece no topo como destaque. Sem banner, o produto aparece normalmente.</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>{getBannerSizeHint()}</div>
-                        </div>
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: '#60a5fa' }}>Banner do destaque</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>Se tiver banner, ele aparece no topo como destaque. Sem banner, o produto aparece normalmente.</div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>{getBannerSizeHint()}</div>
+                      </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <input
                           id="banner-upload"
@@ -1261,26 +1250,28 @@ const Estoque = () => {
                           className="btn"
                           type="button"
                           onClick={() => document.getElementById('banner-upload')?.click()}
-                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}
+                          title="Selecionar imagem do banner"
+                          aria-label="Selecionar imagem do banner"
+                          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', backgroundColor: 'var(--accent-primary)', color: '#ffffff', border: '1px solid var(--accent-primary)', borderRadius: '10px', fontWeight: 700, cursor: 'pointer' }}
                         >
-                          <Upload size={16} /> Enviar banner
+                          <Upload size={16} /> Selecionar banner
                         </button>
                       </div>
                     </div>
 
                     {form.bannerUrl ? (
-                      <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)' }}>
+                      <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
                         <img src={form.bannerUrl} alt="Banner do destaque" style={{ width: '100%', height: '180px', objectFit: 'cover', display: 'block' }} />
                         <button
                           type="button"
                           onClick={() => setForm(prev => ({ ...prev, bannerUrl: '' }))}
-                          style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'rgba(0,0,0,0.65)', color: '#fff', border: 'none', borderRadius: '999px', padding: '6px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
+                          style={{ position: 'absolute', top: '10px', right: '10px', backgroundColor: 'rgba(15,23,42,0.72)', color: '#ffffff', border: 'none', borderRadius: '999px', padding: '6px 10px', fontSize: '11px', fontWeight: 800, cursor: 'pointer' }}
                         >
                           Remover banner
                         </button>
                       </div>
                     ) : (
-                      <div style={{ border: '1px dashed rgba(255,255,255,0.12)', borderRadius: '12px', padding: '16px', color: 'var(--text-secondary)', fontSize: '12px' }}>
+                      <div style={{ border: '1px dashed var(--border-color)', borderRadius: '12px', padding: '16px', color: 'var(--text-secondary)', fontSize: '12px' }}>
                         Nenhum banner enviado ainda. O destaque vai usar a imagem normal do produto.
                       </div>
                     )}
@@ -1305,17 +1296,17 @@ const Estoque = () => {
                     </div>
 
                     {(form.variations || []).length === 0 ? (
-                      <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '12px' }}>
+                      <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: '#ffffff', color: 'var(--text-secondary)', fontSize: '12px', border: '1px solid var(--border-color)' }}>
                         Nenhuma variação cadastrada. Se o produto tiver opções, cadastre aqui.
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {(form.variations || []).map((variation, idx) => (
-                          <div key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1.25fr 0.75fr 0.75fr 0.75fr auto', gap: '10px', alignItems: 'start' }}>
-                            <div>
-                              <label className="estoque-label estoque-label--compact">Nome</label>
-                              <input
+                          <div key={idx} style={{ backgroundColor: '#fafaf8', border: '1px solid #d8e0d7', borderRadius: '12px', padding: '12px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.8fr auto auto', gap: '10px', alignItems: 'center' }}>
+                              <div>
+                                <label className="estoque-label estoque-label--compact">Nome</label>
+                                <input
                                   {...inp}
                                   placeholder="Ex: 1kg, Chocolate, Tradicional"
                                   value={variation.name || ''}
@@ -1326,8 +1317,61 @@ const Estoque = () => {
                                   }}
                                 />
                               </div>
-                              {!(variation.subItems || []).length && (
-                                <>
+                              <div>
+                                <label className="estoque-label estoque-label--compact">Estoque</label>
+                                <input
+                                  {...inp}
+                                  type="number"
+                                  value={variation.stock ?? 0}
+                                  onChange={e => {
+                                    const next = [...(form.variations || [])];
+                                    next[idx] = { ...(next[idx] || {}), stock: e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0 };
+                                    setForm(f => ({ ...f, variations: next }));
+                                  }}
+                                />
+                              </div>
+                              <label htmlFor={`variation-hidden-${idx}`} className="estoque-label estoque-label--switch" style={{ marginTop: '22px' }}>
+                                <span className="estoque-switch__text">Invisível</span>
+                                <span className={`estoque-switch__track ${variation.hidden ? 'is-on' : ''}`}>
+                                  <input
+                                    id={`variation-hidden-${idx}`}
+                                    type="checkbox"
+                                    checked={!!variation.hidden}
+                                    onChange={e => {
+                                      const next = [...(form.variations || [])];
+                                      next[idx] = { ...(next[idx] || {}), hidden: e.target.checked };
+                                      setForm(f => ({ ...f, variations: next }));
+                                    }}
+                                    className="estoque-switch__input"
+                                  />
+                                  <span className="estoque-switch__thumb" />
+                                </span>
+                              </label>
+                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', justifyContent: 'flex-end', paddingTop: '22px' }}>
+                                <button
+                                  type="button"
+                                  className="btn-icon"
+                                  onClick={() => duplicateVariationAt(idx)}
+                                  style={{ color: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.10)', borderRadius: '8px', padding: '8px' }}
+                                  title="Duplicar variação"
+                                >
+                                  <Copy size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-icon"
+                                  onClick={() => setForm(f => ({ ...f, variations: (f.variations || []).filter((_, i) => i !== idx) }))}
+                                  style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.10)', borderRadius: '8px', padding: '8px' }}
+                                  title="Remover variação"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </div>
+
+                            {!Array.isArray(variation.subItems) || variation.subItems.length === 0 ? (
+                              <div style={{ marginTop: '12px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                                   <div>
                                     <label className="estoque-label estoque-label--compact">Preço (R$)</label>
                                     <input
@@ -1358,55 +1402,9 @@ const Estoque = () => {
                                       }}
                                     />
                                   </div>
-                                  <div>
-                                    <label className="estoque-label estoque-label--compact">Estoque</label>
-                                    <input
-                                      {...inp}
-                                      type="number"
-                                      value={variation.stock ?? 0}
-                                      onChange={e => {
-                                        const next = [...(form.variations || [])];
-                                        next[idx] = { ...(next[idx] || {}), stock: e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0 };
-                                        setForm(f => ({ ...f, variations: next }));
-                                      }}
-                                    />
-                                  </div>
-                                </>
-                              )}
-                              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', paddingTop: '27px' }}>
-                                <label className="estoque-label estoque-label--check">
-                                  <input
-                                    type="checkbox"
-                                    checked={!!variation.hidden}
-                                    onChange={e => {
-                                      const next = [...(form.variations || [])];
-                                      next[idx] = { ...(next[idx] || {}), hidden: e.target.checked };
-                                      setForm(f => ({ ...f, variations: next }));
-                                    }}
-                                    style={{ width: '16px', height: '16px', accentColor: '#60a5fa', cursor: 'pointer' }}
-                                  />
-                                  Invisivel
-                                </label>
-                                <button
-                                  type="button"
-                                  className="btn-icon"
-                                  onClick={() => duplicateVariationAt(idx)}
-                                  style={{ color: '#22c55e', backgroundColor: 'rgba(34, 197, 94, 0.10)', borderRadius: '8px', padding: '8px' }}
-                                  title="Duplicar variação"
-                                >
-                                  <Copy size={16} />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn-icon"
-                                  onClick={() => setForm(f => ({ ...f, variations: (f.variations || []).filter((_, i) => i !== idx) }))}
-                                  style={{ color: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.10)', borderRadius: '8px', padding: '8px' }}
-                                  title="Remover variação"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
+                                </div>
                               </div>
-                            </div>
+                            ) : null}
 
                             <div style={{ marginTop: '10px' }}>
                               <label className="estoque-label estoque-label--compact">Descrição</label>
@@ -1422,14 +1420,14 @@ const Estoque = () => {
                               ></textarea>
                             </div>
 
-                            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                            <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                 <div style={{ fontSize: '12px', fontWeight: 800, color: '#94a3b8' }}>Subitens / Estoque interno</div>
                                 <button
                                   type="button"
                                   className="btn"
                                   onClick={() => addSub(idx)}
-                                  style={{ padding: '8px 12px', backgroundColor: 'rgba(255,255,255,0.06)', color: '#fff', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}
+                                  style={{ padding: '8px 12px', backgroundColor: 'rgba(93, 183, 44, 0.08)', color: 'var(--accent-primary)', border: '1px solid rgba(93, 183, 44, 0.18)', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}
                                 >
                                   + Add Subitem
                                 </button>
@@ -1439,7 +1437,7 @@ const Estoque = () => {
                                   <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Nenhum subitem adicionado.</div>
                                 ) : (
                                   (variation.subItems || []).map((subItem, subIdx) => (
-                                    <div key={subIdx} style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.7fr 0.7fr 0.7fr auto', gap: '10px', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '10px' }}>
+                                    <div key={subIdx} style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.7fr 0.7fr 0.7fr auto', gap: '10px', alignItems: 'center', backgroundColor: '#fafaf8', padding: '10px', borderRadius: '10px', border: '1px solid #d8e0d7' }}>
                                       <input
                                         {...inp}
                                         placeholder="Nome do subitem"
@@ -1517,8 +1515,8 @@ const Estoque = () => {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '300px', overflowY: 'auto', paddingRight: '5px' }}>
                     {products.filter(p => p.type === tab && (!p.comboItems || p.comboItems.length === 0)).map(p => (
-                      <div key={p.id} style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <div style={{ fontWeight: 800, fontSize: '13px', color: '#fff', marginBottom: '8px' }}>{p.name}</div>
+                      <div key={p.id} style={{ backgroundColor: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontWeight: 800, fontSize: '13px', color: 'var(--text-primary)', marginBottom: '8px' }}>{p.name}</div>
                         {p.variations.length > 0 ? (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingLeft: '10px' }}>
                             {p.variations.map((v, i) => {
@@ -1530,7 +1528,7 @@ const Estoque = () => {
                                   style={{
                                     padding: '4px 12px', borderRadius: '20px', fontSize: '11px', border: '1px solid',
                                     backgroundColor: isSelected ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
-                                    borderColor: isSelected ? '#8b5cf6' : 'rgba(255,255,255,0.1)',
+                                    borderColor: isSelected ? '#8b5cf6' : 'var(--border-color)',
                                     color: isSelected ? '#a78bfa' : 'var(--text-muted)',
                                     cursor: 'pointer', transition: 'all 0.2s'
                                   }}
@@ -1547,7 +1545,7 @@ const Estoque = () => {
                               style={{
                                 padding: '4px 12px', borderRadius: '20px', fontSize: '11px', border: '1px solid',
                                 backgroundColor: form.comboItems.includes(p.name) ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
-                                borderColor: form.comboItems.includes(p.name) ? '#8b5cf6' : 'rgba(255,255,255,0.1)',
+                                borderColor: form.comboItems.includes(p.name) ? '#8b5cf6' : 'var(--border-color)',
                                 color: form.comboItems.includes(p.name) ? '#a78bfa' : 'var(--text-muted)',
                                 cursor: 'pointer', transition: 'all 0.2s'
                               }}
@@ -1568,7 +1566,7 @@ const Estoque = () => {
                   </div>
 
                   {addonGroups.length === 0 ? (
-                    <div style={{ padding: '14px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                    <div style={{ padding: '14px', borderRadius: '12px', backgroundColor: '#ffffff', color: 'var(--text-secondary)', fontSize: '13px', border: '1px solid var(--border-color)' }}>
                       Nenhum grupo foi criado ainda. Use a aba <b>Adicionais</b> para cadastrar recheios, coberturas e complementos reutilizáveis.
                     </div>
                   ) : (
@@ -1579,6 +1577,18 @@ const Estoque = () => {
                         return (
                           <label
                             key={group.id}
+                            className="addon-group-card"
+                            style={{
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: '12px',
+                              padding: '14px',
+                              borderRadius: '14px',
+                              border: checked ? '1px solid rgba(93, 183, 44, 0.30)' : '1px solid #d8e0d7',
+                              backgroundColor: checked ? 'rgba(93, 183, 44, 0.06)' : '#fafaf8',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease'
+                            }}
                           >
                             <input
                               type="checkbox"
@@ -1590,17 +1600,17 @@ const Estoque = () => {
                                   : current.filter(id => id !== group.id);
                                 setForm(prev => ({ ...prev, addonGroups: next }));
                               }}
-                              style={{ width: '18px', height: '18px', marginTop: '2px', accentColor: '#f59e0b', cursor: 'pointer' }}
+                              style={{ width: '18px', height: '18px', marginTop: '2px', accentColor: '#5db72c', cursor: 'pointer', flexShrink: 0 }}
                             />
-                            <div style={{ flex: 1 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                <span style={{ fontWeight: 800, color: '#fff' }}>{group.name}</span>
-                                <span style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '999px', backgroundColor: group.min > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(255,255,255,0.08)', color: group.min > 0 ? '#fca5a5' : 'var(--text-secondary)', fontWeight: 800 }}>
+                                <span className="addon-group-name">{group.name}</span>
+                                <span className="addon-group-badge" style={{ fontSize: '10px', padding: '2px 7px', borderRadius: '999px', backgroundColor: group.min > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(93, 183, 44, 0.10)', color: group.min > 0 ? '#b91c1c' : 'var(--accent-primary)', fontWeight: 800 }}>
                                   {group.min > 0 ? 'Obrigatório' : 'Opcional'}
                                 </span>
                               </div>
-                              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                Min {group.min} / Max {group.max} Â· {items.length} item(ns)
+                              <div className="addon-group-meta" style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                Min {group.min} / Max {group.max} | {items.length} item(ns)
                               </div>
                             </div>
                           </label>
@@ -1618,7 +1628,7 @@ const Estoque = () => {
                 </div>
 
                 {products.length === 0 ? (
-                  <div style={{ padding: '14px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                  <div style={{ padding: '14px', borderRadius: '12px', backgroundColor: '#ffffff', color: 'var(--text-secondary)', fontSize: '13px', border: '1px solid var(--border-color)' }}>
                     Crie pelo menos um item para poder sugerir outro produto no checkout.
                   </div>
                 ) : (
@@ -1675,13 +1685,13 @@ const Estoque = () => {
                 </div>
 
                 {(form.customFields || []).length === 0 ? (
-                  <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: 'rgba(255,255,255,0.03)', color: 'var(--text-secondary)', fontSize: '12px' }}>
+                  <div style={{ padding: '12px', borderRadius: '10px', backgroundColor: '#ffffff', color: 'var(--text-secondary)', fontSize: '12px', border: '1px solid var(--border-color)' }}>
                     Nenhum campo extra configurado. Use isso para coletar referência, cor, topo, observações ou qualquer outro dado.
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {(form.customFields || []).map((field, idx) => (
-                      <div key={idx} style={{ backgroundColor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', padding: '12px' }}>
+                      <div key={idx} style={{ backgroundColor: '#ffffff', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.9fr 0.55fr auto', gap: '10px', alignItems: 'start' }}>
                           <div>
                             <label className="estoque-label estoque-label--compact">Nome do Campo</label>
@@ -1762,13 +1772,13 @@ const Estoque = () => {
       `}</style>
       {showCategoryModal && createPortal(
         <div style={modalOverlay}>
-          <div className="card" style={{ ...modalContent, width: '450px' }}>
+          <div className="card estoque-modal" style={{ ...modalContent, width: '450px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
               <h3 style={{ fontWeight: 800 }}>Gerenciar Categorias</h3>
               <button onClick={() => { setShowCategoryModal(false); setEditingCategory(null); }} style={closeBtn}><X size={24} /></button>
             </div>
 
-            <div style={{ marginBottom: '25px', backgroundColor: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ marginBottom: '25px', backgroundColor: '#ffffff', padding: '15px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
               <label className="estoque-label">{editingCategory ? 'Editar Categoria' : 'Nova Categoria'}</label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -1837,17 +1847,17 @@ const Estoque = () => {
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        backgroundColor: 'rgba(255,255,255,0.02)',
+                        backgroundColor: '#ffffff',
                         padding: '10px 15px',
                         borderRadius: '8px',
-                        border: '1px solid rgba(255,255,255,0.05)',
+                        border: '1px solid var(--border-color)',
                         cursor: 'grab'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}><Layers size={14} /></div>
-                        <span style={{ fontSize: '11px', backgroundColor: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', color: 'var(--text-secondary)' }}>{cat.order}</span>
-                        <span style={{ fontSize: '14px', color: '#fff', fontWeight: 600 }}>{cat.name}</span>
+                        <span style={{ fontSize: '11px', backgroundColor: 'rgba(93, 183, 44, 0.10)', padding: '2px 6px', borderRadius: '4px', color: 'var(--accent-primary)' }}>{cat.order}</span>
+                        <span style={{ fontSize: '14px', color: '#334155', fontWeight: 600 }}>{cat.name}</span>
                       </div>
                       <div style={{ display: 'flex', gap: '5px' }}>
                         <button className="btn-icon" style={{ color: '#3b82f6' }} onClick={() => {
@@ -1877,13 +1887,13 @@ const Estoque = () => {
   );
 };
 
-const tabBtn = { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', border: 'none', fontWeight: 700, fontSize: '14px', cursor: 'pointer' };
-const modalOverlay = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.95)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9, backdropFilter: 'blur(8px)', padding: '20px' };
-const modalContent = { width: '100%', maxWidth: '960px', maxHeight: '90vh', padding: '30px', position: 'relative', overflowY: 'auto', backgroundColor: '#18181b', borderRadius: '16px', border: '1px solid var(--border-color)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' };
+const tabBtn = { display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '12px', border: '1px solid var(--border-color)', fontWeight: 700, fontSize: '14px', cursor: 'pointer' };
+const modalOverlay = { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(15, 23, 42, 0.28)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 9, backdropFilter: 'blur(8px)', padding: '20px' };
+const modalContent = { width: '100%', maxWidth: '960px', maxHeight: '90vh', padding: '30px', position: 'relative', overflowY: 'auto', backgroundColor: '#f8faf7', borderRadius: '16px', border: '1px solid #d8e0d7', boxShadow: '0 20px 50px rgba(15,23,42,0.08)' };
 const closeBtn = { background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' };
-const sectionBox = { backgroundColor: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '12px', border: '1px dashed var(--border-color)', marginTop: '20px' };
+const sectionBox = { backgroundColor: '#fafaf8', padding: '20px', borderRadius: '12px', border: '1px dashed #d8e0d7', marginTop: '20px' };
 const sectionTitle = { fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' };
-const varGroupStyle = { backgroundColor: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', marginBottom: '15px', border: '1px solid rgba(255,255,255,0.05)' };
+const varGroupStyle = { backgroundColor: '#fafaf8', padding: '15px', borderRadius: '12px', marginBottom: '15px', border: '1px solid #d8e0d7' };
 
 export default Estoque;
 

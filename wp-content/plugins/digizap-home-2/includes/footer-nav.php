@@ -12,7 +12,7 @@ if (!function_exists('dzhome2_render_directory_footer_nav')) {
             'homeUrl' => home_url('/'),
             'restaurantsUrl' => dzhome2_restaurants_url(),
             'blogUrl' => dzhome2_blog_url(),
-            'loginUrl' => 'https://dash.hotwhats.com.br/login',
+            'loginUrl' => dzhome2_login_url(),
             'registerUrl' => home_url('/comprar/'),
         ], $args);
 

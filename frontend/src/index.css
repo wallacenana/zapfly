@@ -177,7 +177,6 @@ h4 {
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
 }
 
 .btn-secondary {
@@ -364,15 +363,206 @@ estoque-label {
 }
 
 .tab-actions button {
-  font-size: 13px!important;
-  padding: 8px 15px !important;
-  border-radius: 4px !important;
-  color: var(--text-primary) !important;
+  font-size: 13px !important;
+  padding: 8px 16px !important;
+  border-radius: 10px !important;
+  box-shadow: none;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .tab-actions {
-  background: #0F172A;
-  padding: 5px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(8px);
+}
+
+.estoque-modal {
+  color: #1f2937;
+  background: #f8faf7 !important;
+}
+
+.estoque-modal :is(h1, h2, h3, h4, h5, h6) {
+  color: #111827 !important;
+}
+
+.estoque-modal :is(p, small, li) {
+  color: #64748b !important;
+}
+
+.estoque-modal .estoque-label,
+.estoque-modal .estoque-label--section,
+.estoque-modal .estoque-label--compact,
+.estoque-modal .estoque-label--switch,
+.estoque-modal .estoque-label--check {
+  color: #334155 !important;
+  font-size: 13px !important;
+  margin-bottom: 5px !important;
+  display: block !important;
+  font-weight: 600 !important;
+}
+
+.estoque-modal input,
+.estoque-modal select,
+.estoque-modal textarea {
+  color: #111827 !important;
+  background-color: #f8fafc !important;
+  border-color: #d8e0d7 !important;
+}
+
+.estoque-modal input[type="checkbox"] {
+  accent-color: var(--accent-primary);
+}
+
+.estoque-modal input::placeholder,
+.estoque-modal textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.estoque-modal option {
+  color: #111827 !important;
+}
+
+.estoque-modal .estoque-label--switch {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  margin-bottom: 0 !important;
+}
+
+.estoque-modal .estoque-switch__text {
+  color: #334155 !important;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.estoque-modal .estoque-switch__track {
+  position: relative;
+  width: 46px;
+  height: 24px;
+  border-radius: 999px;
+  background: #d7dce3;
+  border: 1px solid #c9d0d8;
+  flex-shrink: 0;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.estoque-modal .estoque-switch__track.is-on {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.estoque-modal .estoque-switch__track--blue.is-on {
+  background: #3b82f6;
+  border-color: #3b82f6;
+}
+
+.estoque-modal .estoque-switch__input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.estoque-modal .estoque-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+  transition: left 0.2s ease, transform 0.2s ease;
+}
+
+.estoque-modal .estoque-switch__track.is-on .estoque-switch__thumb {
+  left: 24px;
+}
+
+.estoque-modal .addon-group-card,
+.estoque-modal .addon-group-card * {
+  color: #334155 !important;
+}
+
+.estoque-modal .addon-group-card .addon-group-name {
+  color: #111827 !important;
+  font-weight: 800;
+}
+
+.estoque-modal .addon-group-card .addon-group-meta {
+  color: #64748b !important;
+}
+
+.estoque-modal .addon-group-card .addon-group-badge {
+  color: inherit !important;
+}
+
+.estoque-group-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #334155;
+  text-transform: capitalize;
+}
+
+.estoque-product-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.estoque-product-meta {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.estoque-product-meta--combo {
+  color: #7c3aed;
+  font-weight: 700;
+}
+
+.estoque-product-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.estoque-product-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.estoque-product-badge--combo {
+  background-color: rgba(139, 92, 246, 0.16);
+  color: #8b5cf6;
+}
+
+.estoque-product-badge--order {
+  background-color: rgba(93, 183, 44, 0.10);
+  color: var(--accent-primary);
+}
+
+.estoque-product-badge--featured {
+  background-color: rgba(59, 130, 246, 0.14);
+  color: #2563eb;
+}
+
+.estoque-product-badge--extras {
+  background-color: rgba(245, 158, 11, 0.14);
+  color: #d97706;
+}
+
+.estoque-product-badge--addon {
+  background-color: rgba(245, 158, 11, 0.12);
+  color: #d97706;
 }
 
 .mb-30 {

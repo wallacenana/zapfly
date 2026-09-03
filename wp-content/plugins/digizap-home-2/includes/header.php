@@ -12,7 +12,7 @@ if (!function_exists('dzhome2_render_directory_header')) {
             'homeUrl' => home_url('/'),
             'restaurantsUrl' => dzhome2_restaurants_url(),
             'blogUrl' => dzhome2_blog_url(),
-            'loginUrl' => 'https://dash.hotwhats.com.br/login',
+            'loginUrl' => dzhome2_login_url(),
             'registerUrl' => home_url('/comprar/'),
             'hasSelectedAddress' => false,
             'initialAddressLabel' => '',
@@ -40,8 +40,8 @@ if (!function_exists('dzhome2_render_directory_header')) {
                                 : '';
                             ?>
                         <?php else : ?>
-                            <img decoding="async" width="300" height="78" src="https://hotwhats.com.br/wp-content/uploads/2026/05/HotWhats-Logo-300x78.png" class="attachment-medium size-medium" style="width: 160px; margin-top: 7px" alt="" srcset="https://hotwhats.com.br/wp-content/uploads/2026/05/HotWhats-Logo-300x78.png 300w, https://hotwhats.com.br/wp-content/uploads/2026/05/HotWhats-Logo.png 572w" sizes="(max-width: 300px) 100vw, 300px">
-                            <span class="dz-home2-brand-name" style="display: none"><?php echo esc_html(get_bloginfo('name') ?: 'HotWhats'); ?></span>
+                            <img decoding="async" width="300" height="300" src="<?php echo esc_url(dzhome2_brand_logo_url()); ?>" class="dz-home2-brand-logo" alt="<?php echo esc_attr(get_bloginfo('name') ?: 'DZ'); ?>">
+                            <span class="dz-home2-brand-name" style="display: none"><?php echo esc_html(get_bloginfo('name') ?: 'DZ'); ?></span>
                         <?php endif; ?>
                     </a>
                 </div>

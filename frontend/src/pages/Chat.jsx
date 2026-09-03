@@ -864,12 +864,13 @@ const Chat = () => {
               <div style={{
                 height: '70px',
                 padding: '0 25px',
-                backgroundColor: 'rgba(18, 18, 20, 0.8)',
-                backdropFilter: 'blur(10px)',
+                backgroundColor: 'rgba(255, 255, 255, 0.92)',
+                backdropFilter: 'blur(12px)',
                 borderBottom: '1px solid var(--border-color)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'space-between'
+                justifyContent: 'space-between',
+                boxShadow: '0 8px 24px rgba(15, 23, 42, 0.04)',
               }}>
                 <div
                   onClick={() => setShowContactInfo(!showContactInfo)}

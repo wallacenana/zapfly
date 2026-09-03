@@ -261,6 +261,14 @@ const Production = () => {
     const totalValueStr = finalTotal.toFixed(2);
     const subtotalStr = itemsSubtotal.toFixed(2);
     const freightStr = freightValue.toFixed(2);
+    const detailPairs = [
+      order.massa ? `Massa: ${order.massa}` : null,
+      order.recheio ? `Recheio: ${order.recheio}` : null,
+      order.topo ? `Topo: ${order.topo}` : null,
+    ].filter(Boolean);
+    const detailSummaryHtml = detailPairs.length
+      ? `<div style="font-size: 12px; color: #6b7280; margin-top: 5px;">${detailPairs.join(' | ')}</div>`
+      : '';
 
     let notesHtml = '';
     // Limpa a tag de frete da exibição visual das notas para não ficar repetitivo
@@ -414,8 +422,8 @@ const Production = () => {
     };
 
     Swal.fire({
-      background: '#111827',
-      color: '#fff',
+      background: '#ffffff',
+      color: '#0f172a',
       width: '550px',
       showCloseButton: true,
       showConfirmButton: false,
@@ -458,23 +466,23 @@ const Production = () => {
         if (mapsBtn) mapsBtn.onclick = () => handleMaps(order.deliveryAddress);
       },
       html: `
-        <div style="text-align: left; font-family: 'Inter', sans-serif;">
+        <div style="text-align: left; font-family: 'Inter', sans-serif; color: #0f172a;">
           <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 12px; color: #3b82f6; font-weight: 900; letter-spacing: 1px;">PEDIDO #${orderIdShort}</span>
             <div style="display: flex; gap: 8px; align-items: center;">
-              ${order.type === 'delivery' ? `<button id="btn-maps-order" style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); color: #10b981; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer;">📍 ROTA</button>` : ''}
-              <button id="btn-print-order" style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); color: #a78bfa; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer;">🖨️ IMPRIMIR</button>
-              <button id="btn-edit-order" style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer;">✏️ EDITAR</button>
-              <div style="background: ${columns.find(c => c.id === order.status)?.color || '#6b7280'}; color: #fff; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase;">
+              ${order.type === 'delivery' ? `<button id="btn-maps-order" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); color: #059669; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer;">📍 ROTA</button>` : ''}
+              <button id="btn-print-order" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); color: #3b82f6; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer;">🖨️ IMPRIMIR</button>
+              <button id="btn-edit-order" style="background: rgba(15, 23, 42, 0.04); border: 1px solid rgba(15, 23, 42, 0.08); color: #0f172a; padding: 4px 10px; border-radius: 8px; font-size: 10px; font-weight: 800; cursor: pointer;">✏️ EDITAR</button>
+              <div style="background: ${columns.find(c => c.id === order.status)?.color || '#6b7280'}; color: #ffffff; padding: 2px 10px; border-radius: 20px; font-size: 10px; font-weight: 800; text-transform: uppercase;">
                 ${columns.find(c => c.id === order.status)?.title || order.status}
               </div>
             </div>
           </div>
 
-          <div style="background: rgba(255,255,255,0.03); border-radius: 16px; padding: 20px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
+          <div style="background: #f8fafc; border-radius: 16px; padding: 20px; border: 1px solid rgba(15,23,42,0.08); margin-bottom: 20px;">
             <table style="width: 100%; border-collapse: collapse;">
               <thead>
-                <tr style="font-size: 10px; color: #9ca3af; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <tr style="font-size: 10px; color: #94a3b8; text-transform: uppercase; border-bottom: 1px solid rgba(15,23,42,0.08);">
                   <th style="text-align: left; padding-bottom: 12px; width: 60px;">Qtd</th>
                   <th style="text-align: left; padding-bottom: 12px;">Descrição do Pedido</th>
                   <th style="text-align: right; padding-bottom: 12px;">Subtotal</th>
@@ -488,9 +496,9 @@ const Production = () => {
                     </div>
                   </td>
                   <td style="padding: 20px 10px; vertical-align: top;">
-                    <div style="font-weight: 800; font-size: 18px; color: #fff; line-height: 1.2;">${order.product}</div>
+                    <div style="font-weight: 800; font-size: 18px; color: #0f172a; line-height: 1.2;">${order.product}</div>
                     <div style="font-size: 13px; color: #3b82f6; margin-top: 4px; font-weight: 700;">${order.variation || 'Opção Padrão'}</div>
-                    <div style="font-size: 12px; color: #9ca3af; margin-top: 5px;">Massa: ${order.massa || '-'} | Recheio: ${order.recheio || '-'} | Topo: ${order.topo || '-'}</div>
+                    ${detailSummaryHtml}
                     ${notesHtml}
                   </td>
                   <td style="font-size: 14px;">
@@ -498,42 +506,42 @@ const Production = () => {
                   </td>
                 </tr>
                 ${freightValue > 0 ? `
-                <tr style="border-top: 1px dashed rgba(255,255,255,0.05);">
+                <tr style="border-top: 1px dashed rgba(15,23,42,0.08);">
                   <td style="padding: 10px 0;"></td>
-                  <td style="padding: 10px 10px; font-size: 13px; color: #9ca3af; font-weight: 600;">Taxa de Entrega (Uber)</td>
-                  <td style="padding: 10px 0; text-align: right; font-weight: 700; font-size: 15px; color: #fbbf24;">R$ ${freightStr}</td>
+                  <td style="padding: 10px 10px; font-size: 13px; color: #64748b; font-weight: 600;">Taxa de Entrega (Uber)</td>
+                  <td style="padding: 10px 0; text-align: right; font-weight: 700; font-size: 15px; color: #f59e0b;">R$ ${freightStr}</td>
                 </tr>
                 ` : ''}
               </tbody>
             </table>
 
-            <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;">
-              <span style="font-weight: 800; font-size: 13px; color: #9ca3af;">TOTAL A RECEBER</span>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 2px solid rgba(15,23,42,0.08); display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-weight: 800; font-size: 13px; color: #64748b;">TOTAL A RECEBER</span>
               <span style="font-weight: 900; font-size: 26px; color: #10b981;">R$ ${totalValueStr}</span>
             </div>
           </div>
 
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-            <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-              <div style="font-size: 10px; color: #9ca3af; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">📅 Entrega/Retirada</div>
-              <div style="font-size: 15px; font-weight: 800; color: #fff;">${order.scheduledTime} - ${formattedDate}</div>
+            <div style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid rgba(15,23,42,0.08);">
+              <div style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">📅 Entrega/Retirada</div>
+              <div style="font-size: 15px; font-weight: 800; color: #0f172a;">${order.scheduledTime} - ${formattedDate}</div>
             </div>
-            <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
-              <div style="font-size: 10px; color: #9ca3af; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">💰 Pagamento</div>
+            <div style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid rgba(15,23,42,0.08);">
+              <div style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">💰 Pagamento</div>
               <div style="background: #fbbf24; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 900; display: inline-block; margin-top: 2px;">
                 ${order.paymentMethod || 'A COMBINAR'}
               </div>
             </div>
           </div>
 
-          <div style="padding: 15px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dotted rgba(255,255,255,0.1); margin-bottom: 20px;">
-            <div style="font-size: 10px; color: #9ca3af; font-weight: 800; text-transform: uppercase; margin-bottom: 8px;">Dados do Cliente</div>
+          <div style="padding: 15px; background: #f8fafc; border-radius: 12px; border: 1px dotted rgba(15,23,42,0.12); margin-bottom: 20px;">
+            <div style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 8px;">Dados do Cliente</div>
             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
               <div>
-                <div style="font-weight: 800; font-size: 15px; color: #fff;">${order.clientName}</div>
-                <div style="font-size: 12px; color: #6b7280;">${order.clientPhone || order.clientJid?.split('@')[0]}</div>
+                <div style="font-weight: 800; font-size: 15px; color: #0f172a;">${order.clientName}</div>
+                <div style="font-size: 12px; color: #64748b;">${order.clientPhone || order.clientJid?.split('@')[0]}</div>
               </div>
-              <button id="btn-go-to-chat" style="background: #3b82f6; color: #fff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px;">
+              <button id="btn-go-to-chat" style="background: #3b82f6; color: #ffffff; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px;">
                 <span>💬</span> Ver Conversa
               </button>
             </div>
@@ -569,7 +577,7 @@ const Production = () => {
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#fff' }}>Carregando Produção...</div>;
 
   return (
-    <div style={{
+    <div className="production-page" style={{
       padding: '25px',
       height: 'calc(100vh - 70px)',
       display: 'flex',
@@ -586,7 +594,7 @@ const Production = () => {
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
             <button
               onClick={() => setActiveType('delivery')}
-              style={{ ...tabBtn, backgroundColor: activeType === 'delivery' ? '#3b82f6' : 'var(--bg-tertiary)', color: '#fff', position: 'relative' }}
+              style={{ ...tabBtn, backgroundColor: activeType === 'delivery' ? '#3b82f6' : '#ffffff', color: activeType === 'delivery' ? '#ffffff' : 'var(--text-primary)', border: '1px solid var(--border-color)', position: 'relative' }}
             >
               <Truck size={16} /> Pronta Entrega
               {orders.filter(o => o.type === 'delivery' && o.status !== 'completed' && o.status !== 'cancelled').length > 0 && (
@@ -597,7 +605,7 @@ const Production = () => {
             </button>
             <button
               onClick={() => setActiveType('order')}
-              style={{ ...tabBtn, backgroundColor: activeType === 'order' ? '#f59e0b' : 'var(--bg-tertiary)', color: '#fff', position: 'relative' }}
+              style={{ ...tabBtn, backgroundColor: activeType === 'order' ? '#f59e0b' : '#ffffff', color: activeType === 'order' ? '#ffffff' : 'var(--text-primary)', border: '1px solid var(--border-color)', position: 'relative' }}
             >
               <CalendarIcon size={16} /> Encomendas
               {orders.filter(o => (o.type === 'order' || !o.type) && o.status !== 'completed' && o.status !== 'cancelled').length > 0 && (
@@ -613,7 +621,7 @@ const Production = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', backgroundColor: 'var(--bg-secondary)', padding: '10px 20px', borderRadius: '15px', border: '1px solid var(--border-color)', width: 'fit-content' }}>
               <button
                 onClick={() => changeDate(-1)}
-                style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '5px' }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '5px' }}
               >
                 <ChevronLeft size={24} />
               </button>
@@ -623,7 +631,7 @@ const Production = () => {
                   onClick={() => document.getElementById('date-picker').showPicker()}
                   style={{ textAlign: 'center', cursor: 'pointer' }}
                 >
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff' }}>{getDayName(selectedDate)}</div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)' }}>{getDayName(selectedDate)}</div>
                 </div>
 
                 <input
@@ -643,7 +651,7 @@ const Production = () => {
 
               <button
                 onClick={() => changeDate(1)}
-                style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '5px' }}
+                style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '5px' }}
               >
                 <ChevronRight size={24} />
               </button>
@@ -662,14 +670,14 @@ const Production = () => {
               <button
                 onClick={() => setShowWaitingDrawer(true)}
                 style={{
-                  padding: '10px 15px', borderRadius: '12px', backgroundColor: 'rgba(255,255,255,0.05)',
-                  border: '1px solid var(--border-color)', color: '#9ca3af', fontSize: '12px', fontWeight: 700,
+                  padding: '10px 15px', borderRadius: '12px', backgroundColor: '#ffffff',
+                  border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '12px', fontWeight: 700,
                   cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', position: 'relative'
                 }}
               >
                 <span>💳</span> Aguardando Pagamento
                 {orders.filter(o => o.status === 'waiting_payment' && (o.type === activeType || (!o.type && activeType === 'order'))).length > 0 && (
-                  <span style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: '#fff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: '#ffffff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {orders.filter(o => o.status === 'waiting_payment' && (o.type === activeType || (!o.type && activeType === 'order'))).length}
                   </span>
                 )}
@@ -683,7 +691,7 @@ const Production = () => {
                   onChange={e => setSearchTerm(e.target.value)}
                   style={{
                     width: '100%', padding: '12px 12px 12px 40px', borderRadius: '12px',
-                    backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: '#fff'
+                    backgroundColor: '#ffffff', border: '1px solid var(--border-color)', color: 'var(--text-primary)'
                   }}
                 />
               </div>
@@ -721,13 +729,13 @@ const Production = () => {
       {showWaitingDrawer && (
         <div style={{
           position: 'fixed', top: 0, right: 0, width: '400px', height: '100vh',
-          backgroundColor: 'var(--bg-primary)', borderLeft: '1px solid var(--border-color)',
-          zIndex: 2000, boxShadow: '-10px 0 30px rgba(0,0,0,0.5)',
+          backgroundColor: '#ffffff', borderLeft: '1px solid var(--border-color)',
+          zIndex: 2000, boxShadow: '-10px 0 30px rgba(15,23,42,0.08)',
           padding: '30px', display: 'flex', flexDirection: 'column'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800 }}>💳 Aguardando Pagamento</h3>
-            <button onClick={() => setShowWaitingDrawer(false)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}>
+            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)' }}>💳 Aguardando Pagamento</h3>
+            <button onClick={() => setShowWaitingDrawer(false)} style={{ background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer' }}>
               <XCircle size={24} />
             </button>
           </div>
@@ -739,12 +747,12 @@ const Production = () => {
                 onDragStart={(e) => e.dataTransfer.setData("orderId", order.id)}
                 draggable
                 style={{
-                  backgroundColor: 'var(--bg-secondary)', padding: '15px', borderRadius: '15px',
+                  backgroundColor: '#f8fafc', padding: '15px', borderRadius: '15px',
                   border: '1px solid var(--border-color)', marginBottom: '10px', cursor: 'pointer'
                 }}
               >
-                <div style={{ fontWeight: 800, fontSize: '16px', marginBottom: '5px' }}>#{order.id.slice(-4).toUpperCase()}</div>
-                <div style={{ fontSize: '14px', color: 'var(--text-muted)' }}>{order.clientName}</div>
+                <div style={{ fontWeight: 800, fontSize: '16px', marginBottom: '5px', color: 'var(--text-primary)' }}>#{order.id.slice(-4).toUpperCase()}</div>
+                <div style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{order.clientName}</div>
                 <div style={{ fontSize: '12px', marginTop: '8px', color: '#9ca3af' }}>🕒 {order.scheduledTime}</div>
               </div>
             ))}
@@ -776,7 +784,7 @@ const KanbanColumn = ({ col, orders, updateStatus, openDetails, height = '100%' 
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ color: col.color }}>{col.icon}</span>
-          <span style={{ fontSize: '14px', fontWeight: 800, color: '#fff' }}>{col.title}</span>
+          <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)' }}>{col.title}</span>
         </div>
         <span style={{
           backgroundColor: 'rgba(255,255,255,0.05)', padding: '2px 10px',
@@ -825,7 +833,7 @@ const KanbanColumn = ({ col, orders, updateStatus, openDetails, height = '100%' 
             <div style={{
               fontSize: '18px',
               fontWeight: 900,
-              color: '#fff',
+              color: 'var(--text-primary)',
               marginBottom: '4px'
             }}>
               #{order.id.slice(-4).toUpperCase()}

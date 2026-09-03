@@ -68,7 +68,7 @@ const TriggerNode = ({ id, data }) => {
   }, []);
 
   return (
-    <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '10px', width: '280px', boxShadow: '0 8px 30px rgba(0,0,0,0.3)' }}>
+    <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '10px', width: '280px', boxShadow: 'none' }}>
       <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '10px 10px 0 0' }}>
         <Flag size={16} style={{ color: 'var(--text-secondary)' }} />
         <span style={{ fontWeight: 700, fontSize: '14px', color: 'var(--text-primary)' }}>Gatilho de Entrada</span>
@@ -139,7 +139,7 @@ const TriggerNode = ({ id, data }) => {
 const TextNode = ({ id, data }) => {
   const { setNodes, updateNodeData } = useReactFlow();
   return (
-    <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '10px', minWidth: '280px', width: 'fit-content', boxShadow: '0 8px 30px rgba(0,0,0,0.3)' }}>
+    <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '10px', minWidth: '280px', width: 'fit-content', boxShadow: 'none' }}>
       <Handle type="target" position={Position.Left} style={{ width: '10px', height: '10px', background: 'var(--bg-primary)', border: '2px solid var(--text-secondary)', left: '-5px' }} />
       <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '10px 10px 0 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -161,7 +161,7 @@ const TextNode = ({ id, data }) => {
 const AINode = ({ id, data }) => {
   const { setNodes, updateNodeData } = useReactFlow();
   return (
-    <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '10px', minWidth: '320px', width: 'fit-content', boxShadow: '0 8px 30px rgba(0,0,0,0.3)' }}>
+    <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '10px', minWidth: '320px', width: 'fit-content', boxShadow: 'none' }}>
       <Handle type="target" position={Position.Left} style={{ width: '10px', height: '10px', background: 'var(--bg-primary)', border: '2px solid var(--text-secondary)', left: '-5px' }} />
       <div style={{ backgroundColor: 'rgba(139, 92, 246, 0.15)', padding: '12px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '10px 10px 0 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -205,7 +205,7 @@ const AINode = ({ id, data }) => {
 const WaitNode = ({ id, data }) => {
   const { setNodes, updateNodeData } = useReactFlow();
   return (
-    <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '10px', width: '250px', boxShadow: '0 8px 30px rgba(0,0,0,0.3)' }}>
+    <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '10px', width: '250px', boxShadow: 'none' }}>
       <Handle type="target" position={Position.Left} style={{ width: '10px', height: '10px', background: 'var(--bg-primary)', border: '2px solid var(--text-secondary)', left: '-5px' }} />
       <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '10px 10px 0 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -228,7 +228,7 @@ const WaitNode = ({ id, data }) => {
 const TagNode = ({ id, data }) => {
   const { setNodes, updateNodeData } = useReactFlow();
   return (
-    <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '10px', width: '250px', boxShadow: '0 8px 30px rgba(0,0,0,0.3)' }}>
+    <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '10px', width: '250px', boxShadow: 'none' }}>
       <Handle type="target" position={Position.Left} style={{ width: '10px', height: '10px', background: 'var(--bg-primary)', border: '2px solid var(--text-secondary)', left: '-5px' }} />
       <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '10px 10px 0 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -259,7 +259,7 @@ const TagNode = ({ id, data }) => {
 const NotifyNode = ({ id, data }) => {
   const { setNodes, updateNodeData } = useReactFlow();
   return (
-    <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '10px', minWidth: '280px', width: 'fit-content', boxShadow: '0 8px 30px rgba(0,0,0,0.3)' }}>
+    <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: '10px', minWidth: '280px', width: 'fit-content', boxShadow: 'none' }}>
       <Handle type="target" position={Position.Left} style={{ width: '10px', height: '10px', background: 'var(--bg-primary)', border: '2px solid var(--text-secondary)', left: '-5px' }} />
       <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px 16px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '10px 10px 0 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -316,7 +316,7 @@ const CustomEdge = ({ id, sourceX, sourceY, targetX, targetY, sourcePosition, ta
           className="nodrag nopan"
         >
           <button
-            style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.3)', transition: 'all 0.2s' }}
+            style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'none', transition: 'all 0.2s' }}
             onClick={onEdgeClick}
             onMouseEnter={(e) => { e.currentTarget.style.background = '#ef4444'; e.currentTarget.style.color = '#fff'; e.currentTarget.style.borderColor = '#ef4444'; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--bg-secondary)'; e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border-color)'; }}
@@ -529,7 +529,7 @@ const FlowEditorInner = () => {
           left: 0,
           right: 0,
           height: '60px',
-          backgroundColor: 'var(--bg-secondary)',
+          backgroundColor: '#ffffff',
           borderBottom: '1px solid var(--border-color)',
           display: 'flex',
           alignItems: 'center',
@@ -543,7 +543,7 @@ const FlowEditorInner = () => {
               className="btn-icon"
               style={{ 
                 color: isSidebarCollapsed ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                backgroundColor: isSidebarCollapsed ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+                backgroundColor: isSidebarCollapsed ? 'rgba(16, 185, 129, 0.12)' : 'transparent',
                 borderRadius: '8px'
               }}
               title={isSidebarCollapsed ? "Mostrar Barra Lateral" : "Recolher Barra Lateral"}
@@ -569,7 +569,7 @@ const FlowEditorInner = () => {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>STATUS:</span>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>STATUS:</span>
               <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--success)' }}>ATIVO</span>
             </div>
             <button
@@ -595,10 +595,11 @@ const FlowEditorInner = () => {
           onDrop={onDrop}
           onDragOver={onDragOver}
           defaultViewport={{ x: 150, y: 150, zoom: 1 }}
-          colorMode="dark"
+          colorMode="light"
+          style={{ backgroundColor: '#ffffff' }}
         >
           <Controls />
-          <Background variant="dots" gap={20} size={1} color="var(--border-color)" />
+          <Background variant="dots" gap={20} size={1} color="#dbe3d4" />
 
           <Panel position="bottom-right">
             <button
@@ -626,21 +627,21 @@ const FlowEditorInner = () => {
             overflow: 'hidden',
             border: '1px solid var(--border-color)'
           }}>
-            <div style={{ padding: '15px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'var(--bg-tertiary)' }}>
+            <div style={{ padding: '15px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#ffffff' }}>
               <span style={{ fontWeight: 700, fontSize: '14px' }}>Simulador de Conversa</span>
               <button onClick={() => setShowPreview(false)} className="btn-icon">
                 <X size={18} />
               </button>
             </div>
             <div style={{ flex: 1, backgroundColor: 'var(--bg-primary)', padding: '20px', overflowY: 'auto' }}>
-              <div style={{ backgroundColor: 'var(--bg-tertiary)', padding: '12px 15px', borderRadius: '12px 12px 12px 0', fontSize: '13px', maxWidth: '85%', marginBottom: '15px', border: '1px solid var(--border-color)' }}>
+              <div style={{ backgroundColor: '#ffffff', padding: '12px 15px', borderRadius: '12px 12px 12px 0', fontSize: '13px', maxWidth: '85%', marginBottom: '15px', border: '1px solid var(--border-color)', color: 'var(--text-primary)' }}>
                 Olá! Este é o simulador do seu fluxo. Envie uma mensagem para testar a lógica.
               </div>
             </div>
             <div style={{ padding: '15px', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-tertiary)' }}>
               <input
                 placeholder="Digite para testar..."
-                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', color: '#fff', marginBottom: '10px', fontSize: '13px' }}
+                style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-color)', backgroundColor: '#ffffff', color: 'var(--text-primary)', marginBottom: '10px', fontSize: '13px' }}
               />
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button className="btn btn-secondary" style={{ flex: 1, fontSize: '12px' }}>Reiniciar</button>

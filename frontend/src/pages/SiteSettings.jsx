@@ -408,9 +408,6 @@ const SiteSettings = () => {
                                 ✕ Este link já está em uso. {slugStatus.suggestion && <>Sugestão: <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#3b82f6' }} onClick={() => { setSettings({ ...settings, slug: slugStatus.suggestion }); setSlugStatus({ available: true, suggestion: '' }); }}>{slugStatus.suggestion}</span></>}
                             </p>
                         )}
-                        <p className="site-settings-muted" style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px' }}>
-                            Esse endereço será usado no cardápio público e na home do diretório.
-                        </p>
 
                         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '18px', cursor: 'pointer' }}>
                             <input
@@ -762,7 +759,6 @@ const SiteSettings = () => {
 
                 .site-settings-theme-toggle {
                   background: transparent !important;
-                  border: 1px solid rgba(15, 23, 42, 0.12) !important;
                   box-shadow: none !important;
                   color: #0f172a !important;
                 }

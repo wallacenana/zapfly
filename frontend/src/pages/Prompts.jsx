@@ -152,7 +152,7 @@ const Prompts = () => {
               padding: '15px',
               borderRadius: '12px',
               backgroundColor: activeInstance?.id === inst.id ? 'var(--bg-tertiary)' : 'var(--bg-secondary)',
-              border: `1px solid ${activeInstance?.id === inst.id ? inst.color : 'var(--border-color)'}`,
+              border: `1px solid ${activeInstance?.id === inst.id ? 'var(--accent-primary)' : 'var(--border-color)'}`,
               cursor: 'pointer',
               transition: 'all 0.2s',
               display: 'flex',
@@ -162,7 +162,7 @@ const Prompts = () => {
           >
             <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: inst.status === 'connected' ? '#10b981' : '#71717a' }}></div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#fff' }}>{inst.name}</div>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)' }}>{inst.name}</div>
               <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{inst.id.split('-')[0]}...</div>
             </div>
           </div>
@@ -230,7 +230,7 @@ const Prompts = () => {
                     borderRadius: '12px',
                     backgroundColor: 'var(--bg-tertiary)',
                     border: '1px solid var(--border-color)',
-                    color: '#fff',
+                    color: 'var(--text-primary)',
                     fontSize: '14px',
                     lineHeight: '1.6',
                     resize: 'none',
@@ -316,7 +316,7 @@ const Prompts = () => {
                             setFormKnowledge(n);
                           }}
                           placeholder="Ex: Qual o endereço?"
-                          style={{ width: '100%', padding: '10px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '13px', outline: 'none' }}
+                          style={{ width: '100%', padding: '10px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '13px', outline: 'none' }}
                         />
                       </div>
                       <div>
@@ -329,7 +329,7 @@ const Prompts = () => {
                             setFormKnowledge(n);
                           }}
                           placeholder="Ex: Estamos localizados na Rua das Flores, 123..."
-                          style={{ width: '100%', height: '80px', padding: '10px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: '#fff', fontSize: '13px', resize: 'none', outline: 'none' }}
+                          style={{ width: '100%', height: '80px', padding: '10px', borderRadius: '8px', backgroundColor: 'var(--bg-primary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '13px', resize: 'none', outline: 'none' }}
                         />
                       </div>
                     </div>
