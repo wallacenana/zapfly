@@ -1034,9 +1034,10 @@ function getOAuth2Client(req) {
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
     if (!clientId || !clientSecret) return null;
 
-    // Prefere usar a URL publica do .env para evitar mismatch de redirect_uri
-    const publicUrl = process.env.PUBLIC_URL || 'http://localhost:3001';
-    const redirectUri = `${publicUrl}/auth/google/callback`;
+    // Use a URI explicitamente cadastrada no Google; PUBLIC_URL é apenas fallback.
+    const configuredRedirectUri = String(process.env.GOOGLE_REDIRECT_URI || '').trim();
+    const publicUrl = String(process.env.PUBLIC_URL || 'http://localhost:3001').replace(/\/$/, '');
+    const redirectUri = configuredRedirectUri || `${publicUrl}/auth/google/callback`;
 
     return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
