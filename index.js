@@ -13,7 +13,7 @@ const OpenAI = require('openai');
 const fs = require('fs');
 const prisma = require('./lib/prisma');
 const { calculateFee } = require('./lib/maps');
-const { getStoreStatus, sendRichMessage, formatProduct } = require('./lib/utils');
+const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock } = require('./lib/utils');
 const { initFlows, handleFlows, runFlowNode, startFlowMonitor } = require('./lib/flows');
 const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODEL_MAP } = require('./lib/ai');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -1819,15 +1819,12 @@ async function initInstance(instanceId) {
                                                 const prods = await prisma.product.findMany();
 
                                                 let deliveryStr = '';
-                                                prods.filter(p => (p.type === 'delivery' || p.type === 'combo_delivery') && (p.trackStock === false || p.stock > 0)).forEach(p => {
+                                                prods.filter(p => {
                                                     const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
-                                                    let line = `*${p.name}*`;
-                                                    if (vars.length > 0) {
-                                                        line += '\n' + vars.map(v => `   - ${v.name}: R$ ${v.price.toFixed(2)}`).join('\n');
-                                                    } else {
-                                                        line += ` - R$ ${p.price.toFixed(2)}`;
-                                                    }
-                                                    deliveryStr += line + '\n\n';
+                                                    return (p.type === 'delivery' || p.type === 'combo_delivery') && hasAvailableProductStock(p, vars);
+                                                }).forEach(p => {
+                                                    const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
+                                                    deliveryStr += formatProduct(p, vars, false) + '\n\n';
                                                 });
 
                                                 const catalogText = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
@@ -2054,17 +2051,14 @@ async function initInstance(instanceId) {
 
                                             else if (functionName === "get_delivery_catalog") {
                                                 const allProducts = await prisma.product.findMany();
-                                                const prods = allProducts.filter(p => p.type === 'delivery');
+                                                const prods = allProducts.filter(p => {
+                                                    const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
+                                                    return p.type === 'delivery' && hasAvailableProductStock(p, vars);
+                                                });
                                                 let deliveryStr = '';
                                                 prods.forEach(p => {
                                                     const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
-                                                    let line = `*${p.name}*`;
-                                                    if (vars.length > 0) {
-                                                        line += '\n' + vars.map(v => `   - ${v.name}: R$ ${v.price.toFixed(2)}`).join('\n');
-                                                    } else {
-                                                        line += ` - R$ ${p.price.toFixed(2)}`;
-                                                    }
-                                                    deliveryStr += line + '\n\n';
+                                                    deliveryStr += formatProduct(p, vars, false) + '\n\n';
                                                 });
                                                 pendingCatalogMessage = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
                                                 result = { success: true, message: "Catalogo de pronta entrega preparado. O sistema enviara o catalogo agora. SILENCIO ABSOLUTO." };
