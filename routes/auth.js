@@ -148,6 +148,7 @@ const makeToken = (payload, expiresIn = '10m') =>
   jwt.sign(payload, JWT_SECRET, { expiresIn });
 
 const hashResetToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+const escapeEmailHtml = (value = '') => String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
 
 const sendPasswordResetEmail = async (user) => {
   const mailer = await getMailer(user.id);
@@ -157,6 +158,7 @@ const sendPasswordResetEmail = async (user) => {
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
   const frontendUrl = String(process.env.FRONTEND_URL || 'https://app.menzzu.com').replace(/\/$/, '');
   const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+  const userName = escapeEmailHtml(user.name || 'usuário');
 
   await prisma.user.update({
     where: { id: user.id },
@@ -168,13 +170,26 @@ const sendPasswordResetEmail = async (user) => {
     from: `"${APP_NAME}" <${fromEmail}>`,
     to: user.email,
     subject: `Redefinicao de senha - ${APP_NAME}`,
-    html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:32px;color:#172033">
-      <h2 style="margin:0 0 12px">${APP_NAME}</h2>
-      <p>Ola, ${user.name || 'usuario'}.</p>
-      <p>Recebemos uma solicitacao para redefinir sua senha. O link expira em 30 minutos.</p>
-      <p style="margin:28px 0"><a href="${resetUrl}" style="background:#5db72c;color:#fff;padding:13px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Redefinir senha</a></p>
-      <p style="font-size:13px;color:#667085">Se voce nao solicitou isso, ignore este e-mail.</p>
-    </div>`,
+    html: `
+      <div style="margin:0;padding:32px 16px;background:#f3f7f2;font-family:Arial,Helvetica,sans-serif;color:#172033">
+        <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e3eadf;border-radius:22px;overflow:hidden;box-shadow:0 12px 35px rgba(20,55,25,.08)">
+          <div style="padding:28px 34px;background:#10251a">
+            <div style="font-size:22px;font-weight:800;letter-spacing:-.5px;color:#ffffff">Menzzu<span style="color:#8bd64d">.</span></div>
+            <div style="margin-top:7px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#a9c9a3">Cardápio digital com automação</div>
+          </div>
+          <div style="padding:38px 34px 32px">
+            <div style="display:inline-block;padding:9px 11px;border-radius:12px;background:#edf8e7;color:#4c9e25;font-size:20px">&#128273;</div>
+            <h1 style="margin:20px 0 10px;font-size:27px;line-height:1.2;color:#142019">Redefina sua senha</h1>
+            <p style="margin:0 0 20px;font-size:16px;line-height:1.65;color:#536158">Ol&aacute;, <strong style="color:#172033">${userName}</strong>.</p>
+            <p style="margin:0;font-size:15px;line-height:1.7;color:#536158">Recebemos uma solicita&ccedil;&atilde;o para criar uma nova senha para sua conta Menzzu.</p>
+            <div style="margin:26px 0;padding:17px 18px;border-left:4px solid #5db72c;border-radius:8px;background:#f5faF2;color:#425247;font-size:14px;line-height:1.55"><strong>O link &eacute; v&aacute;lido por 30 minutos</strong> e s&oacute; pode ser usado uma vez.</div>
+            <div style="text-align:center;margin:30px 0 26px"><a href="${resetUrl}" style="display:inline-block;padding:15px 27px;border-radius:11px;background:#5db72c;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;box-shadow:0 7px 16px rgba(93,183,44,.25)">Redefinir minha senha&nbsp; &rarr;</a></div>
+            <p style="margin:0;font-size:13px;line-height:1.6;color:#78847b">Se o bot&atilde;o n&atilde;o funcionar, copie e cole este endere&ccedil;o no navegador:</p>
+            <p style="word-break:break-all;margin:7px 0 0;font-size:12px;line-height:1.6;color:#5b9f35">${resetUrl}</p>
+          </div>
+          <div style="padding:20px 34px;background:#f8faf8;border-top:1px solid #edf1ec;text-align:center"><p style="margin:0;font-size:12px;line-height:1.6;color:#8a958d">Se voc&ecirc; n&atilde;o solicitou esta altera&ccedil;&atilde;o, pode ignorar este e-mail com seguran&ccedil;a.</p><p style="margin:9px 0 0;font-size:11px;color:#a1aaa3">Menzzu &bull; Card&aacute;pio digital com automa&ccedil;&atilde;o no WhatsApp</p></div>
+        </div>
+      </div>`,
   });
 };
 
