@@ -5,9 +5,10 @@
 No painel DNS do provedor do dominio, apontar para o IP publico do Droplet:
 
 ```text
-@    A    <IP_DO_DROPLET>
+@    A    <IP_DO_WORDPRESS_HOSTGATOR>
 app  A    <IP_DO_DROPLET>
 api  A    <IP_DO_DROPLET>
+files A    <IP_DO_SERVIDOR_DE_ARQUIVOS>
 ```
 
 O `www` pode ser um CNAME para `menzzu.com` se for usado.
@@ -77,7 +78,7 @@ server {
 Depois emitir o certificado:
 
 ```bash
-sudo certbot --nginx -d menzzu.com -d www.menzzu.com -d app.menzzu.com -d api.menzzu.com
+sudo certbot --nginx -d app.menzzu.com -d api.menzzu.com -d files.menzzu.com
 ```
 
 No Google Cloud Console, cadastrar exatamente:
