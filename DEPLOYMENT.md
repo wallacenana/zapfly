@@ -23,6 +23,8 @@ FRONTEND_URL=https://app.menzzu.com
 PUBLIC_URL=https://api.menzzu.com
 GOOGLE_REDIRECT_URI=https://api.menzzu.com/auth/google/callback
 FILES_URL=https://files.hotwhats.com.br
+BREVO_API_KEY=<CHAVE_DA_BREVO>
+BREVO_FROM_EMAIL=noreply@menzzu.com
 ```
 
 O upload continua no host de arquivos atual da HostGator.

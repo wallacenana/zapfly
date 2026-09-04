@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
 const nodemailer = require('nodemailer');
+const axios = require('axios');
 const prisma = require('../lib/prisma');
 const { getSettings } = require('../lib/cache');
 const { authenticate, requireRole, normalizeRole } = require('../middleware/auth');
@@ -41,6 +42,28 @@ let mailerInstances = {};
 
 const getMailer = async (userId) => {
   console.log(`[AUTH-DEBUG] ðŸ” Iniciando getMailer para o usuÃ¡rio: ${userId}`);
+
+  const brevoKey = String(process.env.BREVO_API_KEY || '').trim();
+  if (brevoKey) {
+    return {
+      sendMail: async ({ from, to, subject, html }) => {
+        const fromText = String(from || '');
+        const fromMatch = fromText.match(/^"?([^"<]*)"?\s*<([^>]+)>/);
+        const fromEmail = process.env.BREVO_FROM_EMAIL || fromMatch?.[2] || process.env.SMTP_FROM || process.env.SMTP_USER;
+        const fromName = fromMatch?.[1]?.trim() || APP_NAME;
+        const response = await axios.post('https://api.brevo.com/v3/smtp/email', {
+          sender: { name: fromName, email: fromEmail },
+          to: [{ email: to }],
+          subject,
+          htmlContent: html,
+        }, {
+          headers: { accept: 'application/json', 'api-key': brevoKey, 'content-type': 'application/json' },
+          timeout: 10000,
+        });
+        return { response: response.data?.messageId || 'Brevo API' };
+      },
+    };
+  }
 
   const envHost = process.env.SMTP_HOST;
   const envPort = process.env.SMTP_PORT;
