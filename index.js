@@ -266,7 +266,7 @@ app.get('/settings/custom-domain', authenticate, async (req, res) => {
     try {
         const profile = await prisma.storeProfile.findUnique({ where: { userId: req.user.id } });
         if (!profile?.customDomain) {
-            return res.json({ customDomain: '', customDomainStatus: 'not_configured', cloudflareValidationRecords: [] });
+            return res.json({ customDomain: '', customDomainStatus: 'not_configured', cloudflareValidationRecords: [], cloudflareTarget: getCloudflareConfig().target });
         }
 
         if (!profile.cloudflareHostnameId) {
@@ -275,7 +275,8 @@ app.get('/settings/custom-domain', authenticate, async (req, res) => {
                 customDomainStatus: profile.customDomainStatus,
                 cloudflareSslStatus: profile.cloudflareSslStatus,
                 cloudflareValidationRecords: profile.cloudflareValidationRecords || [],
-                customDomainLastError: profile.customDomainLastError || null
+                customDomainLastError: profile.customDomainLastError || null,
+                cloudflareTarget: getCloudflareConfig().target
             });
         }
 

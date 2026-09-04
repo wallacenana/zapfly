@@ -46,7 +46,6 @@ const getFeaturedSizeHint = (count) => {
 const SiteSettings = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [domainProvisioning, setDomainProvisioning] = useState(false);
     const [settings, setSettings] = useState({
         slug: '',
         customDomain: '',
@@ -132,7 +131,6 @@ const SiteSettings = () => {
         setSaving(true);
         try {
             const shouldSyncDomain = Boolean(settings.customDomain || settings.cloudflareHostnameId);
-            setDomainProvisioning(shouldSyncDomain);
             const domainResult = shouldSyncDomain
                 ? await api.post('/settings/custom-domain', { domain: settings.customDomain || '' })
                 : { data: {} };
@@ -166,7 +164,6 @@ const SiteSettings = () => {
             console.error('Erro ao salvar:', err);
             toast.error('Erro ao salvar: ' + (err.response?.data?.error || 'Erro interno do servidor'));
         } finally {
-            setDomainProvisioning(false);
             setSaving(false);
         }
     };

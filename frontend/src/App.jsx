@@ -25,6 +25,7 @@ import Prompts from './pages/Prompts';
 import Users from './pages/Users';
 import AccountHome from './pages/AccountHome';
 import PasswordReset from './pages/PasswordReset';
+import DomainSettings from './pages/DomainSettings';
 
 const FullScreenLoader = () => (
   <div style={{
@@ -117,6 +118,7 @@ function AppRoutes() {
         <Route path="users" element={<SuperAdminRoute><Users /></SuperAdminRoute>} />
         <Route path="settings" element={<Settings />} />
         <Route path="site-settings" element={<SiteSettings />} />
+        <Route path="domain-settings" element={<DomainSettings />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/login" replace />} />
