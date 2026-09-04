@@ -1,7 +1,7 @@
 ﻿<?php
 
 /**
- * HotWhats - Cardápio All-in-One (Versão Checkout 2.0)
+ * Menzzu - Cardápio digital (Versão Checkout 2.0)
  */
 
 if (php_sapi_name() === 'cli-server') {
@@ -27,6 +27,22 @@ try {
     $path = parse_url($uri, PHP_URL_PATH);
     $parts = explode('/', trim($path, '/'));
     $slug = strtolower(end($parts));
+    $hostName = strtolower(trim(explode(':', $_SERVER['HTTP_HOST'] ?? '')[0]));
+    $platformHosts = ['menzzu.com', 'www.menzzu.com', 'cardapio.menzzu.com', 'origin.menzzu.com'];
+
+    // Domínio personalizado acessa a raiz; convertemos o hostname para o slug interno.
+    if (in_array($hostName, $platformHosts, true) === false && ($slug === '' || $slug === 'index.php' || $slug === 'cardapio')) {
+        try {
+            $domainStmt = $pdo->prepare("SELECT u.slug FROM store_profile sp INNER JOIN user u ON u.id = sp.userId WHERE LOWER(sp.customDomain) = ? LIMIT 1");
+            $domainStmt->execute([$hostName]);
+            $domainSlug = $domainStmt->fetchColumn();
+            if ($domainSlug) {
+                $slug = strtolower($domainSlug);
+            }
+        } catch (Exception $e) {
+            // Compatibilidade durante a migração, antes da coluna existir no HostGator.
+        }
+    }
 
     $fallbackToWP = function () {
         $wp_index = __DIR__ . '/../index.php';
@@ -283,8 +299,11 @@ try {
         <link rel="icon" type="image/x-icon" href="<?php echo $faviconUrl; ?>">
         <link rel="preconnect" href="https://maps.googleapis.com" crossorigin>
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-        <link rel="preconnect" href="https://files.blinkvertex.com" crossorigin>
+        <link rel="preconnect" href="https://files.menzzu.com" crossorigin>
         <!-- SSR Data Hydration: inject all data up front, zero API roundtrip -->
+        <script>
+            window.__STORE_SLUG__ = <?php echo json_encode($slug, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
+        </script>
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
@@ -1062,7 +1081,7 @@ try {
 
             // Detecta o slug da URL (ex: domain.com/linda-cake -> linda-cake)
             const pathSegments = window.location.pathname.split('/').filter(p => p);
-            const STORE_SLUG = isHome ? '' : (pathSegments[0] || '');
+            const STORE_SLUG = window.__STORE_SLUG__ || (isHome ? '' : (pathSegments[0] || ''));
 
             // Função auxiliar para alertas bonitos
             const showAlert = (title, text, icon = 'warning') => {
@@ -1087,7 +1106,7 @@ try {
                 currentQty: 1,
                 currentVariation: null,
                 orderBumpSelected: false,
-                userInfo: JSON.parse(localStorage.getItem('hotwhats_user') || '{"name":"","phone":"","address":""}'),
+                userInfo: JSON.parse(localStorage.getItem('menzzu_user') || '{"name":"","phone":"","address":""}'),
                 publicSettings: {
                     googleApiKey: '',
                     deliveryRules: [],
@@ -1829,7 +1848,7 @@ try {
                 if (address) {
                     document.getElementById('user-address').value = address;
                     state.userInfo.address = address;
-                    localStorage.setItem('hotwhats_user', JSON.stringify(state.userInfo));
+                    localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
                     calculateDeliveryFee(address);
                 }
             }
@@ -3089,7 +3108,7 @@ try {
                     phoneInput.addEventListener('input', (e) => {
                         e.target.value = maskPhone(e.target.value);
                         state.userInfo.phone = e.target.value;
-                        localStorage.setItem('hotwhats_user', JSON.stringify(state.userInfo));
+                        localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
                     });
                 }
 
@@ -3098,7 +3117,7 @@ try {
                     if (el) {
                         el.addEventListener('input', (e) => {
                             state.userInfo[id.split('-')[1]] = e.target.value;
-                            localStorage.setItem('hotwhats_user', JSON.stringify(state.userInfo));
+                        localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
                         });
                     }
                 });
@@ -3157,19 +3176,19 @@ try {
                     expires: Date.now() + (24 * 60 * 60 * 1000)
                 };
                 try {
-                    localStorage.setItem('hotwhats_checkout', JSON.stringify(payload));
+                    localStorage.setItem('menzzu_checkout', JSON.stringify(payload));
                 } catch (e) {}
             }
 
             function restoreCheckoutState() {
                 let saved;
                 try {
-                    saved = JSON.parse(localStorage.getItem('hotwhats_checkout') || 'null');
+                    saved = JSON.parse(localStorage.getItem('menzzu_checkout') || 'null');
                 } catch (e) {
                     saved = null;
                 }
                 if (!saved || (saved.expires && saved.expires < Date.now())) {
-                    localStorage.removeItem('hotwhats_checkout');
+                    localStorage.removeItem('menzzu_checkout');
                     return;
                 }
                 // Only restore if the saved progress matches the cart the user is currently looking at
@@ -3198,7 +3217,7 @@ try {
 
                 let saved;
                 try {
-                    saved = JSON.parse(localStorage.getItem('hotwhats_checkout') || 'null');
+                    saved = JSON.parse(localStorage.getItem('menzzu_checkout') || 'null');
                 } catch (e) {
                     saved = null;
                 }

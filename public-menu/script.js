@@ -8,7 +8,7 @@ const isHome = (window.location.hostname === BASE_DOMAIN || window.location.host
 // Detecta o slug da URL (query ?loja= tem prioridade quando o servidor reescreve a rota)
 const pathSegments = window.location.pathname.split('/').filter(p => p);
 const querySlug = new URLSearchParams(window.location.search).get('loja') || '';
-const STORE_SLUG = isHome ? '' : (querySlug || pathSegments[0] || '');
+const STORE_SLUG = window.__STORE_SLUG__ || (isHome ? '' : (querySlug || pathSegments[0] || ''));
 
 // FunÃ§Ã£o auxiliar para alertas bonitos
 const showAlert = (title, text, icon = 'warning') => {
@@ -32,7 +32,7 @@ let state = {
     currentItem: null,
     currentQty: 1,
     currentVariation: null,
-    userInfo: JSON.parse(localStorage.getItem('hotwhats_user') || '{"name":"","phone":"","address":""}'),
+    userInfo: JSON.parse(localStorage.getItem('menzzu_user') || '{"name":"","phone":"","address":""}'),
     publicSettings: { googleApiKey: '', deliveryRules: [], businessName: 'Carregando...' },
     currentStep: 1,
     geocoder: null,
@@ -342,7 +342,7 @@ function updateLocation(location, address = null) {
     if (address) {
         document.getElementById('user-address').value = address;
         state.userInfo.address = address;
-        localStorage.setItem('hotwhats_user', JSON.stringify(state.userInfo));
+    localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
         calculateDeliveryFee(address);
     }
 }
@@ -801,7 +801,7 @@ function initEventListeners() {
         phoneInput.addEventListener('input', (e) => {
             e.target.value = maskPhone(e.target.value);
             state.userInfo.phone = e.target.value;
-            localStorage.setItem('hotwhats_user', JSON.stringify(state.userInfo));
+        localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
         });
     }
 
@@ -810,7 +810,7 @@ function initEventListeners() {
         if (el) {
             el.addEventListener('input', (e) => {
                 state.userInfo[id.split('-')[1]] = e.target.value;
-                localStorage.setItem('hotwhats_user', JSON.stringify(state.userInfo));
+        localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
             });
         }
     });

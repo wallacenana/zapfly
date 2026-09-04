@@ -78,6 +78,7 @@ model StoreProfile {
   deliveryMode         String   @default("hibrido")
   allowCashOnDelivery  Boolean  @default(true)
   menuTheme            String   @default("dark")
+  customDomain        String?  @unique
   createdAt            DateTime @default(now())
   updatedAt            DateTime @default(now()) @updatedAt
 

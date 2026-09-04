@@ -48,6 +48,7 @@ const SiteSettings = () => {
     const [saving, setSaving] = useState(false);
     const [settings, setSettings] = useState({
         slug: '',
+        customDomain: '',
         active: true,
         businessName: '',
         logoUrl: '',
@@ -135,6 +136,7 @@ const SiteSettings = () => {
             }, {});
             const payload = {
                 slug: settings.slug,
+                customDomain: settings.customDomain,
                 businessName: settings.businessName,
                 logoUrl: settings.logoUrl,
                 faviconUrl: settings.faviconUrl,
@@ -408,6 +410,18 @@ const SiteSettings = () => {
                                 ✕ Este link já está em uso. {slugStatus.suggestion && <>Sugestão: <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#3b82f6' }} onClick={() => { setSettings({ ...settings, slug: slugStatus.suggestion }); setSlugStatus({ available: true, suggestion: '' }); }}>{slugStatus.suggestion}</span></>}
                             </p>
                         )}
+
+                        <label className="site-settings-field-label" style={{ ...labelStyle, marginTop: '22px' }}>Domínio personalizado (opcional)</label>
+                        <input
+                            style={inputStyle}
+                            value={settings.customDomain || ''}
+                            onChange={(e) => setSettings({ ...settings, customDomain: e.target.value.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '').trim() })}
+                            placeholder="www.minhaloja.com.br"
+                            inputMode="url"
+                        />
+                        <p className="site-settings-muted" style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
+                            Depois de salvar, o domínio ainda precisa ser conectado ao Cloudflare e apontado para a origem do cardápio.
+                        </p>
 
                         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '18px', cursor: 'pointer' }}>
                             <input

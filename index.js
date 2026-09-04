@@ -158,6 +158,7 @@ app.post('/settings', authenticate, async (req, res) => {
             accentColorOrders, buttonColorOrders,
             buttonTextColor, backgroundColor, textColor,
             seoDescription, pixelId, googleAnalyticsId, microsoftClarityId,
+            customDomain,
             slug,
             menuTheme,
             acceptOrders,
@@ -234,6 +235,7 @@ app.post('/settings', authenticate, async (req, res) => {
             pixelId,
             googleAnalyticsId,
             microsoftClarityId,
+            customDomain,
             menuTheme,
             acceptOrders,
             freeDeliveryEnabled,
@@ -2478,6 +2480,7 @@ app.get('/config/keys', authenticate, async (req, res) => {
         freeDeliveryKm: config.freeDeliveryKm,
         deliveryMode: config.deliveryMode,
         allowCashOnDelivery: config.allowCashOnDelivery
+        ,customDomain: config.customDomain || ''
     });
 });
 
@@ -2496,6 +2499,7 @@ app.post('/config/keys', authenticate, async (req, res) => {
         accentColorOrders, buttonColorOrders,
         buttonTextColor, backgroundColor, textColor,
         seoDescription, pixelId, googleAnalyticsId, microsoftClarityId,
+        customDomain,
         acceptOrders, active
     } = req.body;
 
@@ -2556,6 +2560,7 @@ app.post('/config/keys', authenticate, async (req, res) => {
         pixelId,
         googleAnalyticsId,
         microsoftClarityId,
+        customDomain,
         acceptOrders,
         active,
         maxDeliveryKm,
