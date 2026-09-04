@@ -48,7 +48,8 @@ const getMailer = async (userId) => {
   // Remove aspas simples/duplas ao redor da senha se o .env tiver colocado
   const envPass = (process.env.SMTP_PASS || '').replace(/^['"]+|['"]+$/g, '');
 
-  console.log(`[AUTH-DEBUG] ðŸš€ FINAL: Host=${envHost}, Port=${envPort}, User=${envUser}, Secure=${envPort === 465}`);
+  const portNum = parseInt(envPort || '587', 10);
+  console.log(`[AUTH-DEBUG] ðŸš€ FINAL: Host=${envHost}, Port=${portNum}, User=${envUser}, Secure=${portNum === 465}`);
 
   if (!envHost || !envUser || !envPass) {
     console.log('[AUTH-DEBUG] âŒ Erro: Faltam dados de SMTP.');
@@ -56,7 +57,6 @@ const getMailer = async (userId) => {
   }
 
   try {
-    const portNum = parseInt(envPort || '587');
     const transporter = nodemailer.createTransport({
       host: envHost,
       port: portNum,
