@@ -3246,7 +3246,7 @@ app.get(['/', '/:slug'], async (req, res) => {
 
         // Se nao tem slug ou e expressamente 'home', serve a PV (Pagina de Vendas)
         if (!slug || slug === '' || slug.toLowerCase() === 'home') {
-            return res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
+            return res.sendFile(path.join(__dirname, 'public', 'index.html'));
         }
 
         // Lista exaustiva de rotas do sistema para não confundir com slugs
@@ -3260,7 +3260,7 @@ app.get(['/', '/:slug'], async (req, res) => {
             include: {
                 settings: true,
                 categories: { orderBy: { order: 'asc' } },
-                products: { where: { active: true }, orderBy: { displayOrder: 'asc' } }
+                products: { orderBy: { displayOrder: 'asc' } }
             }
         });
 
@@ -3357,10 +3357,10 @@ app.get(['/', '/:slug'], async (req, res) => {
             html = html.replace('<head>', `<head>\n${metaTags}\n${trackingTags}`);
             return res.send(html);
         }
-        res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
     } catch (e) {
         console.error(e);
-        res.sendFile(path.join(__dirname, 'public-menu', 'index.html'));
+        res.sendFile(path.join(__dirname, 'public', 'index.html'));
     }
 });
 
