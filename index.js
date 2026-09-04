@@ -706,7 +706,7 @@ app.get('/dashboard/summary', authenticate, requireAdmin, async (req, res) => {
 
 app.post('/marketing/upload', authenticate, uploadMarketing.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
-    const fileUrl = `${String(process.env.FILES_URL || 'https://files.hotwhats.com.br').replace(/\/$/, '')}/marketing/${req.file.filename}`;
+    const fileUrl = `${String(process.env.FILES_URL || 'https://files.menzzu.com').replace(/\/$/, '')}/marketing/${req.file.filename}`;
     res.json({ url: fileUrl });
 });
 
@@ -985,7 +985,7 @@ app.post('/marketing-assets', authenticate, uploadMarketing.single('file'), asyn
 
         // Se o frontend já mandou a URL do bucket PHP, usamos ela. 
             // Caso contrario, usamos o dominio de arquivos correto.
-        const finalUrl = url || (req.file ? `${String(process.env.FILES_URL || 'https://files.hotwhats.com.br').replace(/\/$/, '')}/marketing/${req.file.filename}` : null);
+        const finalUrl = url || (req.file ? `${String(process.env.FILES_URL || 'https://files.menzzu.com').replace(/\/$/, '')}/marketing/${req.file.filename}` : null);
 
         if (!finalUrl) {
             return res.status(400).json({ error: "Nenhum arquivo ou URL fornecida" });
@@ -3059,7 +3059,7 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
 app.post('/upload/product', uploadProduct.single('image'), (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada' });
-        const imageUrl = `${String(process.env.FILES_URL || 'https://files.hotwhats.com.br').replace(/\/$/, '')}/products/${req.file.filename}`;
+        const imageUrl = `${String(process.env.FILES_URL || 'https://files.menzzu.com').replace(/\/$/, '')}/products/${req.file.filename}`;
         res.json({ url: imageUrl });
     } catch (err) {
         res.status(500).json({ error: err.message });

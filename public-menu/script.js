@@ -63,7 +63,7 @@ function parseImages(imgField) {
  */
 function getImg(url, size = 'full') {
     if (!url) return url;
-    if (!url.includes('files.hotwhats.com.br')) return url; // SÃ³ funciona para o nosso servidor
+    if (!url.includes('files.menzzu.com')) return url; // SÃ³ funciona para o nosso servidor
 
     if (size === 'thumb') return url.replace('.webp', '_90.webp');
     if (size === 'medium') return url.replace('.webp', '_550.webp');

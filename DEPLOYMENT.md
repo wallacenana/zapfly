@@ -22,10 +22,10 @@ PORT=3001
 FRONTEND_URL=https://app.menzzu.com
 PUBLIC_URL=https://api.menzzu.com
 GOOGLE_REDIRECT_URI=https://api.menzzu.com/auth/google/callback
-FILES_URL=https://files.hotwhats.com.br
+FILES_URL=https://files.menzzu.com
 ```
 
-`FILES_URL` deve continuar no host atual ate que o endpoint `/upload.php` seja migrado e testado em um host Menzzu.
+O host `files.menzzu.com` precisa apontar para o servidor que expõe `/upload.php`, mantendo os caminhos `/marketing`, `/products` e os derivados de imagem.
 
 ## Build do frontend
 
@@ -34,7 +34,7 @@ Executar o build com estas variaveis:
 ```text
 VITE_API_URL=https://api.menzzu.com
 VITE_PUBLIC_SITE_URL=https://menzzu.com
-VITE_FILES_URL=https://files.hotwhats.com.br
+VITE_FILES_URL=https://files.menzzu.com
 ```
 
 Publicar o conteudo de `frontend/dist` no virtual host `app.menzzu.com`.
