@@ -1221,7 +1221,7 @@ try {
              */
             function getImg(url, size = 'full') {
                 if (!url) return url;
-                if (!url.includes('files.menzzu.com')) return url; // Só funciona para o nosso servidor
+                if (!url.includes('files.hotwhats.com.br')) return url; // Só funciona para o nosso servidor
 
                 if (size === 'thumb') return url.replace('.webp', '_550.webp');
                 if (size === 'medium') return url.replace('.webp', '_550.webp');
@@ -1953,7 +1953,7 @@ try {
                     formData.append('secret', 'BlinkMediaSecret123!');
                     formData.append('size', '500');
 
-                    const res = await fetch('https://files.menzzu.com/upload.php', {
+                    const res = await fetch('https://files.hotwhats.com.br/upload.php', {
                         method: 'POST',
                         body: formData
                     });
