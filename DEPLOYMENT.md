@@ -8,6 +8,7 @@ No painel DNS do provedor do dominio, apontar para o IP publico do Droplet:
 @    A    <IP_DO_WORDPRESS_HOSTGATOR>
 app  A    <IP_DO_DROPLET>
 api  A    <IP_DO_DROPLET>
+files A    <IP_DO_HOSTGATOR>
 ```
 
 O `www` pode ser um CNAME para `menzzu.com` se for usado.
@@ -22,12 +23,12 @@ PORT=3001
 FRONTEND_URL=https://app.menzzu.com
 PUBLIC_URL=https://api.menzzu.com
 GOOGLE_REDIRECT_URI=https://api.menzzu.com/auth/google/callback
-FILES_URL=https://files.hotwhats.com.br
+FILES_URL=https://files.menzzu.com
 BREVO_API_KEY=<CHAVE_DA_BREVO>
 BREVO_FROM_EMAIL=noreply@menzzu.com
 ```
 
-O upload continua no host de arquivos atual da HostGator.
+O upload continua hospedado na HostGator, mas usando o hostname `files.menzzu.com`.
 
 ## Build do frontend
 
@@ -36,7 +37,7 @@ Executar o build com estas variaveis:
 ```text
 VITE_API_URL=https://api.menzzu.com
 VITE_PUBLIC_SITE_URL=https://menzzu.com
-VITE_FILES_URL=https://files.hotwhats.com.br
+VITE_FILES_URL=https://files.menzzu.com
 ```
 
 Publicar o conteudo de `frontend/dist` no virtual host `app.menzzu.com`.

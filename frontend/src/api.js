@@ -86,7 +86,7 @@ export const API_URL = getBaseUrl();
 export const PUBLIC_SITE_URL = String(import.meta.env.VITE_PUBLIC_SITE_URL || 'https://menzzu.com')
   .trim()
   .replace(/\/$/, '');
-export const FILES_URL = String(import.meta.env.VITE_FILES_URL || 'https://files.hotwhats.com.br')
+export const FILES_URL = String(import.meta.env.VITE_FILES_URL || 'https://files.menzzu.com')
   .trim()
   .replace(/\/$/, '');
 
