@@ -321,12 +321,13 @@ app.get('/dashboard/summary', authenticate, requireAdmin, async (req, res) => {
                 orderBy: [{ updatedAt: 'desc' }]
             }),
             prisma.customer.count({ where: { userId } }),
-            prisma.order.count({
+            prisma.order.findMany({
                 where: {
                     userId,
                     createdAt: { gte: todayStart, lte: todayEnd },
                     NOT: { status: { in: ['cancelled', 'canceled'] } }
-                }
+                },
+                select: { totalValue: true, status: true }
             }),
             prisma.order.findMany({
                 where: { userId },
@@ -430,6 +431,7 @@ app.get('/dashboard/summary', authenticate, requireAdmin, async (req, res) => {
             })
         ]);
 
+        const ordersTodayCount = ordersToday.length;
         const messagesToday = instances.length > 0
             ? await prisma.message.count({
                 where: {
