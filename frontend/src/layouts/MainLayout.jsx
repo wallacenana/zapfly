@@ -16,6 +16,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { PUBLIC_SITE_URL } from '../api';
 
 const MainLayout = () => {
   const location = useLocation();
@@ -23,7 +24,7 @@ const MainLayout = () => {
   const { logout, user } = useAuth();
   const isSuperAdmin = String(user?.role || '').toLowerCase() === 'superadmin';
   const storeSlug = String(user?.slug || '').trim();
-  const storeUrl = storeSlug ? `https://hotwhats.com.br/${storeSlug}` : '';
+  const storeUrl = storeSlug ? `${PUBLIC_SITE_URL}/${storeSlug}` : '';
   const brandLogo = '/logo%20HotWhats.png';
 
   const menuItems = [

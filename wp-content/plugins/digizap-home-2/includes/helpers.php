@@ -29,7 +29,7 @@ if (!function_exists('dzhome2_asset_version')) {
 if (!function_exists('dzhome2_api_base')) {
     function dzhome2_api_base()
     {
-        return untrailingslashit((string) apply_filters('digizap_home2_api_base', 'https://api.hotwhats.com.br'));
+        return untrailingslashit((string) apply_filters('digizap_home2_api_base', 'https://api.menzzu.com'));
     }
 }
 

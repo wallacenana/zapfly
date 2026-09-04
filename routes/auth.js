@@ -183,7 +183,7 @@ const sendCredentialsEmail = async ({ userId, toEmail, userName, loginEmail, tem
           <p style="margin:0"><strong>NÃ­vel:</strong> ${role}</p>
         </div>
         <p style="color:#a1a1aa">No primeiro acesso, a senha serÃ¡ alterada e as configuraÃ§Ãµes de acesso serÃ£o concluÃ­das.</p>
-        <p style="margin-top:24px"><a href="https://dash.hotwhats.com.br/login" style="display:inline-block;background:#22c55e;color:#fff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700">Acessar painel</a></p>
+        <p style="margin-top:24px"><a href="${process.env.FRONTEND_URL || 'https://app.menzzu.com'}/login" style="display:inline-block;background:#22c55e;color:#fff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700">Acessar painel</a></p>
       </div>
     `,
   });

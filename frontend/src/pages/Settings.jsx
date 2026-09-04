@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Save, Shield, MessageSquare, Bell, Calendar, MapPin, Truck, Plus, Trash2, Key, Cpu, ExternalLink, CheckCircle2, Image, Upload, Mail } from 'lucide-react';
-import { api, API_URL } from '../api';
+import { api, API_URL, FILES_URL } from '../api';
 import axios from 'axios';
 import Swal from 'sweetalert2';
 
@@ -395,7 +395,7 @@ const Settings = () => {
 
     try {
       // 1. Sobe o arquivo para o bucket PHP
-      const uploadRes = await axios.post('https://files.hotwhats.com.br/upload.php', formData, {
+      const uploadRes = await axios.post(`${FILES_URL}/upload.php`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 

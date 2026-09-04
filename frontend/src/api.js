@@ -14,12 +14,15 @@ const PUBLIC_AUTH_PATHS = new Set([
 ]);
 
 const getBaseUrl = () => {
+  const configuredUrl = String(import.meta.env.VITE_API_URL || '').trim().replace(/\/$/, '');
+  if (configuredUrl) return configuredUrl;
+
   if (typeof window !== 'undefined') {
     const host = window.location.hostname;
     if (host === 'localhost' || host === '127.0.0.1') {
       return 'http://localhost:3001';
     }
-    return 'https://api.hotwhats.com.br';
+    return 'https://api.menzzu.com';
   }
   return 'http://localhost:3001';
 };
@@ -80,6 +83,12 @@ export const emitAuthExpired = () => {
 };
 
 export const API_URL = getBaseUrl();
+export const PUBLIC_SITE_URL = String(import.meta.env.VITE_PUBLIC_SITE_URL || 'https://menzzu.com')
+  .trim()
+  .replace(/\/$/, '');
+export const FILES_URL = String(import.meta.env.VITE_FILES_URL || 'https://files.hotwhats.com.br')
+  .trim()
+  .replace(/\/$/, '');
 
 export const api = axios.create({
   baseURL: API_URL,

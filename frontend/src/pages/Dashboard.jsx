@@ -19,7 +19,7 @@ import {
   CircleAlert,
   Layers3,
 } from 'lucide-react';
-import { api } from '../api';
+import { api, PUBLIC_SITE_URL } from '../api';
 
 const money = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -368,7 +368,7 @@ const Dashboard = () => {
     [ordersByDay],
   );
 
-  const openStoreUrl = store.slug ? `https://hotwhats.com.br/${store.slug}` : '';
+  const openStoreUrl = store.slug ? `${PUBLIC_SITE_URL}/${store.slug}` : '';
   const storeStatus = String(store.acceptOrders ? 'opened' : 'closed');
   const deliveryMode = String(store.deliveryMode || '').toLowerCase();
   const orderTypeBreakdown = charts.orderTypeBreakdown || {};

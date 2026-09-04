@@ -288,7 +288,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://hotwhats.com.br/cardapio/style.css?v=3.42">
+        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.42">
         <style>
             :root {
                 --primary-color:
@@ -1050,11 +1050,11 @@ try {
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
 
         <script>
-            const API_BASE = 'https://api.hotwhats.com.br';
+            const API_BASE = 'https://api.menzzu.com';
         </script>
         <script>
             // Configurações
-            const BASE_DOMAIN = 'hotwhats.com.br';
+            const BASE_DOMAIN = 'menzzu.com';
 
             // Detecta se estamos na HOME exatamente
             const isHome = (window.location.hostname === BASE_DOMAIN || window.location.hostname === 'www.' + BASE_DOMAIN) &&

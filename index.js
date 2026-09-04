@@ -706,7 +706,7 @@ app.get('/dashboard/summary', authenticate, requireAdmin, async (req, res) => {
 
 app.post('/marketing/upload', authenticate, uploadMarketing.single('file'), (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado' });
-    const fileUrl = `https://files.hotwhats.com.br/marketing/${req.file.filename}`;
+    const fileUrl = `${String(process.env.FILES_URL || 'https://files.hotwhats.com.br').replace(/\/$/, '')}/marketing/${req.file.filename}`;
     res.json({ url: fileUrl });
 });
 
@@ -729,7 +729,7 @@ app.get('/', async (req, res) => {
                     window.opener.location.reload();
                     window.close();
                 } else {
-                    window.location.href = '${process.env.FRONTEND_URL || 'https://dash.hotwhats.com.br'}/settings';
+                    window.location.href = '${process.env.FRONTEND_URL || 'https://app.menzzu.com'}/settings';
                 }
             </script>
         `);
@@ -985,7 +985,7 @@ app.post('/marketing-assets', authenticate, uploadMarketing.single('file'), asyn
 
         // Se o frontend já mandou a URL do bucket PHP, usamos ela. 
             // Caso contrario, usamos o dominio de arquivos correto.
-        const finalUrl = url || (req.file ? `https://files.hotwhats.com.br/marketing/${req.file.filename}` : null);
+        const finalUrl = url || (req.file ? `${String(process.env.FILES_URL || 'https://files.hotwhats.com.br').replace(/\/$/, '')}/marketing/${req.file.filename}` : null);
 
         if (!finalUrl) {
             return res.status(400).json({ error: "Nenhum arquivo ou URL fornecida" });
@@ -3059,7 +3059,7 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
 app.post('/upload/product', uploadProduct.single('image'), (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada' });
-        const imageUrl = `https://files.hotwhats.com.br/products/${req.file.filename}`;
+        const imageUrl = `${String(process.env.FILES_URL || 'https://files.hotwhats.com.br').replace(/\/$/, '')}/products/${req.file.filename}`;
         res.json({ url: imageUrl });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -3308,7 +3308,7 @@ app.get(['/', '/:slug'], async (req, res) => {
 
             const title = settings.businessName ? `${settings.businessName} - Cardápio Digital` : 'Cardápio Digital';
             const description = settings.seoDescription || `Confira o cardapio digital de ${settings.businessName || 'nossa loja'} e faca seu pedido online.`;
-            const image = settings.logoUrl || 'https://hotwhats.com.br/default-logo.png';
+            const image = settings.logoUrl || 'https://menzzu.com/default-logo.png';
 
             const metaTags = `
                 <title>${title}</title>

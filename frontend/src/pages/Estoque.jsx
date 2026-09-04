@@ -5,7 +5,7 @@ import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box
 
 import Swal from 'sweetalert2';
 
-import { api, API_URL } from '../api';
+import { api, API_URL, FILES_URL } from '../api';
 import AddonGroupManager from '../components/AddonGroupManager';
 
 const parseJsonArray = (value, fallback = []) => {
@@ -288,7 +288,7 @@ const Estoque = () => {
       formData.append('secret', 'BlinkMediaSecret123!');
       formData.append('size', '500'); // Tamanho ideal para produtos (carrossel + listagem)
 
-      const res = await axios.post('https://files.hotwhats.com.br/upload.php', formData);
+      const res = await axios.post(`${FILES_URL}/upload.php`, formData);
       Swal.close();
       return res.data.url;
     } catch (err) {

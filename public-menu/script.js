@@ -1,5 +1,5 @@
 ﻿// ConfiguraÃ§Ãµes
-const BASE_DOMAIN = 'hotwhats.com.br';
+const BASE_DOMAIN = 'menzzu.com';
 
 // Detecta se estamos na HOME exatamente
 const isHome = (window.location.hostname === BASE_DOMAIN || window.location.hostname === 'www.' + BASE_DOMAIN) &&

@@ -1,6 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react';
 import { Palette, Layout as LayoutIcon, Globe, Upload, Save, Eye, CheckCircle, RefreshCw } from 'lucide-react';
-import { api, API_URL } from '../api';
+import { api, API_URL, FILES_URL, PUBLIC_SITE_URL } from '../api';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 import { motion as Motion } from 'framer-motion';
@@ -245,7 +245,7 @@ const SiteSettings = () => {
             formData.append('size', type === 'logo' ? '200' : '64');
 
             // Upload direto para o servidor de arquivos PHP
-            const res = await axios.post('https://files.hotwhats.com.br/upload.php', formData, {
+            const res = await axios.post(`${FILES_URL}/upload.php`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
 
@@ -374,7 +374,7 @@ const SiteSettings = () => {
                         <label className="site-settings-field-label" style={labelStyle}>🔗 Link do Cardápio (Slug)</label>
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                             <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 15px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.1)', color: 'var(--text-muted)', fontSize: '14px', flexShrink: 0 }}>
-                                hotwhats.com.br/
+                                menzzu.com/
                             </div>
                             <input
                                 style={{ ...inputStyle, flex: '1 1 280px' }}
@@ -392,7 +392,7 @@ const SiteSettings = () => {
                             </button>
                             {settings.slug && slugStatus.available === true && (
                                 <a
-                                    href={`https://hotwhats.com.br/${settings.slug}`}
+                                    href={`${PUBLIC_SITE_URL}/${settings.slug}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="btn btn-primary"
