@@ -7,7 +7,6 @@ import {
   Share2,
   Settings,
   Globe,
-  Globe2,
   LogOut,
   ClipboardList,
   Calendar,
@@ -38,7 +37,6 @@ const MainLayout = () => {
     { path: '/connections', icon: <Share2 size={20} />, label: 'Conexões' },
     { path: '/prompts', icon: <MessageSquare size={20} />, label: 'Prompts' },
     { path: '/site-settings', icon: <Globe size={20} />, label: 'Cardápio' },
-    { path: '/domain-settings', icon: <Globe2 size={20} />, label: 'Domínio' },
     ...(isSuperAdmin ? [{ path: '/users', icon: <Users size={20} />, label: 'Usuários' }] : []),
     { path: '/settings', icon: <Settings size={20} />, label: 'Configurações' },
   ];

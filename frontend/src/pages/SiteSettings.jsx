@@ -48,7 +48,6 @@ const SiteSettings = () => {
     const [saving, setSaving] = useState(false);
     const [settings, setSettings] = useState({
         slug: '',
-        customDomain: '',
         active: true,
         businessName: '',
         logoUrl: '',
@@ -130,17 +129,12 @@ const SiteSettings = () => {
     const handleSave = async () => {
         setSaving(true);
         try {
-            const shouldSyncDomain = Boolean(settings.customDomain || settings.cloudflareHostnameId);
-            const domainResult = shouldSyncDomain
-                ? await api.post('/settings/custom-domain', { domain: settings.customDomain || '' })
-                : { data: {} };
             const colorPayload = COLOR_FIELDS.reduce((acc, key) => {
                 acc[key] = normalizeHexColor(settings[key], key === 'accentColorOrders' || key === 'buttonColorOrders' ? '#4a2c2a' : '#ffffff');
                 return acc;
             }, {});
             const payload = {
                 slug: settings.slug,
-                customDomain: settings.customDomain,
                 businessName: settings.businessName,
                 logoUrl: settings.logoUrl,
                 faviconUrl: settings.faviconUrl,
@@ -156,10 +150,7 @@ const SiteSettings = () => {
                 microsoftClarityId: settings.microsoftClarityId
             };
             await api.post('/settings', payload);
-            setSettings(prev => ({ ...prev, ...domainResult.data }));
-            toast.success(domainResult.data.customDomainStatus === 'active'
-                ? 'Configurações e domínio ativos!'
-                : 'Configurações salvas. Finalize a validação do domínio.');
+            toast.success('Identidade visual salva com sucesso!');
         } catch (err) {
             console.error('Erro ao salvar:', err);
             toast.error('Erro ao salvar: ' + (err.response?.data?.error || 'Erro interno do servidor'));
@@ -399,11 +390,6 @@ const SiteSettings = () => {
                             >
                                 {checkingSlug ? '...' : 'Verificar'}
                             </button>
-                            {settings.customDomain && (
-                                <span style={{ fontSize: '12px', fontWeight: 800, color: settings.customDomainStatus === 'active' ? '#10b981' : '#f59e0b' }}>
-                                    {settings.customDomainStatus === 'active' ? 'Ativo' : `Status: ${settings.customDomainStatus || 'pendente'}`}
-                                </span>
-                            )}
                             {settings.slug && slugStatus.available === true && (
                                 <a
                                     href={`${PUBLIC_SITE_URL}/${settings.slug}`}
@@ -421,34 +407,6 @@ const SiteSettings = () => {
                             <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '8px', fontWeight: 700 }}>
                                 ✕ Este link já está em uso. {slugStatus.suggestion && <>Sugestão: <span style={{ cursor: 'pointer', textDecoration: 'underline', color: '#3b82f6' }} onClick={() => { setSettings({ ...settings, slug: slugStatus.suggestion }); setSlugStatus({ available: true, suggestion: '' }); }}>{slugStatus.suggestion}</span></>}
                             </p>
-                        )}
-
-                        <label className="site-settings-field-label" style={{ ...labelStyle, marginTop: '22px' }}>Domínio personalizado (opcional)</label>
-                        <input
-                            style={inputStyle}
-                            value={settings.customDomain || ''}
-                            onChange={(e) => setSettings({ ...settings, customDomain: e.target.value.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '').trim() })}
-                            placeholder="www.minhaloja.com.br"
-                            inputMode="url"
-                        />
-                        <p className="site-settings-muted" style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                            Depois de salvar, o domínio ainda precisa ser conectado ao Cloudflare e apontado para a origem do cardápio.
-                        </p>
-                        {settings.customDomain && settings.cloudflareTarget && (
-                            <p className="site-settings-muted" style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '6px' }}>
-                                DNS: crie um CNAME de <strong>{settings.customDomain}</strong> para <strong>{settings.cloudflareTarget}</strong>.
-                            </p>
-                        )}
-                        {settings.customDomain && Array.isArray(settings.cloudflareValidationRecords) && settings.cloudflareValidationRecords.length > 0 && (
-                            <div style={{ marginTop: '12px', padding: '12px 14px', borderRadius: '10px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', fontSize: '12px' }}>
-                                <strong>Validação Cloudflare pendente</strong>
-                                {settings.cloudflareValidationRecords.map((record, index) => (
-                                    <div key={`${record.name}-${index}`} style={{ marginTop: '8px', wordBreak: 'break-all' }}>
-                                        <div><b>{record.type}</b> Nome: {record.name}</div>
-                                        <div>Valor: {record.value}</div>
-                                    </div>
-                                ))}
-                            </div>
                         )}
 
                         <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '18px', cursor: 'pointer' }}>
