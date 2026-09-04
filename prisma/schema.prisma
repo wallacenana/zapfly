@@ -79,6 +79,11 @@ model StoreProfile {
   allowCashOnDelivery  Boolean  @default(true)
   menuTheme            String   @default("dark")
   customDomain        String?  @unique
+  customDomainStatus  String   @default("not_configured")
+  cloudflareHostnameId String?
+  cloudflareSslStatus String?
+  cloudflareValidationRecords Json?
+  customDomainLastError String? @db.Text
   createdAt            DateTime @default(now())
   updatedAt            DateTime @default(now()) @updatedAt
 

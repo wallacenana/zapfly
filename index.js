@@ -21,6 +21,15 @@ const multer = require('multer');
 const axios = require('axios');
 const { MercadoPagoConfig, Payment: MercadoPagoPayment } = require('mercadopago');
 const { authenticate, requireAdmin } = require('./middleware/auth');
+const {
+    getCloudflareConfig,
+    normalizeDomain,
+    assertValidDomain,
+    mapValidationRecords,
+    createOrGetCustomHostname,
+    getCustomHostname,
+    deleteCustomHostname
+} = require('./lib/cloudflare');
 
 
 // Dynamic JID canonicalization helper for Brazilian phone numbers
@@ -249,6 +258,115 @@ app.post('/settings', authenticate, async (req, res) => {
     } catch (err) {
         console.error('[Settings Save Error] Erro detalhado:', err);
         res.status(500).json({ error: err.message });
+    }
+});
+
+// Provisiona o domínio personalizado na Cloudflare for SaaS e acompanha o SSL.
+app.get('/settings/custom-domain', authenticate, async (req, res) => {
+    try {
+        const profile = await prisma.storeProfile.findUnique({ where: { userId: req.user.id } });
+        if (!profile?.customDomain) {
+            return res.json({ customDomain: '', customDomainStatus: 'not_configured', cloudflareValidationRecords: [] });
+        }
+
+        if (!profile.cloudflareHostnameId) {
+            return res.json({
+                customDomain: profile.customDomain,
+                customDomainStatus: profile.customDomainStatus,
+                cloudflareSslStatus: profile.cloudflareSslStatus,
+                cloudflareValidationRecords: profile.cloudflareValidationRecords || [],
+                customDomainLastError: profile.customDomainLastError || null
+            });
+        }
+
+        const hostname = await getCustomHostname(profile.cloudflareHostnameId);
+        const status = hostname?.status || 'pending';
+        const sslStatus = hostname?.ssl?.status || 'pending';
+        const ready = status === 'active' && sslStatus === 'active';
+        const updated = await prisma.storeProfile.update({
+            where: { userId: req.user.id },
+            data: {
+                customDomainStatus: ready ? 'active' : (status === 'active' ? 'ssl_pending' : status),
+                cloudflareSslStatus: sslStatus,
+                cloudflareValidationRecords: mapValidationRecords(hostname),
+                customDomainLastError: null
+            }
+        });
+        res.json({
+            customDomain: updated.customDomain,
+            customDomainStatus: updated.customDomainStatus,
+            cloudflareSslStatus: updated.cloudflareSslStatus,
+            cloudflareValidationRecords: updated.cloudflareValidationRecords || [],
+            customDomainLastError: null,
+            cloudflareTarget: getCloudflareConfig().target
+        });
+    } catch (err) {
+        res.status(err.code === 'CLOUDFLARE_NOT_CONFIGURED' ? 503 : 500).json({ error: err.message, code: err.code || 'CLOUDFLARE_ERROR' });
+    }
+});
+
+app.post('/settings/custom-domain', authenticate, async (req, res) => {
+    try {
+        const domain = normalizeDomain(req.body?.domain);
+        const current = await prisma.storeProfile.findUnique({ where: { userId: req.user.id } });
+
+        if (!domain) {
+            if (current?.cloudflareHostnameId) {
+                await deleteCustomHostname(current.cloudflareHostnameId).catch((error) => {
+                    console.warn('[Cloudflare] Não foi possível remover o hostname antigo:', error.message);
+                });
+            }
+            const cleared = await upsertStoreProfile(req.user.id, {
+                customDomain: null
+            });
+            const result = await prisma.storeProfile.update({
+                where: { userId: req.user.id },
+                data: {
+                    customDomainStatus: 'not_configured',
+                    cloudflareHostnameId: null,
+                    cloudflareSslStatus: null,
+                    cloudflareValidationRecords: [],
+                    customDomainLastError: null
+                }
+            });
+            return res.json({ ...cleared, ...result, cloudflareValidationRecords: [] });
+        }
+
+        assertValidDomain(domain);
+        const conflict = await prisma.storeProfile.findFirst({
+            where: { customDomain: domain, NOT: { userId: req.user.id } },
+            select: { userId: true }
+        });
+        if (conflict) return res.status(409).json({ error: 'Este domínio já está vinculado a outra loja.' });
+
+        if (current?.customDomain && current.customDomain !== domain && current.cloudflareHostnameId) {
+            await deleteCustomHostname(current.cloudflareHostnameId).catch((error) => {
+                console.warn('[Cloudflare] Não foi possível remover o hostname antigo:', error.message);
+            });
+        }
+
+        const hostname = await createOrGetCustomHostname(domain);
+        const status = hostname?.status || 'pending';
+        const sslStatus = hostname?.ssl?.status || 'pending';
+        const ready = status === 'active' && sslStatus === 'active';
+        const result = await upsertStoreProfile(req.user.id, {
+            customDomain: domain
+        });
+        const updated = await prisma.storeProfile.update({
+            where: { userId: req.user.id },
+            data: {
+                customDomainStatus: ready ? 'active' : (status === 'active' ? 'ssl_pending' : status),
+                cloudflareHostnameId: hostname.id,
+                cloudflareSslStatus: sslStatus,
+                cloudflareValidationRecords: mapValidationRecords(hostname),
+                customDomainLastError: null
+            }
+        });
+        res.json({ ...result, ...updated, cloudflareTarget: getCloudflareConfig().target });
+    } catch (err) {
+        console.error('[Cloudflare] Erro ao configurar domínio:', err);
+        if (err.code === 'CLOUDFLARE_NOT_CONFIGURED') return res.status(503).json({ error: err.message, code: err.code });
+        res.status(err.status === 409 ? 409 : 400).json({ error: err.message, code: err.code || 'CLOUDFLARE_ERROR' });
     }
 });
 
