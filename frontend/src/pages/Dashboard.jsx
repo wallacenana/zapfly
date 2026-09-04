@@ -562,7 +562,7 @@ const Dashboard = () => {
                   Restaurante
                 </div>
                 <div style={{ fontFamily: 'Outfit, sans-serif', fontSize: '22px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px' }}>
-                  {safeText(store.name, 'HotWhats')}
+                  {safeText(store.name, 'Menzzu')}
                 </div>
                 <div style={{ fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
                   {safeText(store.address, 'Endereço não informado')}
@@ -702,7 +702,7 @@ const Dashboard = () => {
                     <Store size={20} />
                   </div>
                   <div>
-                    <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{safeText(store.name, 'HotWhats')}</div>
+                    <div style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{safeText(store.name, 'Menzzu')}</div>
                     <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{safeText(store.category, 'Categoria não informada')}</div>
                   </div>
                 </div>

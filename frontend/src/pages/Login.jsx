@@ -350,7 +350,7 @@ export default function Login() {
               marginBottom: "20px",
             }}
           >
-            <img src={brandLogo} alt="HotWhats" style={{ width: "38px", height: "38px", objectFit: "contain" }} />
+            <img src={brandLogo} alt="Menzzu" style={{ width: "38px", height: "38px", objectFit: "contain" }} />
           </div>
 
           <h1
@@ -362,7 +362,7 @@ export default function Login() {
               marginBottom: "6px",
             }}
           >
-            HotWhats
+            Menzzu
           </h1>
 
           <p style={{ color: "#d4d4d8", fontSize: "14px" }}>
@@ -574,6 +574,7 @@ export default function Login() {
                     </>
                   )}
                 </button>
+                <a href="/forgot-password" style={{ display: "block", textAlign: "right", color: "#bbf7d0", fontSize: "13px", textDecoration: "none" }}>Esqueci minha senha</a>
               </div>
             </form>
           ) : (
@@ -804,8 +805,7 @@ export default function Login() {
             marginTop: "24px",
           }}
         >
-          HotWhats © {new Date().getFullYear()} - Plataforma de automação
-          WhatsApp
+          Cardápio digital com automação no WhatsApp
         </p>
       </div>
     </div>

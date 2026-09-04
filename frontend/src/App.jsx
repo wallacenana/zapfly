@@ -24,6 +24,7 @@ import FirstLoginSetup from './pages/FirstLoginSetup';
 import Prompts from './pages/Prompts';
 import Users from './pages/Users';
 import AccountHome from './pages/AccountHome';
+import PasswordReset from './pages/PasswordReset';
 
 const FullScreenLoader = () => (
   <div style={{
@@ -91,6 +92,8 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<LoginRoute />} />
+      <Route path="/forgot-password" element={<PasswordReset />} />
+      <Route path="/reset-password" element={<PasswordReset />} />
       <Route path="/first-login" element={<FirstLoginSetup />} />
       <Route path="/conta" element={<PrivateRoute><AccountHome /></PrivateRoute>} />
 

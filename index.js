@@ -585,7 +585,7 @@ app.get('/dashboard/summary', authenticate, requireAdmin, async (req, res) => {
         res.json({
             store: {
                 id: user?.id || userId,
-                name: settings?.businessName || storeProfile?.businessName || user?.name || 'HotWhats',
+                name: settings?.businessName || storeProfile?.businessName || user?.name || 'Menzzu',
                 slug: user?.slug || '',
                 role: user?.role || '',
                 active: user?.active ?? true,

@@ -11,7 +11,7 @@ const { authenticate, requireRole, normalizeRole } = require('../middleware/auth
 const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'hotwhats-secret-key-super-safe';
-const APP_NAME = 'HotWhats';
+const APP_NAME = 'Menzzu';
 const maskEmail = (email = '') => {
   const value = String(email || '').trim().toLowerCase();
   if (!value.includes('@')) return value;
@@ -123,6 +123,37 @@ const sendOtpEmail = async (userId, toEmail, code, userName) => {
 // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const makeToken = (payload, expiresIn = '10m') =>
   jwt.sign(payload, JWT_SECRET, { expiresIn });
+
+const hashResetToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+
+const sendPasswordResetEmail = async (user) => {
+  const mailer = await getMailer(user.id);
+  if (!mailer) throw new Error('SMTP nao configurado.');
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+  const frontendUrl = String(process.env.FRONTEND_URL || 'https://app.menzzu.com').replace(/\/$/, '');
+  const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { passwordResetTokenHash: hashResetToken(token), passwordResetExpiresAt: expiresAt },
+  });
+
+  const fromEmail = process.env.SMTP_FROM || process.env.SMTP_USER;
+  await mailer.sendMail({
+    from: `"${APP_NAME}" <${fromEmail}>`,
+    to: user.email,
+    subject: `Redefinicao de senha - ${APP_NAME}`,
+    html: `<div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:32px;color:#172033">
+      <h2 style="margin:0 0 12px">${APP_NAME}</h2>
+      <p>Ola, ${user.name || 'usuario'}.</p>
+      <p>Recebemos uma solicitacao para redefinir sua senha. O link expira em 30 minutos.</p>
+      <p style="margin:28px 0"><a href="${resetUrl}" style="background:#5db72c;color:#fff;padding:13px 20px;border-radius:8px;text-decoration:none;font-weight:bold">Redefinir senha</a></p>
+      <p style="font-size:13px;color:#667085">Se voce nao solicitou isso, ignore este e-mail.</p>
+    </div>`,
+  });
+};
 
 const generateRandomPassword = (length = 12) => {
   const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
@@ -482,6 +513,50 @@ router.delete('/users/:id', authenticate, requireRole('superadmin'), async (req,
 });
 
 // â”€â”€â”€ POST /auth/login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// Solicita redefinicao sem revelar se o e-mail existe.
+router.post('/forgot-password', async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+  const genericResponse = { message: 'Se o e-mail estiver cadastrado, voce recebera um link para redefinir a senha.' };
+
+  try {
+    if (!email || !email.includes('@')) return res.json(genericResponse);
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (user?.active) await sendPasswordResetEmail(user);
+    return res.json(genericResponse);
+  } catch (err) {
+    authLog('error', 'password-reset:request', err.message);
+    return res.json(genericResponse);
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  const token = String(req.body?.token || '').trim();
+  const newPassword = String(req.body?.newPassword || '');
+  if (newPassword.length < 8) return res.status(400).json({ error: 'A senha deve ter pelo menos 8 caracteres.' });
+  if (!/^[a-f0-9]{64}$/i.test(token)) return res.status(400).json({ error: 'Link de redefinicao invalido ou expirado.' });
+
+  try {
+    const user = await prisma.user.findFirst({
+      where: { passwordResetTokenHash: hashResetToken(token), passwordResetExpiresAt: { gt: new Date() } },
+    });
+    if (!user) return res.status(400).json({ error: 'Link de redefinicao invalido ou expirado.' });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: await bcrypt.hash(newPassword, 10),
+        passwordResetTokenHash: null,
+        passwordResetExpiresAt: null,
+        mustChangePassword: false,
+      },
+    });
+    return res.json({ message: 'Senha redefinida com sucesso.' });
+  } catch (err) {
+    authLog('error', 'password-reset:complete', err.message);
+    return res.status(500).json({ error: 'Nao foi possivel redefinir a senha.' });
+  }
+});
+
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
   try {
@@ -774,7 +849,7 @@ router.post('/test-email', async (req, res) => {
     await mailer.sendMail({
       from: `"${settings?.businessName || APP_NAME}" <${fromEmail}>`,
       to,
-      subject: 'âœ… Teste de Email - HotWhats',
+      subject: 'âœ… Teste de Email - Menzzu',
       html: `<div style="font-family:sans-serif;padding:30px;background:#09090b;color:#f4f4f5;border-radius:12px"><h2 style="color:#10b981">Funcionou! ðŸŽ‰</h2><p>Seu servidor SMTP global estÃ¡ configurado corretamente.</p></div>`,
     });
     res.json({ message: 'Email de teste enviado com sucesso.' });

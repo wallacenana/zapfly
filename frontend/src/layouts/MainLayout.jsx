@@ -94,10 +94,10 @@ const MainLayout = () => {
                 border: '1px solid rgba(93, 183, 44, 0.10)',
               }}
             >
-              <img src={brandLogo} alt="HotWhats" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px' }} />
+              <img src={brandLogo} alt="Menzzu" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px' }} />
             </div>
             <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', lineHeight: 1.1 }}>HotWhats</div>
+              <div style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', lineHeight: 1.1 }}>Menzzu</div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '3px' }}>Painel operacional</div>
             </div>
           </div>
