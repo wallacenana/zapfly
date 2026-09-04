@@ -279,7 +279,7 @@ try {
         <?php if (!empty($store['seoDescription'])): ?>
             <meta name="description" content="<?php echo htmlspecialchars($store['seoDescription']); ?>">
         <?php endif; ?>
-        <title><?php echo $businessName; ?> | Cardápio Digital HotWhats</title>
+        <title><?php echo $businessName; ?> | Cardápio Digital Menzzu</title>
         <link rel="icon" type="image/x-icon" href="<?php echo $faviconUrl; ?>">
         <link rel="preconnect" href="https://maps.googleapis.com" crossorigin>
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>

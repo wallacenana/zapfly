@@ -7,7 +7,7 @@
             <a href="/termos">Termos de uso</a>
         </div>
         <div class="footer-copyright">
-            <p>&copy; <?php echo date('Y'); ?> HotWhats - Todos os direitos reservados</p>
+            <p>&copy; <?php echo date('Y'); ?> Menzzu - Todos os direitos reservados</p>
         </div>
     </div>
 </footer>

@@ -151,7 +151,7 @@ async function fetchPublicSettings() {
 
         updateTheme(); // Aplica o tema inicial
         // SEO Injection DinÃ¢mico (Lido pelo Google JS Engine)
-        const titleText = data.businessName ? `${data.businessName} | CardÃ¡pio Digital HotWhats` : 'CardÃ¡pio Digital HotWhats';
+        const titleText = data.businessName ? `${data.businessName} | CardÃ¡pio Digital Menzzu` : 'CardÃ¡pio Digital Menzzu';
         document.title = titleText;
         const ogTitle = document.querySelector('meta[property="og:title"]');
         if (ogTitle) ogTitle.setAttribute('content', titleText);

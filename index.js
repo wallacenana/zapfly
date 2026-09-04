@@ -371,12 +371,6 @@ app.get('/dashboard/summary', authenticate, requireAdmin, async (req, res) => {
                 orderBy: { _count: { productId: 'desc' } },
                 take: 5
             }),
-            prisma.message.count({
-                where: {
-                    instanceId: { in: instances.map((item) => item.id) },
-                    timestamp: { gte: todayStart, lte: todayEnd }
-                }
-            }),
             prisma.order.groupBy({
                 by: ['status'],
                 where: {
@@ -738,8 +732,8 @@ app.get('/', async (req, res) => {
         const homeData = await buildHomeDirectoryData({ limit: 24 });
         console.log(homeData);
         const template = fs.readFileSync(path.join(__dirname, 'public', 'home.html'), 'utf8');
-        const title = 'HotWhats | Restaurantes, entregas e encomendas';
-        const description = 'Descubra restaurantes, encomendas e ofertas perto de voce com a experiencia iFood da HotWhats.';
+                const title = 'Menzzu | Cardapio digital com automacao no WhatsApp';
+                const description = 'Crie seu cardapio digital e automatize seus pedidos no WhatsApp com a Menzzu.';
         const safeJson = JSON.stringify(homeData).replace(/</g, '\\u003c');
 
         const html = template
@@ -758,8 +752,8 @@ app.get('/', async (req, res) => {
             const template = fs.readFileSync(path.join(__dirname, 'public', 'home.html'), 'utf8');
             const fallbackData = { search: '', category: '', total: 0, categories: [], featuredStores: [], restaurants: [] };
             const html = template
-                .replaceAll('__HOME_TITLE__', escapeHtml('HotWhats | Restaurantes, entregas e encomendas'))
-                .replaceAll('__HOME_DESCRIPTION__', escapeHtml('Descubra restaurantes, encomendas e ofertas perto de voce com a experiencia iFood da HotWhats.'))
+                .replaceAll('__HOME_TITLE__', escapeHtml('Menzzu | Cardapio digital com automacao no WhatsApp'))
+                .replaceAll('__HOME_DESCRIPTION__', escapeHtml('Crie seu cardapio digital e automatize seus pedidos no WhatsApp com a Menzzu.'))
                 .replace('<!--HOME_FEATURED_CARDS-->', renderHeroRestaurants([]))
                 .replace('<!--HOME_CATEGORY_CARDS-->', renderCategoryCards([]))
                 .replace('<!--HOME_RESTAURANT_CARDS-->', renderRestaurantCards([]))
@@ -1226,7 +1220,7 @@ async function initInstance(instanceId) {
         version,
         auth: state,
         printQRInTerminal: false,
-        browser: ['HotWhats', 'Chrome', '1.0.0'],
+                browser: ['Menzzu', 'Chrome', '1.0.0'],
         logger: pino({ level: 'silent' }),
         syncFullHistory: false,            // true consome muita memoria e pode causar desconexoes
         keepAliveIntervalMs: 30000,        // envia ping a cada 30s para manter a conexão viva
