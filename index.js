@@ -22,7 +22,7 @@ const multer = require('multer');
 const axios = require('axios');
 const { MercadoPagoConfig, Payment: MercadoPagoPayment } = require('mercadopago');
 const { authenticate, requireAdmin } = require('./middleware/auth');
-const { PLAN_DEFINITIONS, getPlan, checkEntitlement } = require('./lib/plans');
+const { PLAN_DEFINITIONS, BILLING_CYCLES, getPlan, getCycle, getCyclePriceCents, checkEntitlement } = require('./lib/plans');
 const { createSubscriptionCheckout } = require('./lib/abacatepay');
 const {
     getCloudflareConfig,
@@ -179,7 +179,11 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/auth', require('./routes/auth'));
 app.use('/reviews', reviewsRouter);
 
-const publicPlan = (plan) => ({ ...plan, price: plan.priceCents / 100 });
+const publicPlan = (plan) => ({
+    ...plan,
+    price: plan.priceCents / 100,
+    cycles: Object.values(BILLING_CYCLES).map((cycle) => ({ key: cycle.key, label: cycle.label, price: getCyclePriceCents(plan, cycle.key) / 100 })),
+});
 
 app.get('/billing/plans', authenticate, async (req, res) => {
     const setting = await prisma.platformSetting.findUnique({ where: { id: 'default' } });
@@ -207,20 +211,23 @@ app.post('/billing/checkout', authenticate, async (req, res) => {
     try {
         const plan = getPlan(req.body?.planKey);
         if (!plan) return res.status(400).json({ error: 'Plano inválido.' });
+        const cycle = getCycle(req.body?.cycle || 'monthly');
+        if (!cycle) return res.status(400).json({ error: 'Ciclo de cobrança inválido.' });
         const setting = await prisma.platformSetting.findUnique({ where: { id: 'default' } });
         const trialEnabled = setting?.trialEnabled ?? true;
         const subscription = await prisma.subscription.upsert({
             where: { userId: req.user.id },
-            update: { planKey: plan.key, status: 'pending', cancelAtPeriodEnd: false },
-            create: { userId: req.user.id, planKey: plan.key, status: 'pending' },
+            update: { planKey: plan.key, billingCycle: cycle.key, status: 'pending', cancelAtPeriodEnd: false },
+            create: { userId: req.user.id, planKey: plan.key, billingCycle: cycle.key, status: 'pending' },
         });
         const checkout = await createSubscriptionCheckout({
             planKey: plan.key,
+            cycle: cycle.key,
             externalId: subscription.id,
-            metadata: { userId: req.user.id, subscriptionId: subscription.id, planKey: plan.key },
+            metadata: { userId: req.user.id, subscriptionId: subscription.id, planKey: plan.key, billingCycle: cycle.key },
         });
         await prisma.subscription.update({ where: { id: subscription.id }, data: { checkoutId: checkout.id || null } });
-        return res.json({ url: checkout.url, checkoutId: checkout.id, trialEnabled, trialDays: setting?.trialDays ?? 7 });
+        return res.json({ url: checkout.url, checkoutId: checkout.id, cycle: cycle.key, trialEnabled, trialDays: setting?.trialDays ?? 7 });
     } catch (error) {
         console.error('[AbacatePay Checkout] Erro:', error.message);
         return res.status(error.code === 'ABACATEPAY_NOT_CONFIGURED' || error.code === 'ABACATEPAY_PRODUCT_NOT_CONFIGURED' ? 503 : 400).json({ error: error.message, code: error.code });

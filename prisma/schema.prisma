@@ -466,6 +466,7 @@ model Subscription {
   userId                 String    @unique
   user                   User      @relation(fields: [userId], references: [id])
   planKey                String
+  billingCycle           String    @default("monthly")
   status                 String    @default("pending")
   provider               String    @default("abacatepay")
   providerSubscriptionId String?
