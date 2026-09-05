@@ -204,7 +204,7 @@ app.get('/billing/me', authenticate, async (req, res) => {
     const trialEndsAt = user?.createdAt ? new Date(user.createdAt.getTime() + trialDays * 86400000) : null;
     const trialActive = trialEnabled && !subscription?.status?.match(/active|trialing/i) && trialEndsAt > new Date();
     const daysLeft = trialActive ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86400000)) : 0;
-    res.json({ subscription, plan: subscription ? getPlan(subscription.planKey) : null, trial: { enabled: trialEnabled, days: trialDays, active: trialActive, daysLeft, endsAt: trialEndsAt?.toISOString() || null }, access: { allowed: Boolean(subscription?.status?.match(/active|trialing/i)) || trialActive } });
+    res.json({ subscription, plan: subscription ? getPlan(subscription.planKey) : (trialActive ? getPlan('basic') : null), trial: { enabled: trialEnabled, days: trialDays, active: trialActive, daysLeft, endsAt: trialEndsAt?.toISOString() || null }, access: { allowed: Boolean(subscription?.status?.match(/active|trialing/i)) || trialActive } });
 });
 
 app.post('/billing/checkout', authenticate, async (req, res) => {

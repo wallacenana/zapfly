@@ -32,7 +32,7 @@ export default function Login() {
     if (!token || !payload?.id) return;
     login(token, { id: payload.id, name: payload.name, email: payload.email, role: payload.role, slug: payload.slug });
     window.history.replaceState({}, document.title, '/login');
-    window.location.replace(String(payload.role).toLowerCase() === 'user' ? '/conta' : '/dashboard');
+    window.location.replace('/dashboard');
   }, [login]);
 
   const loginWithGoogle = () => window.location.assign(`${API_URL}/auth/google/login`);
@@ -42,7 +42,7 @@ export default function Login() {
     try {
       if (mode === 'register') {
         const { data } = await api.post('/auth/register', { name, email, password });
-        login(data.token, data.user); window.location.replace('/conta'); return;
+        login(data.token, data.user); window.location.replace('/dashboard'); return;
       }
       if (mode === 'forgot') {
         const { data } = await api.post('/auth/forgot-password', { email });
@@ -50,7 +50,7 @@ export default function Login() {
       }
       const { data } = await api.post('/auth/login', { email, password });
       if (data.requiresSetup) { setSetupData({ setupToken: data.setupToken, step: data.step }); return; }
-      if (data.token) { login(data.token, data.user); window.location.replace(String(data.user?.role).toLowerCase() === 'user' ? '/conta' : '/dashboard'); return; }
+      if (data.token) { login(data.token, data.user); window.location.replace('/dashboard'); return; }
       setTempToken(data.tempToken); setTwoFactorMethod(data.twoFactorMethod); setMode('otp');
     } catch (err) { setError(err?.response?.data?.error || 'Não foi possível concluir a solicitação.'); } finally { setLoading(false); }
   };

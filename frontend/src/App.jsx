@@ -53,7 +53,7 @@ const LoginRoute = () => {
       logout();
       return <Login />;
     }
-    return <Navigate to={role === 'user' ? '/conta' : '/dashboard'} replace />;
+    return <Navigate to="/dashboard" replace />;
   }
   return <Login />;
 };
@@ -102,11 +102,7 @@ function AppRoutes() {
         <Route path="/comprar" element={<Plans />} />
       </Route>
 
-      <Route element={
-        <AdminRoute>
-          <MainLayout />
-        </AdminRoute>
-      }>
+      <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="estoque" element={<Estoque />} />
         <Route path="inventory" element={<Navigate to="/estoque" replace />} />

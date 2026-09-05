@@ -15,7 +15,6 @@ import {
   Users,
   ExternalLink,
   CreditCard,
-  UserRound,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { PUBLIC_SITE_URL } from '../api';
@@ -44,7 +43,7 @@ const MainLayout = ({ clientMode = false }) => {
     { path: '/settings', icon: <Settings size={20} />, label: 'Configurações' },
   ];
   const clientMenuItems = [
-    { path: '/conta', icon: <UserRound size={20} />, label: 'Minha conta' },
+    ...adminMenuItems.filter((item) => item.path !== '/users' && item.path !== '/billing'),
     { path: '/comprar', icon: <CreditCard size={20} />, label: 'Planos e cobrança' },
   ];
   const menuItems = clientMode ? clientMenuItems : adminMenuItems;
