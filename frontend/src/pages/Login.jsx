@@ -42,7 +42,7 @@ export default function Login() {
     try {
       if (mode === 'register') {
         const { data } = await api.post('/auth/register', { name, email, password });
-        login(data.token, data.user); window.location.replace('/dashboard'); return;
+        login(data.token, data.user); window.location.replace('/get-started'); return;
       }
       if (mode === 'forgot') {
         const { data } = await api.post('/auth/forgot-password', { email });

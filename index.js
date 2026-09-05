@@ -486,7 +486,7 @@ app.post('/settings/custom-domain', authenticate, async (req, res) => {
     }
 });
 
-app.get('/dashboard/summary', authenticate, requireAdmin, async (req, res) => {
+app.get('/dashboard/summary', authenticate, async (req, res) => {
     try {
         const userId = req.user.id;
         const now = new Date();
