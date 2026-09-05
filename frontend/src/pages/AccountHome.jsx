@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { ShoppingBag, Clock3, Ticket, ShieldCheck, ArrowRight, CreditCard, ReceiptText } from 'lucide-react';
+import { ArrowRight, CheckCircle2, CreditCard, ShieldCheck, ShoppingBag } from 'lucide-react';
 import TrialBanner from '../components/TrialBanner';
+import { api } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 
 const cardStyle = {
   backgroundColor: 'var(--bg-secondary)',
@@ -11,131 +13,71 @@ const cardStyle = {
   boxShadow: 'var(--card-shadow)',
 };
 
-const ActionCard = ({ icon: Icon, title, description, href, label = 'Abrir' }) => (
-  <div style={cardStyle}>
-    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
-        <div style={{
-          width: '46px',
-          height: '46px',
-          borderRadius: '14px',
-          backgroundColor: 'var(--accent-glow)',
-          color: 'var(--accent-primary)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-        }}>
-          <Icon size={22} />
-        </div>
-        <div>
-          <h3 style={{ fontSize: '18px', marginBottom: '8px' }}>{title}</h3>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>{description}</p>
-        </div>
-      </div>
-      {href ? (
-        <Link
-          to={href}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '10px 14px',
-            borderRadius: '12px',
-            backgroundColor: 'var(--bg-tertiary)',
-            border: '1px solid var(--border-color)',
-            color: 'var(--text-primary)',
-            textDecoration: 'none',
-            fontSize: '14px',
-            fontWeight: 700,
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {label}
-          <ArrowRight size={16} />
-        </Link>
-      ) : (
-        <span className="badge badge-success" style={{ alignSelf: 'flex-start' }}>Em breve</span>
-      )}
-    </div>
-  </div>
-);
-
 const AccountHome = () => {
   const { user } = useAuth();
+  const [billing, setBilling] = useState(null);
+
+  useEffect(() => {
+    api.get('/billing/me').then(({ data }) => setBilling(data)).catch(() => setBilling(null));
+  }, []);
+
+  const subscription = billing?.subscription;
+  const plan = billing?.plan;
+  const status = subscription?.status === 'active' || subscription?.status === 'trialing'
+    ? 'Ativa'
+    : billing?.trial?.active ? 'Período de teste' : 'Sem assinatura';
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', padding: '32px' }}>
+    <main style={{ minHeight: '100vh', padding: '32px', backgroundColor: 'var(--bg-primary)' }}>
       <TrialBanner />
       <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
         <div style={{ marginBottom: '28px' }}>
-          <p style={{ color: 'var(--accent-primary)', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>
-            Minha conta
-          </p>
-          <h1 style={{ fontSize: '34px', marginBottom: '8px' }}>Bem-vindo, {user?.name || 'usuário'}</h1>
-          <p style={{ color: 'var(--text-secondary)', maxWidth: '720px', lineHeight: 1.6 }}>
-            Aqui você acompanha sua assinatura, acessa compras e resolve o básico sem entrar no painel interno da operação.
-          </p>
+          <p style={{ color: 'var(--accent-primary)', fontSize: '13px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>Minha conta</p>
+          <h1 style={{ fontSize: '34px', marginBottom: '8px' }}>Bem-vindo ao Menzzu</h1>
+          <p style={{ color: 'var(--text-secondary)', maxWidth: '720px', lineHeight: 1.6 }}>Gerencie sua assinatura e acompanhe o acesso à plataforma.</p>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '18px', marginBottom: '22px' }}>
           <div style={cardStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-              <ShieldCheck size={20} color="var(--success)" />
-              <span style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Acesso</span>
-            </div>
-            <div style={{ fontSize: '22px', fontWeight: 800, marginBottom: '6px' }}>{String(user?.role || 'user').toUpperCase()}</div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Conta ativa para compra e acompanhamento.</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}><ShieldCheck size={20} color="var(--success)" /><span style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Acesso</span></div>
+            <div style={{ fontSize: '22px', fontWeight: 800, marginBottom: '6px' }}>{status}</div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{user?.email || 'Conta Menzzu'}</div>
           </div>
-
           <div style={cardStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-              <CreditCard size={20} color="var(--accent-primary)" />
-              <span style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Plano</span>
-            </div>
-            <div style={{ fontSize: '22px', fontWeight: 800, marginBottom: '6px' }}>Assinatura</div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Pronto para integrar com cobrança recorrente.</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}><CreditCard size={20} color="var(--accent-primary)" /><span style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Plano</span></div>
+            <div style={{ fontSize: '22px', fontWeight: 800, marginBottom: '6px' }}>{plan?.name || 'Escolha um plano'}</div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>{subscription ? 'Assinatura recorrente' : 'Comece seu período de teste'}</div>
           </div>
-
           <div style={cardStyle}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-              <ReceiptText size={20} color="var(--warning)" />
-              <span style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Histórico</span>
-            </div>
-            <div style={{ fontSize: '22px', fontWeight: 800, marginBottom: '6px' }}>Pedidos</div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Central para ver compras e assinaturas.</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}><CheckCircle2 size={20} color="var(--warning)" /><span style={{ color: 'var(--text-secondary)', fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Benefícios</span></div>
+            <div style={{ fontSize: '22px', fontWeight: 800, marginBottom: '6px' }}>Tudo pronto</div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Recursos conforme seu plano</div>
           </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '18px', marginBottom: '18px' }}>
-          <ActionCard
-            icon={ShoppingBag}
-            title="Comprar plano"
-            description="Escolha um plano, conclua o pagamento e receba o acesso automaticamente."
-            href="/comprar/"
-            label="Ir para compra"
-          />
-          <ActionCard
-            icon={Clock3}
-            title="Meus pedidos"
-            description="Veja o que já foi solicitado e acompanhe o status das suas compras."
-          />
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '18px' }}>
-          <ActionCard
-            icon={Ticket}
-            title="Assinatura e renovação"
-            description="Área preparada para cobrança recorrente, renovações e cancelamentos."
-          />
-          <ActionCard
-            icon={ShieldCheck}
-            title="Dados da conta"
-            description={`Email de acesso: ${user?.email || '-'} • Atualize seus dados e senha quando precisar.`}
-          />
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+              <div style={{ width: '46px', height: '46px', borderRadius: '14px', backgroundColor: 'var(--accent-glow)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><ShoppingBag size={22} /></div>
+              <div>
+                <h3 style={{ fontSize: '18px', marginBottom: '8px' }}>Planos Menzzu</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6, marginBottom: '16px' }}>Escolha o plano ideal para sua operação e ative os recursos da plataforma.</p>
+                <Link to="/comprar" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', color: 'var(--accent-primary)', fontWeight: 800, textDecoration: 'none' }}>Ver planos <ArrowRight size={16} /></Link>
+              </div>
+            </div>
+          </div>
+          <div style={cardStyle}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
+              <div style={{ width: '46px', height: '46px', borderRadius: '14px', backgroundColor: 'var(--accent-glow)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><ShieldCheck size={22} /></div>
+              <div>
+                <h3 style={{ fontSize: '18px', marginBottom: '8px' }}>Dados da conta</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>Conta cadastrada com o e-mail {user?.email || '-'}.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
 

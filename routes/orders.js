@@ -4,7 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../lib/prisma');
-const { checkEntitlement } = require('../lib/plans');
+const { checkEntitlement, hasPlanFeature } = require('../lib/plans');
 const cron = require('node-cron');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
@@ -615,6 +615,10 @@ async function calculateOrderTotal(data, userId) {
 // ─── MERCADO PAGO ───────────────────────────────────────────────────────────
 
 async function createPaymentLink(order, settings) {
+  if (!(await hasPlanFeature(prisma, order.userId, 'paymentGateway'))) {
+    console.warn(`[MercadoPago] [User ${order.userId}] Recurso bloqueado pelo plano.`);
+    return null;
+  }
   if (!settings?.mercadopagoToken) {
     console.warn(`[MercadoPago] [User ${order.userId}] Token não configurado.`);
     return null;

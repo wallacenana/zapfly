@@ -97,8 +97,10 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<PasswordReset />} />
       <Route path="/reset-password" element={<PasswordReset />} />
       <Route path="/first-login" element={<FirstLoginSetup />} />
-      <Route path="/conta" element={<PrivateRoute><AccountHome /></PrivateRoute>} />
-      <Route path="/comprar" element={<PrivateRoute><Plans /></PrivateRoute>} />
+      <Route element={<PrivateRoute><MainLayout clientMode /></PrivateRoute>}>
+        <Route path="/conta" element={<AccountHome />} />
+        <Route path="/comprar" element={<Plans />} />
+      </Route>
 
       <Route element={
         <AdminRoute>

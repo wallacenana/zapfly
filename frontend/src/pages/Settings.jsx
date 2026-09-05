@@ -210,6 +210,7 @@ const Settings = () => {
   const businessAddressRef = useRef(null);
   const [acceptOrders, setAcceptOrders] = useState(true);
   const [savingAcceptOrders, setSavingAcceptOrders] = useState(false);
+  const [canUseMercadoPago, setCanUseMercadoPago] = useState(false);
 
   const fetchStoreSettings = useCallback(async () => {
     try {
@@ -362,6 +363,9 @@ const Settings = () => {
     fetchStoreSettings();
 
     loadMarketingAssets();
+    api.get('/billing/me').then(({ data }) => {
+      setCanUseMercadoPago(Boolean(data?.plan?.paymentGateway));
+    }).catch(() => setCanUseMercadoPago(false));
   }, [fetchStoreSettings]);
 
   const loadSlots = async () => {
@@ -958,8 +962,10 @@ const Settings = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px' }}>
                   <Shield size={20} color="#3b82f6" />
                   <span style={{ fontWeight: 800 }}>Mercado Pago</span>
+                  {!canUseMercadoPago && <span style={{ marginLeft: 'auto', padding: '4px 9px', borderRadius: '999px', background: '#fff1dc', color: '#9a5a00', fontSize: '11px', fontWeight: 800 }}>PLANO ILIMITADO</span>}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                {!canUseMercadoPago && <div style={{ padding: '16px', borderRadius: '12px', background: '#f7faf5', border: '1px solid #d9e5d2' }}><p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px', lineHeight: 1.6 }}>Receba pagamentos online com PIX e cartão e confirme pedidos automaticamente. Esse recurso está disponível no plano Ilimitado.</p><button type="button" onClick={() => window.location.assign('/comprar')} style={{ marginTop: '12px', padding: '10px 14px', border: 0, borderRadius: '10px', background: 'var(--accent-primary)', color: '#fff', fontWeight: 800, cursor: 'pointer' }}>Fazer upgrade</button></div>}
+                <div style={{ display: canUseMercadoPago ? 'grid' : 'none', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                   <div>
                     <label style={microLabel}>Access Token (Chave de API)</label>
                     <input {...inp} type="password" value={settings.mercadopagoToken || ''} onChange={e => setSettings({ ...settings, mercadopagoToken: e.target.value })} placeholder="APP_USR-..." />

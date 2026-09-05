@@ -22,7 +22,7 @@ const multer = require('multer');
 const axios = require('axios');
 const { MercadoPagoConfig, Payment: MercadoPagoPayment } = require('mercadopago');
 const { authenticate, requireAdmin } = require('./middleware/auth');
-const { PLAN_DEFINITIONS, BILLING_CYCLES, getPlan, getCycle, getCyclePriceCents, checkEntitlement } = require('./lib/plans');
+const { PLAN_DEFINITIONS, BILLING_CYCLES, getPlan, getCycle, getCyclePriceCents, hasPlanFeature, checkEntitlement } = require('./lib/plans');
 const { createSubscriptionCheckout } = require('./lib/abacatepay');
 const {
     getCloudflareConfig,
@@ -2664,6 +2664,7 @@ app.get('/config/keys', authenticate, async (req, res) => {
     let config = await getSettings(req.user.id);
     if (!config) config = await prisma.setting.create({ data: { id: req.user.id, userId: req.user.id, activeModel: 'openai' } });
     const user = await prisma.user.findUnique({ where: { id: req.user.id }, select: { slug: true } });
+    const paymentGatewayEnabled = await hasPlanFeature(prisma, req.user.id, 'paymentGateway');
 
     res.json({
         slug: user?.slug,
@@ -2705,8 +2706,8 @@ app.get('/config/keys', authenticate, async (req, res) => {
         deliveryRules: config.deliveryRules,
         dailyDeliveryItems: config.dailyDeliveryItems,
         gcalRefreshToken: config.gcalRefreshToken,
-        mercadopagoPublicKey: config.mercadopagoPublicKey,
-        mercadopagoToken: config.mercadopagoToken,
+        mercadopagoPublicKey: paymentGatewayEnabled ? config.mercadopagoPublicKey : '',
+        mercadopagoToken: paymentGatewayEnabled ? config.mercadopagoToken : '',
         pixReceiverName: config.pixReceiverName,
         pixReceiverKey: config.pixReceiverKey,
         maxDeliveryKm: config.maxDeliveryKm,
@@ -2751,12 +2752,18 @@ app.post('/config/keys', authenticate, async (req, res) => {
     }
 
     const currentConfig = await getSettings(req.user.id);
+    const paymentGatewayEnabled = await hasPlanFeature(prisma, req.user.id, 'paymentGateway');
+    const mercadoPagoChanged = mercadopagoToken !== currentConfig?.mercadopagoToken
+        || mercadopagoPublicKey !== currentConfig?.mercadopagoPublicKey;
+    if (!paymentGatewayEnabled && mercadoPagoChanged && (mercadopagoToken || mercadopagoPublicKey)) {
+        return res.status(403).json({ error: 'A integração de pagamentos está disponível apenas no plano Ilimitado.', code: 'PLAN_FEATURE_LOCKED', feature: 'paymentGateway' });
+    }
 
     const updateData = {
         openaiKey: openai,
         claudeKey: claude,
-        mercadopagoToken,
-        mercadopagoPublicKey,
+        mercadopagoToken: paymentGatewayEnabled ? mercadopagoToken : currentConfig?.mercadopagoToken,
+        mercadopagoPublicKey: paymentGatewayEnabled ? mercadopagoPublicKey : currentConfig?.mercadopagoPublicKey,
         activeModel,
         gcalSyncHour: gcalSyncHour ?? (currentConfig?.gcalSyncHour || 6),
         dailyMaxOrders: parseInt(dailyMaxOrders || 10),

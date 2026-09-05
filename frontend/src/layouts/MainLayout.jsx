@@ -15,11 +15,12 @@ import {
   Users,
   ExternalLink,
   CreditCard,
+  UserRound,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { PUBLIC_SITE_URL } from '../api';
 
-const MainLayout = () => {
+const MainLayout = ({ clientMode = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
@@ -28,7 +29,7 @@ const MainLayout = () => {
   const storeUrl = storeSlug ? `${PUBLIC_SITE_URL}/${storeSlug}` : '';
   const brandLogo = '/logo%20HotWhats.png';
 
-  const menuItems = [
+  const adminMenuItems = [
     { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
     { path: '/chat', icon: <MessageCircle size={20} />, label: 'Chat' },
     { path: '/estoque', icon: <Package size={20} />, label: 'Estoque' },
@@ -42,6 +43,11 @@ const MainLayout = () => {
     ...(isSuperAdmin ? [{ path: '/billing', icon: <CreditCard size={20} />, label: 'Planos e cobrança' }] : []),
     { path: '/settings', icon: <Settings size={20} />, label: 'Configurações' },
   ];
+  const clientMenuItems = [
+    { path: '/conta', icon: <UserRound size={20} />, label: 'Minha conta' },
+    { path: '/comprar', icon: <CreditCard size={20} />, label: 'Planos e cobrança' },
+  ];
+  const menuItems = clientMode ? clientMenuItems : adminMenuItems;
 
   const handleLogout = () => {
     logout();
@@ -110,7 +116,7 @@ const MainLayout = () => {
             </div>
             <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', lineHeight: 1.1 }}>Menzzu</div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '3px' }}>Painel operacional</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '3px' }}>{clientMode ? 'Área da conta' : 'Painel operacional'}</div>
             </div>
           </div>
           {storeUrl ? (
