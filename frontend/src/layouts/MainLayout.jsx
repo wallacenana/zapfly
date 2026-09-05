@@ -71,6 +71,12 @@ const MainLayout = () => {
       <div
         style={{
           width: '260px',
+          minWidth: '260px',
+          maxWidth: '260px',
+          flex: '0 0 260px',
+          height: '100vh',
+          overflowY: 'auto',
+          boxSizing: 'border-box',
           backgroundColor: '#ffffff',
           borderRight: '1px solid var(--border-color)',
           display: 'flex',
