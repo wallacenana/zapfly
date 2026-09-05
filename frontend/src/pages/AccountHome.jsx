@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, CreditCard, ShieldCheck, ShoppingBag } from 'lucide-react';
-import TrialBanner from '../components/TrialBanner';
 import { api } from '../api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -29,7 +28,6 @@ const AccountHome = () => {
 
   return (
     <main style={{ minHeight: '100vh', padding: '32px', backgroundColor: 'var(--bg-primary)' }}>
-      <TrialBanner />
       <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
         <div style={{ marginBottom: '28px' }}>
           <p style={{ color: 'var(--accent-primary)', fontSize: '13px', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>Minha conta</p>

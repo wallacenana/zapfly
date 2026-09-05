@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { PUBLIC_SITE_URL } from '../api';
+import TrialBanner from '../components/TrialBanner';
 
 const MainLayout = ({ clientMode = false }) => {
   const location = useLocation();
@@ -198,6 +199,7 @@ const MainLayout = ({ clientMode = false }) => {
       </div>
 
       <div style={{ flex: 1, marginLeft: '260px', minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3' }}>
+        <TrialBanner embedded />
         <Outlet />
       </div>
     </div>

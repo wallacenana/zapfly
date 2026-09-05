@@ -54,7 +54,7 @@ const LoginRoute = () => {
       logout();
       return <Login />;
     }
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/get-started" replace />;
   }
   return <Login />;
 };

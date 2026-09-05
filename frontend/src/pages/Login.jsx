@@ -32,7 +32,7 @@ export default function Login() {
     if (!token || !payload?.id) return;
     login(token, { id: payload.id, name: payload.name, email: payload.email, role: payload.role, slug: payload.slug });
     window.history.replaceState({}, document.title, '/login');
-    window.location.replace('/dashboard');
+    window.location.replace('/get-started');
   }, [login]);
 
   const loginWithGoogle = () => window.location.assign(`${API_URL}/auth/google/login`);
@@ -50,14 +50,14 @@ export default function Login() {
       }
       const { data } = await api.post('/auth/login', { email, password });
       if (data.requiresSetup) { setSetupData({ setupToken: data.setupToken, step: data.step }); return; }
-      if (data.token) { login(data.token, data.user); window.location.replace('/dashboard'); return; }
+      if (data.token) { login(data.token, data.user); window.location.replace('/get-started'); return; }
       setTempToken(data.tempToken); setTwoFactorMethod(data.twoFactorMethod); setMode('otp');
     } catch (err) { setError(err?.response?.data?.error || 'Não foi possível concluir a solicitação.'); } finally { setLoading(false); }
   };
 
   const verifyOtp = async (event) => {
     event.preventDefault(); setError(''); setLoading(true);
-    try { const { data } = await api.post('/auth/verify', { tempToken, code: otp }); login(data.token, data.user); window.location.replace(String(data.user?.role).toLowerCase() === 'user' ? '/conta' : '/dashboard'); }
+    try { const { data } = await api.post('/auth/verify', { tempToken, code: otp }); login(data.token, data.user); window.location.replace('/get-started'); }
     catch (err) { setError(err?.response?.data?.error || 'Código inválido.'); } finally { setLoading(false); }
   };
 
