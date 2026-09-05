@@ -75,6 +75,10 @@ const MainLayout = () => {
           maxWidth: '260px',
           flex: '0 0 260px',
           height: '100vh',
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
           overflowY: 'auto',
           boxSizing: 'border-box',
           backgroundColor: '#ffffff',
@@ -186,7 +190,7 @@ const MainLayout = () => {
         </button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3' }}>
+      <div style={{ flex: 1, marginLeft: '260px', minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3' }}>
         <Outlet />
       </div>
     </div>
