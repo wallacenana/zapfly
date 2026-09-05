@@ -6,6 +6,7 @@ const speakeasy = require('speakeasy');
 const QRCode = require('qrcode');
 const nodemailer = require('nodemailer');
 const axios = require('axios');
+const { google } = require('googleapis');
 const prisma = require('../lib/prisma');
 const { getSettings } = require('../lib/cache');
 const { authenticate, requireRole, normalizeRole } = require('../middleware/auth');
@@ -13,6 +14,49 @@ const router = express.Router();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'hotwhats-secret-key-super-safe';
 const APP_NAME = 'Menzzu';
+const GOOGLE_LOGIN_SCOPES = ['openid', 'email', 'profile'];
+
+const getGoogleLoginClient = () => {
+  const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+  const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
+  if (!clientId || !clientSecret) return null;
+  const redirectUri = String(process.env.GOOGLE_LOGIN_REDIRECT_URI || `${process.env.PUBLIC_URL || 'http://localhost:3001'}/auth/google/login/callback`).replace(/\/$/, '');
+  return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
+};
+
+router.get('/google/login', (req, res) => {
+  const client = getGoogleLoginClient();
+  if (!client) return res.status(503).send('Login com Google não configurado.');
+  const state = makeToken({ oauth: 'google_login' }, '10m');
+  res.redirect(client.generateAuthUrl({ access_type: 'online', scope: GOOGLE_LOGIN_SCOPES, state, prompt: 'select_account' }));
+});
+
+router.get('/google/login/callback', async (req, res) => {
+  const frontendUrl = String(process.env.FRONTEND_URL || 'https://app.menzzu.com').replace(/\/$/, '');
+  try {
+    const client = getGoogleLoginClient();
+    if (!client || !req.query.code) return res.redirect(`${frontendUrl}/login?google_error=invalid_request`);
+    const state = jwt.verify(String(req.query.state || ''), JWT_SECRET);
+    if (state.oauth !== 'google_login') return res.redirect(`${frontendUrl}/login?google_error=invalid_state`);
+    const { tokens } = await client.getToken(String(req.query.code));
+    client.setCredentials(tokens);
+    const { data: profile } = await axios.get('https://openidconnect.googleapis.com/v1/userinfo', { headers: { Authorization: `Bearer ${tokens.access_token}` }, timeout: 10000 });
+    const email = String(profile.email || '').trim().toLowerCase();
+    if (!email || profile.email_verified === false) return res.redirect(`${frontendUrl}/login?google_error=email_not_verified`);
+    let user = await prisma.user.findFirst({ where: { OR: [{ googleId: String(profile.sub) }, { email }] } });
+    if (!user) {
+      user = await prisma.user.create({ data: { name: String(profile.name || email.split('@')[0]), email, googleId: String(profile.sub), password: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10), slug: await generateUniqueUserSlug(profile.name || email.split('@')[0]), role: 'user', active: true, mustChangePassword: false, isFirstLogin: false, twoFactorMethod: 'none', twoFactorVerified: true, twoFactorEnabled: false } });
+    } else if (!user.googleId) {
+      user = await prisma.user.update({ where: { id: user.id }, data: { googleId: String(profile.sub) } });
+    }
+    if (!user.active) return res.redirect(`${frontendUrl}/login?google_error=account_inactive`);
+    const token = makeToken({ id: user.id, role: user.role, slug: user.slug, name: user.name, email: user.email }, '7d');
+    return res.redirect(`${frontendUrl}/login#google_token=${encodeURIComponent(token)}`);
+  } catch (err) {
+    authLog('error', 'google-login:callback', err.message);
+    return res.redirect(`${frontendUrl}/login?google_error=callback_failed`);
+  }
+});
 const maskEmail = (email = '') => {
   const value = String(email || '').trim().toLowerCase();
   if (!value.includes('@')) return value;
@@ -592,6 +636,30 @@ router.post('/reset-password', async (req, res) => {
   } catch (err) {
     authLog('error', 'password-reset:complete', err.message);
     return res.status(500).json({ error: 'Nao foi possivel redefinir a senha.' });
+  }
+});
+
+router.post('/register', async (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const password = String(req.body?.password || '');
+    if (name.length < 2) return res.status(400).json({ error: 'Informe seu nome.' });
+    if (!email.includes('@')) return res.status(400).json({ error: 'Informe um e-mail válido.' });
+    if (password.length < 8) return res.status(400).json({ error: 'A senha deve ter pelo menos 8 caracteres.' });
+    if (await prisma.user.findUnique({ where: { email }, select: { id: true } })) return res.status(409).json({ error: 'Já existe uma conta com este e-mail.' });
+    const user = await prisma.user.create({
+      data: {
+        name, email, password: await bcrypt.hash(password, 10), slug: await generateUniqueUserSlug(name),
+        role: 'user', active: true, mustChangePassword: false, isFirstLogin: false,
+        twoFactorMethod: 'none', twoFactorVerified: true, twoFactorEnabled: false,
+      },
+    });
+    const token = makeToken({ id: user.id, role: user.role, slug: user.slug }, '7d');
+    return res.status(201).json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, slug: user.slug } });
+  } catch (err) {
+    authLog('error', 'register:exception', err.message);
+    return res.status(500).json({ error: 'Não foi possível criar sua conta.' });
   }
 });
 
