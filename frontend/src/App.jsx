@@ -25,6 +25,8 @@ import Prompts from './pages/Prompts';
 import Users from './pages/Users';
 import AccountHome from './pages/AccountHome';
 import PasswordReset from './pages/PasswordReset';
+import Plans from './pages/Plans';
+import BillingSettings from './pages/BillingSettings';
 
 const FullScreenLoader = () => (
   <div style={{
@@ -96,6 +98,7 @@ function AppRoutes() {
       <Route path="/reset-password" element={<PasswordReset />} />
       <Route path="/first-login" element={<FirstLoginSetup />} />
       <Route path="/conta" element={<PrivateRoute><AccountHome /></PrivateRoute>} />
+      <Route path="/comprar" element={<PrivateRoute><Plans /></PrivateRoute>} />
 
       <Route element={
         <AdminRoute>
@@ -115,6 +118,7 @@ function AppRoutes() {
         <Route path="flows/edit/:id" element={<FlowEditor />} />
         <Route path="prompts" element={<Prompts />} />
         <Route path="users" element={<SuperAdminRoute><Users /></SuperAdminRoute>} />
+        <Route path="billing" element={<SuperAdminRoute><BillingSettings /></SuperAdminRoute>} />
         <Route path="settings" element={<Settings />} />
         <Route path="site-settings" element={<SiteSettings />} />
       </Route>

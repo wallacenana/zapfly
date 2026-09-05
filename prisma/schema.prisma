@@ -8,98 +8,99 @@ datasource db {
 }
 
 model User {
-  id                String            @id @default(uuid())
-  email             String            @unique
-  password          String
-  name              String
-  slug              String            @unique
-  role              String            @default("user")
-  active            Boolean           @default(true)
-  mustChangePassword Boolean          @default(false)
-  twoFactorMethod   String            @default("none")
-  twoFactorVerified Boolean           @default(false)
-  otpSecret         String?           @db.Text
-  twoFactorSecret   String?           @db.Text
-  twoFactorEnabled  Boolean           @default(false)
-  isFirstLogin      Boolean           @default(true)
-  passwordResetTokenHash String?      @db.VarChar(64)
+  id                     String            @id @default(uuid())
+  email                  String            @unique
+  password               String
+  name                   String
+  slug                   String            @unique
+  role                   String            @default("user")
+  active                 Boolean           @default(true)
+  mustChangePassword     Boolean           @default(false)
+  twoFactorMethod        String            @default("none")
+  twoFactorVerified      Boolean           @default(false)
+  otpSecret              String?           @db.Text
+  twoFactorSecret        String?           @db.Text
+  twoFactorEnabled       Boolean           @default(false)
+  isFirstLogin           Boolean           @default(true)
+  passwordResetTokenHash String?           @db.VarChar(64)
   passwordResetExpiresAt DateTime?
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @default(now()) @updatedAt
-  products          Product[]
-  categories        Category[]
-  orders            Order[]
-  customers         Customer[]
-  settings          Setting?
-  storeProfile      StoreProfile?
-  reviews           StoreReview[]
-  marketingAssets   MarketingAsset[]
-  instances         Instance[]
-  stockItems        StockItem[]
-  calendarEvents    CalendarEvent[]
-  seasonalCatalogs  SeasonalCatalog[]
-  flows             Flow[]
-  availableSlots    AvailableSlot[]
-  addonGroups       AddonGroup[]
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @default(now()) @updatedAt
+  products               Product[]
+  categories             Category[]
+  orders                 Order[]
+  customers              Customer[]
+  settings               Setting?
+  storeProfile           StoreProfile?
+  reviews                StoreReview[]
+  marketingAssets        MarketingAsset[]
+  instances              Instance[]
+  stockItems             StockItem[]
+  calendarEvents         CalendarEvent[]
+  seasonalCatalogs       SeasonalCatalog[]
+  flows                  Flow[]
+  availableSlots         AvailableSlot[]
+  addonGroups            AddonGroup[]
+  subscription           Subscription?
 
   @@map("user")
 }
 
 model StoreProfile {
-  id                   String   @id @default(uuid())
-  userId               String   @unique
-  user                 User     @relation(fields: [userId], references: [id])
-  businessName         String?
-  businessCategory     String?
-  prepTime             String?
-  businessAddress      String?
-  businessPlaceId      String?
-  businessLat          Float?
-  businessLng          Float?
-  businessMapsUrl      String?  @db.Text
-  logoUrl              String?  @db.Text
-  faviconUrl           String?  @db.Text
-  accentColor          String?  @default("#ff4d6d")
-  buttonColor          String?  @default("#ff4d6d")
-  accentColorOrders    String?  @default("#4a2c2a")
-  buttonColorOrders    String?  @default("#4a2c2a")
-  buttonTextColor      String?  @default("#ffffff")
-  backgroundColor      String?  @default("#ffffff")
-  textColor            String?  @default("#333333")
-  seoDescription       String?  @db.Text
-  pixelId              String?
-  googleAnalyticsId    String?
-  microsoftClarityId   String?
-  acceptOrders         Boolean  @default(true)
-  active               Boolean  @default(true)
-  maxDeliveryKm        Float    @default(15.0)
-  freeDeliveryEnabled  Boolean  @default(false)
-  freeDeliveryKm       Float?  
-  deliveryMode         String   @default("hibrido")
-  allowCashOnDelivery  Boolean  @default(true)
-  menuTheme            String   @default("dark")
-  customDomain        String?  @unique
-  customDomainStatus  String   @default("not_configured")
-  cloudflareHostnameId String?
-  cloudflareSslStatus String?
+  id                          String   @id @default(uuid())
+  userId                      String   @unique
+  user                        User     @relation(fields: [userId], references: [id])
+  businessName                String?
+  businessCategory            String?
+  prepTime                    String?
+  businessAddress             String?
+  businessPlaceId             String?
+  businessLat                 Float?
+  businessLng                 Float?
+  businessMapsUrl             String?  @db.Text
+  logoUrl                     String?  @db.Text
+  faviconUrl                  String?  @db.Text
+  accentColor                 String?  @default("#ff4d6d")
+  buttonColor                 String?  @default("#ff4d6d")
+  accentColorOrders           String?  @default("#4a2c2a")
+  buttonColorOrders           String?  @default("#4a2c2a")
+  buttonTextColor             String?  @default("#ffffff")
+  backgroundColor             String?  @default("#ffffff")
+  textColor                   String?  @default("#333333")
+  seoDescription              String?  @db.Text
+  pixelId                     String?
+  googleAnalyticsId           String?
+  microsoftClarityId          String?
+  acceptOrders                Boolean  @default(true)
+  active                      Boolean  @default(true)
+  maxDeliveryKm               Float    @default(15.0)
+  freeDeliveryEnabled         Boolean  @default(false)
+  freeDeliveryKm              Float?
+  deliveryMode                String   @default("hibrido")
+  allowCashOnDelivery         Boolean  @default(true)
+  menuTheme                   String   @default("dark")
+  customDomain                String?  @unique
+  customDomainStatus          String   @default("not_configured")
+  cloudflareHostnameId        String?
+  cloudflareSslStatus         String?
   cloudflareValidationRecords Json?
-  customDomainLastError String? @db.Text
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @default(now()) @updatedAt
+  customDomainLastError       String?  @db.Text
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @default(now()) @updatedAt
 
   @@map("store_profile")
 }
 
 model AddonGroup {
-  id          String   @id @default(uuid())
-  name        String
-  min         Int      @default(0)
-  max         Int      @default(1)
-  items       String   @db.Text
-  userId      String
-  user        User     @relation(fields: [userId], references: [id])
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
+  id        String   @id @default(uuid())
+  name      String
+  min       Int      @default(0)
+  max       Int      @default(1)
+  items     String   @db.Text
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   @@map("addon_group")
 }
@@ -119,19 +120,19 @@ model AvailableSlot {
 }
 
 model Instance {
-  id        String   @id @default(uuid())
-  name      String
-  status    String   @default("disconnected")
-  color     String?  @default("#3b82f6")
-  botPrompt String?  @db.Text
-  knowledge String?  @db.Text
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  chats     Chat[]
-  messages  Message[]
+  id         String      @id @default(uuid())
+  name       String
+  status     String      @default("disconnected")
+  color      String?     @default("#3b82f6")
+  botPrompt  String?     @db.Text
+  knowledge  String?     @db.Text
+  userId     String
+  user       User        @relation(fields: [userId], references: [id])
+  chats      Chat[]
+  messages   Message[]
   flowStates FlowState[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @default(now()) @updatedAt
 
   @@map("instance")
 }
@@ -227,11 +228,11 @@ model Product {
   featured        Boolean   @default(false)
   promotion       Boolean   @default(false)
   displayOrder    Int       @default(0)
-    bannerUrl       String?   @db.Text
-    addonGroups     String?   @db.Text
-    suggestedItemId String?
-    userId          String
-    user            User      @relation(fields: [userId], references: [id])
+  bannerUrl       String?   @db.Text
+  addonGroups     String?   @db.Text
+  suggestedItemId String?
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
   orders          Order[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @default(now()) @updatedAt
@@ -240,58 +241,58 @@ model Product {
 }
 
 model Customer {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   jid             String
   name            String?
   phone           String?
-  address         String?  @db.Text
+  address         String?   @db.Text
   lastOrderDate   DateTime?
   lastDeliveryFee Float?    @default(0)
   userId          String
-  user            User     @relation(fields: [userId], references: [id])
+  user            User      @relation(fields: [userId], references: [id])
   orders          Order[]
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now()) @updatedAt
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
 
   @@unique([jid, userId], name: "jid_userId")
   @@map("customer")
 }
 
 model Order {
-  id              String   @id @default(uuid())
+  id              String       @id @default(uuid())
   productId       String?
-  productRelation Product? @relation(fields: [productId], references: [id])
+  productRelation Product?     @relation(fields: [productId], references: [id])
   product         String?
   variation       String?
   quantity        String?
-  notes           String?  @db.Text
+  notes           String?      @db.Text
   scheduledDate   String?
   scheduledTime   String?
   clientName      String?
   clientJid       String?
   clientPhone     String?
-  type            String   @default("order")
-  deliveryAddress String?  @db.Text
+  type            String       @default("order")
+  deliveryAddress String?      @db.Text
   paymentMethod   String?
-  paymentStatus   String   @default("pending")
-  paymentLink     String?  @db.Text
-  deliveryFee     Float    @default(0)
-  totalValue      Float    @default(0)
-  status          String   @default("pending")
+  paymentStatus   String       @default("pending")
+  paymentLink     String?      @db.Text
+  deliveryFee     Float        @default(0)
+  totalValue      Float        @default(0)
+  status          String       @default("pending")
   massa           String?
   recheio         String?
   topo            String?
-  addons          String?  @db.Text
+  addons          String?      @db.Text
   calendarEventId String?
-  instanceId      String?  @default("global")
-  reminderSent    Boolean  @default(false)
+  instanceId      String?      @default("global")
+  reminderSent    Boolean      @default(false)
   storeReview     StoreReview?
   customerId      String?
-  customer        Customer? @relation(fields: [customerId], references: [id])
+  customer        Customer?    @relation(fields: [customerId], references: [id])
   userId          String
-  user            User     @relation(fields: [userId], references: [id])
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @default(now()) @updatedAt
+  user            User         @relation(fields: [userId], references: [id])
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @default(now()) @updatedAt
 
   @@map("order")
 }
@@ -420,20 +421,20 @@ model CalendarEvent {
 }
 
 model SeasonalCatalog {
-  id                      String   @id @default(uuid())
-  name                    String
-  eventDate               String
-  preStartDays            Int      @default(15)
-  postEndDays             Int      @default(2)
-  description             String?  @db.Text
-  items                   String?  @db.Text
-  maxOrders               Int      @default(0)
-  onlySeasonalOnEventDay  Boolean  @default(false)
-  active                  Boolean  @default(true)
-  userId                  String
-  user                    User     @relation(fields: [userId], references: [id])
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @default(now()) @updatedAt
+  id                     String   @id @default(uuid())
+  name                   String
+  eventDate              String
+  preStartDays           Int      @default(15)
+  postEndDays            Int      @default(2)
+  description            String?  @db.Text
+  items                  String?  @db.Text
+  maxOrders              Int      @default(0)
+  onlySeasonalOnEventDay Boolean  @default(false)
+  active                 Boolean  @default(true)
+  userId                 String
+  user                   User     @relation(fields: [userId], references: [id])
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @default(now()) @updatedAt
 
   @@map("seasonal_catalog")
 }
@@ -447,4 +448,47 @@ model MarketingAsset {
   createdAt DateTime @default(now())
 
   @@map("marketing_asset")
+}
+
+model PlatformSetting {
+  id           String   @id @default("default")
+  trialEnabled Boolean  @default(true)
+  trialDays    Int      @default(7)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  @@map("platform_setting")
+}
+
+model Subscription {
+  id                     String    @id @default(uuid())
+  userId                 String    @unique
+  user                   User      @relation(fields: [userId], references: [id])
+  planKey                String
+  status                 String    @default("pending")
+  provider               String    @default("abacatepay")
+  providerSubscriptionId String?
+  providerCustomerId     String?
+  checkoutId             String?
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  trialEndsAt            DateTime?
+  cancelAtPeriodEnd      Boolean   @default(false)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @default(now()) @updatedAt
+
+  @@index([providerSubscriptionId])
+  @@map("subscription")
+}
+
+model ProcessedBillingEvent {
+  id          String   @id @default(uuid())
+  provider    String
+  externalId  String
+  event       String
+  payload     Json?
+  processedAt DateTime @default(now())
+
+  @@unique([provider, externalId])
+  @@map("processed_billing_event")
 }

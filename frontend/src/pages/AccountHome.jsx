@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { ShoppingBag, Clock3, Ticket, ShieldCheck, ArrowRight, CreditCard, ReceiptText } from 'lucide-react';
+import TrialBanner from '../components/TrialBanner';
 
 const cardStyle = {
   backgroundColor: 'var(--bg-secondary)',
@@ -65,6 +66,7 @@ const AccountHome = () => {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', padding: '32px' }}>
+      <TrialBanner />
       <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
         <div style={{ marginBottom: '28px' }}>
           <p style={{ color: 'var(--accent-primary)', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>

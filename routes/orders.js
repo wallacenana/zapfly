@@ -4,6 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const prisma = require('../lib/prisma');
+const { checkEntitlement } = require('../lib/plans');
 const cron = require('node-cron');
 const { MercadoPagoConfig, Preference } = require('mercadopago');
 
@@ -1287,6 +1288,11 @@ router.get('/products', authenticate, async (req, res) => {
 });
 
 router.post('/products', authenticate, async (req, res) => {
+  try {
+    await checkEntitlement(prisma, req.user.id, 'productLimit', await prisma.product.count({ where: { userId: req.user.id } }));
+  } catch (error) {
+    return res.status(403).json({ error: error.message, code: error.code, limit: error.limit });
+  }
   const { name, description, price, promoPrice, image, category, categoryId, type, variations, comboItems, customFields, stock, trackStock, featured, capacityCost, bannerUrl, displayOrder, suggestedItemId } = req.body;
   const addonGroups = await normalizeProductAddonGroups(req.body.addonGroups, req.user.id);
   const suggestedId = await normalizeSuggestedItemId(suggestedItemId, req.user.id);

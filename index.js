@@ -11,6 +11,7 @@ const path = require('path');
 const cors = require('cors');
 const OpenAI = require('openai');
 const fs = require('fs');
+const crypto = require('crypto');
 const prisma = require('./lib/prisma');
 const { calculateFee } = require('./lib/maps');
 const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock } = require('./lib/utils');
@@ -21,6 +22,8 @@ const multer = require('multer');
 const axios = require('axios');
 const { MercadoPagoConfig, Payment: MercadoPagoPayment } = require('mercadopago');
 const { authenticate, requireAdmin } = require('./middleware/auth');
+const { PLAN_DEFINITIONS, getPlan, checkEntitlement } = require('./lib/plans');
+const { createSubscriptionCheckout } = require('./lib/abacatepay');
 const {
     getCloudflareConfig,
     normalizeDomain,
@@ -122,6 +125,48 @@ const aiProcessingTokens = {};
 const aiMessageBuffer = {};
 
 
+// Webhook must receive the raw body for HMAC verification before express.json().
+app.post('/webhooks/abacatepay', express.raw({ type: 'application/json' }), async (req, res) => {
+    const secret = String(process.env.ABACATEPAY_WEBHOOK_SECRET || '').trim();
+    const querySecret = String(req.query.webhookSecret || '').trim();
+    const signature = String(req.headers['x-webhook-signature'] || '').trim();
+    const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from('');
+    const expected = secret ? crypto.createHmac('sha256', secret).update(rawBody).digest('base64') : '';
+    const signatureOk = expected && signature && expected.length === signature.length && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
+    if (!secret || (querySecret !== secret && !signatureOk)) return res.status(401).json({ error: 'Webhook não autorizado.' });
+
+    try {
+        const payload = JSON.parse(rawBody.toString('utf8') || '{}');
+        const event = String(payload.event || '').toLowerCase();
+        const data = payload.data || {};
+        const metadata = data.metadata || data.subscription?.metadata || {};
+        const externalId = String(payload.id || data.id || data.subscription?.id || '').trim();
+        if (!externalId) return res.status(400).json({ error: 'Evento sem identificador.' });
+
+        const existing = await prisma.processedBillingEvent.findUnique({ where: { provider_externalId: { provider: 'abacatepay', externalId } } });
+        if (existing) return res.json({ received: true, duplicate: true });
+
+        const subscriptionId = String(metadata.subscriptionId || data.externalId || data.subscription?.externalId || '').trim();
+        const status = event === 'subscription.cancelled' ? 'canceled' : (event.includes('renewed') ? 'active' : 'active');
+        if (subscriptionId) {
+            await prisma.subscription.updateMany({
+                where: { id: subscriptionId },
+                data: {
+                    status,
+                    providerSubscriptionId: String(data.subscription?.id || data.id || '').trim() || undefined,
+                    providerCustomerId: String(data.customerId || data.subscription?.customerId || '').trim() || undefined,
+                    trialEndsAt: event === 'subscription.trial_started' ? (data.subscription?.trialEndsAt ? new Date(data.subscription.trialEndsAt) : undefined) : undefined,
+                }
+            });
+        }
+        await prisma.processedBillingEvent.create({ data: { provider: 'abacatepay', externalId, event, payload } });
+        return res.json({ received: true });
+    } catch (error) {
+        console.error('[AbacatePay Webhook] Erro:', error.message);
+        return res.status(500).json({ error: 'Falha ao processar webhook.' });
+    }
+});
+
 app.use(cors({ origin: "*" }));
 app.use(express.json());
 
@@ -133,6 +178,69 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/auth', require('./routes/auth'));
 app.use('/reviews', reviewsRouter);
+
+const publicPlan = (plan) => ({ ...plan, price: plan.priceCents / 100 });
+
+app.get('/billing/plans', authenticate, async (req, res) => {
+    const setting = await prisma.platformSetting.findUnique({ where: { id: 'default' } });
+    res.json({
+        plans: Object.values(PLAN_DEFINITIONS).map(publicPlan),
+        trial: { enabled: setting?.trialEnabled ?? true, days: setting?.trialDays ?? 7 },
+    });
+});
+
+app.get('/billing/me', authenticate, async (req, res) => {
+    const [subscription, setting, user] = await Promise.all([
+        prisma.subscription.findUnique({ where: { userId: req.user.id } }),
+        prisma.platformSetting.findUnique({ where: { id: 'default' } }),
+        prisma.user.findUnique({ where: { id: req.user.id }, select: { createdAt: true } }),
+    ]);
+    const trialEnabled = setting?.trialEnabled ?? true;
+    const trialDays = setting?.trialDays ?? 7;
+    const trialEndsAt = user?.createdAt ? new Date(user.createdAt.getTime() + trialDays * 86400000) : null;
+    const trialActive = trialEnabled && !subscription?.status?.match(/active|trialing/i) && trialEndsAt > new Date();
+    const daysLeft = trialActive ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86400000)) : 0;
+    res.json({ subscription, plan: subscription ? getPlan(subscription.planKey) : null, trial: { enabled: trialEnabled, days: trialDays, active: trialActive, daysLeft, endsAt: trialEndsAt?.toISOString() || null }, access: { allowed: Boolean(subscription?.status?.match(/active|trialing/i)) || trialActive } });
+});
+
+app.post('/billing/checkout', authenticate, async (req, res) => {
+    try {
+        const plan = getPlan(req.body?.planKey);
+        if (!plan) return res.status(400).json({ error: 'Plano inválido.' });
+        const setting = await prisma.platformSetting.findUnique({ where: { id: 'default' } });
+        const trialEnabled = setting?.trialEnabled ?? true;
+        const subscription = await prisma.subscription.upsert({
+            where: { userId: req.user.id },
+            update: { planKey: plan.key, status: 'pending', cancelAtPeriodEnd: false },
+            create: { userId: req.user.id, planKey: plan.key, status: 'pending' },
+        });
+        const checkout = await createSubscriptionCheckout({
+            planKey: plan.key,
+            externalId: subscription.id,
+            metadata: { userId: req.user.id, subscriptionId: subscription.id, planKey: plan.key },
+        });
+        await prisma.subscription.update({ where: { id: subscription.id }, data: { checkoutId: checkout.id || null } });
+        return res.json({ url: checkout.url, checkoutId: checkout.id, trialEnabled, trialDays: setting?.trialDays ?? 7 });
+    } catch (error) {
+        console.error('[AbacatePay Checkout] Erro:', error.message);
+        return res.status(error.code === 'ABACATEPAY_NOT_CONFIGURED' || error.code === 'ABACATEPAY_PRODUCT_NOT_CONFIGURED' ? 503 : 400).json({ error: error.message, code: error.code });
+    }
+});
+
+app.get('/admin/billing/settings', authenticate, requireAdmin, async (req, res) => {
+    const setting = await prisma.platformSetting.upsert({ where: { id: 'default' }, update: {}, create: { id: 'default' } });
+    res.json({ trialEnabled: setting.trialEnabled, trialDays: setting.trialDays, plans: Object.values(PLAN_DEFINITIONS).map(publicPlan) });
+});
+
+app.patch('/admin/billing/settings', authenticate, requireAdmin, async (req, res) => {
+    const trialDays = Math.max(0, Math.min(30, Number.parseInt(req.body?.trialDays ?? 7, 10) || 0));
+    const setting = await prisma.platformSetting.upsert({
+        where: { id: 'default' },
+        update: { trialEnabled: req.body?.trialEnabled !== false, trialDays },
+        create: { id: 'default', trialEnabled: req.body?.trialEnabled !== false, trialDays },
+    });
+    res.json({ trialEnabled: setting.trialEnabled, trialDays: setting.trialDays });
+});
 
 // --- SEO: Robots na Raiz ---
 app.get('/robots.txt', (req, res) => {
@@ -3318,6 +3426,12 @@ app.post('/flows', authenticate, async (req, res) => {
                 data: flowPayload
             });
             return res.json(flow);
+        }
+
+        try {
+            await checkEntitlement(prisma, req.user.id, 'flowLimit', await prisma.flow.count({ where: { userId: req.user.id } }));
+        } catch (error) {
+            return res.status(403).json({ error: error.message, code: error.code, limit: error.limit });
         }
 
         const flow = await prisma.flow.create({

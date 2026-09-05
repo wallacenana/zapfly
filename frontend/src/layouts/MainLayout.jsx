@@ -14,6 +14,7 @@ import {
   Zap,
   Users,
   ExternalLink,
+  CreditCard,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { PUBLIC_SITE_URL } from '../api';
@@ -38,6 +39,7 @@ const MainLayout = () => {
     { path: '/prompts', icon: <MessageSquare size={20} />, label: 'Prompts' },
     { path: '/site-settings', icon: <Globe size={20} />, label: 'Cardápio' },
     ...(isSuperAdmin ? [{ path: '/users', icon: <Users size={20} />, label: 'Usuários' }] : []),
+    ...(isSuperAdmin ? [{ path: '/billing', icon: <CreditCard size={20} />, label: 'Planos e cobrança' }] : []),
     { path: '/settings', icon: <Settings size={20} />, label: 'Configurações' },
   ];
 
