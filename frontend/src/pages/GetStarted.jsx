@@ -39,7 +39,10 @@ export default function GetStarted() {
     }).catch(() => toast.error('Não foi possível carregar sua configuração.')).finally(() => setLoading(false));
   }, []);
 
-  const current = steps[step];
+  const visibleSteps = form.openai.trim() && form.claude.trim()
+    ? steps
+    : steps.filter((item) => item.key !== 'activeModel');
+  const current = visibleSteps[Math.min(step, visibleSteps.length - 1)];
   const value = form[current.key] || '';
   const setValue = (nextValue) => setForm((previous) => ({ ...previous, [current.key]: nextValue }));
 
@@ -48,7 +51,7 @@ export default function GetStarted() {
       toast.error('Preencha este campo para continuar.');
       return;
     }
-    if (step < steps.length - 1) {
+    if (step < visibleSteps.length - 1) {
       setStep((previous) => previous + 1);
       return;
     }
@@ -59,7 +62,11 @@ export default function GetStarted() {
     }
     setSaving(true);
     try {
-      await api.post('/config/keys', form);
+      const onlyOneAi = Boolean(form.openai.trim()) !== Boolean(form.claude.trim());
+      const payload = onlyOneAi
+        ? { ...form, activeModel: form.openai.trim() ? 'openai' : 'claude' }
+        : form;
+      await api.post('/config/keys', payload);
       toast.success('Tudo pronto. Bem-vindo ao Menzzu!');
       navigate('/dashboard', { replace: true });
     } catch (error) {
@@ -79,7 +86,7 @@ export default function GetStarted() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--accent-primary)', fontSize: '12px', fontWeight: 800, letterSpacing: '.08em', textTransform: 'uppercase' }}><Rocket size={17} /> Primeiros passos</div>
           <span style={{ color: 'var(--text-muted)', fontSize: '13px', fontWeight: 700 }}>{step + 1} de {steps.length}</span>
         </div>
-        <div style={{ display: 'flex', gap: '5px', marginBottom: '34px' }}>{steps.map((item, index) => <span key={item.key} style={{ height: '4px', flex: 1, borderRadius: '4px', background: index <= step ? 'var(--accent-primary)' : 'var(--bg-tertiary)' }} />)}</div>
+        <div style={{ display: 'flex', gap: '5px', marginBottom: '34px' }}>{visibleSteps.map((item, index) => <span key={item.key} style={{ height: '4px', flex: 1, borderRadius: '4px', background: index <= step ? 'var(--accent-primary)' : 'var(--bg-tertiary)' }} />)}</div>
         <div style={{ width: '52px', height: '52px', borderRadius: '16px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'var(--accent-glow)', color: 'var(--accent-primary)', marginBottom: '20px' }}><Icon size={25} /></div>
         <h1 id="get-started-title" style={{ marginBottom: '10px', fontSize: '30px', lineHeight: 1.12 }}>{current.title}</h1>
         <label style={{ display: 'block', marginBottom: '9px', color: 'var(--text-primary)', fontSize: '16px', fontWeight: 800 }}>{current.question}</label>
@@ -90,7 +97,7 @@ export default function GetStarted() {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginTop: '32px' }}>
           <button type="button" onClick={() => setStep((previous) => Math.max(0, previous - 1))} disabled={step === 0 || saving} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '12px 16px', border: '1px solid var(--border-color)', borderRadius: '12px', background: '#fff', color: 'var(--text-secondary)', fontWeight: 800, cursor: step === 0 ? 'default' : 'pointer', opacity: step === 0 ? .4 : 1 }}><ArrowLeft size={16} /> Voltar</button>
-          <button type="button" onClick={next} disabled={saving} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '13px 20px', border: 0, borderRadius: '12px', background: 'var(--accent-primary)', color: '#fff', fontWeight: 800, cursor: 'pointer', opacity: saving ? .7 : 1 }}>{saving ? <Loader2 size={17} className="animate-spin" /> : step === steps.length - 1 ? 'Salvar e começar' : 'Continuar'} {!saving && <ArrowRight size={17} />}</button>
+          <button type="button" onClick={next} disabled={saving} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '13px 20px', border: 0, borderRadius: '12px', background: 'var(--accent-primary)', color: '#fff', fontWeight: 800, cursor: 'pointer', opacity: saving ? .7 : 1 }}>{saving ? <Loader2 size={17} className="animate-spin" /> : step === visibleSteps.length - 1 ? 'Salvar e começar' : 'Continuar'} {!saving && <ArrowRight size={17} />}</button>
         </div>
       </section>
     </div>
