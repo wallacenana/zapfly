@@ -471,8 +471,10 @@ async function loadOrderAvailability(dateStr, preserveSelection = true, config =
                 html += `<option value="${slot.time}" ${slot.available ? '' : 'disabled'}>${label}</option>`;
             });
             timeSelect.innerHTML = html;
-            timeSelect.disabled = false;
-            if (noteEl) noteEl.innerText = data.reason || (availableTimes.length > 0 ? '' : 'Nenhum horário disponível');
+            timeSelect.disabled = availableTimes.length === 0;
+            if (noteEl) noteEl.innerText = data.reason || (availableTimes.length > 0
+                ? `${data.used ?? 0} de ${data.limit ?? '?'} encomendas ocupadas. ${data.remaining ?? 0} disponíveis.`
+                : 'Nenhum horário disponível');
         } else {
             const reason = data.reason || 'Nenhum horário disponível';
             timeSelect.disabled = true;

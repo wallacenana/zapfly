@@ -683,8 +683,8 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
 
     if (!date) {
       const reason = 'Data inválida.';
-      if (!time) return { available: false, reason, date, times: buildDisabledTimes(reason) };
-      return { available: false, reason };
+      if (!time) return { available: false, reason, date, used: totalUsed, limit: dailyLimit, remaining: 0, times: buildDisabledTimes(reason) };
+      return { available: false, reason, used: totalUsed, limit: dailyLimit, remaining: 0 };
     }
 
     if (isDateBeforeToday(date)) {
@@ -693,27 +693,18 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
       return { available: false, reason };
     }
 
-    // SOMA O CUSTO DE CAPACIDADE (VAGAS) DE TODOS OS PEDIDOS NO DIA
+    // Delivery e encomendas possuem limites independentes por dia.
+    const requestedType = (type || 'order') === 'delivery' ? 'delivery' : 'order';
     const ordersToday = await prisma.order.findMany({
       where: {
         userId,
         scheduledDate: date,
-        OR: [
-          { type: 'delivery', status: { notIn: ['cancelled', 'cancelado'] } },
-          { type: 'order', status: { in: ['accepted', 'production', 'ready', 'completed'] } }
-        ]
+        type: requestedType,
+        status: { notIn: ['cancelled', 'cancelado'] }
       }
     });
 
-    const productIds = ordersToday.map(o => o.productId).filter(Boolean);
-    const products = await prisma.product.findMany({
-      where: { userId, id: { in: productIds } }
-    });
-
-    const totalUsed = ordersToday.reduce((acc, order) => {
-      const p = products.find(prod => prod.id === order.productId);
-      return acc + (p?.capacityCost || 1);
-    }, 0);
+    const totalUsed = ordersToday.length;
 
     if (totalUsed >= dailyLimit) {
       const reason = `Desculpe, já atingimos nosso limite de produção para o dia ${date}.`;
@@ -735,7 +726,7 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
       if (deliveriesAtTime >= 3) {
         return { available: false, reason: `Já temos o máximo de entregas para as ${time}.` };
       }
-      return { available: true, remaining: dailyLimit - totalUsed };
+      return { available: true, used: totalUsed, limit: dailyLimit, remaining: dailyLimit - totalUsed };
     }
 
     const dayOfWeek = getDayOfWeekFromDateString(date);
@@ -763,12 +754,6 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
         orderBy: [{ startAt: 'asc' }]
       });
 
-      const orderCountsByTime = ordersToday.reduce((acc, order) => {
-        if (!order.scheduledTime) return acc;
-        acc[order.scheduledTime] = (acc[order.scheduledTime] || 0) + 1;
-        return acc;
-      }, {});
-
       const today = getBrazilDateString();
       const nowMinutes = parseTimeToMinutes(getBrazilTimeString());
 
@@ -783,11 +768,8 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
           return { time: slotTime, available: false, reason: 'Horário já passou.' };
         }
 
-        const slotCapacity = matchingSlots.reduce((min, slot) => {
-          const current = Number(slot.maxOrders) || 1;
-          return Math.min(min, current);
-        }, Infinity);
-        const usedAtTime = orderCountsByTime[slotTime] || 0;
+        const slotCapacity = dailyLimit;
+        const usedAtTime = ordersToday.filter(order => order.scheduledTime === slotTime).length;
         if (usedAtTime >= slotCapacity) {
           return { time: slotTime, available: false, reason: 'Horário lotado.' };
         }
@@ -815,6 +797,9 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
         available: anyAvailable,
         reason: anyAvailable ? null : 'Nenhum horário disponível para este dia.',
         date,
+        used: totalUsed,
+        limit: dailyLimit,
+        remaining: Math.max(0, dailyLimit - totalUsed),
         times
       };
     }
@@ -831,15 +816,13 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
       return { available: false, reason: 'Horário já passou.' };
     }
 
-    const slotCapacity = matchingSlots.reduce((min, slot) => {
-      const current = Number(slot.maxOrders) || 1;
-      return Math.min(min, current);
-    }, Infinity);
+    const slotCapacity = dailyLimit;
     const usedAtTime = await prisma.order.count({
       where: {
         userId,
         scheduledDate: date,
         scheduledTime: time,
+        type: requestedType,
         status: { notIn: ['cancelled', 'cancelado'] }
       }
     });
@@ -868,7 +851,7 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
       return { available: false, reason: `Horário ocupado (conflito com ${conflict.title}).` };
     }
 
-    return { available: true, remaining: dailyLimit - totalUsed };
+    return { available: true, used: totalUsed, limit: dailyLimit, remaining: Math.max(0, dailyLimit - totalUsed) };
   } catch (e) {
     console.error('[Availability] Erro:', e.message);
     return { available: false, reason: 'Erro ao verificar disponibilidade.' };
