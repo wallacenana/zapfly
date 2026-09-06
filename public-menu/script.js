@@ -16,7 +16,7 @@ const showAlert = (title, text, icon = 'warning') => {
         title: title,
         text: text,
         icon: icon,
-        confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#66D711',
+        confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#82F026',
         confirmButtonText: 'Entendi'
     });
 };
@@ -1169,7 +1169,7 @@ async function handlePlaceOrder() {
                     title: 'Pedido Recebido!',
                     text: 'Seu pedido foi registrado e estÃ¡ aguardando confirmaÃ§Ã£o.',
                     icon: 'success',
-                    confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#66D711',
+                    confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#82F026',
                     confirmButtonText: 'Ver meus pedidos'
                 }).then(() => {
                     setActiveCart([]);

@@ -61,10 +61,10 @@ model StoreProfile {
   businessMapsUrl             String?  @db.Text
   logoUrl                     String?  @db.Text
   faviconUrl                  String?  @db.Text
-  accentColor                 String?  @default("#ff4d6d")
-  buttonColor                 String?  @default("#ff4d6d")
-  accentColorOrders           String?  @default("#4a2c2a")
-  buttonColorOrders           String?  @default("#4a2c2a")
+  accentColor                 String?  @default("#82F026")
+  buttonColor                 String?  @default("#82F026")
+  accentColorOrders           String?  @default("#82F026")
+  buttonColorOrders           String?  @default("#82F026")
   buttonTextColor             String?  @default("#ffffff")
   backgroundColor             String?  @default("#ffffff")
   textColor                   String?  @default("#333333")
@@ -79,7 +79,7 @@ model StoreProfile {
   freeDeliveryKm              Float?
   deliveryMode                String   @default("hibrido")
   allowCashOnDelivery         Boolean  @default(true)
-  menuTheme                   String   @default("dark")
+  menuTheme                   String   @default("light")
   customDomain                String?  @unique
   customDomainStatus          String   @default("not_configured")
   cloudflareHostnameId        String?
@@ -377,10 +377,10 @@ model Setting {
   smtpFrom             String?
   logoUrl              String? @db.Text
   faviconUrl           String? @db.Text
-  accentColor          String? @default("#ff4d6d")
-  buttonColor          String? @default("#ff4d6d")
-  accentColorOrders    String? @default("#4a2c2a")
-  buttonColorOrders    String? @default("#4a2c2a")
+  accentColor          String? @default("#82F026")
+  buttonColor          String? @default("#82F026")
+  accentColorOrders    String? @default("#82F026")
+  buttonColorOrders    String? @default("#82F026")
   buttonTextColor      String? @default("#ffffff")
   backgroundColor      String? @default("#ffffff")
   textColor            String? @default("#333333")
@@ -388,7 +388,7 @@ model Setting {
   pixelId              String?
   googleAnalyticsId    String?
   microsoftClarityId   String?
-  menuTheme            String? @default("dark")
+  menuTheme            String? @default("light")
 
   @@map("setting")
 }

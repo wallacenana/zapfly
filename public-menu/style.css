@@ -1,14 +1,14 @@
 :root {
-    --primary-color: #66D711;
+    --primary-color: #82F026;
     --primary-hover: #a2e403;
     --bg-color: var(--text-main);
     --bg-gray: #f4f4f5;
     --border: rgba(0, 0, 0, 0.08);
-    --primary-color: #66D711;
+    --primary-color: #82F026;
     --text-main: #031614;
     --text-black: #111111;
     --text-gray: #666666;
-    --btn-bg: #66D711;
+    --btn-bg: #82F026;
     --btn-text: #031614;
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     --category-nav-top: -1px;
@@ -2316,16 +2316,16 @@ body.theme-dark .delivery-fee-badge {
 }
 
 .payment-card:hover:not(.disabled) {
-    border-color: var(--primary-color, #66D711);
+    border-color: var(--primary-color, #82F026);
     background: #fffafa;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .payment-card.selected {
-    border-color: var(--primary-color, #66D711);
+    border-color: var(--primary-color, #82F026);
     background: #fffafa;
-    box-shadow: 0 0 0 1px var(--primary-color, #66D711);
+    box-shadow: 0 0 0 1px var(--primary-color, #82F026);
 }
 
 .payment-card.disabled {

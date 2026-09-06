@@ -132,7 +132,7 @@ try {
         $cacheSettingsStmt = $pdo->prepare("
             SELECT
                 COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders,
-                COALESCE(sp.menuTheme, s.menuTheme, 'dark') AS menuTheme,
+                COALESCE(sp.menuTheme, s.menuTheme, 'light') AS menuTheme,
                 COALESCE(sp.businessName, s.businessName) AS businessName,
                 COALESCE(sp.businessCategory, s.businessCategory) AS businessCategory,
                 COALESCE(sp.prepTime, '') AS prepTime,
@@ -193,17 +193,28 @@ try {
     $businessCategory = trim((string) ($store['businessCategory'] ?? ''));
     $logoUrl = $store['logoUrl'] ?: 'https://menzzu.com/wp-content/uploads/2026/09/fallback-image_1-100.jpg';
     $faviconUrl = $store['faviconUrl'] ?: '/favicon.ico';
-    $menuTheme = strtolower(trim($store['menuTheme'] ?? 'dark')) ?: 'dark';
+    $menuTheme = strtolower(trim($store['menuTheme'] ?? 'light')) ?: 'light';
+    $storedBackground = strtolower((string) ($store['backgroundColor'] ?? ''));
+    $storedText = strtolower((string) ($store['textColor'] ?? ''));
+    // Registros antigos com fundo claro e texto branco eram o default quebrado.
+    if ($menuTheme === 'dark' && in_array($storedBackground, ['', '#ffffff'], true) && in_array($storedText, ['', '#ffffff'], true)) {
+        $menuTheme = 'light';
+    }
     $isDarkTheme = $menuTheme === 'dark';
-    $legacyAccent = in_array(strtolower((string) ($store['accentColor'] ?? '')), ['#ff4d6d', '#6cb649'], true);
+    $legacyAccent = in_array(strtolower((string) ($store['accentColor'] ?? '')), ['#ff4d6d', '#6cb649', '#a2e403'], true) && !$isDarkTheme;
     $legacyButton = in_array(strtolower((string) ($store['buttonColor'] ?? '')), ['#ff4d6d', '#6cb649'], true);
     $legacyText = in_array(strtolower((string) ($store['textColor'] ?? '')), ['#333333', '#ffffff', '#fff'], true) && !$isDarkTheme;
     $legacyBackground = strtolower((string) ($store['backgroundColor'] ?? '')) === '#07150d';
-    $accentColor = (!$store['accentColor'] || $legacyAccent) ? ($isDarkTheme ? '#a2e403' : '#66D711') : $store['accentColor'];
+    $accentColor = (!$store['accentColor'] || $legacyAccent) ? ($isDarkTheme ? '#a2e403' : '#82F026') : $store['accentColor'];
     $backgroundColor = (!$store['backgroundColor'] || $legacyBackground) ? ($isDarkTheme ? '#031614' : '#ffffff') : $store['backgroundColor'];
     $textColor = (!$store['textColor'] || $legacyText) ? ($isDarkTheme ? '#ffffff' : '#031614') : $store['textColor'];
     $buttonColor = (!$store['buttonColor'] || $legacyButton) ? $accentColor : $store['buttonColor'];
     $buttonTextColor = $store['buttonTextColor'] ?: '#031614';
+    $legacyOrderAccent = in_array(strtolower((string) ($store['accentColorOrders'] ?? '')), ['', '#4a2c2a', '#a2e403'], true) && !$isDarkTheme;
+    $orderAccentColor = $legacyOrderAccent ? ($isDarkTheme ? '#a2e403' : '#82F026') : $store['accentColorOrders'];
+    $orderButtonColor = in_array(strtolower((string) ($store['buttonColorOrders'] ?? '')), ['', '#4a2c2a'], true)
+        ? $orderAccentColor
+        : $store['buttonColorOrders'];
     $surfaceColor = $isDarkTheme ? '#092b24' : 'color-mix(in srgb, var(--bg-color) 96%, #ffffff 4%)';
     $surfaceSoftColor = $isDarkTheme ? '#06231e' : 'color-mix(in srgb, var(--bg-color) 90%, #ffffff 10%)';
     $borderColor = $isDarkTheme ? 'color-mix(in srgb, ' . $accentColor . ' 16%, transparent)' : 'rgba(0, 0, 0, 0.08)';
@@ -266,9 +277,9 @@ try {
         'microsoftClarityId' => $store['microsoftClarityId'] ?? '',
         'googleAnalyticsId' => $store['googleAnalyticsId'] ?? '',
         'accentColor' => $accentColor,
-        'accentColorOrders' => $store['accentColorOrders'] ?? '#4a2c2a',
+        'accentColorOrders' => $orderAccentColor,
         'buttonColor' => $buttonColor,
-        'buttonColorOrders' => $store['buttonColorOrders'] ?? '#4a2c2a',
+        'buttonColorOrders' => $orderButtonColor,
         'buttonTextColor' => $buttonTextColor,
         'backgroundColor' => $backgroundColor,
         'textColor' => $textColor,

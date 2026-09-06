@@ -52,14 +52,14 @@ const SiteSettings = () => {
         businessName: '',
         logoUrl: '',
         faviconUrl: '',
-        accentColor: '#66D711',
-        buttonColor: '#66D711',
-        accentColorOrders: '#4a2c2a',
-        buttonColorOrders: '#4a2c2a',
-        buttonTextColor: '#ffffff',
+        accentColor: '#82F026',
+        buttonColor: '#82F026',
+        accentColorOrders: '#82F026',
+        buttonColorOrders: '#82F026',
+        buttonTextColor: '#031614',
         backgroundColor: '#ffffff',
         textColor: '#031614',
-        menuTheme: 'dark',
+        menuTheme: 'light',
         featuredCountDesktop: 4,
         featuredCountTablet: 2,
         featuredCountMobile: 1,
@@ -68,7 +68,7 @@ const SiteSettings = () => {
         googleAnalyticsId: '',
         microsoftClarityId: ''
     });
-    const isDarkMenuTheme = (settings.menuTheme || 'dark') === 'dark';
+    const isDarkMenuTheme = (settings.menuTheme || 'light') === 'dark';
     const previewTheme = isDarkMenuTheme ? {
         bg: normalizeHexColor(settings.backgroundColor, '#031614'),
         surface: normalizeHexColor(settings.backgroundColor, '#031614'),
@@ -88,8 +88,8 @@ const SiteSettings = () => {
         text: settings.textColor || '#031614',
         textMuted: 'rgba(102,102,102,0.7)',
         border: 'rgba(0,0,0,0.08)',
-        accent: settings.accentColor || '#66D711',
-        buttonBg: settings.buttonColor || '#66D711',
+        accent: settings.accentColor || '#82F026',
+        buttonBg: settings.buttonColor || '#82F026',
         buttonText: settings.buttonTextColor || '#031614',
         cardBg: '#fff',
         cardSurface: '#f4f4f5'
@@ -105,10 +105,12 @@ const SiteSettings = () => {
             if (res.data) {
                 const normalizedColors = COLOR_FIELDS.reduce((acc, key) => {
                     const rawColor = String(res.data[key] || '').toLowerCase();
-                    const isDark = (res.data.menuTheme || 'dark') === 'dark';
-                    const legacyColor = (key === 'accentColor' || key === 'buttonColor') && ['#ff4d6d', '#6cb649'].includes(rawColor)
-                        ? (isDark ? '#a2e403' : '#66D711')
-                        : key === 'textColor' && rawColor === '#333333'
+                    const isDark = (res.data.menuTheme || 'light') === 'dark';
+                    const legacyColor = (key === 'accentColor' || key === 'buttonColor') && ['#ff4d6d', '#6cb649', '#a2e403'].includes(rawColor)
+                        ? (isDark ? '#a2e403' : '#82F026')
+                        : (key === 'accentColorOrders' || key === 'buttonColorOrders') && ['#4a2c2a', '#a2e403'].includes(rawColor)
+                            ? (isDark ? '#a2e403' : '#82F026')
+                        : key === 'textColor' && ['#333333', '#ffffff', '#fff'].includes(rawColor) && !isDark
                             ? (isDark ? '#ffffff' : '#031614')
                             : key === 'backgroundColor' && rawColor === '#07150d'
                                 ? '#031614'
@@ -116,11 +118,15 @@ const SiteSettings = () => {
                     acc[key] = normalizeHexColor(legacyColor, key === 'accentColorOrders' || key === 'buttonColorOrders' ? '#a2e403' : acc[key] || settings[key]);
                     return acc;
                 }, {});
+                const storedMenuTheme = res.data.menuTheme || 'light';
+                const shouldUseLightTheme = storedMenuTheme === 'dark'
+                    && ['#ffffff', ''].includes(String(res.data.backgroundColor || '').toLowerCase())
+                    && ['#ffffff', '#fff', ''].includes(String(res.data.textColor || '').toLowerCase());
                 setSettings(prev => ({
                     ...prev,
                     ...res.data,
                     active: res.data.active ?? true,
-                    menuTheme: res.data.menuTheme || 'dark',
+                    menuTheme: shouldUseLightTheme ? 'light' : storedMenuTheme,
                     ...normalizedColors,
                     featuredCountDesktop: Number.isFinite(Number(res.data.featuredCountDesktop)) ? Number(res.data.featuredCountDesktop) : 4,
                     featuredCountTablet: Number.isFinite(Number(res.data.featuredCountTablet)) ? Number(res.data.featuredCountTablet) : 2,
@@ -294,7 +300,7 @@ const SiteSettings = () => {
                 <button
                     className="site-settings-theme-toggle"
                     type="button"
-                    onClick={() => setSettings({ ...settings, menuTheme: (settings.menuTheme || 'dark') === 'dark' ? 'light' : 'dark' })}
+                    onClick={() => setSettings({ ...settings, menuTheme: (settings.menuTheme || 'light') === 'dark' ? 'light' : 'dark' })}
                     style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -307,7 +313,7 @@ const SiteSettings = () => {
                         fontWeight: 700
                     }}
                 >
-                    <span>{(settings.menuTheme || 'dark') === 'dark' ? 'Modo Escuro' : 'Modo Claro'}</span>
+                    <span>{(settings.menuTheme || 'light') === 'dark' ? 'Modo Escuro' : 'Modo Claro'}</span>
                     <span style={{
                         width: '52px',
                         height: '28px',
@@ -317,7 +323,7 @@ const SiteSettings = () => {
                         border: '1px solid rgba(15,23,42,0.10)',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: (settings.menuTheme || 'dark') === 'dark' ? 'flex-end' : 'flex-start'
+                        justifyContent: (settings.menuTheme || 'light') === 'dark' ? 'flex-end' : 'flex-start'
                     }}>
                         <span style={{
                             width: '20px',
