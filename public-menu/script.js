@@ -246,8 +246,8 @@ async function fetchPublicSettings() {
 
 function checkStoreStatus() {
     const settings = state.publicSettings || {};
-    const hasMinimumSetup = settings.marketplaceReady !== false
-        && Boolean(settings.hasLogo !== false)
+    const hasMinimumSetup = settings.marketplaceReady === true
+        && settings.hasLogo === true
         && Number(settings.maxDeliveryKm || 0) > 0
         && state.availableSlots.length > 0
         && state.products.some(product => product && product.active !== false && String(product.type || '').toLowerCase() !== 'addon');

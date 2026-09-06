@@ -197,7 +197,7 @@ try {
     $isDarkTheme = $menuTheme === 'dark';
     $legacyAccent = in_array(strtolower((string) ($store['accentColor'] ?? '')), ['#ff4d6d', '#6cb649'], true);
     $legacyButton = in_array(strtolower((string) ($store['buttonColor'] ?? '')), ['#ff4d6d', '#6cb649'], true);
-    $legacyText = strtolower((string) ($store['textColor'] ?? '')) === '#333333';
+    $legacyText = in_array(strtolower((string) ($store['textColor'] ?? '')), ['#333333', '#ffffff', '#fff'], true) && !$isDarkTheme;
     $legacyBackground = strtolower((string) ($store['backgroundColor'] ?? '')) === '#07150d';
     $accentColor = (!$store['accentColor'] || $legacyAccent) ? ($isDarkTheme ? '#a2e403' : '#66D711') : $store['accentColor'];
     $backgroundColor = (!$store['backgroundColor'] || $legacyBackground) ? ($isDarkTheme ? '#031614' : '#ffffff') : $store['backgroundColor'];
@@ -207,7 +207,7 @@ try {
     $surfaceColor = $isDarkTheme ? '#092b24' : 'color-mix(in srgb, var(--bg-color) 96%, #ffffff 4%)';
     $surfaceSoftColor = $isDarkTheme ? '#06231e' : 'color-mix(in srgb, var(--bg-color) 90%, #ffffff 10%)';
     $borderColor = $isDarkTheme ? 'color-mix(in srgb, ' . $accentColor . ' 16%, transparent)' : 'rgba(0, 0, 0, 0.08)';
-    $textSecondary = $isDarkTheme ? 'rgba(255,255,255,0.72)' : ($store['textColor'] ? $store['textColor'] . '99' : 'rgba(102,102,102,0.6)');
+    $textSecondary = $isDarkTheme ? 'rgba(255,255,255,0.72)' : ($textColor ? $textColor . '99' : 'rgba(102,102,102,0.6)');
     $acceptOrders = isset($store['acceptOrders']) ? (bool) $store['acceptOrders'] : true;
     $prepTimeLabel = formatPrepTimeLabel($store['prepTime'] ?? '');
 
@@ -593,7 +593,7 @@ try {
                                     <div class="store-category"><?php echo htmlspecialchars($businessCategory, ENT_QUOTES, 'UTF-8'); ?></div>
                                 <?php endif; ?>
                                 <div class="store-meta-line">
-                                    <span id="store-status-badge" class="status-badge open">Aberto</span>
+                                    <span id="store-status-badge" class="status-badge <?php echo $marketplaceReady ? 'open' : 'closed'; ?>"><?php echo $marketplaceReady ? 'Aberto' : 'Inativo'; ?></span>
                                     <?php if ($prepTimeLabel !== ''): ?>
                                         <span class="store-meta-separator" aria-hidden="true">•</span>
                                         <span id="store-prep-time" class="store-prep-time"><?php echo htmlspecialchars($prepTimeLabel, ENT_QUOTES, 'UTF-8'); ?></span>
@@ -1721,6 +1721,11 @@ try {
             }
 
             function checkStoreStatus() {
+                const hasMinimumSetup = state.publicSettings.marketplaceReady === true
+                    && state.publicSettings.hasLogo === true
+                    && Number(state.publicSettings.maxDeliveryKm || 0) > 0
+                    && state.availableSlots.length > 0
+                    && state.products.some(product => product && product.active !== false && String(product.type || '').toLowerCase() !== 'addon');
                 const now = new Date();
                 const day = now.getDay();
                 const time = now.getHours() * 60 + now.getMinutes();
@@ -1734,8 +1739,8 @@ try {
                     return time >= start && time <= end;
                 });
 
-                const statusLabel = state.isOpen ? 'Aberto' : (isOrderEnabled() ? 'Apenas encomendas' : 'Fechado');
-                const statusClass = state.isOpen ? 'status-badge open' : (isOrderEnabled() ? 'status-badge order-only' : 'status-badge closed');
+                const statusLabel = !hasMinimumSetup ? 'Inativo' : state.isOpen ? 'Aberto' : (isOrderEnabled() ? 'Apenas encomendas' : 'Fechado');
+                const statusClass = !hasMinimumSetup || !state.isOpen ? 'status-badge closed' : 'status-badge open';
 
                 const statusEl = document.getElementById('store-status-badge');
                 if (statusEl) {
@@ -4128,7 +4133,7 @@ try {
                 const themeSoft = useDarkTheme
                     ? (data.surfaceSoftColor || '#06231e')
                     : `color-mix(in srgb, ${themeBg} 90%, #ffffff 10%)`;
-                const themeText = data.textColor || (useDarkTheme ? '#ffffff' : '#333333');
+                const themeText = data.textColor || (useDarkTheme ? '#ffffff' : '#031614');
                 const themeSecondary = useDarkTheme ? 'rgba(255,255,255,0.72)' : `${themeText}99`;
                 const themeBorder = useDarkTheme
                     ? `color-mix(in srgb, ${accent} 16%, transparent)`
