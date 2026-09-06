@@ -767,9 +767,10 @@ const Dashboard = () => {
                   </div>
                   <div style={{ display: 'grid', gap: '10px' }}>
                     {configIssues.slice(0, 5).map((issue) => (
-                      <button type="button" key={issue} onClick={() => navigate(getIssueRoute(issue))} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: 0, border: 0, background: 'transparent', color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.5, textAlign: 'left', cursor: 'pointer' }}>
+                      <button type="button" key={issue} onClick={() => navigate(getIssueRoute(issue))} aria-label={`Abrir configuração: ${issue}`} title="Abrir configuração" style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: 0, border: 0, background: 'transparent', color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.5, textAlign: 'left', cursor: 'pointer' }}>
                         <CircleAlert size={16} style={{ color: '#ef4444', flexShrink: 0 }} />
-                        <span style={{ textDecoration: 'underline', textUnderlineOffset: '3px' }}>{issue}</span>
+                        <span style={{ flex: 1 }}>{issue}</span>
+                        <ExternalLink size={15} style={{ color: 'var(--text-secondary)', flexShrink: 0 }} aria-hidden="true" />
                       </button>
                     ))}
                   </div>
