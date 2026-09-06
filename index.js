@@ -755,8 +755,10 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             !storeProfile?.businessAddress && !settings?.businessAddress ? 'Endereço público não informado.' : null,
             !storeProfile?.prepTime && !settings?.prepTime ? 'Tempo de preparo não informado.' : null,
             !storeProfile?.logoUrl && !settings?.logoUrl ? 'Logo pública não configurada.' : null,
+            !(Number(settings?.maxDeliveryKm ?? storeProfile?.maxDeliveryKm) > 0) ? 'Raio de atendimento não configurado.' : null,
             !settings?.acceptOrders && !storeProfile?.acceptOrders ? 'Loja fechada para pedidos.' : null,
             !availableSlots.length ? 'Não há horários de atendimento cadastrados.' : null,
+            !products.some((product) => product && product.active !== false && String(product.type || '').toLowerCase() !== 'addon') ? 'Cadastre pelo menos um produto para aparecer no marketplace.' : null,
         ].filter(Boolean);
         const categoryProductStats = categories.map((category) => {
             const total = products.filter((product) => product.categoryId === category.id || String(product.categoryName || '').toLowerCase() === String(category.name || '').toLowerCase()).length;

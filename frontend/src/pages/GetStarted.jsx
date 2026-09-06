@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, KeyRound, Loader2, MapPin, Rocket, Store } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Image, KeyRound, Loader2, MapPin, Rocket, Store, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { api } from '../api';
+import axios from 'axios';
+import { api, FILES_URL } from '../api';
 import { useNavigate } from 'react-router-dom';
 
 let googlePlacesLoaderPromise = null;
@@ -57,6 +58,9 @@ const inputStyle = {
 };
 
 const steps = [
+  { key: 'logoUrl', title: 'A imagem da sua marca', question: 'Envie o logo que os clientes vao reconhecer.', help: 'Uma loja sem logo nao aparece no marketplace. Voce pode trocar a imagem depois.', type: 'logo-upload', icon: Image, required: true },
+  { key: 'maxDeliveryKm', title: 'Raio de atendimento', question: 'Ate quantos quilometros voce entrega?', help: 'Escolha uma sugestao ou digite o seu limite. Esse raio sera usado no marketplace.', placeholder: 'Ex.: 8', type: 'number-with-suggestions-km', icon: MapPin, required: true },
+  { key: 'firstProduct', title: 'Seu primeiro produto', question: 'Cadastre pelo menos um item para abrir sua vitrine.', help: 'Informe um produto real. Voce podera adicionar fotos, categorias e mais itens depois no Estoque.', type: 'first-product', icon: Store, required: true },
   { key: 'openai', title: 'Vamos começar pela IA', question: 'Qual é sua chave da OpenAI?', help: 'Ela será usada para responder seus clientes pelo WhatsApp. Se você usa Anthropic, pode deixar em branco.', placeholder: 'sk-...', type: 'password', icon: KeyRound },
   { key: 'claude', title: 'Uma segunda opção', question: 'Você também usa Anthropic?', help: 'Opcional. Deixe em branco se sua operação usa apenas OpenAI.', placeholder: 'sk-ant-...', type: 'password', icon: KeyRound },
   { key: 'activeModel', title: 'Escolha o cérebro da operação', question: 'Qual modelo deve responder primeiro?', help: 'Você poderá trocar isso depois nas configurações.', type: 'select', icon: KeyRound },
@@ -79,15 +83,25 @@ export default function GetStarted() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ openai: '', claude: '', activeModel: 'openai', businessName: '', businessCategory: '', prepTime: '', acceptOrders: true, dailyDeliveryItems: defaultDeliveryOptions, dailyMaxOrders: 10, deliveryMode: 'hibrido', allowCashOnDelivery: true, pixReceiverKey: '', businessAddress: '', businessPlaceId: '', businessLat: null, businessLng: null, businessMapsUrl: '', slug: '', googleApiKey: '' });
+  const [form, setForm] = useState({ openai: '', claude: '', activeModel: 'openai', logoUrl: '', maxDeliveryKm: 15, firstProductName: '', firstProductPrice: '', businessName: '', businessCategory: '', prepTime: '', acceptOrders: true, dailyDeliveryItems: defaultDeliveryOptions, dailyMaxOrders: 10, deliveryMode: 'hibrido', allowCashOnDelivery: true, pixReceiverKey: '', businessAddress: '', businessPlaceId: '', businessLat: null, businessLng: null, businessMapsUrl: '', slug: '', googleApiKey: '' });
   const [slots, setSlots] = useState([]);
+  const [hasProducts, setHasProducts] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const addressRef = useRef(null);
+  const visibleSteps = (form.openai.trim() && form.claude.trim()
+    ? steps
+    : steps.filter((item) => item.key !== 'activeModel')).filter((item) => hasProducts || item.key !== 'firstProduct');
+  const current = visibleSteps[Math.min(step, visibleSteps.length - 1)];
+  const value = form[current.key] || '';
+  const setValue = (nextValue) => setForm((previous) => ({ ...previous, [current.key]: nextValue }));
 
   useEffect(() => {
-    Promise.all([api.get('/config/keys'), api.get('/config/slots')]).then(([configResponse, slotsResponse]) => {
+    Promise.all([api.get('/config/keys'), api.get('/config/slots'), api.get('/orders/products')]).then(([configResponse, slotsResponse, productsResponse]) => {
       const data = configResponse.data;
       const deliveryOptions = normalizeDeliveryOptions(data.dailyDeliveryItems);
-      setForm((current) => ({ ...current, openai: data.openai || '', claude: data.claude || '', activeModel: data.activeModel || 'openai', businessName: data.businessName || '', businessCategory: data.businessCategory || '', prepTime: data.prepTime || '', acceptOrders: data.acceptOrders !== false, dailyDeliveryItems: deliveryOptions, dailyMaxOrders: data.dailyMaxOrders || 10, deliveryMode: data.deliveryMode || 'hibrido', allowCashOnDelivery: data.allowCashOnDelivery !== false, pixReceiverKey: data.pixReceiverKey || '', businessAddress: data.businessAddress || '', businessPlaceId: data.businessPlaceId || '', businessLat: data.businessLat ?? null, businessLng: data.businessLng ?? null, businessMapsUrl: data.businessMapsUrl || '', slug: data.slug || '', googleApiKey: data.googleApiKey || '' }));
+      const products = Array.isArray(productsResponse.data) ? productsResponse.data : [];
+      setHasProducts(products.some((product) => product && product.active !== false && String(product.type || '').toLowerCase() !== 'addon'));
+      setForm((current) => ({ ...current, openai: data.openai || '', claude: data.claude || '', activeModel: data.activeModel || 'openai', logoUrl: data.logoUrl || '', maxDeliveryKm: data.maxDeliveryKm || 15, businessName: data.businessName || '', businessCategory: data.businessCategory || '', prepTime: data.prepTime || '', acceptOrders: data.acceptOrders !== false, dailyDeliveryItems: deliveryOptions, dailyMaxOrders: data.dailyMaxOrders || 10, deliveryMode: data.deliveryMode || 'hibrido', allowCashOnDelivery: data.allowCashOnDelivery !== false, pixReceiverKey: data.pixReceiverKey || '', businessAddress: data.businessAddress || '', businessPlaceId: data.businessPlaceId || '', businessLat: data.businessLat ?? null, businessLng: data.businessLng ?? null, businessMapsUrl: data.businessMapsUrl || '', slug: data.slug || '', googleApiKey: data.googleApiKey || '' }));
       setSlots(Array.isArray(slotsResponse.data) ? slotsResponse.data : []);
     }).catch(() => toast.error('Não foi possível carregar sua configuração.')).finally(() => setLoading(false));
   }, []);
@@ -111,16 +125,13 @@ export default function GetStarted() {
     }).catch(() => { if (addressRef.current) addressRef.current.dataset.autocompleteReady = 'error'; });
   }, [step, form.googleApiKey]);
 
-  const visibleSteps = form.openai.trim() && form.claude.trim()
-    ? steps
-    : steps.filter((item) => item.key !== 'activeModel');
-  const current = visibleSteps[Math.min(step, visibleSteps.length - 1)];
-  const value = form[current.key] || '';
-  const setValue = (nextValue) => setForm((previous) => ({ ...previous, [current.key]: nextValue }));
-
   const next = async () => {
     const nextValue = current.type === 'select' ? (value || current.options?.[0] || '') : value;
-    const textValue = String(nextValue ?? '');
+    if (current.type === 'first-product' && (!form.firstProductName.trim() || form.firstProductPrice === '')) {
+      toast.error('Informe o nome e o preco do produto para continuar.');
+      return;
+    }
+    const textValue = current.type === 'first-product' ? `${form.firstProductName} ${form.firstProductPrice}` : String(nextValue ?? '');
     if (current.required && !textValue.trim()) {
       toast.error('Preencha este campo para continuar.');
       return;
@@ -144,6 +155,7 @@ export default function GetStarted() {
       await Promise.all([
         api.post('/config/keys', { ...payload, dailyDeliveryItems: JSON.stringify(payload.dailyDeliveryItems || defaultDeliveryOptions), deliveryRules: JSON.stringify(payload.deliveryRules || []) }),
         api.post('/config/slots', { slots }),
+        ...(hasProducts ? [] : [api.post('/orders/products', { name: form.firstProductName.trim(), price: Number(form.firstProductPrice), type: 'delivery', description: '', category: form.businessCategory || null })]),
       ]);
       window.localStorage.setItem('menzzu_onboarding_completed', '1');
       toast.success('Tudo pronto. Bem-vindo ao Menzzu!');
@@ -158,6 +170,26 @@ export default function GetStarted() {
   if (loading) return null;
 
   const Icon = current.icon;
+  const handleLogoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('secret', 'BlinkMediaSecret123!');
+      formData.append('size', '200');
+      const response = await axios.post(`${FILES_URL}/upload.php`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (!response.data?.success || !response.data.url) throw new Error(response.data?.error || 'Falha no upload');
+      setValue(response.data.url);
+      toast.success('Logo enviado.');
+    } catch (error) {
+      toast.error(error.message || 'Nao foi possivel enviar o logo.');
+    } finally {
+      setUploadingLogo(false);
+      event.target.value = '';
+    }
+  };
   const renderControl = () => {
     if (current.type === 'delivery-options') {
       const options = normalizeDeliveryOptions(form.dailyDeliveryItems);
@@ -168,7 +200,9 @@ export default function GetStarted() {
       </div>;
     }
     if (current.type === 'schedule') return <div style={{ display: 'grid', gap: '8px' }}>{weekDays.map((day, index) => { const slot = slots.find((item) => item.dayOfWeek === index); return <div key={day} style={{ display: 'grid', gridTemplateColumns: 'minmax(130px, 1fr) 1fr 1fr auto', gap: '8px', alignItems: 'center' }}><button type="button" onClick={() => setSlots((previous) => slot ? previous.filter((item) => item.dayOfWeek !== index) : [...previous, { dayOfWeek: index, startTime: '09:00', endTime: '20:00' }].sort((a, b) => a.dayOfWeek - b.dayOfWeek))} style={{ padding: '10px', textAlign: 'left', border: '1px solid var(--border-color)', borderRadius: '10px', background: slot ? 'var(--accent-glow)' : 'var(--bg-primary)', color: slot ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: 700 }}>{slot ? '✓ ' : ''}{day}</button><input type="time" value={slot?.startTime || '09:00'} disabled={!slot} onChange={(event) => setSlots((previous) => previous.map((item) => item.dayOfWeek === index ? { ...item, startTime: event.target.value } : item))} style={{ ...inputStyle, padding: '10px', opacity: slot ? 1 : .45 }} /><input type="time" value={slot?.endTime || '20:00'} disabled={!slot} onChange={(event) => setSlots((previous) => previous.map((item) => item.dayOfWeek === index ? { ...item, endTime: event.target.value } : item))} style={{ ...inputStyle, padding: '10px', opacity: slot ? 1 : .45 }} /><span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>até</span></div>; })}</div>;
-    if (current.type === 'number-with-suggestions') return <div style={{ width: '100%' }}><div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>{[10, 20, 30, 50, 100].map((suggestion) => <button type="button" key={suggestion} onClick={() => setValue(String(suggestion))} style={{ padding: '9px 13px', border: `1px solid ${String(value) === String(suggestion) ? 'var(--accent-primary)' : 'var(--border-color)'}`, borderRadius: '10px', background: String(value) === String(suggestion) ? 'var(--accent-glow)' : 'var(--bg-secondary)', color: 'var(--text-primary)', fontWeight: 800 }}>{suggestion}</button>)}</div><input autoFocus style={inputStyle} type="number" min="1" value={value} onChange={(event) => setValue(event.target.value.replace(/[^0-9]/g, ''))} placeholder={current.placeholder} onKeyDown={(event) => { if (event.key === 'Enter') next(); }} /></div>;
+    if (current.type === 'number-with-suggestions' || current.type === 'number-with-suggestions-km') { const suggestions = current.type === 'number-with-suggestions-km' ? [1, 3, 5, 10, 15, 20] : [10, 20, 30, 50, 100]; return <div style={{ width: '100%' }}><div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>{suggestions.map((suggestion) => <button type="button" key={suggestion} onClick={() => setValue(String(suggestion))} style={{ padding: '9px 13px', border: `1px solid ${String(value) === String(suggestion) ? 'var(--accent-primary)' : 'var(--border-color)'}`, borderRadius: '10px', background: String(value) === String(suggestion) ? 'var(--accent-glow)' : 'var(--bg-secondary)', color: 'var(--text-primary)', fontWeight: 800 }}>{suggestion}{current.type === 'number-with-suggestions-km' ? ' km' : ''}</button>)}</div><input autoFocus style={inputStyle} type="number" min="1" step={current.type === 'number-with-suggestions-km' ? '0.1' : '1'} value={value} onChange={(event) => setValue(event.target.value.replace(/[^0-9.]/g, ''))} placeholder={current.placeholder} onKeyDown={(event) => { if (event.key === 'Enter') next(); }} /></div>; }
+    if (current.type === 'logo-upload') return <div style={{ width: '100%', display: 'grid', gap: '14px' }}><div style={{ minHeight: '150px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px dashed var(--border-color)', borderRadius: '16px', background: 'var(--bg-secondary)' }}>{value ? <img src={value} alt="Logo da empresa" style={{ maxWidth: '180px', maxHeight: '130px', objectFit: 'contain' }} /> : <Image size={48} color="var(--text-muted)" />}</div><label style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '13px 16px', borderRadius: '12px', background: 'var(--accent-glow)', color: 'var(--accent-primary)', fontWeight: 800, cursor: uploadingLogo ? 'wait' : 'pointer' }}><Upload size={17} /> {uploadingLogo ? 'Enviando...' : value ? 'Trocar logo' : 'Enviar logo'}<input type="file" accept="image/png,image/jpeg,image/webp" hidden disabled={uploadingLogo} onChange={handleLogoUpload} /></label></div>;
+    if (current.type === 'first-product') return <div style={{ width: '100%', display: 'grid', gap: '12px' }}><input autoFocus style={inputStyle} value={form.firstProductName} onChange={(event) => setForm((previous) => ({ ...previous, firstProductName: event.target.value }))} placeholder="Ex.: Bolo de chocolate" /><input style={inputStyle} type="number" min="0" step="0.01" value={form.firstProductPrice} onChange={(event) => setForm((previous) => ({ ...previous, firstProductPrice: event.target.value }))} placeholder="Preco em R$" /></div>;
     if (current.type === 'select') return <select autoFocus style={inputStyle} value={String(value || current.options?.[0] || 'openai')} onChange={(event) => setValue(event.target.value)}>{(current.options || ['openai', 'claude']).map((option, index) => <option key={option} value={option}>{current.optionLabels?.[index] || option}</option>)}</select>;
     return <input ref={current.key === 'businessAddress' ? addressRef : undefined} autoFocus style={inputStyle} type={current.type || 'text'} min={current.type === 'number' ? 1 : undefined} value={value} onChange={(event) => setForm((previous) => ({ ...previous, [current.key]: current.type === 'number' ? event.target.value.replace(/[^0-9]/g, '') : current.key === 'slug' ? event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') : event.target.value, ...(current.key === 'businessAddress' ? { businessPlaceId: '', businessLat: null, businessLng: null, businessMapsUrl: '' } : {}) }))} placeholder={current.placeholder} onKeyDown={(event) => { if (event.key === 'Enter') next(); }} />;
   };
