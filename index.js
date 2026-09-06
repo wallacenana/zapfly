@@ -3558,7 +3558,7 @@ app.get(['/', '/:slug'], async (req, res) => {
 
             const title = settings.businessName ? `${settings.businessName} - Cardápio Digital` : 'Cardápio Digital';
             const description = settings.seoDescription || `Confira o cardapio digital de ${settings.businessName || 'nossa loja'} e faca seu pedido online.`;
-            const image = settings.logoUrl || 'https://menzzu.com/default-logo.png';
+            const image = settings.logoUrl || 'https://menzzu.com/wp-content/uploads/2026/09/fallback-image_1-100.jpg';
 
             const metaTags = `
                 <title>${title}</title>

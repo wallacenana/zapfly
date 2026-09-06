@@ -191,7 +191,7 @@ try {
 
     $businessName = $store['businessName'] ?: $store['name'];
     $businessCategory = trim((string) ($store['businessCategory'] ?? ''));
-    $logoUrl = $store['logoUrl'] ?: '/cardapio/logo.png';
+    $logoUrl = $store['logoUrl'] ?: 'https://menzzu.com/wp-content/uploads/2026/09/fallback-image_1-100.jpg';
     $faviconUrl = $store['faviconUrl'] ?: '/favicon.ico';
     $menuTheme = strtolower(trim($store['menuTheme'] ?? 'dark')) ?: 'dark';
     $isDarkTheme = $menuTheme === 'dark';
