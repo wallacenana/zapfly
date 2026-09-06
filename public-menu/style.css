@@ -133,8 +133,8 @@ body.theme-dark .addon-option.disabled .addon-option-mark {
 }
 
 .addon-group-header {
-    background: #e6e8e7;
-    border-bottom: 1px solid #d4d8d6;
+    background: color-mix(in srgb, var(--text-main) 8%, var(--bg-color));
+    border-bottom: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
 }
 
 body.theme-dark .addon-option-mark {
