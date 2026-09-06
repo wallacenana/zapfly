@@ -787,6 +787,14 @@ h3 {
     overflow: hidden;
 }
 
+/* O detalhe usa todo o espaço útil sem criar uma terceira área vazia. */
+#item-detail-modal .item-detail-content {
+    width: min(90vw, 1180px);
+    max-width: none;
+    max-height: 86vh;
+    border-radius: 16px;
+}
+
 .close-modal-btn {
     position: absolute;
     top: 16px;
@@ -1122,6 +1130,8 @@ body.theme-dark .var-option.selected {
     position: sticky;
     bottom: 0;
     z-index: 5;
+    flex-shrink: 0;
+    background: var(--bg-color);
 }
 
 .qty-selector {
@@ -1430,6 +1440,13 @@ body.theme-dark .delivery-fee-badge {
         border-left: none;
         border-top: 1px solid var(--border);
         padding: 16px;
+    }
+
+    #item-detail-modal .item-detail-content {
+        width: 100vw;
+        max-width: none;
+        max-height: 100dvh;
+        border-radius: 0;
     }
 }
 

@@ -1988,6 +1988,14 @@ function initEventListeners() {
         });
     });
 
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+        overlay.addEventListener('click', (event) => {
+            if (event.target !== event.currentTarget) return;
+            const modal = overlay.closest('.modal');
+            if (modal?.id) closeWithAnimation(modal.id);
+        });
+    });
+
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') closeModal();
     });
