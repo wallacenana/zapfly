@@ -20,7 +20,7 @@ const steps = [
   { key: 'claude', title: 'Uma segunda opção', question: 'Você também usa Anthropic?', help: 'Opcional. Deixe em branco se sua operação usa apenas OpenAI.', placeholder: 'sk-ant-...', type: 'password', icon: KeyRound },
   { key: 'activeModel', title: 'Escolha o cérebro da operação', question: 'Qual modelo deve responder primeiro?', help: 'Você poderá trocar isso depois nas configurações.', type: 'select', icon: KeyRound },
   { key: 'businessName', title: 'Agora, sobre sua empresa', question: 'Como sua empresa se chama?', help: 'Esse nome aparecerá no cardápio e nas mensagens.', placeholder: 'Ex.: Linda Cake', icon: Store, required: true },
-  { key: 'businessCategory', title: 'Vamos ajustar a experiência', question: 'O que sua empresa vende?', help: 'Isso ajuda a IA a entender o contexto dos seus pedidos.', placeholder: 'Ex.: Doces e bolos', icon: Store, required: true },
+  { key: 'businessCategory', title: 'Vamos ajustar a experiência', question: 'O que sua empresa vende?', help: 'Escolha a opção mais próxima. Isso ajuda a IA a entender o contexto dos seus pedidos.', type: 'select', options: ['Restaurante', 'Lanchonete', 'Pizzaria', 'Hamburgueria', 'Doces e bolos', 'Padaria', 'Marmitas', 'Açaí', 'Outro'], icon: Store, required: true },
   { key: 'prepTime', title: 'Tempo de preparo', question: 'Quanto tempo você normalmente precisa?', help: 'Pode ser aproximado. Ex.: 30-45 minutos.', placeholder: 'Ex.: 30-45', icon: Store },
   { key: 'businessAddress', title: 'Onde você atende?', question: 'Qual é o endereço da empresa?', help: 'Usaremos essa informação no cardápio e na entrega.', placeholder: 'Rua, número, bairro, cidade e estado', icon: MapPin },
   { key: 'slug', title: 'Seu endereço público', question: 'Qual será o link do seu cardápio?', help: 'Use apenas letras, números e hífens.', placeholder: 'sua-loja', prefix: 'menzzu.com/', icon: Rocket, required: true },
@@ -47,10 +47,12 @@ export default function GetStarted() {
   const setValue = (nextValue) => setForm((previous) => ({ ...previous, [current.key]: nextValue }));
 
   const next = async () => {
-    if (current.required && !value.trim()) {
+    const nextValue = current.type === 'select' ? (value || current.options?.[0] || '') : value;
+    if (current.required && !nextValue.trim()) {
       toast.error('Preencha este campo para continuar.');
       return;
     }
+    if (nextValue !== value) setValue(nextValue);
     if (step < visibleSteps.length - 1) {
       setStep((previous) => previous + 1);
       return;
@@ -93,7 +95,7 @@ export default function GetStarted() {
         <p style={{ minHeight: '44px', marginBottom: '20px', color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>{current.help}</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {current.prefix && <span style={{ flexShrink: 0, color: 'var(--text-secondary)', fontSize: '15px' }}>{current.prefix}</span>}
-          {current.type === 'select' ? <select autoFocus style={inputStyle} value={value || 'openai'} onChange={(event) => setValue(event.target.value)}><option value="openai">OpenAI</option><option value="claude">Anthropic</option></select> : <input autoFocus style={inputStyle} type={current.type || 'text'} value={value} onChange={(event) => setValue(current.key === 'slug' ? event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') : event.target.value)} placeholder={current.placeholder} onKeyDown={(event) => { if (event.key === 'Enter') next(); }} />}
+          {current.type === 'select' ? <select autoFocus style={inputStyle} value={value || current.options?.[0] || 'openai'} onChange={(event) => setValue(event.target.value)}>{(current.options || ['openai', 'claude']).map((option) => <option key={option} value={option}>{option}</option>)}</select> : <input autoFocus style={inputStyle} type={current.type || 'text'} value={value} onChange={(event) => setValue(current.key === 'slug' ? event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') : event.target.value)} placeholder={current.placeholder} onKeyDown={(event) => { if (event.key === 'Enter') next(); }} />}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginTop: '32px' }}>
           <button type="button" onClick={() => setStep((previous) => Math.max(0, previous - 1))} disabled={step === 0 || saving} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '12px 16px', border: '1px solid var(--border-color)', borderRadius: '12px', background: '#fff', color: 'var(--text-secondary)', fontWeight: 800, cursor: step === 0 ? 'default' : 'pointer', opacity: step === 0 ? .4 : 1 }}><ArrowLeft size={16} /> Voltar</button>
