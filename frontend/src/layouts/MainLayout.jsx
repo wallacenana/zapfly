@@ -28,7 +28,7 @@ const MainLayout = ({ clientMode = false }) => {
   const isSuperAdmin = String(user?.role || '').toLowerCase() === 'superadmin';
   const storeSlug = String(user?.slug || '').trim();
   const storeUrl = storeSlug ? `${PUBLIC_SITE_URL}/${storeSlug}` : '';
-  const brandLogo = '/logo%20HotWhats.png';
+  const brandLogo = '/favicon.svg';
 
   const adminMenuItems = [
     { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
