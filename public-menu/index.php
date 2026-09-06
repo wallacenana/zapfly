@@ -203,7 +203,8 @@ try {
     $isDarkTheme = $menuTheme === 'dark';
     $legacyAccent = in_array(strtolower((string) ($store['accentColor'] ?? '')), ['#ff4d6d', '#6cb649', '#a2e403'], true) && !$isDarkTheme;
     $legacyButton = in_array(strtolower((string) ($store['buttonColor'] ?? '')), ['#ff4d6d', '#6cb649'], true);
-    $legacyText = in_array(strtolower((string) ($store['textColor'] ?? '')), ['#333333', '#ffffff', '#fff'], true) && !$isDarkTheme;
+    $legacyText = ($isDarkTheme && in_array($storedText, ['', '#031614', '#111111', '#333333', '#000000'], true))
+        || (!$isDarkTheme && in_array($storedText, ['#333333', '#ffffff', '#fff'], true));
     $legacyBackground = strtolower((string) ($store['backgroundColor'] ?? '')) === '#07150d';
     $accentColor = (!$store['accentColor'] || $legacyAccent) ? ($isDarkTheme ? '#a2e403' : '#82F026') : $store['accentColor'];
     $backgroundColor = (!$store['backgroundColor'] || $legacyBackground) ? ($isDarkTheme ? '#031614' : '#ffffff') : $store['backgroundColor'];
@@ -331,7 +332,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.43">
+        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.48">
         <style>
             :root {
                 --primary-color:
@@ -1048,7 +1049,7 @@ try {
         </svg>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-        <script type="text/javascript" src="/cardapio/script.js?v=0.3" defer></script>
+        <script type="text/javascript" src="/cardapio/script.js?v=0.7" defer></script>
 
     </html>
 <?php

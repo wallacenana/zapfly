@@ -76,7 +76,7 @@ const SiteSettings = () => {
         bg: darkBackground,
         surface: darkBackground,
         surfaceSoft: `${darkBackground}f2`,
-        text: normalizeHexColor(settings.textColor, '#ffffff'),
+        text: '#ffffff',
         textMuted: 'rgba(255,255,255,0.72)',
         border: `color-mix(in srgb, ${normalizeHexColor(settings.accentColor, '#a2e403')} 16%, transparent)`,
         accent: normalizeHexColor(settings.accentColor, '#a2e403'),
@@ -117,12 +117,19 @@ const SiteSettings = () => {
                         ? (isDark ? '#a2e403' : '#82F026')
                         : (key === 'accentColorOrders' || key === 'buttonColorOrders') && ['#4a2c2a', '#a2e403'].includes(rawColor)
                             ? (isDark ? '#a2e403' : '#82F026')
+                        : key === 'textColor' && (isDark && ['#031614', '#111111', '#333333', '#000000'].includes(rawColor))
+                            ? '#ffffff'
                         : key === 'textColor' && ['#333333', '#ffffff', '#fff'].includes(rawColor) && !isDark
-                            ? (isDark ? '#ffffff' : '#031614')
+                            ? '#031614'
                             : key === 'backgroundColor' && rawColor === '#07150d'
                                 ? '#031614'
                                 : res.data[key];
-                    acc[key] = normalizeHexColor(legacyColor, key === 'accentColorOrders' || key === 'buttonColorOrders' ? '#a2e403' : acc[key] || settings[key]);
+                    const fallback = key === 'textColor'
+                        ? (isDark ? '#ffffff' : '#031614')
+                        : key === 'accentColorOrders' || key === 'buttonColorOrders'
+                            ? (isDark ? '#a2e403' : '#82F026')
+                            : acc[key] || settings[key];
+                    acc[key] = normalizeHexColor(legacyColor, fallback);
                     return acc;
                 }, {});
                 setSettings(prev => ({
