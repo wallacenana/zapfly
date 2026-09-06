@@ -161,7 +161,7 @@ function getDisplayPriceText(product) {
             .map(v => getEffectiveProductPrice(v))
             .filter(price => Number.isFinite(price) && price > 0);
         const fromPrice = effectiveVariationPrices.length > 0 ? Math.min(...effectiveVariationPrices) : basePrice;
-        return `A partir de R$ ${Math.max(0, fromPrice).toFixed(2)}`;
+        return `A partir de R$ ${fromPrice.toFixed(2)}`;
     }
 
     if (hasPaidAddonsForProduct(product)) {
@@ -173,7 +173,7 @@ function getDisplayPriceText(product) {
     if (promoPrice > 0 && promoPrice < price) {
         return `de R$ ${price.toFixed(2)} por R$ ${promoPrice.toFixed(2)}`;
     }
-    return `R$ ${Math.max(0, basePrice).toFixed(2)}`;
+    return `R$ ${basePrice.toFixed(2)}`;
 }
 
 function getSuggestedProductForItem(item) {
@@ -1296,7 +1296,14 @@ function ensureDetailFooter() {
     if (!panel || document.getElementById('item-detail-footer')) return;
 
     panel.insertAdjacentHTML('beforeend', `
-        
+        <div id="item-detail-footer" class="modal-footer-sticky">
+            <div class="qty-selector">
+                <button class="qty-btn" id="qty-minus" aria-label="Diminuir quantidade"><i data-lucide="minus"></i></button>
+                <span id="detail-qty">1</span>
+                <button class="qty-btn" id="qty-plus" aria-label="Aumentar quantidade"><i data-lucide="plus"></i></button>
+            </div>
+            <button id="add-to-cart-btn" class="primary-btn">Adicionar <span id="add-btn-price"></span></button>
+        </div>
     `);
     lucide.createIcons();
 }
@@ -1325,20 +1332,6 @@ function openItemDetail(productId) {
                             </div>
                             <div class="skeleton" style="height:92px; width:100%;"></div>
                             <div class="skeleton" style="height:92px; width:100%;"></div>
-                            <div id="item-detail-footer" class="modal-footer-sticky">
-            <div class="qty-selector">
-                <button class="qty-btn" id="qty-minus" aria-label="Diminuir quantidade">
-                    <i data-lucide="minus"></i>
-                </button>
-                <span id="detail-qty">1</span>
-                <button class="qty-btn" id="qty-plus" aria-label="Aumentar quantidade">
-                    <i data-lucide="plus"></i>
-                </button>
-            </div>
-            <button id="add-to-cart-btn" class="primary-btn">
-                Adicionar <span id="add-btn-price"></span>
-            </button>
-        </div>
                         </div>
                     </div>
                 `;
@@ -1966,6 +1959,10 @@ function updateOrderTabsVisibility(forceSync = false) {
 }
 
 function initEventListeners() {
+    const bindClick = (id, handler) => {
+        const element = document.getElementById(id);
+        if (element) element.addEventListener('click', handler);
+    };
     const searchInput = document.getElementById('search-input');
     const mobileSearchToggle = document.getElementById('mobile-search-toggle');
     const searchContainer = document.getElementById('search-container');
@@ -2029,12 +2026,12 @@ function initEventListeners() {
         if (e.key === 'Escape') closeModal();
     });
 
-    document.getElementById('history-toggle-btn').addEventListener('click', () => {
+    bindClick('history-toggle-btn', () => {
         openModal('history-modal');
         renderPreviousOrders();
     });
 
-    document.getElementById('view-cart-btn').addEventListener('click', () => {
+    bindClick('view-cart-btn', () => {
         restoreCheckoutState();
         if (state.activeTab === 'order' && (!state.orderSchedule?.date || !state.orderSchedule?.time) && getActiveCart().length > 0) {
             openScheduleModal('resume');
@@ -2042,8 +2039,8 @@ function initEventListeners() {
         }
         goToStep(getResumeStep());
     });
-    document.getElementById('next-step-btn').addEventListener('click', handleNextStep);
-    document.getElementById('place-order-btn').addEventListener('click', handlePlaceOrder);
+    bindClick('next-step-btn', handleNextStep);
+    bindClick('place-order-btn', handlePlaceOrder);
 
     updateOrderTabsVisibility(true);
     window.addEventListener('scroll', () => {
