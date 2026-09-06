@@ -69,10 +69,13 @@ const SiteSettings = () => {
         microsoftClarityId: ''
     });
     const isDarkMenuTheme = (settings.menuTheme || 'light') === 'dark';
+    const darkBackground = String(settings.backgroundColor || '').toLowerCase() === '#ffffff'
+        ? '#031614'
+        : normalizeHexColor(settings.backgroundColor, '#031614');
     const previewTheme = isDarkMenuTheme ? {
-        bg: normalizeHexColor(settings.backgroundColor, '#031614'),
-        surface: normalizeHexColor(settings.backgroundColor, '#031614'),
-        surfaceSoft: `${normalizeHexColor(settings.backgroundColor, '#031614')}f2`,
+        bg: darkBackground,
+        surface: darkBackground,
+        surfaceSoft: `${darkBackground}f2`,
         text: normalizeHexColor(settings.textColor, '#ffffff'),
         textMuted: 'rgba(255,255,255,0.72)',
         border: `color-mix(in srgb, ${normalizeHexColor(settings.accentColor, '#a2e403')} 16%, transparent)`,
@@ -80,7 +83,7 @@ const SiteSettings = () => {
         buttonBg: normalizeHexColor(settings.buttonColor, normalizeHexColor(settings.accentColor, '#a2e403')),
         buttonText: normalizeHexColor(settings.buttonTextColor, '#031614'),
         cardBg: 'rgba(255,255,255,0.04)',
-        cardSurface: `color-mix(in srgb, ${normalizeHexColor(settings.backgroundColor, '#031614')} 90%, #ffffff 10%)`
+        cardSurface: `color-mix(in srgb, ${darkBackground} 90%, #ffffff 10%)`
     } : {
         bg: settings.backgroundColor || '#ffffff',
         surface: settings.backgroundColor || '#ffffff',
@@ -103,9 +106,13 @@ const SiteSettings = () => {
         try {
             const res = await api.get('/settings');
             if (res.data) {
+                const storedMenuTheme = res.data.menuTheme || 'light';
+                const shouldUseLightTheme = storedMenuTheme === 'dark'
+                    && ['#ffffff', ''].includes(String(res.data.backgroundColor || '').toLowerCase());
+                const effectiveMenuTheme = shouldUseLightTheme ? 'light' : storedMenuTheme;
                 const normalizedColors = COLOR_FIELDS.reduce((acc, key) => {
                     const rawColor = String(res.data[key] || '').toLowerCase();
-                    const isDark = (res.data.menuTheme || 'light') === 'dark';
+                    const isDark = effectiveMenuTheme === 'dark';
                     const legacyColor = (key === 'accentColor' || key === 'buttonColor') && ['#ff4d6d', '#6cb649', '#a2e403'].includes(rawColor)
                         ? (isDark ? '#a2e403' : '#82F026')
                         : (key === 'accentColorOrders' || key === 'buttonColorOrders') && ['#4a2c2a', '#a2e403'].includes(rawColor)
@@ -118,15 +125,11 @@ const SiteSettings = () => {
                     acc[key] = normalizeHexColor(legacyColor, key === 'accentColorOrders' || key === 'buttonColorOrders' ? '#a2e403' : acc[key] || settings[key]);
                     return acc;
                 }, {});
-                const storedMenuTheme = res.data.menuTheme || 'light';
-                const shouldUseLightTheme = storedMenuTheme === 'dark'
-                    && ['#ffffff', ''].includes(String(res.data.backgroundColor || '').toLowerCase())
-                    && ['#ffffff', '#fff', ''].includes(String(res.data.textColor || '').toLowerCase());
                 setSettings(prev => ({
                     ...prev,
                     ...res.data,
                     active: res.data.active ?? true,
-                    menuTheme: shouldUseLightTheme ? 'light' : storedMenuTheme,
+                    menuTheme: effectiveMenuTheme,
                     ...normalizedColors,
                     featuredCountDesktop: Number.isFinite(Number(res.data.featuredCountDesktop)) ? Number(res.data.featuredCountDesktop) : 4,
                     featuredCountTablet: Number.isFinite(Number(res.data.featuredCountTablet)) ? Number(res.data.featuredCountTablet) : 2,
@@ -329,7 +332,7 @@ const SiteSettings = () => {
                             width: '20px',
                             height: '20px',
                             borderRadius: '50%',
-                            background: (settings.menuTheme || 'dark') === 'dark' ? '#a2e403' : '#d1d5db',
+                            background: (settings.menuTheme || 'light') === 'dark' ? '#a2e403' : '#d1d5db',
                             boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
                         }} />
                     </span>

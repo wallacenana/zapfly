@@ -181,7 +181,7 @@ try {
 
     ob_start();
 
-    $stmt = $pdo->prepare("SELECT u.*, COALESCE(sp.businessName, s.businessName) AS businessName, COALESCE(sp.businessCategory, s.businessCategory) AS businessCategory, COALESCE(sp.prepTime, '') AS prepTime, COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl, COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl, COALESCE(sp.accentColor, s.accentColor) AS accentColor, COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor, COALESCE(sp.textColor, s.textColor) AS textColor, COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor, COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor, COALESCE(sp.seoDescription, s.seoDescription) AS seoDescription, COALESCE(s.googleApiKey, '') AS googleApiKey, COALESCE(s.deliveryRules, '[]') AS deliveryRules, COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm, COALESCE(sp.pixelId, s.pixelId) AS pixelId, COALESCE(sp.microsoftClarityId, s.microsoftClarityId) AS microsoftClarityId, COALESCE(sp.googleAnalyticsId, s.googleAnalyticsId) AS googleAnalyticsId, COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders, COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders, COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders, COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled, COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm, COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode, COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery, COALESCE(sp.menuTheme, s.menuTheme, 'dark') AS menuTheme, COALESCE(s.featuredCountDesktop, 4) AS featuredCountDesktop, COALESCE(s.featuredCountTablet, 2) AS featuredCountTablet, COALESCE(s.featuredCountMobile, 1) AS featuredCountMobile, COALESCE(s.dailyDeliveryItems, '{\"orderTypes\":{\"delivery\":true,\"order\":true},\"fulfillmentMethods\":{\"delivery\":true,\"pickup\":true,\"local\":true}}') AS dailyDeliveryItems FROM user u LEFT JOIN setting s ON u.id = s.userId LEFT JOIN store_profile sp ON u.id = sp.userId WHERE u.slug = ?");
+    $stmt = $pdo->prepare("SELECT u.*, COALESCE(sp.businessName, s.businessName) AS businessName, COALESCE(sp.businessCategory, s.businessCategory) AS businessCategory, COALESCE(sp.prepTime, '') AS prepTime, COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl, COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl, COALESCE(sp.accentColor, s.accentColor) AS accentColor, COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor, COALESCE(sp.textColor, s.textColor) AS textColor, COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor, COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor, COALESCE(sp.seoDescription, s.seoDescription) AS seoDescription, COALESCE(s.googleApiKey, '') AS googleApiKey, COALESCE(s.deliveryRules, '[]') AS deliveryRules, COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm, COALESCE(sp.pixelId, s.pixelId) AS pixelId, COALESCE(sp.microsoftClarityId, s.microsoftClarityId) AS microsoftClarityId, COALESCE(sp.googleAnalyticsId, s.googleAnalyticsId) AS googleAnalyticsId, COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders, COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders, COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders, COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled, COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm, COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode, COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery, COALESCE(sp.menuTheme, s.menuTheme, 'light') AS menuTheme, COALESCE(s.featuredCountDesktop, 4) AS featuredCountDesktop, COALESCE(s.featuredCountTablet, 2) AS featuredCountTablet, COALESCE(s.featuredCountMobile, 1) AS featuredCountMobile, COALESCE(s.dailyDeliveryItems, '{\"orderTypes\":{\"delivery\":true,\"order\":true},\"fulfillmentMethods\":{\"delivery\":true,\"pickup\":true,\"local\":true}}') AS dailyDeliveryItems FROM user u LEFT JOIN setting s ON u.id = s.userId LEFT JOIN store_profile sp ON u.id = sp.userId WHERE u.slug = ?");
     $stmt->execute([$slug]);
     $store = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -197,7 +197,7 @@ try {
     $storedBackground = strtolower((string) ($store['backgroundColor'] ?? ''));
     $storedText = strtolower((string) ($store['textColor'] ?? ''));
     // Registros antigos com fundo claro e texto branco eram o default quebrado.
-    if ($menuTheme === 'dark' && in_array($storedBackground, ['', '#ffffff'], true) && in_array($storedText, ['', '#ffffff'], true)) {
+    if ($menuTheme === 'dark' && in_array($storedBackground, ['', '#ffffff'], true)) {
         $menuTheme = 'light';
     }
     $isDarkTheme = $menuTheme === 'dark';
@@ -4118,11 +4118,12 @@ try {
                 const root = document.documentElement;
                 const body = document.body;
                 const isOrder = state.activeTab === 'order';
-                const useDarkTheme = data.menuTheme === 'dark';
+                const useDarkTheme = data.menuTheme === 'dark'
+                    && !['', '#ffffff'].includes(String(data.backgroundColor || '').toLowerCase());
 
                 const accent = isOrder
-                    ? (data.accentColorOrders || data.accentColor || (useDarkTheme ? '#a2e403' : '#66D711'))
-                    : (data.accentColor || (useDarkTheme ? '#a2e403' : '#66D711'));
+                    ? (data.accentColorOrders || data.accentColor || (useDarkTheme ? '#a2e403' : '#82F026'))
+                    : (data.accentColor || (useDarkTheme ? '#a2e403' : '#82F026'));
                 const button = isOrder
                     ? (data.buttonColorOrders || data.buttonColor || accent)
                     : (data.buttonColor || accent);
@@ -4137,7 +4138,7 @@ try {
                 root.style.setProperty('--btn-bg', button);
                 root.style.setProperty('--button-color', button);
                 root.style.setProperty('--btn-text', data.buttonTextColor || '#ffffff');
-                const themeBg = data.backgroundColor || (useDarkTheme ? '#031614' : '#ffffff');
+                const themeBg = useDarkTheme ? '#031614' : '#ffffff';
                 const themeSurface = useDarkTheme
                     ? (data.surfaceColor || '#092b24')
                     : `color-mix(in srgb, ${themeBg} 96%, #ffffff 4%)`;

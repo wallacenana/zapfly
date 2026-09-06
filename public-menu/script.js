@@ -1267,11 +1267,12 @@ function updateTheme() {
     const root = document.documentElement;
     const body = document.body;
     const isOrder = state.activeTab === 'order';
-    const useDarkTheme = data.menuTheme === 'dark';
+    const useDarkTheme = data.menuTheme === 'dark'
+        && !['', '#ffffff'].includes(String(data.backgroundColor || '').toLowerCase());
 
     const accent = isOrder
-        ? (data.accentColorOrders || data.accentColor || (useDarkTheme ? '#a2e403' : '#66D711'))
-        : (data.accentColor || (useDarkTheme ? '#a2e403' : '#66D711'));
+        ? (data.accentColorOrders || data.accentColor || (useDarkTheme ? '#a2e403' : '#82F026'))
+        : (data.accentColor || (useDarkTheme ? '#a2e403' : '#82F026'));
     const button = isOrder
         ? (data.buttonColorOrders || data.buttonColor || accent)
         : (data.buttonColor || accent);
@@ -1286,7 +1287,7 @@ function updateTheme() {
     root.style.setProperty('--btn-bg', button);
     root.style.setProperty('--button-color', button);
     root.style.setProperty('--btn-text', data.buttonTextColor || (useDarkTheme ? '#031614' : '#031614'));
-    root.style.setProperty('--bg-color', data.backgroundColor || (useDarkTheme ? '#031614' : '#ffffff'));
+    root.style.setProperty('--bg-color', useDarkTheme ? '#031614' : '#ffffff');
     root.style.setProperty('--text-main', data.textColor || (useDarkTheme ? '#ffffff' : '#031614'));
     root.style.setProperty('--text-secondary', useDarkTheme ? 'rgba(255,255,255,0.72)' : `${data.textColor || '#031614'}99`);
     root.style.setProperty('--border', useDarkTheme
@@ -1296,9 +1297,9 @@ function updateTheme() {
         ? `color-mix(in srgb, ${accent} 16%, transparent)`
         : `${data.textColor || '#031614'}15`);
     root.style.setProperty('--bg-gray', `${data.textColor || (useDarkTheme ? '#ffffff' : '#031614')}08`);
-    root.style.setProperty('--surface-color', useDarkTheme ? '#092b24' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 96%, #ffffff 4%)`);
-    root.style.setProperty('--surface-soft', useDarkTheme ? '#06231e' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 90%, #ffffff 10%)`);
-    root.style.setProperty('--bg-tertiary', useDarkTheme ? '#06231e' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 90%, #ffffff 10%)`);
+    root.style.setProperty('--surface-color', useDarkTheme ? '#092b24' : 'color-mix(in srgb, #ffffff 96%, #ffffff 4%)');
+    root.style.setProperty('--surface-soft', useDarkTheme ? '#06231e' : 'color-mix(in srgb, #ffffff 90%, #ffffff 10%)');
+    root.style.setProperty('--bg-tertiary', useDarkTheme ? '#06231e' : 'color-mix(in srgb, #ffffff 90%, #ffffff 10%)');
     root.style.setProperty('--text-primary', data.textColor || (useDarkTheme ? '#ffffff' : '#031614'));
     root.style.setProperty('--text-black', data.textColor || (useDarkTheme ? '#ffffff' : '#031614'));
     root.style.setProperty('--text-gray', `${data.textColor || (useDarkTheme ? '#ffffff' : '#031614')}99`);
