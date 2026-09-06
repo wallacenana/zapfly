@@ -202,7 +202,8 @@ try {
     $legacyButton = in_array(strtolower((string) ($store['buttonColor'] ?? '')), ['#ff4d6d', '#6cb649'], true);
     $legacyText = ($isDarkTheme && in_array($storedText, ['', '#031614', '#111111', '#333333', '#000000'], true))
         || (!$isDarkTheme && in_array($storedText, ['#333333', '#ffffff', '#fff'], true));
-    $legacyBackground = strtolower((string) ($store['backgroundColor'] ?? '')) === '#07150d';
+    $legacyBackground = strtolower((string) ($store['backgroundColor'] ?? '')) === '#07150d'
+        || ($isDarkTheme && in_array($storedBackground, ['', '#ffffff', '#fff'], true));
     $accentColor = (!$store['accentColor'] || $legacyAccent) ? ($isDarkTheme ? '#a2e403' : '#82F026') : $store['accentColor'];
     $backgroundColor = (!$store['backgroundColor'] || $legacyBackground) ? ($isDarkTheme ? '#031614' : '#ffffff') : $store['backgroundColor'];
     $textColor = (!$store['textColor'] || $legacyText) ? ($isDarkTheme ? '#ffffff' : '#031614') : $store['textColor'];

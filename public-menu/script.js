@@ -3113,7 +3113,10 @@ function updateTheme() {
     root.style.setProperty('--btn-bg', button);
     root.style.setProperty('--button-color', button);
     root.style.setProperty('--btn-text', data.buttonTextColor || '#ffffff');
-    const themeBg = useDarkTheme ? '#031614' : '#ffffff';
+    const storedBackground = String(data.backgroundColor || '').toLowerCase();
+    const themeBg = useDarkTheme
+        ? (['', '#ffffff', '#fff'].includes(storedBackground) ? '#031614' : data.backgroundColor)
+        : (data.backgroundColor || '#ffffff');
     const themeSurface = useDarkTheme
         ? (data.surfaceColor || '#092b24')
         : `color-mix(in srgb, ${themeBg} 96%, #ffffff 4%)`;
