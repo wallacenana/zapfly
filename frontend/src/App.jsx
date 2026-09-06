@@ -27,7 +27,6 @@ import AccountHome from './pages/AccountHome';
 import PasswordReset from './pages/PasswordReset';
 import Plans from './pages/Plans';
 import BillingSettings from './pages/BillingSettings';
-import GetStarted from './pages/GetStarted';
 
 const FullScreenLoader = () => (
   <div style={{
@@ -103,9 +102,7 @@ function AppRoutes() {
         <Route path="/comprar" element={<Plans />} />
       </Route>
 
-      <Route path="/get-started" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-        <Route index element={<><Dashboard /><GetStarted /></>} />
-      </Route>
+      <Route path="/get-started" element={<Navigate to="/dashboard" replace />} />
 
       <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>
         <Route path="dashboard" element={<Dashboard />} />

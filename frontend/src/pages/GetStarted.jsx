@@ -110,6 +110,7 @@ export default function GetStarted() {
         ? { ...form, activeModel: form.openai.trim() ? 'openai' : 'claude' }
         : form;
       await api.post('/config/keys', payload);
+      window.localStorage.setItem('menzzu_onboarding_completed', '1');
       toast.success('Tudo pronto. Bem-vindo ao Menzzu!');
       navigate('/dashboard', { replace: true });
     } catch (error) {

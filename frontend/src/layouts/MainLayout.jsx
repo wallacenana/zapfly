@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { PUBLIC_SITE_URL } from '../api';
 import TrialBanner from '../components/TrialBanner';
+import GetStarted from '../pages/GetStarted';
 
 const MainLayout = ({ clientMode = false }) => {
   const location = useLocation();
@@ -199,6 +200,7 @@ const MainLayout = ({ clientMode = false }) => {
       <div style={{ flex: 1, marginLeft: '260px', minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3' }}>
         <TrialBanner embedded />
         <Outlet />
+        {location.pathname === '/dashboard' && !window.localStorage.getItem('menzzu_onboarding_completed') ? <GetStarted /> : null}
       </div>
     </div>
   );
