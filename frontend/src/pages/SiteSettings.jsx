@@ -107,9 +107,7 @@ const SiteSettings = () => {
             const res = await api.get('/settings');
             if (res.data) {
                 const storedMenuTheme = res.data.menuTheme || 'light';
-                const shouldUseLightTheme = storedMenuTheme === 'dark'
-                    && ['#ffffff', ''].includes(String(res.data.backgroundColor || '').toLowerCase());
-                const effectiveMenuTheme = shouldUseLightTheme ? 'light' : storedMenuTheme;
+                const effectiveMenuTheme = storedMenuTheme === 'dark' ? 'dark' : 'light';
                 const normalizedColors = COLOR_FIELDS.reduce((acc, key) => {
                     const rawColor = String(res.data[key] || '').toLowerCase();
                     const isDark = effectiveMenuTheme === 'dark';

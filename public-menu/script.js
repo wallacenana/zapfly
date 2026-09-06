@@ -3094,8 +3094,7 @@ function updateTheme() {
     const root = document.documentElement;
     const body = document.body;
     const isOrder = state.activeTab === 'order';
-    const useDarkTheme = data.menuTheme === 'dark'
-        && !['', '#ffffff'].includes(String(data.backgroundColor || '').toLowerCase());
+    const useDarkTheme = data.menuTheme === 'dark';
 
     const accent = isOrder
         ? (data.accentColorOrders || data.accentColor || (useDarkTheme ? '#a2e403' : '#82F026'))
