@@ -1290,14 +1290,37 @@ async function handleCheckoutFieldImageUpload(input, hiddenId, previewId) {
     }
 }
 
+function ensureDetailFooter() {
+    const modalContent = document.querySelector('#item-detail-modal .item-detail-content');
+    if (!modalContent || document.getElementById('item-detail-footer')) return;
+
+    modalContent.insertAdjacentHTML('beforeend', `
+        <div id="item-detail-footer" class="modal-footer-sticky">
+            <div class="qty-selector">
+                <button class="qty-btn" id="qty-minus" aria-label="Diminuir quantidade">
+                    <i data-lucide="minus"></i>
+                </button>
+                <span id="detail-qty">1</span>
+                <button class="qty-btn" id="qty-plus" aria-label="Aumentar quantidade">
+                    <i data-lucide="plus"></i>
+                </button>
+            </div>
+            <button id="add-to-cart-btn" class="primary-btn">
+                Adicionar <span id="add-btn-price"></span>
+            </button>
+        </div>
+    `);
+    lucide.createIcons();
+}
+
 function openItemDetail(productId) {
+    ensureDetailFooter();
     const item = state.products.find(p => p.id === productId);
     state.currentItem = item;
     state.currentQty = 1;
     state.currentVariation = null;
     state.orderBumpSelected = false;
 
-    const modal = document.getElementById('item-detail-modal');
     const body = document.getElementById('item-detail-body');
 
     // Inicia com Skeleton
@@ -1938,6 +1961,7 @@ function updateOrderTabsVisibility(forceSync = false) {
 }
 
 function initEventListeners() {
+    ensureDetailFooter();
     const searchInput = document.getElementById('search-input');
     const mobileSearchToggle = document.getElementById('mobile-search-toggle');
     const searchContainer = document.getElementById('search-container');

@@ -331,7 +331,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.42">
+        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.43">
         <style>
             :root {
                 --primary-color:
@@ -737,16 +737,6 @@ try {
                     <i data-lucide="x"></i>
                 </button>
                 <div id="item-detail-body"></div>
-                <div class="modal-footer-sticky">
-                    <div class="qty-selector">
-                        <button class="qty-btn" id="qty-minus" aria-label="Diminuir Quantidade"><i
-                                data-lucide="minus"></i></button>
-                        <span id="detail-qty">1</span>
-                        <button class="qty-btn" id="qty-plus" aria-label="Aumentar Quantidade"><i
-                                data-lucide="plus"></i></button>
-                    </div>
-                    <button id="add-to-cart-btn" class="primary-btn">Adicionar <span id="add-btn-price"></span></button>
-                </div>
             </div>
         </div>
 
