@@ -16,7 +16,7 @@ const showAlert = (title, text, icon = 'warning') => {
         title: title,
         text: text,
         icon: icon,
-        confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#ff4d6d',
+        confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#66D711',
         confirmButtonText: 'Entendi'
     });
 };
@@ -245,6 +245,12 @@ async function fetchPublicSettings() {
 }
 
 function checkStoreStatus() {
+    const settings = state.publicSettings || {};
+    const hasMinimumSetup = settings.marketplaceReady !== false
+        && Boolean(settings.hasLogo !== false)
+        && Number(settings.maxDeliveryKm || 0) > 0
+        && state.availableSlots.length > 0
+        && state.products.some(product => product && product.active !== false && String(product.type || '').toLowerCase() !== 'addon');
     const now = new Date();
     const day = now.getDay();
     const time = now.getHours() * 60 + now.getMinutes();
@@ -260,8 +266,8 @@ function checkStoreStatus() {
 
     const statusEl = document.getElementById('store-status-badge');
     if (statusEl) {
-        statusEl.innerText = state.isOpen ? 'â— Aberto agora' : 'â— Fechado (Apenas encomendas)';
-        statusEl.className = state.isOpen ? 'status-badge open' : 'status-badge closed';
+        statusEl.innerText = !hasMinimumSetup ? 'â— Inativo' : state.isOpen ? 'â— Aberto agora' : 'â— Fechado (Apenas encomendas)';
+        statusEl.className = !hasMinimumSetup || !state.isOpen ? 'status-badge closed' : 'status-badge open';
     }
 }
 
@@ -1163,7 +1169,7 @@ async function handlePlaceOrder() {
                     title: 'Pedido Recebido!',
                     text: 'Seu pedido foi registrado e estÃ¡ aguardando confirmaÃ§Ã£o.',
                     icon: 'success',
-                    confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#ff4d6d',
+                    confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--primary-color').trim() || '#66D711',
                     confirmButtonText: 'Ver meus pedidos'
                 }).then(() => {
                     setActiveCart([]);
@@ -1264,8 +1270,8 @@ function updateTheme() {
     const useDarkTheme = data.menuTheme === 'dark';
 
     const accent = isOrder
-        ? (data.accentColorOrders || data.accentColor || '#ff4d6d')
-        : (data.accentColor || '#ff4d6d');
+        ? (data.accentColorOrders || data.accentColor || (useDarkTheme ? '#a2e403' : '#66D711'))
+        : (data.accentColor || (useDarkTheme ? '#a2e403' : '#66D711'));
     const button = isOrder
         ? (data.buttonColorOrders || data.buttonColor || accent)
         : (data.buttonColor || accent);
@@ -1279,23 +1285,23 @@ function updateTheme() {
     root.style.setProperty('--accent', accent);
     root.style.setProperty('--btn-bg', button);
     root.style.setProperty('--button-color', button);
-    root.style.setProperty('--btn-text', data.buttonTextColor || '#ffffff');
-    root.style.setProperty('--bg-color', data.backgroundColor || (useDarkTheme ? '#07150d' : '#ffffff'));
-    root.style.setProperty('--text-main', data.textColor || (useDarkTheme ? '#ffffff' : '#333333'));
-    root.style.setProperty('--text-secondary', useDarkTheme ? 'rgba(255,255,255,0.72)' : `${data.textColor || '#333333'}99`);
+    root.style.setProperty('--btn-text', data.buttonTextColor || (useDarkTheme ? '#031614' : '#031614'));
+    root.style.setProperty('--bg-color', data.backgroundColor || (useDarkTheme ? '#031614' : '#ffffff'));
+    root.style.setProperty('--text-main', data.textColor || (useDarkTheme ? '#ffffff' : '#031614'));
+    root.style.setProperty('--text-secondary', useDarkTheme ? 'rgba(255,255,255,0.72)' : `${data.textColor || '#031614'}99`);
     root.style.setProperty('--border', useDarkTheme
         ? `color-mix(in srgb, ${accent} 16%, transparent)`
-        : `${data.textColor || '#333333'}15`);
+        : `${data.textColor || '#031614'}15`);
     root.style.setProperty('--border-color', useDarkTheme
         ? `color-mix(in srgb, ${accent} 16%, transparent)`
-        : `${data.textColor || '#333333'}15`);
-    root.style.setProperty('--bg-gray', `${data.textColor || '#333333'}08`);
-    root.style.setProperty('--surface-color', useDarkTheme ? '#09271b' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 96%, #ffffff 4%)`);
-    root.style.setProperty('--surface-soft', useDarkTheme ? '#0c1f15' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 90%, #ffffff 10%)`);
-    root.style.setProperty('--bg-tertiary', useDarkTheme ? '#0c1f15' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 90%, #ffffff 10%)`);
-    root.style.setProperty('--text-primary', data.textColor || (useDarkTheme ? '#ffffff' : '#333333'));
-    root.style.setProperty('--text-black', data.textColor || (useDarkTheme ? '#ffffff' : '#333333'));
-    root.style.setProperty('--text-gray', `${data.textColor || (useDarkTheme ? '#ffffff' : '#333333')}99`);
+        : `${data.textColor || '#031614'}15`);
+    root.style.setProperty('--bg-gray', `${data.textColor || (useDarkTheme ? '#ffffff' : '#031614')}08`);
+    root.style.setProperty('--surface-color', useDarkTheme ? '#092b24' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 96%, #ffffff 4%)`);
+    root.style.setProperty('--surface-soft', useDarkTheme ? '#06231e' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 90%, #ffffff 10%)`);
+    root.style.setProperty('--bg-tertiary', useDarkTheme ? '#06231e' : `color-mix(in srgb, ${data.backgroundColor || '#ffffff'} 90%, #ffffff 10%)`);
+    root.style.setProperty('--text-primary', data.textColor || (useDarkTheme ? '#ffffff' : '#031614'));
+    root.style.setProperty('--text-black', data.textColor || (useDarkTheme ? '#ffffff' : '#031614'));
+    root.style.setProperty('--text-gray', `${data.textColor || (useDarkTheme ? '#ffffff' : '#031614')}99`);
 }
 
 // InicializaÃ§Ã£o imediata de elementos visuais sÃ­ncronos

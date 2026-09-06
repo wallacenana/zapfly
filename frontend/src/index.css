@@ -1,11 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Outfit:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg-primary: #09271b;
-  --bg-secondary: #0c1f15;
-  --bg-tertiary: #10301f;
-  --accent-primary: #5db72c;
-  --accent-glow: rgba(93, 183, 44, 0.16);
+  --bg-primary: #031614;
+  --bg-secondary: #06231e;
+  --bg-tertiary: #092b24;
+  --accent-primary: #a2e403;
+  --accent-glow: rgba(162, 228, 3, 0.16);
   --text-primary: #fdfdff;
   --text-secondary: #a1a1aa;
   --text-muted: #71717a;
@@ -15,13 +15,13 @@
   --warning: #f59e0b;
   --sidebar-width: 260px;
   --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  --surface-color: #0c1f15;
+  --surface-color: #092b24;
   --surface-soft: #10301f;
   --bg-gray: #f4f4f5;
   --text-black: #111111;
   --text-gray: #666666;
-  --btn-bg: #ff4d6d;
-  --btn-text: #ffffff;
+  --btn-bg: #a2e403;
+  --btn-text: #031614;
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   --primary-hover: #ff758f;
   --category-nav-top: -1px;
@@ -551,7 +551,7 @@ estoque-label {
 }
 
 .estoque-product-badge--order {
-  background-color: rgba(93, 183, 44, 0.10);
+  background-color: rgba(102, 215, 17, 0.10);
   color: var(--accent-primary);
 }
 

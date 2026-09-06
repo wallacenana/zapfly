@@ -52,13 +52,13 @@ const SiteSettings = () => {
         businessName: '',
         logoUrl: '',
         faviconUrl: '',
-        accentColor: '#ff4d6d',
-        buttonColor: '#ff4d6d',
+        accentColor: '#66D711',
+        buttonColor: '#66D711',
         accentColorOrders: '#4a2c2a',
         buttonColorOrders: '#4a2c2a',
         buttonTextColor: '#ffffff',
         backgroundColor: '#ffffff',
-        textColor: '#333333',
+        textColor: '#031614',
         menuTheme: 'dark',
         featuredCountDesktop: 4,
         featuredCountTablet: 2,
@@ -70,27 +70,27 @@ const SiteSettings = () => {
     });
     const isDarkMenuTheme = (settings.menuTheme || 'dark') === 'dark';
     const previewTheme = isDarkMenuTheme ? {
-        bg: normalizeHexColor(settings.backgroundColor, '#07150d'),
-        surface: normalizeHexColor(settings.backgroundColor, '#07150d'),
-        surfaceSoft: `${normalizeHexColor(settings.backgroundColor, '#07150d')}f2`,
+        bg: normalizeHexColor(settings.backgroundColor, '#031614'),
+        surface: normalizeHexColor(settings.backgroundColor, '#031614'),
+        surfaceSoft: `${normalizeHexColor(settings.backgroundColor, '#031614')}f2`,
         text: normalizeHexColor(settings.textColor, '#ffffff'),
         textMuted: 'rgba(255,255,255,0.72)',
-        border: `color-mix(in srgb, ${normalizeHexColor(settings.accentColor, '#6cb649')} 16%, transparent)`,
-        accent: normalizeHexColor(settings.accentColor, '#6cb649'),
-        buttonBg: normalizeHexColor(settings.buttonColor, normalizeHexColor(settings.accentColor, '#6cb649')),
-        buttonText: normalizeHexColor(settings.buttonTextColor, '#ffffff'),
+        border: `color-mix(in srgb, ${normalizeHexColor(settings.accentColor, '#a2e403')} 16%, transparent)`,
+        accent: normalizeHexColor(settings.accentColor, '#a2e403'),
+        buttonBg: normalizeHexColor(settings.buttonColor, normalizeHexColor(settings.accentColor, '#a2e403')),
+        buttonText: normalizeHexColor(settings.buttonTextColor, '#031614'),
         cardBg: 'rgba(255,255,255,0.04)',
-        cardSurface: `color-mix(in srgb, ${normalizeHexColor(settings.backgroundColor, '#07150d')} 90%, #ffffff 10%)`
+        cardSurface: `color-mix(in srgb, ${normalizeHexColor(settings.backgroundColor, '#031614')} 90%, #ffffff 10%)`
     } : {
         bg: settings.backgroundColor || '#ffffff',
         surface: settings.backgroundColor || '#ffffff',
         surfaceSoft: `${settings.backgroundColor || '#ffffff'}f2`,
-        text: settings.textColor || '#333333',
+        text: settings.textColor || '#031614',
         textMuted: 'rgba(102,102,102,0.7)',
         border: 'rgba(0,0,0,0.08)',
-        accent: settings.accentColor || '#ff4d6d',
-        buttonBg: settings.buttonColor || '#ff4d6d',
-        buttonText: settings.buttonTextColor || '#ffffff',
+        accent: settings.accentColor || '#66D711',
+        buttonBg: settings.buttonColor || '#66D711',
+        buttonText: settings.buttonTextColor || '#031614',
         cardBg: '#fff',
         cardSurface: '#f4f4f5'
     };
@@ -104,7 +104,16 @@ const SiteSettings = () => {
             const res = await api.get('/settings');
             if (res.data) {
                 const normalizedColors = COLOR_FIELDS.reduce((acc, key) => {
-                    acc[key] = normalizeHexColor(res.data[key], key === 'accentColorOrders' || key === 'buttonColorOrders' ? '#4a2c2a' : acc[key] || settings[key]);
+                    const rawColor = String(res.data[key] || '').toLowerCase();
+                    const isDark = (res.data.menuTheme || 'dark') === 'dark';
+                    const legacyColor = (key === 'accentColor' || key === 'buttonColor') && ['#ff4d6d', '#6cb649'].includes(rawColor)
+                        ? (isDark ? '#a2e403' : '#66D711')
+                        : key === 'textColor' && rawColor === '#333333'
+                            ? (isDark ? '#ffffff' : '#031614')
+                            : key === 'backgroundColor' && rawColor === '#07150d'
+                                ? '#031614'
+                                : res.data[key];
+                    acc[key] = normalizeHexColor(legacyColor, key === 'accentColorOrders' || key === 'buttonColorOrders' ? '#a2e403' : acc[key] || settings[key]);
                     return acc;
                 }, {});
                 setSettings(prev => ({
@@ -314,7 +323,7 @@ const SiteSettings = () => {
                             width: '20px',
                             height: '20px',
                             borderRadius: '50%',
-                            background: (settings.menuTheme || 'dark') === 'dark' ? '#6cb649' : '#d1d5db',
+                            background: (settings.menuTheme || 'dark') === 'dark' ? '#a2e403' : '#d1d5db',
                             boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
                         }} />
                     </span>

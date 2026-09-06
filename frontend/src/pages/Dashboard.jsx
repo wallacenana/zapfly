@@ -60,7 +60,7 @@ const toShortDateTime = (value) => {
 };
 
 const severityTone = (count, total) => {
-  if (!total) return { fill: 'rgba(93, 183, 44, 0.12)', bar: 'var(--accent-primary)', text: 'var(--accent-primary)' };
+  if (!total) return { fill: 'rgba(102, 215, 17, 0.12)', bar: 'var(--accent-primary)', text: 'var(--accent-primary)' };
   const ratio = count / total;
   if (ratio >= 0.7) return { fill: 'rgba(34, 197, 94, 0.12)', bar: '#16a34a', text: '#16a34a' };
   if (ratio >= 0.4) return { fill: 'rgba(245, 158, 11, 0.12)', bar: '#f59e0b', text: '#b45309' };
@@ -86,7 +86,7 @@ const Card = ({ children, style = {}, className = '', ...rest }) => (
 const Badge = ({ tone = 'neutral', children, icon: Icon }) => {
   const palette = {
     neutral: { background: 'rgba(15, 23, 42, 0.05)', color: 'var(--text-secondary)', border: 'rgba(15, 23, 42, 0.06)' },
-    success: { background: 'rgba(93, 183, 44, 0.12)', color: '#2e7d15', border: 'rgba(93, 183, 44, 0.18)' },
+    success: { background: 'rgba(102, 215, 17, 0.12)', color: '#2d7d0e', border: 'rgba(102, 215, 17, 0.18)' },
     info: { background: 'rgba(59, 130, 246, 0.10)', color: '#2563eb', border: 'rgba(59, 130, 246, 0.16)' },
     warning: { background: 'rgba(245, 158, 11, 0.12)', color: '#b45309', border: 'rgba(245, 158, 11, 0.18)' },
     danger: { background: 'rgba(239, 68, 68, 0.10)', color: '#dc2626', border: 'rgba(239, 68, 68, 0.16)' },
@@ -156,7 +156,7 @@ const SectionHeader = ({ eyebrow, title, description, actions }) => (
 
 const MetricCard = ({ icon: Icon, label, value, caption, tone = 'accent' }) => {
   const iconStyles = {
-    accent: { backgroundColor: 'rgba(93, 183, 44, 0.12)', color: 'var(--accent-primary)' },
+    accent: { backgroundColor: 'rgba(102, 215, 17, 0.12)', color: 'var(--accent-primary)' },
     blue: { backgroundColor: 'rgba(59, 130, 246, 0.12)', color: '#2563eb' },
     amber: { backgroundColor: 'rgba(245, 158, 11, 0.12)', color: '#d97706' },
     red: { backgroundColor: 'rgba(239, 68, 68, 0.12)', color: '#dc2626' },
@@ -222,7 +222,7 @@ const EmptyState = ({ icon: Icon = CircleAlert, title, text }) => (
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(93, 183, 44, 0.10)',
+        backgroundColor: 'rgba(102, 215, 17, 0.10)',
         color: 'var(--accent-primary)',
         flexShrink: 0,
       }}
@@ -256,7 +256,7 @@ const ProgressLine = ({ value, max, tone = 'accent', label }) => {
             width: `${width}%`,
             height: '100%',
             borderRadius: '999px',
-            background: `linear-gradient(90deg, ${toneMap[tone]}, rgba(93, 183, 44, 0.55))`,
+            background: `linear-gradient(90deg, ${toneMap[tone]}, rgba(102, 215, 17, 0.55))`,
           }}
         />
       </div>
@@ -427,8 +427,8 @@ const Dashboard = () => {
             gap: '8px',
             padding: '12px 16px',
             borderRadius: '14px',
-            border: '1px solid rgba(93, 183, 44, 0.18)',
-            backgroundColor: 'rgba(93, 183, 44, 0.08)',
+            border: '1px solid rgba(102, 215, 17, 0.18)',
+            backgroundColor: 'rgba(102, 215, 17, 0.08)',
             color: 'var(--accent-primary)',
             textDecoration: 'none',
             fontWeight: 800,
@@ -503,13 +503,13 @@ const Dashboard = () => {
         '--text-secondary': '#475569',
         '--text-muted': '#64748b',
         '--border-color': '#d9e5d2',
-        '--accent-primary': '#5db72c',
-        '--accent-glow': 'rgba(93, 183, 44, 0.14)',
+        '--accent-primary': '#66D711',
+        '--accent-glow': 'rgba(102, 215, 17, 0.14)',
         '--card-shadow': '0 12px 30px rgba(15, 23, 42, 0.06)',
         '--bg-gray': '#eef5ea',
         '--text-black': '#0f172a',
         '--text-gray': '#64748b',
-        '--btn-bg': '#5db72c',
+        '--btn-bg': '#66D711',
         '--btn-text': '#ffffff',
       }}
     >

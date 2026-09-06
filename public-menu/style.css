@@ -1,33 +1,33 @@
 :root {
-    --primary-color: #ff4d6d;
-    --primary-hover: #ff758f;
+    --primary-color: #66D711;
+    --primary-hover: #a2e403;
     --bg-color: var(--text-main);
     --bg-gray: #f4f4f5;
     --border: rgba(0, 0, 0, 0.08);
-    --primary-color: #ff4d6d;
-    --text-main: #333333;
+    --primary-color: #66D711;
+    --text-main: #031614;
     --text-black: #111111;
     --text-gray: #666666;
-    --btn-bg: #ff4d6d;
-    --btn-text: #ffffff;
+    --btn-bg: #66D711;
+    --btn-text: #031614;
     --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     --category-nav-top: -1px;
 }
 
 body.theme-dark {
-    --bg-color: var(--theme-bg-color, #07150d);
-    --bg-gray: var(--theme-bg-gray, #0c1f15);
-    --surface-color: var(--theme-surface-color, #09271b);
-    --surface-soft: var(--theme-surface-soft, #0c1f15);
+    --bg-color: var(--theme-bg-color, #031614);
+    --bg-gray: var(--theme-bg-gray, #06231e);
+    --surface-color: var(--theme-surface-color, #092b24);
+    --surface-soft: var(--theme-surface-soft, #06231e);
     --text-main: var(--theme-text-main, #ffffff);
     --text-primary: var(--theme-text-main, #ffffff);
     --text-black: var(--theme-text-main, #ffffff);
     --text-gray: var(--theme-text-secondary, rgba(255, 255, 255, 0.72));
     --text-secondary: var(--theme-text-secondary, rgba(255, 255, 255, 0.72));
-    --border: var(--theme-border, color-mix(in srgb, var(--accent, #6cb649) 16%, transparent));
-    --border-color: var(--theme-border-color, color-mix(in srgb, var(--accent, #6cb649) 16%, transparent));
-    --primary-color: var(--accent, #6cb649);
-    --btn-bg: var(--button-color, var(--accent, #6cb649));
+    --border: var(--theme-border, color-mix(in srgb, var(--accent, #a2e403) 16%, transparent));
+    --border-color: var(--theme-border-color, color-mix(in srgb, var(--accent, #a2e403) 16%, transparent));
+    --primary-color: var(--accent, #a2e403);
+    --btn-bg: var(--button-color, var(--accent, #a2e403));
     --btn-text: #ffffff;
 }
 
@@ -2316,16 +2316,16 @@ body.theme-dark .delivery-fee-badge {
 }
 
 .payment-card:hover:not(.disabled) {
-    border-color: var(--primary-color, #ff4d6d);
+    border-color: var(--primary-color, #66D711);
     background: #fffafa;
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
 
 .payment-card.selected {
-    border-color: var(--primary-color, #ff4d6d);
+    border-color: var(--primary-color, #66D711);
     background: #fffafa;
-    box-shadow: 0 0 0 1px var(--primary-color, #ff4d6d);
+    box-shadow: 0 0 0 1px var(--primary-color, #66D711);
 }
 
 .payment-card.disabled {

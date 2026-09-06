@@ -195,13 +195,17 @@ try {
     $faviconUrl = $store['faviconUrl'] ?: '/favicon.ico';
     $menuTheme = strtolower(trim($store['menuTheme'] ?? 'dark')) ?: 'dark';
     $isDarkTheme = $menuTheme === 'dark';
-    $accentColor = $store['accentColor'] ?: ($isDarkTheme ? '#6cb649' : '#ff4d6d');
-    $backgroundColor = $store['backgroundColor'] ?: ($isDarkTheme ? '#07150d' : '#ffffff');
-    $textColor = $store['textColor'] ?: ($isDarkTheme ? '#ffffff' : '#1a1a1a');
-    $buttonColor = $store['buttonColor'] ?: $accentColor;
-    $buttonTextColor = $store['buttonTextColor'] ?: ($isDarkTheme ? '#ffffff' : '#ffffff');
-    $surfaceColor = $isDarkTheme ? '#09271b' : 'color-mix(in srgb, var(--bg-color) 96%, #ffffff 4%)';
-    $surfaceSoftColor = $isDarkTheme ? '#0c1f15' : 'color-mix(in srgb, var(--bg-color) 90%, #ffffff 10%)';
+    $legacyAccent = in_array(strtolower((string) ($store['accentColor'] ?? '')), ['#ff4d6d', '#6cb649'], true);
+    $legacyButton = in_array(strtolower((string) ($store['buttonColor'] ?? '')), ['#ff4d6d', '#6cb649'], true);
+    $legacyText = strtolower((string) ($store['textColor'] ?? '')) === '#333333';
+    $legacyBackground = strtolower((string) ($store['backgroundColor'] ?? '')) === '#07150d';
+    $accentColor = (!$store['accentColor'] || $legacyAccent) ? ($isDarkTheme ? '#a2e403' : '#66D711') : $store['accentColor'];
+    $backgroundColor = (!$store['backgroundColor'] || $legacyBackground) ? ($isDarkTheme ? '#031614' : '#ffffff') : $store['backgroundColor'];
+    $textColor = (!$store['textColor'] || $legacyText) ? ($isDarkTheme ? '#ffffff' : '#031614') : $store['textColor'];
+    $buttonColor = (!$store['buttonColor'] || $legacyButton) ? $accentColor : $store['buttonColor'];
+    $buttonTextColor = $store['buttonTextColor'] ?: '#031614';
+    $surfaceColor = $isDarkTheme ? '#092b24' : 'color-mix(in srgb, var(--bg-color) 96%, #ffffff 4%)';
+    $surfaceSoftColor = $isDarkTheme ? '#06231e' : 'color-mix(in srgb, var(--bg-color) 90%, #ffffff 10%)';
     $borderColor = $isDarkTheme ? 'color-mix(in srgb, ' . $accentColor . ' 16%, transparent)' : 'rgba(0, 0, 0, 0.08)';
     $textSecondary = $isDarkTheme ? 'rgba(255,255,255,0.72)' : ($store['textColor'] ? $store['textColor'] . '99' : 'rgba(102,102,102,0.6)');
     $acceptOrders = isset($store['acceptOrders']) ? (bool) $store['acceptOrders'] : true;
@@ -218,6 +222,13 @@ try {
     $stmt = $pdo->prepare("SELECT id, dayOfWeek, startTime, endTime, maxOrders FROM available_slot WHERE userId = ? ORDER BY dayOfWeek ASC, startTime ASC");
     $stmt->execute([$store['id']]);
     $availableSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $hasVisibleProduct = count(array_filter($products, static function ($product) {
+        return ($product['active'] ?? 1) && strtolower((string) ($product['type'] ?? '')) !== 'addon';
+    })) > 0;
+    $marketplaceReady = !empty($store['logoUrl'])
+        && (float) ($store['maxDeliveryKm'] ?? 0) > 0
+        && count($availableSlots) > 0
+        && $hasVisibleProduct;
 
     $stmt = $pdo->prepare("SELECT * FROM addon_group WHERE userId = ?");
     $stmt->execute([$store['id']]);
@@ -283,6 +294,8 @@ try {
         'recentReviews' => $recentReviews,
         'showDeliveryTab' => $showDeliveryTab,
         'showOrderTab' => $showOrderTab
+        , 'marketplaceReady' => $marketplaceReady
+        , 'hasLogo' => !empty($store['logoUrl'])
     ];
 
 ?>
@@ -4092,8 +4105,8 @@ try {
                 const useDarkTheme = data.menuTheme === 'dark';
 
                 const accent = isOrder
-                    ? (data.accentColorOrders || data.accentColor || '#ff4d6d')
-                    : (data.accentColor || '#ff4d6d');
+                    ? (data.accentColorOrders || data.accentColor || (useDarkTheme ? '#a2e403' : '#66D711'))
+                    : (data.accentColor || (useDarkTheme ? '#a2e403' : '#66D711'));
                 const button = isOrder
                     ? (data.buttonColorOrders || data.buttonColor || accent)
                     : (data.buttonColor || accent);
@@ -4108,12 +4121,12 @@ try {
                 root.style.setProperty('--btn-bg', button);
                 root.style.setProperty('--button-color', button);
                 root.style.setProperty('--btn-text', data.buttonTextColor || '#ffffff');
-                const themeBg = data.backgroundColor || (useDarkTheme ? '#07150d' : '#ffffff');
+                const themeBg = data.backgroundColor || (useDarkTheme ? '#031614' : '#ffffff');
                 const themeSurface = useDarkTheme
-                    ? (data.surfaceColor || '#09271b')
+                    ? (data.surfaceColor || '#092b24')
                     : `color-mix(in srgb, ${themeBg} 96%, #ffffff 4%)`;
                 const themeSoft = useDarkTheme
-                    ? (data.surfaceSoftColor || '#0c1f15')
+                    ? (data.surfaceSoftColor || '#06231e')
                     : `color-mix(in srgb, ${themeBg} 90%, #ffffff 10%)`;
                 const themeText = data.textColor || (useDarkTheme ? '#ffffff' : '#333333');
                 const themeSecondary = useDarkTheme ? 'rgba(255,255,255,0.72)' : `${themeText}99`;
