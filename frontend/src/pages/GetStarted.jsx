@@ -78,7 +78,7 @@ export default function GetStarted() {
       });
       addressRef.current.dataset.autocompleteReady = 'ready';
     }).catch(() => { if (addressRef.current) addressRef.current.dataset.autocompleteReady = 'error'; });
-  }, [current?.key, form.googleApiKey]);
+  }, [step, form.googleApiKey]);
 
   const visibleSteps = form.openai.trim() && form.claude.trim()
     ? steps
