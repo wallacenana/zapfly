@@ -134,7 +134,8 @@ function formatProductPriceText(product) {
 function getEffectiveProductPrice(product) {
     const basePrice = parseFloat(product?.price || 0) || 0;
     const promoPrice = parseFloat(product?.promoPrice || 0) || 0;
-    return promoPrice > 0 && promoPrice < basePrice ? promoPrice : basePrice;
+    const price = promoPrice > 0 && promoPrice < basePrice ? promoPrice : basePrice;
+    return Math.max(0, price);
 }
 
 function hasPaidAddonsForProduct(product) {
@@ -160,7 +161,7 @@ function getDisplayPriceText(product) {
             .map(v => getEffectiveProductPrice(v))
             .filter(price => Number.isFinite(price) && price > 0);
         const fromPrice = effectiveVariationPrices.length > 0 ? Math.min(...effectiveVariationPrices) : basePrice;
-        return `A partir de R$ ${fromPrice.toFixed(2)}`;
+        return `A partir de R$ ${Math.max(0, fromPrice).toFixed(2)}`;
     }
 
     if (hasPaidAddonsForProduct(product)) {
@@ -172,7 +173,7 @@ function getDisplayPriceText(product) {
     if (promoPrice > 0 && promoPrice < price) {
         return `de R$ ${price.toFixed(2)} por R$ ${promoPrice.toFixed(2)}`;
     }
-    return `R$ ${basePrice.toFixed(2)}`;
+    return `R$ ${Math.max(0, basePrice).toFixed(2)}`;
 }
 
 function getSuggestedProductForItem(item) {
@@ -1291,24 +1292,11 @@ async function handleCheckoutFieldImageUpload(input, hiddenId, previewId) {
 }
 
 function ensureDetailFooter() {
-    const modalContent = document.querySelector('#item-detail-modal .item-detail-content');
-    if (!modalContent || document.getElementById('item-detail-footer')) return;
+    const panel = document.querySelector('#item-detail-modal .item-detail-panel');
+    if (!panel || document.getElementById('item-detail-footer')) return;
 
-    modalContent.insertAdjacentHTML('beforeend', `
-        <div id="item-detail-footer" class="modal-footer-sticky">
-            <div class="qty-selector">
-                <button class="qty-btn" id="qty-minus" aria-label="Diminuir quantidade">
-                    <i data-lucide="minus"></i>
-                </button>
-                <span id="detail-qty">1</span>
-                <button class="qty-btn" id="qty-plus" aria-label="Aumentar quantidade">
-                    <i data-lucide="plus"></i>
-                </button>
-            </div>
-            <button id="add-to-cart-btn" class="primary-btn">
-                Adicionar <span id="add-btn-price"></span>
-            </button>
-        </div>
+    panel.insertAdjacentHTML('beforeend', `
+        
     `);
     lucide.createIcons();
 }
@@ -1337,6 +1325,20 @@ function openItemDetail(productId) {
                             </div>
                             <div class="skeleton" style="height:92px; width:100%;"></div>
                             <div class="skeleton" style="height:92px; width:100%;"></div>
+                            <div id="item-detail-footer" class="modal-footer-sticky">
+            <div class="qty-selector">
+                <button class="qty-btn" id="qty-minus" aria-label="Diminuir quantidade">
+                    <i data-lucide="minus"></i>
+                </button>
+                <span id="detail-qty">1</span>
+                <button class="qty-btn" id="qty-plus" aria-label="Aumentar quantidade">
+                    <i data-lucide="plus"></i>
+                </button>
+            </div>
+            <button id="add-to-cart-btn" class="primary-btn">
+                Adicionar <span id="add-btn-price"></span>
+            </button>
+        </div>
                         </div>
                     </div>
                 `;
@@ -1405,7 +1407,7 @@ function openItemDetail(productId) {
                     `;
 
         const variationsHtml = variations.length > 0 ?
-            `<div class="variation-section"><div class="addon-group-header"><h4>Escolha uma opção</h4></div>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price || 0})"><div class="var-label">${v.name}</div><div class="var-price">+ R$ ${parseFloat(v.price || 0).toFixed(2)}</div></div>`).join('')}</div>` :
+            `<div class="variation-section"><div class="addon-group-header"><h4>Escolha uma opção</h4></div>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price || 0})"><div class="var-label">${v.name}</div><div class="var-price">R$ ${getEffectiveProductPrice(v).toFixed(2)}</div></div>`).join('')}</div>` :
             '';
 
         const customFieldsHtml = state.activeTab === 'order' ? '' : (() => {
@@ -1541,6 +1543,7 @@ function openItemDetail(productId) {
                             </div>
                         </div>
                     `;
+        ensureDetailFooter();
         updateDetailFooter();
         lucide.createIcons();
     }, 50);
@@ -1690,7 +1693,9 @@ function getSelectedAddons() {
 }
 
 function updateDetailFooter() {
-    const basePrice = state.currentVariation ? parseFloat(state.currentVariation.price || 0) : parseFloat(state.currentItem?.price || 0);
+    const basePrice = state.currentVariation
+        ? getEffectiveProductPrice(state.currentVariation)
+        : getEffectiveProductPrice(state.currentItem);
     const {
         addonTotal
     } = getSelectedAddons();
@@ -1961,7 +1966,6 @@ function updateOrderTabsVisibility(forceSync = false) {
 }
 
 function initEventListeners() {
-    ensureDetailFooter();
     const searchInput = document.getElementById('search-input');
     const mobileSearchToggle = document.getElementById('mobile-search-toggle');
     const searchContainer = document.getElementById('search-container');
@@ -1995,14 +1999,15 @@ function initEventListeners() {
         });
     });
 
-    document.getElementById('qty-plus').addEventListener('click', () => {
-        state.currentQty++;
-        updateDetailFooter();
-    });
-    document.getElementById('qty-minus').addEventListener('click', () => {
-        if (state.currentQty > 1) {
-            state.currentQty--;
+    document.addEventListener('click', (event) => {
+        if (event.target.closest('#qty-plus')) {
+            state.currentQty++;
             updateDetailFooter();
+        } else if (event.target.closest('#qty-minus')) {
+            if (state.currentQty > 1) state.currentQty--;
+            updateDetailFooter();
+        } else if (event.target.closest('#add-to-cart-btn')) {
+            addToCart();
         }
     });
 
@@ -2029,7 +2034,6 @@ function initEventListeners() {
         renderPreviousOrders();
     });
 
-    document.getElementById('add-to-cart-btn').addEventListener('click', addToCart);
     document.getElementById('view-cart-btn').addEventListener('click', () => {
         restoreCheckoutState();
         if (state.activeTab === 'order' && (!state.orderSchedule?.date || !state.orderSchedule?.time) && getActiveCart().length > 0) {
@@ -2642,7 +2646,9 @@ function commitAddToCart() {
     } = getSelectedAddons();
     const addonsJSON = addons.length > 0 ? JSON.stringify(addons) : null;
 
-    const basePrice = parseFloat((variation ? variation.price : item.price) || 0);
+    const basePrice = variation
+        ? getEffectiveProductPrice(variation)
+        : getEffectiveProductPrice(item);
     const finalUnitPrice = basePrice + addonTotal;
 
     const customFieldSchema = getCustomFieldSchema(item);

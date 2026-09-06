@@ -910,6 +910,10 @@ h3 {
     background: color-mix(in srgb, var(--bg-color) 96%, var(--text-main) 4%);
 }
 
+.item-detail-panel > .modal-footer-sticky {
+    margin: auto -20px -20px;
+}
+
 .item-detail-panel .item-main-info {
     padding: 0;
 }
@@ -1406,7 +1410,6 @@ body.theme-dark .delivery-fee-badge {
 @media (min-width: 600px) {
     .modal {
         align-items: center;
-        padding: 24px;
     }
 
     .modal-content {
@@ -1440,6 +1443,10 @@ body.theme-dark .delivery-fee-badge {
         border-left: none;
         border-top: 1px solid var(--border);
         padding: 16px;
+    }
+
+    .item-detail-panel > .modal-footer-sticky {
+        margin: auto -16px -16px;
     }
 
     #item-detail-modal .item-detail-content {
