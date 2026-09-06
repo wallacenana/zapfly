@@ -312,7 +312,7 @@ function openScheduleModal(context = 'add') {
     const today = getBrazilDateString();
     if (dateInput) {
         dateInput.min = today;
-        dateInput.value = state.orderSchedule?.date || today;
+        dateInput.value = state.orderSchedule?.date || getBrazilDateAfterDays(1);
     }
     if (timeSelect) {
         timeSelect.disabled = true;
@@ -385,6 +385,12 @@ function getBrazilDateParts(date = new Date()) {
 function getBrazilDateString(date = new Date()) {
     const parts = getBrazilDateParts(date);
     return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function getBrazilDateAfterDays(days) {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    return getBrazilDateString(date);
 }
 
 function setOrderDateConstraints() {
@@ -2087,7 +2093,6 @@ function initEventListeners() {
         };
 
         scheduleDateInput.addEventListener('change', handleScheduleDateChange);
-        scheduleDateInput.addEventListener('blur', handleScheduleDateChange);
     }
 
     document.getElementById('confirm-schedule-btn')?.addEventListener('click', commitScheduleAndMaybeAdd);
