@@ -737,7 +737,7 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
 
     if (!time) {
       if (!availableSlots.length) {
-        const reason = 'Sem horários disponíveis para este dia.';
+        const reason = 'A loja está fechada neste dia.';
         return { available: false, reason, date, times: buildDisabledTimes(reason) };
       }
 
@@ -766,12 +766,6 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
         const timeMinutes = parseTimeToMinutes(slotTime);
         if (date === today && nowMinutes !== null && timeMinutes !== null && timeMinutes <= nowMinutes) {
           return { time: slotTime, available: false, reason: 'Horário já passou.' };
-        }
-
-        const slotCapacity = dailyLimit;
-        const usedAtTime = ordersToday.filter(order => order.scheduledTime === slotTime).length;
-        if (usedAtTime >= slotCapacity) {
-          return { time: slotTime, available: false, reason: 'Horário lotado.' };
         }
 
         const conflict = calendarEvents.find(event => {
@@ -814,20 +808,6 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
     const timeMinutes = parseTimeToMinutes(time);
     if (date === today && nowMinutes !== null && timeMinutes !== null && timeMinutes <= nowMinutes) {
       return { available: false, reason: 'Horário já passou.' };
-    }
-
-    const slotCapacity = dailyLimit;
-    const usedAtTime = await prisma.order.count({
-      where: {
-        userId,
-        scheduledDate: date,
-        scheduledTime: time,
-        type: requestedType,
-        status: { notIn: ['cancelled', 'cancelado'] }
-      }
-    });
-    if (usedAtTime >= slotCapacity) {
-      return { available: false, reason: 'Horário lotado.' };
     }
 
     const window = getTimeWindowForOrder(date, time);
