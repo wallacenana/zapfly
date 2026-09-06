@@ -82,6 +82,7 @@ const BUSINESS_CATEGORY_OPTIONS = [
   'Vegana',
   'Vegetariana'
 ];
+const normalizeBusinessCategory = (value) => ({ Restaurante: 'Brasileira', Lanchonete: 'Lanches', Hamburgueria: 'Hambúrguer', 'Doces e bolos': 'Doces & Bolos', Marmitas: 'Marmitaria', lanchone: 'Lanches' }[value] || value);
 
 function normalizeDeliveryMenuOptions(value) {
   const base = {
@@ -234,7 +235,7 @@ const Settings = () => {
           claudeKey: dataWithoutSlug.claude || '',
           googleApiKey: dataWithoutSlug.googleApiKey || '',
           gcalCalendarId: dataWithoutSlug.gcalCalendarId || '',
-          businessCategory: dataWithoutSlug.businessCategory || '',
+          businessCategory: normalizeBusinessCategory(dataWithoutSlug.businessCategory || ''),
           prepTime: dataWithoutSlug.prepTime || '',
           businessAddress: dataWithoutSlug.businessAddress || parsedLocation.address || '',
           businessPlaceId: dataWithoutSlug.businessPlaceId || parsedLocation.placeId || '',
@@ -559,18 +560,16 @@ const Settings = () => {
                   <Shield size={18} />
                   <span>Categoria do Negócio</span>
                 </div>
-                <input
+                <select
                   {...inp}
-                  list="business-category-list"
                   value={settings.businessCategory || ''}
                   onChange={e => setSettings({ ...settings, businessCategory: e.target.value })}
-                  placeholder="Ex: Pizza, Marmitaria, Açaí, Confeitaria"
-                />
-                <datalist id="business-category-list">
+                >
+                  <option value="">Selecione uma categoria</option>
                   {BUSINESS_CATEGORY_OPTIONS.map(option => (
-                    <option key={option} value={option} />
+                    <option key={option} value={option}>{option}</option>
                   ))}
-                </datalist>
+                </select>
                 <p className="settings-helper">Essa categoria alimenta o diretório público e a home estilo iFood.</p>
               </div>
 
