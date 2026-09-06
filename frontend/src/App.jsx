@@ -104,7 +104,7 @@ function AppRoutes() {
       </Route>
 
       <Route path="/get-started" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
-        <Route index element={<GetStarted />} />
+        <Route index element={<><Dashboard /><GetStarted /></>} />
       </Route>
 
       <Route element={<PrivateRoute><MainLayout /></PrivateRoute>}>

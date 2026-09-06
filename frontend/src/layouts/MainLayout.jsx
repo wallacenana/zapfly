@@ -15,7 +15,6 @@ import {
   Users,
   ExternalLink,
   CreditCard,
-  Rocket,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { PUBLIC_SITE_URL } from '../api';
@@ -31,7 +30,6 @@ const MainLayout = ({ clientMode = false }) => {
   const brandLogo = '/logo%20HotWhats.png';
 
   const adminMenuItems = [
-    { path: '/get-started', icon: <Rocket size={20} />, label: 'Começar' },
     { path: '/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard' },
     { path: '/chat', icon: <MessageCircle size={20} />, label: 'Chat' },
     { path: '/estoque', icon: <Package size={20} />, label: 'Estoque' },
