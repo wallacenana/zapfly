@@ -133,8 +133,8 @@ body.theme-dark .addon-option.disabled .addon-option-mark {
 }
 
 .addon-group-header {
-    background: rgba(0, 0, 0, 0.04);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    background: #e6e8e7;
+    border-bottom: 1px solid #d4d8d6;
 }
 
 body.theme-dark .addon-option-mark {
@@ -791,7 +791,7 @@ h3 {
 #item-detail-modal .item-detail-content {
     width: min(90vw, 1180px);
     max-width: none;
-    height: 86vh;
+    height: 67vh;
     max-height: 86vh;
     border-radius: 16px;
 }
