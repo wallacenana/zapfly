@@ -485,11 +485,13 @@ if (!function_exists('dzhome2_enqueue_blog_assets')) {
             wp_enqueue_style('digizap-home-2-blog', dzhome2_asset_url($style_rel), [], dzhome2_asset_version($style_rel));
             wp_enqueue_script('digizap-home-2-blog', dzhome2_asset_url($script_rel), [], dzhome2_asset_version($script_rel), true);
 
-            wp_localize_script('digizap-home-2-blog', 'dzHome2BlogConfig', [
-                'storageKey' => 'dz_home2_reading_progress',
+            $blog_config = [
+                'storageKey' => 'menzzu_reading_progress',
                 'restBase' => esc_url_raw(rest_url('digizap-home-2/v1')),
                 'singlePost' => $single_post,
-            ]);
+            ];
+            wp_localize_script('digizap-home-2-blog', 'menzzuBlogConfig', $blog_config);
+            wp_localize_script('digizap-home-2-blog', 'dzHome2BlogConfig', $blog_config);
 
             $loaded = true;
         }

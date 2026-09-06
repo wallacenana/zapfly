@@ -82,7 +82,7 @@ if (!function_exists('dzhome2_render_restaurants_shortcode')) {
             data-login-url="<?php echo esc_attr(dzhome2_login_url()); ?>"
             data-register-url="<?php echo esc_attr(home_url('/comprar/')); ?>"
             data-blog-url="<?php echo esc_attr(dzhome2_blog_url()); ?>"
-            data-storage-key="dz_home2_address"
+            data-storage-key="menzzu_home_address"
             data-limit="<?php echo esc_attr($limit); ?>"
             data-maps-key="<?php echo esc_attr($mapsKey); ?>">
             <?php echo dzhome2_render_directory_header([
@@ -189,4 +189,5 @@ if (!function_exists('dzhome2_render_restaurants_shortcode')) {
 }
 
 add_shortcode('digizap_home_2_restaurants', 'dzhome2_render_restaurants_shortcode');
+add_shortcode('menzzu_restaurants', 'dzhome2_render_restaurants_shortcode');
 

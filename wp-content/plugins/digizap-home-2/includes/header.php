@@ -36,12 +36,12 @@ if (!function_exists('dzhome2_render_directory_header')) {
                             <?php
                             $logo_id = (int) get_theme_mod('custom_logo');
                             echo $logo_id
-                                ? wp_get_attachment_image($logo_id, 'full', false, ['class' => 'dz-home2-brand-logo', 'alt' => get_bloginfo('name') ?: 'HotWhats'])
+                                ? wp_get_attachment_image($logo_id, 'full', false, ['class' => 'dz-home2-brand-logo', 'alt' => get_bloginfo('name') ?: 'Menzzu'])
                                 : '';
                             ?>
                         <?php else : ?>
-                            <img decoding="async" width="300" height="300" src="<?php echo esc_url(dzhome2_brand_logo_url()); ?>" class="dz-home2-brand-logo" alt="<?php echo esc_attr(get_bloginfo('name') ?: 'DZ'); ?>">
-                            <span class="dz-home2-brand-name" style="display: none"><?php echo esc_html(get_bloginfo('name') ?: 'DZ'); ?></span>
+                            <img decoding="async" width="300" height="300" src="<?php echo esc_url(dzhome2_brand_logo_url()); ?>" class="dz-home2-brand-logo" alt="<?php echo esc_attr(get_bloginfo('name') ?: 'Menzzu'); ?>">
+                            <span class="dz-home2-brand-name" style="display: none"><?php echo esc_html(get_bloginfo('name') ?: 'Menzzu'); ?></span>
                         <?php endif; ?>
                     </a>
                 </div>

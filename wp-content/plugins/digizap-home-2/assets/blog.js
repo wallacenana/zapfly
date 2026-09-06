@@ -1,6 +1,6 @@
 (function () {
-  const config = window.dzHome2BlogConfig || {};
-  const storageKey = String(config.storageKey || 'dz_home2_reading_progress');
+  const config = window.menzzuBlogConfig || window.dzHome2BlogConfig || {};
+  const storageKey = String(config.storageKey || 'menzzu_reading_progress');
   const restBase = String(config.restBase || '').replace(/\/+$/, '');
 
   function escapeHtml(value) {

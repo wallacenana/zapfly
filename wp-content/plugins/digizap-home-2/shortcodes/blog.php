@@ -172,3 +172,5 @@ if (!function_exists('dzhome2_render_continue_reading_shortcode')) {
 
 add_shortcode('digizap_home_2_popular_posts', 'dzhome2_render_popular_posts_shortcode');
 add_shortcode('digizap_home_2_continue_reading', 'dzhome2_render_continue_reading_shortcode');
+add_shortcode('menzzu_popular_posts', 'dzhome2_render_popular_posts_shortcode');
+add_shortcode('menzzu_continue_reading', 'dzhome2_render_continue_reading_shortcode');

@@ -51,7 +51,7 @@ if (!function_exists('dzhome2_brand_logo_url')) {
             }
         }
 
-        return dzhome2_placeholder_logo(get_bloginfo('name') ?: 'DZ');
+        return dzhome2_placeholder_logo(get_bloginfo('name') ?: 'Menzzu');
     }
 }
 
@@ -66,10 +66,10 @@ if (!function_exists('dzhome2_enqueue_assets')) {
         $style_rel = 'assets/home.css';
         $script_rel = 'assets/home.js';
 
-        wp_enqueue_style('digizap-home-2', dzhome2_asset_url($style_rel), [], dzhome2_asset_version($style_rel));
-        wp_enqueue_script('digizap-home-2', dzhome2_asset_url($script_rel), [], dzhome2_asset_version($script_rel), true);
+        wp_enqueue_style('menzzu-marketplace', dzhome2_asset_url($style_rel), [], dzhome2_asset_version($style_rel));
+        wp_enqueue_script('menzzu-marketplace', dzhome2_asset_url($script_rel), [], dzhome2_asset_version($script_rel), true);
 
-        wp_localize_script('digizap-home-2', 'dzHome2Config', [
+        $config = [
             'apiBase' => dzhome2_api_base(),
             'homeUrl' => home_url('/'),
             'restaurantsUrl' => dzhome2_restaurants_url(),
@@ -78,12 +78,16 @@ if (!function_exists('dzhome2_enqueue_assets')) {
             'blogUrl' => dzhome2_blog_url(),
             'categoryImageBaseUrl' => dzhome2_asset_url('assets/img/'),
             'categoryImageRules' => dzhome2_category_image_rules(),
-            'storageKey' => 'dz_home2_address',
+            'storageKey' => 'menzzu_home_address',
+            'legacyStorageKey' => 'dz_home2_address',
             'searchLabel' => 'Buscar loja ou item',
             'continueLabel' => 'Continuar',
             'editLabel' => 'Alterar endereÃ§o',
             'addressPlaceholder' => 'Digite seu endereÃ§o completo',
-        ]);
+        ];
+
+        wp_localize_script('menzzu-marketplace', 'menzzuMarketplaceConfig', $config);
+        wp_localize_script('menzzu-marketplace', 'dzHome2Config', $config);
 
         $loaded = true;
     }
@@ -136,7 +140,7 @@ if (!function_exists('dzhome2_placeholder_logo')) {
         $words = preg_split('/\s+/', trim((string) $name)) ?: [];
         $words = array_values(array_filter($words, static fn($word) => $word !== ''));
         if (count($words) === 0) {
-            $initials = 'DZ';
+            $initials = 'MZ';
         } elseif (count($words) === 1) {
             $initials = mb_strtoupper(mb_substr($words[0], 0, 2));
         } else {
@@ -275,9 +279,19 @@ if (!function_exists('dzhome2_store_schedule_state')) {
 }
 
 if (!function_exists('dzhome2_read_address_cookie')) {
-    function dzhome2_read_address_cookie($key = 'dz_home2_address')
+    function dzhome2_read_address_cookie($key = 'menzzu_home_address')
     {
-        $raw = isset($_COOKIE[$key]) ? wp_unslash((string) $_COOKIE[$key]) : '';
+        $keys = [$key];
+        if ($key !== 'dz_home2_address') {
+            $keys[] = 'dz_home2_address';
+        }
+        $raw = '';
+        foreach ($keys as $cookieKey) {
+            if (isset($_COOKIE[$cookieKey]) && (string) $_COOKIE[$cookieKey] !== '') {
+                $raw = wp_unslash((string) $_COOKIE[$cookieKey]);
+                break;
+            }
+        }
 
         if ($raw === '') {
             return [
@@ -845,7 +859,10 @@ if (!function_exists('dzhome2_short_address')) {
 if (!function_exists('dzhome2_maps_key')) {
     function dzhome2_maps_key($fallback = '')
     {
-        $option = trim((string) get_option('hotwhats_home2_maps_key', ''));
+        $option = trim((string) get_option('menzzu_maps_key', ''));
+        if ($option === '') {
+            $option = trim((string) get_option('hotwhats_home2_maps_key', ''));
+        }
         if ($option !== '') {
             return $option;
         }

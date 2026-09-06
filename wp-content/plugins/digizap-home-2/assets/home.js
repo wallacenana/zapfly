@@ -1,5 +1,5 @@
 ﻿(function () {
-  const config = window.dzHome2Config || {};
+  const config = window.menzzuMarketplaceConfig || window.dzHome2Config || {};
   const categoryImageBaseUrl = String(config.categoryImageBaseUrl || '');
   const categoryImageRules = Array.isArray(config.categoryImageRules) ? config.categoryImageRules : [];
   const roots = new Set();
@@ -76,7 +76,7 @@
 
   function placeholderLogo(name, accent = '#e11d48') {
     const words = String(name || '').trim().split(/\s+/).filter(Boolean);
-    let initials = 'DZ';
+    let initials = 'MZ';
     if (words.length === 1) {
       initials = words[0].slice(0, 2).toUpperCase();
     } else if (words.length > 1) {
@@ -193,7 +193,7 @@
   }
 
   function getStorageKey(root) {
-    return root.dataset.storageKey || 'dz_home2_address';
+    return root.dataset.storageKey || config.storageKey || 'menzzu_home_address';
   }
 
   function getAddressCookie(root) {
