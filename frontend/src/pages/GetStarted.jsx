@@ -66,7 +66,7 @@ const steps = [
   { key: 'acceptOrders', title: 'Pedidos', question: 'Você quer aceitar pedidos agora?', help: 'Você pode pausar os pedidos depois nas configurações.', type: 'select', options: ['true', 'false'], optionLabels: ['Sim, aceitar pedidos', 'Não, deixar pausado'], icon: Store, required: true },
   { key: 'dailyDeliveryItems', title: 'Como você atende?', question: 'Quais tipos de pedido e retirada estarão disponíveis?', help: 'Selecione todas as opções que sua empresa oferece.', type: 'delivery-options', icon: Store },
   { key: 'dailyMaxOrders', title: 'Capacidade da operação', question: 'Quantos pedidos você aceita por dia?', help: 'Escolha uma sugestão ou informe outro limite. Você pode alterar esse número quando quiser.', placeholder: 'Ex.: 25', type: 'number-with-suggestions', icon: Store, required: true },
-  { key: 'slots', title: 'Horários de funcionamento', question: 'Em quais horários você atende?', help: 'Ative os dias e informe a abertura e o fechamento.', type: 'schedule', icon: Store, required: true },
+  { key: 'slots', title: 'Horários de funcionamento', question: 'Em quais horários você atende?', help: 'Ative apenas os dias em que sua empresa funciona. Dias desativados ficam fechados.', type: 'schedule', icon: Store },
   { key: 'deliveryMode', title: 'Entrega', question: 'Como o frete será calculado?', help: 'Você poderá configurar regras por distância depois.', type: 'select', options: ['hibrido', 'manual', 'automatico'], optionLabels: ['Híbrido (recomendado)', 'Manual', 'Automático'], icon: MapPin, required: true },
   { key: 'allowCashOnDelivery', title: 'Pagamento na entrega', question: 'Você aceita dinheiro na entrega?', help: 'O dinheiro só aparecerá como opção quando o pedido permitir pagamento na entrega.', type: 'select', options: ['true', 'false'], optionLabels: ['Sim, aceitar dinheiro', 'Não aceitar dinheiro'], icon: Store, required: true },
   { key: 'pixReceiverKey', title: 'Recebimento por Pix', question: 'Qual chave Pix sua empresa recebe?', help: 'Opcional por enquanto. Pode ser CPF, CNPJ, telefone, e-mail ou chave aleatória.', placeholder: 'Sua chave Pix', icon: KeyRound },
@@ -121,11 +121,7 @@ export default function GetStarted() {
   const next = async () => {
     const nextValue = current.type === 'select' ? (value || current.options?.[0] || '') : value;
     const textValue = String(nextValue ?? '');
-    if (current.key === 'slots' && slots.length === 0) {
-      toast.error('Ative pelo menos um dia de atendimento.');
-      return;
-    }
-    if (current.required && current.key !== 'slots' && !textValue.trim()) {
+    if (current.required && !textValue.trim()) {
       toast.error('Preencha este campo para continuar.');
       return;
     }
