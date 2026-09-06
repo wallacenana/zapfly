@@ -25,6 +25,9 @@ const loadGooglePlaces = (apiKey) => {
   return googlePlacesLoaderPromise;
 };
 
+const defaultDeliveryOptions = { orderTypes: { delivery: true, order: true }, fulfillmentMethods: { delivery: true, pickup: true, local: true } };
+const weekDays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+
 const inputStyle = {
   width: '100%',
   padding: '16px 18px',
@@ -43,6 +46,13 @@ const steps = [
   { key: 'businessName', title: 'Agora, sobre sua empresa', question: 'Como sua empresa se chama?', help: 'Esse nome aparecerá no cardápio e nas mensagens.', placeholder: 'Ex.: Linda Cake', icon: Store, required: true },
   { key: 'businessCategory', title: 'Vamos ajustar a experiência', question: 'O que sua empresa vende?', help: 'Escolha a opção mais próxima. Isso ajuda a IA a entender o contexto dos seus pedidos.', type: 'select', options: ['Restaurante', 'Lanchonete', 'Pizzaria', 'Hamburgueria', 'Doces e bolos', 'Padaria', 'Marmitas', 'Açaí', 'Outro'], icon: Store, required: true },
   { key: 'prepTime', title: 'Tempo de preparo', question: 'Quanto tempo você normalmente precisa?', help: 'Pode ser aproximado. Ex.: 30-45 minutos.', placeholder: 'Ex.: 30-45', icon: Store },
+  { key: 'acceptOrders', title: 'Pedidos', question: 'Você quer aceitar pedidos agora?', help: 'Você pode pausar os pedidos depois nas configurações.', type: 'select', options: ['true', 'false'], optionLabels: ['Sim, aceitar pedidos', 'Não, deixar pausado'], icon: Store, required: true },
+  { key: 'dailyDeliveryItems', title: 'Como você atende?', question: 'Quais tipos de pedido e retirada estarão disponíveis?', help: 'Selecione todas as opções que sua empresa oferece.', type: 'delivery-options', icon: Store },
+  { key: 'dailyMaxOrders', title: 'Capacidade da operação', question: 'Quantos pedidos você aceita por dia?', help: 'Esse limite ajuda a evitar mais pedidos do que sua equipe consegue preparar.', type: 'select', options: ['10', '20', '30', '50', '100'], icon: Store, required: true },
+  { key: 'slots', title: 'Horários de funcionamento', question: 'Em quais horários você atende?', help: 'Ative os dias e informe a abertura e o fechamento.', type: 'schedule', icon: Store, required: true },
+  { key: 'deliveryMode', title: 'Entrega', question: 'Como o frete será calculado?', help: 'Você poderá configurar regras por distância depois.', type: 'select', options: ['hibrido', 'manual', 'automatico'], optionLabels: ['Híbrido (recomendado)', 'Manual', 'Automático'], icon: MapPin, required: true },
+  { key: 'allowCashOnDelivery', title: 'Pagamento na entrega', question: 'Você aceita dinheiro na entrega?', help: 'O dinheiro só aparecerá como opção quando o pedido permitir pagamento na entrega.', type: 'select', options: ['true', 'false'], optionLabels: ['Sim, aceitar dinheiro', 'Não aceitar dinheiro'], icon: Store, required: true },
+  { key: 'pixReceiverKey', title: 'Recebimento por Pix', question: 'Qual chave Pix sua empresa recebe?', help: 'Opcional por enquanto. Pode ser CPF, CNPJ, telefone, e-mail ou chave aleatória.', placeholder: 'Sua chave Pix', icon: KeyRound },
   { key: 'businessAddress', title: 'Onde você atende?', question: 'Qual é o endereço da empresa?', help: 'Usaremos essa informação no cardápio e na entrega.', placeholder: 'Rua, número, bairro, cidade e estado', icon: MapPin },
   { key: 'slug', title: 'Seu endereço público', question: 'Qual será o link do seu cardápio?', help: 'Use apenas letras, números e hífens.', placeholder: 'sua-loja', prefix: 'menzzu.com/', icon: Rocket, required: true },
 ];
@@ -52,12 +62,19 @@ export default function GetStarted() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ openai: '', claude: '', activeModel: 'openai', businessName: '', businessCategory: '', prepTime: '', businessAddress: '', businessPlaceId: '', businessLat: null, businessLng: null, businessMapsUrl: '', slug: '', googleApiKey: '' });
+  const [form, setForm] = useState({ openai: '', claude: '', activeModel: 'openai', businessName: '', businessCategory: '', prepTime: '', acceptOrders: true, dailyDeliveryItems: defaultDeliveryOptions, dailyMaxOrders: 10, deliveryMode: 'hibrido', allowCashOnDelivery: true, pixReceiverKey: '', businessAddress: '', businessPlaceId: '', businessLat: null, businessLng: null, businessMapsUrl: '', slug: '', googleApiKey: '' });
+  const [slots, setSlots] = useState([]);
   const addressRef = useRef(null);
 
   useEffect(() => {
-    api.get('/config/keys').then(({ data }) => {
-      setForm((current) => ({ ...current, openai: data.openai || '', claude: data.claude || '', activeModel: data.activeModel || 'openai', businessName: data.businessName || '', businessCategory: data.businessCategory || '', prepTime: data.prepTime || '', businessAddress: data.businessAddress || '', businessPlaceId: data.businessPlaceId || '', businessLat: data.businessLat ?? null, businessLng: data.businessLng ?? null, businessMapsUrl: data.businessMapsUrl || '', slug: data.slug || '', googleApiKey: data.googleApiKey || '' }));
+    Promise.all([api.get('/config/keys'), api.get('/config/slots')]).then(([configResponse, slotsResponse]) => {
+      const data = configResponse.data;
+      let deliveryOptions = data.dailyDeliveryItems || defaultDeliveryOptions;
+      if (typeof deliveryOptions === 'string') {
+        try { deliveryOptions = JSON.parse(deliveryOptions); } catch { deliveryOptions = defaultDeliveryOptions; }
+      }
+      setForm((current) => ({ ...current, openai: data.openai || '', claude: data.claude || '', activeModel: data.activeModel || 'openai', businessName: data.businessName || '', businessCategory: data.businessCategory || '', prepTime: data.prepTime || '', acceptOrders: data.acceptOrders !== false, dailyDeliveryItems: deliveryOptions, dailyMaxOrders: data.dailyMaxOrders || 10, deliveryMode: data.deliveryMode || 'hibrido', allowCashOnDelivery: data.allowCashOnDelivery !== false, pixReceiverKey: data.pixReceiverKey || '', businessAddress: data.businessAddress || '', businessPlaceId: data.businessPlaceId || '', businessLat: data.businessLat ?? null, businessLng: data.businessLng ?? null, businessMapsUrl: data.businessMapsUrl || '', slug: data.slug || '', googleApiKey: data.googleApiKey || '' }));
+      setSlots(Array.isArray(slotsResponse.data) ? slotsResponse.data : []);
     }).catch(() => toast.error('Não foi possível carregar sua configuração.')).finally(() => setLoading(false));
   }, []);
 
@@ -89,11 +106,16 @@ export default function GetStarted() {
 
   const next = async () => {
     const nextValue = current.type === 'select' ? (value || current.options?.[0] || '') : value;
-    if (current.required && !nextValue.trim()) {
+    const textValue = String(nextValue ?? '');
+    if (current.key === 'slots' && slots.length === 0) {
+      toast.error('Ative pelo menos um dia de atendimento.');
+      return;
+    }
+    if (current.required && !textValue.trim()) {
       toast.error('Preencha este campo para continuar.');
       return;
     }
-    if (nextValue !== value) setValue(nextValue);
+    if (nextValue !== value) setValue(nextValue === 'true' ? true : nextValue === 'false' ? false : nextValue);
     if (step < visibleSteps.length - 1) {
       setStep((previous) => previous + 1);
       return;
@@ -109,10 +131,13 @@ export default function GetStarted() {
       const payload = onlyOneAi
         ? { ...form, activeModel: form.openai.trim() ? 'openai' : 'claude' }
         : form;
-      await api.post('/config/keys', payload);
+      await Promise.all([
+        api.post('/config/keys', { ...payload, dailyDeliveryItems: JSON.stringify(payload.dailyDeliveryItems || defaultDeliveryOptions), deliveryRules: JSON.stringify(payload.deliveryRules || []) }),
+        api.post('/config/slots', { slots }),
+      ]);
       window.localStorage.setItem('menzzu_onboarding_completed', '1');
       toast.success('Tudo pronto. Bem-vindo ao Menzzu!');
-      navigate('/dashboard', { replace: true });
+      window.location.assign('/dashboard');
     } catch (error) {
       toast.error(error.response?.data?.error || 'Não foi possível salvar sua configuração.');
     } finally {
@@ -123,6 +148,19 @@ export default function GetStarted() {
   if (loading) return null;
 
   const Icon = current.icon;
+  const renderControl = () => {
+    if (current.type === 'delivery-options') {
+      const options = form.dailyDeliveryItems || defaultDeliveryOptions;
+      const toggle = (group, key) => setForm((previous) => ({ ...previous, dailyDeliveryItems: { ...previous.dailyDeliveryItems, [group]: { ...previous.dailyDeliveryItems[group], [key]: !previous.dailyDeliveryItems[group][key] } } }));
+      return <div style={{ display: 'grid', gap: '16px' }}>
+        <div><strong style={{ display: 'block', marginBottom: '9px', fontSize: '13px' }}>Tipos de pedido</strong><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '9px' }}>{[['delivery', 'Delivery'], ['order', 'Encomendas']].map(([key, label]) => <button type="button" key={key} onClick={() => toggle('orderTypes', key)} style={{ padding: '14px', border: `1px solid ${options.orderTypes?.[key] ? 'var(--accent-primary)' : 'var(--border-color)'}`, borderRadius: '12px', background: options.orderTypes?.[key] ? 'var(--accent-glow)' : 'var(--bg-secondary)', color: 'var(--text-primary)', fontWeight: 800 }}>{label}</button>)}</div></div>
+        <div><strong style={{ display: 'block', marginBottom: '9px', fontSize: '13px' }}>Formas de retirada</strong><div style={{ display: 'grid', gap: '9px' }}>{[['delivery', 'Entrega'], ['pickup', 'Retirada na loja'], ['local', 'Consumo no local']].map(([key, label]) => <button type="button" key={key} onClick={() => toggle('fulfillmentMethods', key)} style={{ padding: '13px 14px', textAlign: 'left', border: `1px solid ${options.fulfillmentMethods?.[key] ? 'var(--accent-primary)' : 'var(--border-color)'}`, borderRadius: '12px', background: options.fulfillmentMethods?.[key] ? 'var(--accent-glow)' : 'var(--bg-secondary)', color: 'var(--text-primary)', fontWeight: 700 }}>{options.fulfillmentMethods?.[key] ? '✓ ' : ''}{label}</button>)}</div></div>
+      </div>;
+    }
+    if (current.type === 'schedule') return <div style={{ display: 'grid', gap: '8px' }}>{weekDays.map((day, index) => { const slot = slots.find((item) => item.dayOfWeek === index); return <div key={day} style={{ display: 'grid', gridTemplateColumns: 'minmax(130px, 1fr) 1fr 1fr auto', gap: '8px', alignItems: 'center' }}><button type="button" onClick={() => setSlots((previous) => slot ? previous.filter((item) => item.dayOfWeek !== index) : [...previous, { dayOfWeek: index, startTime: '09:00', endTime: '20:00' }].sort((a, b) => a.dayOfWeek - b.dayOfWeek))} style={{ padding: '10px', textAlign: 'left', border: '1px solid var(--border-color)', borderRadius: '10px', background: slot ? 'var(--accent-glow)' : 'var(--bg-primary)', color: slot ? 'var(--text-primary)' : 'var(--text-muted)', fontWeight: 700 }}>{slot ? '✓ ' : ''}{day}</button><input type="time" value={slot?.startTime || '09:00'} disabled={!slot} onChange={(event) => setSlots((previous) => previous.map((item) => item.dayOfWeek === index ? { ...item, startTime: event.target.value } : item))} style={{ ...inputStyle, padding: '10px', opacity: slot ? 1 : .45 }} /><input type="time" value={slot?.endTime || '20:00'} disabled={!slot} onChange={(event) => setSlots((previous) => previous.map((item) => item.dayOfWeek === index ? { ...item, endTime: event.target.value } : item))} style={{ ...inputStyle, padding: '10px', opacity: slot ? 1 : .45 }} /><span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>até</span></div>; })}</div>;
+    if (current.type === 'select') return <select autoFocus style={inputStyle} value={String(value || current.options?.[0] || 'openai')} onChange={(event) => setValue(event.target.value)}>{(current.options || ['openai', 'claude']).map((option, index) => <option key={option} value={option}>{current.optionLabels?.[index] || option}</option>)}</select>;
+    return <input ref={current.key === 'businessAddress' ? addressRef : undefined} autoFocus style={inputStyle} type={current.type || 'text'} value={value} onChange={(event) => setForm((previous) => ({ ...previous, [current.key]: current.key === 'slug' ? event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') : event.target.value, ...(current.key === 'businessAddress' ? { businessPlaceId: '', businessLat: null, businessLng: null, businessMapsUrl: '' } : {}) }))} placeholder={current.placeholder} onKeyDown={(event) => { if (event.key === 'Enter') next(); }} />;
+  };
   return (
     <div role="dialog" aria-modal="true" aria-labelledby="get-started-title" style={{ position: 'fixed', inset: 0, zIndex: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'rgba(15, 23, 42, 0.38)', backdropFilter: 'blur(7px)' }}>
       <section style={{ width: '100%', maxWidth: '620px', padding: '38px 42px 32px', border: '1px solid rgba(217,229,210,.95)', borderRadius: '24px', background: '#fff', boxShadow: '0 28px 80px rgba(15,23,42,.22)' }}>
@@ -137,7 +175,7 @@ export default function GetStarted() {
         <p style={{ minHeight: '44px', marginBottom: '20px', color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>{current.help}</p>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {current.prefix && <span style={{ flexShrink: 0, color: 'var(--text-secondary)', fontSize: '15px' }}>{current.prefix}</span>}
-          {current.type === 'select' ? <select autoFocus style={inputStyle} value={value || current.options?.[0] || 'openai'} onChange={(event) => setValue(event.target.value)}>{(current.options || ['openai', 'claude']).map((option) => <option key={option} value={option}>{option}</option>)}</select> : <input ref={current.key === 'businessAddress' ? addressRef : undefined} autoFocus style={inputStyle} type={current.type || 'text'} value={value} onChange={(event) => setForm((previous) => ({ ...previous, [current.key]: current.key === 'slug' ? event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') : event.target.value, ...(current.key === 'businessAddress' ? { businessPlaceId: '', businessLat: null, businessLng: null, businessMapsUrl: '' } : {}) }))} placeholder={current.placeholder} onKeyDown={(event) => { if (event.key === 'Enter') next(); }} />}
+          {renderControl()}
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginTop: '32px' }}>
           <button type="button" onClick={() => setStep((previous) => Math.max(0, previous - 1))} disabled={step === 0 || saving} style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', padding: '12px 16px', border: '1px solid var(--border-color)', borderRadius: '12px', background: '#fff', color: 'var(--text-secondary)', fontWeight: 800, cursor: step === 0 ? 'default' : 'pointer', opacity: step === 0 ? .4 : 1 }}><ArrowLeft size={16} /> Voltar</button>
