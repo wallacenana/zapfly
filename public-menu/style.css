@@ -1855,6 +1855,14 @@ body.theme-dark .delivery-fee-badge {
     font-weight: 700;
 }
 
+#history-modal .store-info-hour-row.is-closed {
+    color: var(--text-gray);
+}
+
+#history-modal .store-info-hour-row.is-closed strong {
+    font-weight: 600;
+}
+
 #history-modal .store-info-section-title {
     padding: 18px 24px 10px;
     flex: 0 0 auto;

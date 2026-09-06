@@ -922,8 +922,7 @@ try {
                         <p class="store-info-description"><?php echo htmlspecialchars($store['seoDescription']); ?></p>
                     <?php endif; ?>
 
-                    <?php if (!empty($availableSlots)): ?>
-                        <div class="store-info-hours">
+                    <div class="store-info-hours">
                             <h4>Horários de abertura</h4>
                             <div class="store-info-hours-list">
                                 <?php
@@ -936,17 +935,22 @@ try {
                                     5 => 'Sex',
                                     6 => 'Sab'
                                 ];
-                                foreach ($availableSlots as $slot):
-                                    $dayLabel = $dayNames[(int) ($slot['dayOfWeek'] ?? 0)] ?? 'Dia';
+                                $slotsByDay = [];
+                                foreach ($availableSlots as $slot) {
+                                    $day = (int) ($slot['dayOfWeek'] ?? 0);
+                                    $slotsByDay[$day][] = substr((string) ($slot['startTime'] ?? '00:00'), 0, 5) . ' - ' . substr((string) ($slot['endTime'] ?? '00:00'), 0, 5);
+                                }
+                                for ($day = 0; $day <= 6; $day++):
+                                    $dayLabel = $dayNames[$day];
+                                    $dayHours = $slotsByDay[$day] ?? [];
                                 ?>
-                                    <div class="store-info-hour-row">
+                                    <div class="store-info-hour-row<?php echo empty($dayHours) ? ' is-closed' : ''; ?>">
                                         <span><?php echo htmlspecialchars($dayLabel); ?></span>
-                                        <strong><?php echo htmlspecialchars(substr((string) ($slot['startTime'] ?? '00:00'), 0, 5) . ' - ' . substr((string) ($slot['endTime'] ?? '00:00'), 0, 5)); ?></strong>
+                                        <strong><?php echo htmlspecialchars(empty($dayHours) ? 'Fechado' : implode(' • ', $dayHours)); ?></strong>
                                     </div>
-                                <?php endforeach; ?>
+                                <?php endfor; ?>
                             </div>
-                        </div>
-                    <?php endif; ?>
+                    </div>
                 </div>
                 <h4 class="store-info-section-title">Meus pedidos</h4>
                 <div id="history-modal-list" class="history-modal-list"></div>
