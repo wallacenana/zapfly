@@ -164,7 +164,8 @@ function loadGooglePlaces(apiKey) {
 }
 
 const Settings = () => {
-  const [activeTab, setActiveTab] = useState('business');
+  const initialTab = ['business', 'delivery', 'schedules', 'bot', 'marketing'].includes(window.location.hash.slice(1)) ? window.location.hash.slice(1) : 'business';
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [loading, setLoading] = useState(true);
   const [calendars, setCalendars] = useState([]);
   const [settings, setSettings] = useState({

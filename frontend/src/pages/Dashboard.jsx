@@ -20,6 +20,7 @@ import {
   Layers3,
 } from 'lucide-react';
 import { api, PUBLIC_SITE_URL } from '../api';
+import { useNavigate } from 'react-router-dom';
 
 const money = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -322,6 +323,7 @@ const DashboardSkeleton = () => (
 );
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -362,6 +364,15 @@ const Dashboard = () => {
   const configIssues = Array.isArray(lists.configIssues) ? lists.configIssues : [];
   const instances = Array.isArray(lists.instances) ? lists.instances : [];
   const slotsByDay = Array.isArray(lists.slotsByDay) ? lists.slotsByDay : [];
+
+  const getIssueRoute = (issue) => {
+    const text = String(issue || '').toLowerCase();
+    if (text.includes('logo')) return '/site-settings';
+    if (text.includes('produto')) return '/estoque';
+    if (text.includes('raio')) return '/settings#delivery';
+    if (text.includes('hor')) return '/settings#schedules';
+    return '/settings';
+  };
 
   const highestDay = useMemo(
     () => Math.max(...ordersByDay.map((item) => safeNumber(item.count)), 1),
@@ -756,10 +767,10 @@ const Dashboard = () => {
                   </div>
                   <div style={{ display: 'grid', gap: '10px' }}>
                     {configIssues.slice(0, 5).map((issue) => (
-                      <div key={issue} style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.5 }}>
+                      <button type="button" key={issue} onClick={() => navigate(getIssueRoute(issue))} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: 0, border: 0, background: 'transparent', color: 'var(--text-primary)', fontSize: '14px', lineHeight: 1.5, textAlign: 'left', cursor: 'pointer' }}>
                         <CircleAlert size={16} style={{ color: '#ef4444', flexShrink: 0 }} />
-                        <span>{issue}</span>
-                      </div>
+                        <span style={{ textDecoration: 'underline', textUnderlineOffset: '3px' }}>{issue}</span>
+                      </button>
                     ))}
                   </div>
                 </div>
