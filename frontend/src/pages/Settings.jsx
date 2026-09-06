@@ -538,21 +538,6 @@ const Settings = () => {
                   <p className="settings-business-desc">Configure o que aparece no cardápio público e no diretório.</p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleAcceptOrdersChange(!acceptOrders)}
-                  disabled={savingAcceptOrders}
-                  className={`settings-status-pill ${acceptOrders ? 'is-on' : 'is-off'}`}
-                  aria-pressed={acceptOrders}
-                >
-                  <span className="settings-status-pill__mark" aria-hidden="true">
-                    <CheckCircle2 size={14} />
-                  </span>
-                  <span className="settings-status-pill__text">
-                    <strong>{savingAcceptOrders ? 'Salvando...' : 'Aceitar encomendas'}</strong>
-                    <small>{acceptOrders ? 'Mostra a aba de encomendas no cardápio público.' : 'Cardápio de encomendas oculto para clientes.'}</small>
-                  </span>
-                </button>
               </div>
 
               <div className="settings-section-card settings-section-card--accent">
