@@ -27,6 +27,23 @@ const loadGooglePlaces = (apiKey) => {
 
 const defaultDeliveryOptions = { orderTypes: { delivery: true, order: true }, fulfillmentMethods: { delivery: true, pickup: true, local: true } };
 const weekDays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+const normalizeDeliveryOptions = (value) => {
+  let parsed = value;
+  if (typeof parsed === 'string') {
+    try { parsed = JSON.parse(parsed); } catch { parsed = null; }
+  }
+  return {
+    orderTypes: {
+      delivery: parsed?.orderTypes?.delivery !== false,
+      order: parsed?.orderTypes?.order !== false,
+    },
+    fulfillmentMethods: {
+      delivery: parsed?.fulfillmentMethods?.delivery !== false,
+      pickup: parsed?.fulfillmentMethods?.pickup !== false,
+      local: parsed?.fulfillmentMethods?.local !== false,
+    },
+  };
+};
 
 const inputStyle = {
   width: '100%',
@@ -69,10 +86,7 @@ export default function GetStarted() {
   useEffect(() => {
     Promise.all([api.get('/config/keys'), api.get('/config/slots')]).then(([configResponse, slotsResponse]) => {
       const data = configResponse.data;
-      let deliveryOptions = data.dailyDeliveryItems || defaultDeliveryOptions;
-      if (typeof deliveryOptions === 'string') {
-        try { deliveryOptions = JSON.parse(deliveryOptions); } catch { deliveryOptions = defaultDeliveryOptions; }
-      }
+      const deliveryOptions = normalizeDeliveryOptions(data.dailyDeliveryItems);
       setForm((current) => ({ ...current, openai: data.openai || '', claude: data.claude || '', activeModel: data.activeModel || 'openai', businessName: data.businessName || '', businessCategory: data.businessCategory || '', prepTime: data.prepTime || '', acceptOrders: data.acceptOrders !== false, dailyDeliveryItems: deliveryOptions, dailyMaxOrders: data.dailyMaxOrders || 10, deliveryMode: data.deliveryMode || 'hibrido', allowCashOnDelivery: data.allowCashOnDelivery !== false, pixReceiverKey: data.pixReceiverKey || '', businessAddress: data.businessAddress || '', businessPlaceId: data.businessPlaceId || '', businessLat: data.businessLat ?? null, businessLng: data.businessLng ?? null, businessMapsUrl: data.businessMapsUrl || '', slug: data.slug || '', googleApiKey: data.googleApiKey || '' }));
       setSlots(Array.isArray(slotsResponse.data) ? slotsResponse.data : []);
     }).catch(() => toast.error('Não foi possível carregar sua configuração.')).finally(() => setLoading(false));
@@ -150,8 +164,8 @@ export default function GetStarted() {
   const Icon = current.icon;
   const renderControl = () => {
     if (current.type === 'delivery-options') {
-      const options = form.dailyDeliveryItems || defaultDeliveryOptions;
-      const toggle = (group, key) => setForm((previous) => ({ ...previous, dailyDeliveryItems: { ...previous.dailyDeliveryItems, [group]: { ...previous.dailyDeliveryItems[group], [key]: !previous.dailyDeliveryItems[group][key] } } }));
+      const options = normalizeDeliveryOptions(form.dailyDeliveryItems);
+      const toggle = (group, key) => setForm((previous) => { const normalized = normalizeDeliveryOptions(previous.dailyDeliveryItems); return { ...previous, dailyDeliveryItems: { ...normalized, [group]: { ...normalized[group], [key]: !normalized[group][key] } } }; });
       return <div style={{ display: 'grid', gap: '16px' }}>
         <div><strong style={{ display: 'block', marginBottom: '9px', fontSize: '13px' }}>Tipos de pedido</strong><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '9px' }}>{[['delivery', 'Delivery'], ['order', 'Encomendas']].map(([key, label]) => <button type="button" key={key} onClick={() => toggle('orderTypes', key)} style={{ padding: '14px', border: `1px solid ${options.orderTypes?.[key] ? 'var(--accent-primary)' : 'var(--border-color)'}`, borderRadius: '12px', background: options.orderTypes?.[key] ? 'var(--accent-glow)' : 'var(--bg-secondary)', color: 'var(--text-primary)', fontWeight: 800 }}>{label}</button>)}</div></div>
         <div><strong style={{ display: 'block', marginBottom: '9px', fontSize: '13px' }}>Formas de retirada</strong><div style={{ display: 'grid', gap: '9px' }}>{[['delivery', 'Entrega'], ['pickup', 'Retirada na loja'], ['local', 'Consumo no local']].map(([key, label]) => <button type="button" key={key} onClick={() => toggle('fulfillmentMethods', key)} style={{ padding: '13px 14px', textAlign: 'left', border: `1px solid ${options.fulfillmentMethods?.[key] ? 'var(--accent-primary)' : 'var(--border-color)'}`, borderRadius: '12px', background: options.fulfillmentMethods?.[key] ? 'var(--accent-glow)' : 'var(--bg-secondary)', color: 'var(--text-primary)', fontWeight: 700 }}>{options.fulfillmentMethods?.[key] ? '✓ ' : ''}{label}</button>)}</div></div>
