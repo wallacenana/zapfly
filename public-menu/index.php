@@ -197,9 +197,6 @@ try {
     $storedBackground = strtolower((string) ($store['backgroundColor'] ?? ''));
     $storedText = strtolower((string) ($store['textColor'] ?? ''));
     // Registros antigos com fundo claro e texto branco eram o default quebrado.
-    if ($menuTheme === 'dark' && in_array($storedBackground, ['', '#ffffff'], true)) {
-        $menuTheme = 'light';
-    }
     $isDarkTheme = $menuTheme === 'dark';
     $legacyAccent = in_array(strtolower((string) ($store['accentColor'] ?? '')), ['#ff4d6d', '#6cb649', '#a2e403'], true) && !$isDarkTheme;
     $legacyButton = in_array(strtolower((string) ($store['buttonColor'] ?? '')), ['#ff4d6d', '#6cb649'], true);
