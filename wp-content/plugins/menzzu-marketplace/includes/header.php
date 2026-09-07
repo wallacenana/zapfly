@@ -32,7 +32,16 @@ if (!function_exists('menzzu_marketplace_render_directory_header')) {
             <div class="menzzu-left">
                 <div class="menzzu-marketplace-brand">
                     <a class="menzzu-marketplace-brand-link" href="<?php echo esc_url($args['homeUrl']); ?>">
-                        <span class="menzzu-marketplace-wordmark" aria-label="Menzzu">men<span>zzu</span></span>
+                        <?php if (has_custom_logo()) : ?>
+                            <?php
+                            $logo_id = (int) get_theme_mod('custom_logo');
+                            echo $logo_id
+                                ? wp_get_attachment_image($logo_id, 'full', false, ['class' => 'menzzu-marketplace-brand-logo', 'alt' => 'Menzzu'])
+                                : '';
+                            ?>
+                        <?php else : ?>
+                            <span class="menzzu-marketplace-wordmark" aria-label="Menzzu">men<span>zzu</span></span>
+                        <?php endif; ?>
                     </a>
                 </div>
 

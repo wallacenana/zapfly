@@ -844,7 +844,7 @@
 .menzzu-marketplace-wordmark span { color: #66d711; }
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-nav a {
-  color: #031614;
+  color: #6d777b;
   font-size: 0.88rem;
   font-weight: 700;
   border: 0;
@@ -852,19 +852,19 @@
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-nav a.is-active,
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-nav a:hover {
-  color: #3ea30b;
+  color: #031614;
 }
 
 .menzzu-marketplace-theme-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 40px;
-  padding: 0 10px;
-  border: 1px solid rgba(3, 22, 20, 0.12);
-  border-radius: 999px;
-  background: #fff;
-  color: #031614;
+  min-height: 32px;
+  padding: 0 3px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #66d711;
   font: inherit;
   font-size: 0.78rem;
   font-weight: 800;
@@ -872,8 +872,21 @@
 }
 
 .menzzu-marketplace-theme-toggle-icon {
-  font-size: 1.1rem;
+  font-size: 1.35rem;
   line-height: 1;
+}
+
+.menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-theme-toggle-label { display: none; }
+
+.menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-header-actions-guest .menzzu-marketplace-button-primary {
+  background: #031614;
+  border-color: #031614;
+  color: #ffffff;
+}
+
+.menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-header-actions-guest .menzzu-marketplace-button-primary:hover {
+  background: #0b3029;
+  border-color: #0b3029;
 }
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-landing-grid {
