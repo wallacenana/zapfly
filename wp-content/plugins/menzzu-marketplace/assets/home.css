@@ -265,6 +265,7 @@
   text-decoration: none;
   white-space: nowrap;
   transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+  font-size: 15px !important;
 }
 
 .menzzu-marketplace-button:hover {
@@ -311,6 +312,10 @@
   margin: 0 auto;
   padding: 26px 0 32px;
   position: relative;
+}
+
+.menzzu-marketplace-main h2 {
+  color: var(--e-global-color-secondary);
 }
 
 .menzzu-marketplace-landing,
@@ -1517,8 +1522,8 @@
 
 .menzzu-marketplace-directory-filter {
   appearance: none;
-  border: 1px solid rgba(17, 24, 39, 0.14);
-  background: transparent;
+  border: 1px solid rgba(17, 24, 39, 0.10) !important;
+  background: var(--menzzu-marketplace-surface) !important;
   color: var(--menzzu-marketplace-muted);
   border-radius: 999px;
   padding: 8px 12px;
@@ -1526,18 +1531,21 @@
   font-size: .84rem;
   cursor: pointer;
   transition: background-color .18s ease, border-color .18s ease, color .18s ease;
+  color: var(--e-global-color-secondary) !important;
+  border-color: var(--menzzu-marketplace-border) !important;
 }
 
 .menzzu-marketplace-directory-filter:hover {
-  border-color: var(--menzzu-marketplace-primary);
-  color: var(--menzzu-marketplace-secondary);
-  background: rgba(45, 189, 48, 0.04);
+  border-color: rgba(17, 24, 39, 0.18) !important;
+  color: var(--menzzu-marketplace-secondary) !important;
+  background: rgba(17, 24, 39, 0.025) !important;
 }
 
 .menzzu-marketplace-directory-filter.is-active {
-  color: var(--menzzu-marketplace-secondary);
-  border-color: var(--menzzu-marketplace-primary);
-  background: rgba(45, 189, 48, 0.06);
+  color: var(--menzzu-marketplace-primary) !important;
+  border-color: rgba(45, 189, 48, 0.30) !important;
+  background: rgba(45, 189, 48, 0.045) !important;
+  box-shadow: 0 0 0 2px rgba(45, 189, 48, 0.04);
 }
 
 .menzzu-marketplace-directory-sort {
@@ -1825,6 +1833,12 @@
   margin-top: 2px;
 }
 
+.menzzu-marketplace-restaurants-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px 24px;
+}
+
 .menzzu-marketplace-store-badge-promo {
   background: rgba(255, 196, 0, 0.16);
   color: #ffe08a;
@@ -1837,41 +1851,8 @@
 
 .menzzu-marketplace-restaurants-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 18px 24px;
-}
-
-.menzzu-marketplace-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin: 28px 0 8px;
-}
-
-.menzzu-marketplace-pagination-button {
-  min-width: 34px;
-  height: 34px;
-  padding: 0 9px;
-  border: 1px solid var(--menzzu-marketplace-border);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--menzzu-marketplace-muted);
-  font: inherit;
-  font-size: .84rem;
-  cursor: pointer;
-}
-
-.menzzu-marketplace-pagination-button:hover:not(:disabled),
-.menzzu-marketplace-pagination-button.is-active {
-  border-color: var(--menzzu-marketplace-primary);
-  color: var(--menzzu-marketplace-secondary);
-  background: rgba(45, 189, 48, 0.06);
-}
-
-.menzzu-marketplace-pagination-button:disabled {
-  cursor: default;
-  opacity: .4;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
 }
 
 .menzzu-marketplace-restaurant-card,
@@ -1879,19 +1860,23 @@
   height: 100%;
 }
 
+.menzzu-marketplace-restaurant-card {
+  min-width: 0;
+}
+
 .menzzu-marketplace-restaurant-link {
-  display: grid;
-  grid-template-columns: 92px 1fr;
-  gap: 14px;
-  align-items: center;
-  overflow: visible;
-  border-radius: 0;
-  border: 0;
-  background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  border: 1px solid rgba(17, 24, 39, 0.07);
+  background: var(--menzzu-marketplace-surface);
   text-decoration: none;
   color: inherit;
-  box-shadow: none;
-  transition: transform 0.18s ease;
+  box-shadow: 0 8px 22px rgba(17, 24, 39, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
 
 .menzzu-marketplace-restaurant-link.is-closed {
@@ -1899,7 +1884,9 @@
 }
 
 .menzzu-marketplace-restaurant-link:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  border-color: rgba(45, 189, 48, 0.22);
+  box-shadow: 0 12px 28px rgba(17, 24, 39, 0.10);
 }
 
 .menzzu-marketplace-restaurant-link.is-closed:hover {
@@ -1908,11 +1895,12 @@
 
 .menzzu-marketplace-restaurant-media {
   display: block;
-  width: 85px;
-  height: 85px;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  height: auto;
   overflow: hidden;
   background: linear-gradient(135deg, rgba(45, 189, 48, .1), rgba(17, 24, 39, .04));
-  border-radius: 13px;
+  border-radius: 0;
 }
 
 .menzzu-marketplace-restaurant-media img {
@@ -1924,8 +1912,8 @@
 
 .menzzu-marketplace-restaurant-body {
   display: grid;
-  gap: 6px;
-  padding: 0;
+  gap: 5px;
+  padding: 12px 13px 13px;
 }
 
 .menzzu-marketplace-restaurant-head {
@@ -1945,11 +1933,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
-  padding: 0 10px;
+  min-height: 22px;
+  padding: 0 7px;
   border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 900;
+  font-size: 0.66rem;
+  font-weight: 800;
   flex: 0 0 auto;
 }
 
@@ -1989,9 +1977,9 @@
   align-items: center;
   gap: 6px;
   color: #9a5f00;
-  background: rgba(255, 179, 0, 0.10);
-  padding: 4px 10px;
-  border-radius: 999px;
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -2038,7 +2026,7 @@
 }
 
 .menzzu-marketplace-search-icon {
-  color: var(--menzzu-marketplace-primary);
+  color: var(--e-global-color-primary) !important;
   flex: 0 0 auto;
 }
 
@@ -2479,14 +2467,16 @@
   }
 
   .menzzu-marketplace-restaurant-link {
-    grid-template-columns: 80px 1fr;
-    gap: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
   }
 
   .menzzu-marketplace-restaurant-media {
-    width: 64px;
-    height: 64px;
-    border-radius: 16px;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 0;
   }
 
   .menzzu-marketplace-featured-card {
