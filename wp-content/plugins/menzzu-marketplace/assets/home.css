@@ -837,7 +837,8 @@
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-header {
   margin: 0 auto;
   padding: 16px 22px;
-  background: transparent;
+  background: #ffffff;
+  box-shadow: 0 8px 22px rgba(3, 22, 20, 0.06);
 }
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-header::after {
