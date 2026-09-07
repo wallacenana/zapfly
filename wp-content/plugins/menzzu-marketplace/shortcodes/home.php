@@ -70,17 +70,13 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
             ]); ?>
 
             <main class="menzzu-marketplace-main">
-                <?php echo menzzu_marketplace_render_directory_skeleton('home'); ?>
-
                 <section class="menzzu-marketplace-landing" id="inicio" data-landing>
                     <div class="menzzu-marketplace-home-hero">
-                        <span class="menzzu-marketplace-home-eyebrow">O marketplace local da sua cidade</span>
                         <h1>O cardápio do seu<br><em>próximo pedido</em>, está aqui.</h1>
-                        <p>Encontre restaurantes na sua região, explore os cardápios e faça seu pedido diretamente pelo Menzzu.</p>
+                        <p>Faça seu pedido aqui. Seu lanche até 30% mais barato que em outros Apps.</p>
                         <form class="menzzu-marketplace-address-form menzzu-marketplace-home-search" data-address-form>
                             <span class="menzzu-marketplace-home-search-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></span>
                             <input type="text" data-address-input placeholder="Buscar restaurante, prato ou cozinha..." autocomplete="off" spellcheck="false" inputmode="text">
-                            <span class="menzzu-marketplace-home-search-location" aria-hidden="true">⌖ <strong>São Luís - MA</strong></span>
                             <button type="submit" class="menzzu-marketplace-button menzzu-marketplace-button-primary" data-address-continue disabled>Buscar</button>
                         </form>
                     </div>
@@ -263,4 +259,3 @@ add_shortcode('menzzu_home', 'menzzu_marketplace_render_home_shortcode');
 add_shortcode('menzzu_marketplace', 'menzzu_marketplace_render_home_shortcode');
 // Compatibility alias for pages that still contain the original shortcode.
 add_shortcode('digizap_home_2', 'menzzu_marketplace_render_home_shortcode');
-

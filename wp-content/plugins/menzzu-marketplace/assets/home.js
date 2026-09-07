@@ -393,10 +393,19 @@
   }
 
   function setLoading(root, isLoading) {
+    const itemTargets = root.querySelectorAll('[data-restaurants-grid], [data-rail-track]');
+
     if (isLoading) {
       root.dataset.loading = '1';
+      itemTargets.forEach((target) => {
+        target.classList.add('is-loading');
+        if (target.children.length === 0) {
+          target.innerHTML = Array.from({ length: 4 }, () => '<span class="menzzu-marketplace-item-skeleton" aria-hidden="true"></span>').join('');
+        }
+      });
     } else {
       delete root.dataset.loading;
+      itemTargets.forEach((target) => target.classList.remove('is-loading'));
     }
   }
 

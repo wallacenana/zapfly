@@ -100,8 +100,6 @@ if (!function_exists('menzzu_marketplace_render_restaurants_shortcode')) {
             ]); ?>
 
             <main class="menzzu-marketplace-main">
-                <?php echo menzzu_marketplace_render_directory_skeleton('restaurants'); ?>
-
                 <section class="menzzu-marketplace-landing" id="inicio" data-landing <?php echo $hasSelectedAddress ? 'hidden' : ''; ?>>
                     <div class="menzzu-marketplace-landing-grid">
                         <div class="menzzu-marketplace-landing-copy">

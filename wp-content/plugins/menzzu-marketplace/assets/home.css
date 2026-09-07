@@ -273,18 +273,21 @@
 
 .menzzu-marketplace-button-primary {
   background: var(--menzzu-marketplace-primary) !important;
-  color: var(--menzzu-marketplace-surface) !important;
+  color: var(--menzzu-marketplace-dark) !important;
   box-shadow: none !important;
   font-size: 1rem;
+  border: none!important;
+  font-weight: 700!important;
 }
 
 .menzzu-marketplace-button-primary:hover {
-  background: #1B771A !important;
+  background: var(--menzzu-marketplace-accent) !important;
+  color: var(--menzzu-marketplace-surface)
 }
 
 .menzzu-marketplace-button-ghost {
   background: var(--menzzu-marketplace-surface) !important;
-  color: var(--menzzu-marketplace-secondary) !important;
+  color: var(--e-global-color-secondary) !important;
   border-color: var(--menzzu-marketplace-border) !important;
   box-shadow: none !important;
 }
@@ -328,8 +331,23 @@
 }
 
 .menzzu-marketplace[data-loading="1"] .menzzu-marketplace-landing,
-.menzzu-marketplace[data-loading="1"] .menzzu-marketplace-catalog {
-  display: none !important;
+.menzzu-marketplace[data-loading="1"] .menzzu-marketplace-catalog { display: block; }
+
+.menzzu-marketplace-item-skeleton {
+  display: block;
+  min-height: 190px;
+  border: 1px solid rgba(3, 22, 20, 0.08);
+  border-radius: 18px;
+  background: linear-gradient(90deg, rgba(237, 240, 242, 0.86) 25%, rgba(222, 228, 231, 0.94) 50%, rgba(237, 240, 242, 0.86) 75%);
+  background-size: 200% 100%;
+  animation: menzzu-marketplace-shimmer 1.35s ease-in-out infinite;
+}
+
+.menzzu-marketplace[data-loading="1"] [data-restaurants-grid],
+.menzzu-marketplace[data-loading="1"] [data-rail-track] {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
 }
 
 .menzzu-marketplace-skeleton-inner {
@@ -468,6 +486,7 @@
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
@@ -803,10 +822,16 @@
   --menzzu-marketplace-text: var(--e-global-color-text);
   --menzzu-marketplace-muted: #66737a;
   --menzzu-marketplace-border: rgba(3, 22, 20, 0.1);
+  --menzzu-marketplace-dark: #021b17;
   --menzzu-marketplace-surface: #ffffff;
   --menzzu-marketplace-soft: #f5faef;
   background: #ffffff;
   color: var(--e-global-color-text);
+}
+
+.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] {
+    --e-global-color-secondary: #fff!important;
+    --e-global-color-text: #fff!important
 }
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-header {
@@ -830,9 +855,17 @@
   height: 42px;
 }
 
-.menzzu-marketplace-brand-logo-dark { display: none; }
-.menzzu-marketplace[data-theme="dark"] .menzzu-marketplace-brand-logo-light { display: none; }
-.menzzu-marketplace[data-theme="dark"] .menzzu-marketplace-brand-logo-dark { display: block; }
+.menzzu-marketplace-brand-logo-dark {
+  display: none;
+}
+
+.menzzu-marketplace[data-theme="dark"] .menzzu-marketplace-brand-logo-light {
+  display: none;
+}
+
+.menzzu-marketplace[data-theme="dark"] .menzzu-marketplace-brand-logo-dark {
+  display: block;
+}
 
 .menzzu-marketplace-wordmark {
   display: inline-block;
@@ -844,7 +877,9 @@
   line-height: 1;
 }
 
-.menzzu-marketplace-wordmark span { color: #66d711; }
+.menzzu-marketplace-wordmark span {
+  color: #66d711;
+}
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-nav a {
   color: #6d777b;
@@ -871,8 +906,8 @@
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
-  background: #00000000!important;
-  color: var( --e-global-color-primary )!important;
+  background: #00000000 !important;
+  color: var(--e-global-color-primary) !important;
 }
 
 .menzzu-marketplace-theme-toggle-icon {
@@ -883,12 +918,27 @@
   line-height: 1;
 }
 
-.menzzu-marketplace-theme-toggle-icon svg { display: block; width: 100%; height: 100%; }
-.menzzu-marketplace-theme-toggle-icon .menzzu-theme-icon-sun { display: none; }
-.menzzu-marketplace[data-theme="dark"] .menzzu-marketplace-theme-toggle-icon .menzzu-theme-icon-moon { display: none; }
-.menzzu-marketplace[data-theme="dark"] .menzzu-marketplace-theme-toggle-icon .menzzu-theme-icon-sun { display: block; }
+.menzzu-marketplace-theme-toggle-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 
-.menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-theme-toggle-label { display: none; }
+.menzzu-marketplace-theme-toggle-icon .menzzu-theme-icon-sun {
+  display: none;
+}
+
+.menzzu-marketplace[data-theme="dark"] .menzzu-marketplace-theme-toggle-icon .menzzu-theme-icon-moon {
+  display: none;
+}
+
+.menzzu-marketplace[data-theme="dark"] .menzzu-marketplace-theme-toggle-icon .menzzu-theme-icon-sun {
+  display: block;
+}
+
+.menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-theme-toggle-label {
+  display: none;
+}
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-header-actions-guest .menzzu-marketplace-button-primary {
   background: var(--e-global-color-text);
@@ -998,12 +1048,12 @@
 }
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-search button {
-    min-width: 140px;
-    border-radius: 999px;
-    background: #82f026;
-    color: var(--e-global-color-secondary) !important;
-    font-weight: 600;
-    height: 54px;
+  min-width: 140px;
+  border-radius: 999px;
+  background: #82f026;
+  color: var(--e-global-color-secondary) !important;
+  font-weight: 600;
+  height: 54px;
 }
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-categories {
@@ -1078,7 +1128,7 @@
   background: linear-gradient(105deg, #f4f4ee 0%, #f8faf7 48%, #e9f2e5 100%);
 }
 
-.menzzu-marketplace-home-banner > div:first-child {
+.menzzu-marketplace-home-banner>div:first-child {
   position: relative;
   z-index: 1;
 }
@@ -1140,7 +1190,7 @@
   background: #fff;
 }
 
-.menzzu-marketplace-home-benefits > div {
+.menzzu-marketplace-home-benefits>div {
   display: grid;
   grid-template-columns: 40px 1fr;
   column-gap: 10px;
@@ -1149,12 +1199,31 @@
   border-right: 1px solid rgba(3, 22, 20, 0.1);
 }
 
-.menzzu-marketplace-home-benefits > div:last-child { border-right: 0; }
-.menzzu-marketplace-home-benefits > div > span { grid-row: span 2; color: #66d711; font-size: 1.65rem; font-weight: 900; }
-.menzzu-marketplace-home-benefits strong { color: var(--e-global-color-text); font-size: 0.82rem; }
-.menzzu-marketplace-home-benefits small { color: #718087; font-size: 0.7rem; line-height: 1.35; }
+.menzzu-marketplace-home-benefits>div:last-child {
+  border-right: 0;
+}
 
-.menzzu-marketplace[data-home-shell="1"] [data-catalog] > .menzzu-marketplace-categories { display: none; }
+.menzzu-marketplace-home-benefits>div>span {
+  grid-row: span 2;
+  color: #66d711;
+  font-size: 1.65rem;
+  font-weight: 900;
+}
+
+.menzzu-marketplace-home-benefits strong {
+  color: var(--e-global-color-text);
+  font-size: 0.82rem;
+}
+
+.menzzu-marketplace-home-benefits small {
+  color: #718087;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.menzzu-marketplace[data-home-shell="1"] [data-catalog]>.menzzu-marketplace-categories {
+  display: none;
+}
 
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] {
   --menzzu-marketplace-text: #f5fff2;
@@ -1162,7 +1231,7 @@
   --menzzu-marketplace-border: rgba(255, 255, 255, 0.13);
   --menzzu-marketplace-surface: #0a2420;
   --menzzu-marketplace-soft: #102f29;
-  background: var(--e-global-color-text);
+  background: #102f29;
   color: #f5fff2;
 }
 
@@ -1175,9 +1244,14 @@
   color: #f5fff2;
 }
 
-.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-wordmark { color: #f5fff2; }
+.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-wordmark {
+  color: #f5fff2;
+}
 
-.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-header::after { background: rgba(255,255,255,0.12); }
+.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-header::after {
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-nav a,
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-theme-toggle,
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-home-hero h1,
@@ -1186,13 +1260,28 @@
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-category-label strong,
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-home-banner span,
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-home-banner a,
-.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-home-benefits strong { color: #f5fff2; }
+.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-home-benefits strong {
+  color: #f5fff2;
+}
+
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-home-hero p,
-.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-home-banner p { color: #a9bbb4; }
+.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-home-banner p {
+  color: #a9bbb4;
+}
+
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-category-card:hover,
-.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-category-card:first-child { background: #12382f; border-color: rgba(130,240,38,0.5); }
-.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-home-banner { background: linear-gradient(105deg, #102d27, #173a2f); }
-.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-home-benefits > div { border-color: rgba(255,255,255,0.1); }
+.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-category-card:first-child {
+  background: #12382f;
+  border-color: rgba(130, 240, 38, 0.5);
+}
+
+.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-home-banner {
+  background: linear-gradient(105deg, #102d27, #173a2f);
+}
+
+.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-home-benefits>div {
+  border-color: rgba(255, 255, 255, 0.1);
+}
 
 .menzzu-marketplace-site-footer {
   display: grid;
@@ -1204,62 +1293,208 @@
   border-top: 1px solid rgba(3, 22, 20, 0.08);
 }
 
-.menzzu-marketplace-site-footer > div:not(.menzzu-marketplace-site-footer-bottom) {
+.menzzu-marketplace-site-footer>div:not(.menzzu-marketplace-site-footer-bottom) {
   display: flex;
   flex-direction: column;
   gap: 9px;
 }
 
-.menzzu-marketplace-site-footer strong { color: var(--e-global-color-text); font-size: 0.8rem; }
-.menzzu-marketplace-site-footer-brand > strong { font-size: 2rem; letter-spacing: -0.09em; }
-.menzzu-marketplace-site-footer-brand > strong span { color: #66d711; }
-.menzzu-marketplace-site-footer p,
-.menzzu-marketplace-site-footer a { color: #66737a; font-size: 0.78rem; line-height: 1.45; text-decoration: none; }
-.menzzu-marketplace-site-footer a:hover { color: #3ea30c; }
-.menzzu-marketplace-social-links { display: flex; gap: 14px; }
-.menzzu-marketplace-social-links a { color: var(--e-global-color-text); font-size: 1.15rem; font-weight: 900; }
-.menzzu-marketplace-site-footer-bottom { grid-column: 1 / -1; display: flex; justify-content: space-between; margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(3, 22, 20, 0.08); color: #859197; font-size: 0.72rem; }
-.menzzu-marketplace-site-footer-bottom b { color: #66d711; }
+.menzzu-marketplace-site-footer strong {
+  color: var(--e-global-color-text);
+  font-size: 0.8rem;
+}
 
-.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-site-footer { border-color: rgba(255,255,255,0.1); }
+.menzzu-marketplace-site-footer-brand>strong {
+  font-size: 2rem;
+  letter-spacing: -0.09em;
+}
+
+.menzzu-marketplace-site-footer-brand>strong span {
+  color: #66d711;
+}
+
+.menzzu-marketplace-site-footer p,
+.menzzu-marketplace-site-footer a {
+  color: #66737a;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  text-decoration: none;
+}
+
+.menzzu-marketplace-site-footer a:hover {
+  color: #3ea30c;
+}
+
+.menzzu-marketplace-social-links {
+  display: flex;
+  gap: 14px;
+}
+
+.menzzu-marketplace-social-links a {
+  color: var(--e-global-color-text);
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.menzzu-marketplace-site-footer-bottom {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: space-between;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(3, 22, 20, 0.08);
+  color: #859197;
+  font-size: 0.72rem;
+}
+
+.menzzu-marketplace-site-footer-bottom b {
+  color: #66d711;
+}
+
+.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-site-footer {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-site-footer strong,
-.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-site-footer-social a { color: #f5fff2; }
+.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-site-footer-social a {
+  color: #f5fff2;
+}
+
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-site-footer p,
-.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-site-footer a { color: #a9bbb4; }
+.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-site-footer a {
+  color: #a9bbb4;
+}
 
 
 @media (max-width: 900px) {
-  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-categories-track { grid-template-columns: repeat(5, minmax(76px, 1fr)); }
-  .menzzu-marketplace-home-benefits { grid-template-columns: repeat(2, 1fr); row-gap: 18px; }
-  .menzzu-marketplace-home-benefits > div:nth-child(2) { border-right: 0; }
-  .menzzu-marketplace-site-footer { grid-template-columns: repeat(3, 1fr); }
-  .menzzu-marketplace-site-footer-brand { grid-column: 1 / -1; }
+  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-categories-track {
+    grid-template-columns: repeat(5, minmax(76px, 1fr));
+  }
+
+  .menzzu-marketplace-home-benefits {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 18px;
+  }
+
+  .menzzu-marketplace-home-benefits>div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .menzzu-marketplace-site-footer {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .menzzu-marketplace-site-footer-brand {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 640px) {
-  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-header { padding: 12px 14px; }
-  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-nav { display: none; }
-  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-wordmark { font-size: 1.65rem; }
-  .menzzu-marketplace-theme-toggle-label { display: none; }
-  .menzzu-marketplace-theme-toggle { min-height: 36px; padding: 0 9px; }
-  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-hero { padding: 46px 14px 24px; }
-  .menzzu-marketplace-home-hero h1 { font-size: 2.6rem; }
-  .menzzu-marketplace-home-hero p { font-size: 0.92rem; }
-  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-search { flex-wrap: wrap; border-radius: 22px; padding: 10px; }
-  .menzzu-marketplace-home-search input { flex-basis: calc(100% - 40px); }
-  .menzzu-marketplace-home-search-location { order: 3; padding-left: 4px; }
-  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-search button { order: 4; flex: 1; min-width: 0; }
-  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-categories { padding: 0 12px; }
-  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-categories-track { display: flex; overflow-x: auto; padding-bottom: 8px; }
-  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-category-card { flex: 0 0 82px; }
-  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-banner { display: block; min-height: 0; margin: 0 12px 24px; padding: 23px; }
-  .menzzu-marketplace-home-banner-art { width: 100%; height: 110px; margin: 12px 0 -20px; }
-  .menzzu-marketplace-home-benefits { grid-template-columns: 1fr; margin: 0 12px 24px; }
-  .menzzu-marketplace-home-benefits > div,
-  .menzzu-marketplace-home-benefits > div:nth-child(2) { border-right: 0; }
-  .menzzu-marketplace-site-footer { grid-template-columns: repeat(2, 1fr); gap: 24px 16px; padding: 32px 14px 20px; }
-  .menzzu-marketplace-site-footer-brand { grid-column: 1 / -1; }
-  .menzzu-marketplace-site-footer-bottom { flex-direction: column; gap: 8px; }
+  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-header {
+    padding: 12px 14px;
+  }
+
+  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-nav {
+    display: none;
+  }
+
+  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-wordmark {
+    font-size: 1.65rem;
+  }
+
+  .menzzu-marketplace-theme-toggle-label {
+    display: none;
+  }
+
+  .menzzu-marketplace-theme-toggle {
+    min-height: 36px;
+    padding: 0 9px;
+  }
+
+  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-hero {
+    padding: 46px 14px 24px;
+  }
+
+  .menzzu-marketplace-home-hero h1 {
+    font-size: 2.6rem;
+  }
+
+  .menzzu-marketplace-home-hero p {
+    font-size: 0.92rem;
+  }
+
+  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-search {
+    flex-wrap: wrap;
+    border-radius: 22px;
+    padding: 10px;
+  }
+
+  .menzzu-marketplace-home-search input {
+    flex-basis: calc(100% - 40px);
+  }
+
+  .menzzu-marketplace-home-search-location {
+    order: 3;
+    padding-left: 4px;
+  }
+
+  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-search button {
+    order: 4;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-categories {
+    padding: 0 12px;
+  }
+
+  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-categories-track {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-category-card {
+    flex: 0 0 82px;
+  }
+
+  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-banner {
+    display: block;
+    min-height: 0;
+    margin: 0 12px 24px;
+    padding: 23px;
+  }
+
+  .menzzu-marketplace-home-banner-art {
+    width: 100%;
+    height: 110px;
+    margin: 12px 0 -20px;
+  }
+
+  .menzzu-marketplace-home-benefits {
+    grid-template-columns: 1fr;
+    margin: 0 12px 24px;
+  }
+
+  .menzzu-marketplace-home-benefits>div,
+  .menzzu-marketplace-home-benefits>div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .menzzu-marketplace-site-footer {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px 16px;
+    padding: 32px 14px 20px;
+  }
+
+  .menzzu-marketplace-site-footer-brand {
+    grid-column: 1 / -1;
+  }
+
+  .menzzu-marketplace-site-footer-bottom {
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 
 .menzzu-marketplace-directory-toolbar {
@@ -1333,7 +1568,7 @@
   gap: 12px;
 }
 
-.menzzu-marketplace-store-rail + .menzzu-marketplace-store-rail {
+.menzzu-marketplace-store-rail+.menzzu-marketplace-store-rail {
   margin-top: 2px;
 }
 
@@ -1576,7 +1811,7 @@
   letter-spacing: .01em;
 }
 
-.menzzu-marketplace-store-badge + .menzzu-marketplace-store-badge {
+.menzzu-marketplace-store-badge+.menzzu-marketplace-store-badge {
   margin-left: 6px;
 }
 
@@ -1797,9 +2032,9 @@
   width: 20px;
 }
 
-.menzzu-marketplace-location-icon svg{
-    width: 20px;
-    height: 20px;
+.menzzu-marketplace-location-icon svg {
+  width: 20px;
+  height: 20px;
 }
 
 .menzzu-marketplace-location-copy {
