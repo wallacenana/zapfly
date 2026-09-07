@@ -85,8 +85,8 @@ if (!function_exists('menzzu_marketplace_enqueue_assets')) {
             'mapsKey' => menzzu_marketplace_maps_key(),
             'searchLabel' => 'Buscar loja ou item',
             'continueLabel' => 'Continuar',
-            'editLabel' => 'Alterar endereÃ§o',
-            'addressPlaceholder' => 'Digite seu endereÃ§o completo',
+            'editLabel' => 'Alterar endereço',
+            'addressPlaceholder' => 'Digite seu endereço completo',
         ];
 
         wp_localize_script('menzzu-marketplace', 'menzzuMarketplaceConfig', $config);
@@ -174,7 +174,7 @@ if (!function_exists('menzzu_marketplace_category_image_rules')) {
         return [
             ['match' => 'doces bolos', 'file' => 'bolos.png'],
             ['match' => 'doces e bolos', 'file' => 'bolos.png'],
-            ['match' => 'acai', 'file' => 'aÃ§ai.png'],
+            ['match' => 'acai', 'file' => 'açai.png'],
             ['match' => 'bebidas', 'file' => 'bebidas.png'],
             ['match' => 'bolos', 'file' => 'bolos.png'],
             ['match' => 'doces', 'file' => 'doces.png'],
@@ -486,10 +486,10 @@ if (!function_exists('menzzu_marketplace_render_restaurant_cards')) {
             $name = isset($store['name']) ? (string) $store['name'] : 'Restaurante';
             $slug = isset($store['slug']) ? (string) $store['slug'] : '';
             $category = isset($store['category']) ? (string) $store['category'] : '';
-            $address = !empty($store['address']) ? (string) $store['address'] : 'EndereÃ§o nÃ£o informado';
+            $address = !empty($store['address']) ? (string) $store['address'] : 'Endereço não informado';
             $logoUrl = !empty($store['logoUrl']) ? (string) $store['logoUrl'] : menzzu_marketplace_placeholder_logo($name, $store['accentColor'] ?? '#e11d48');
             $featuredLine = !empty($store['featuredProducts'])
-                ? implode(' Â· ', array_map(static fn($item) => isset($item['name']) ? (string) $item['name'] : '', $store['featuredProducts']))
+                ? implode(' · ', array_map(static fn($item) => isset($item['name']) ? (string) $item['name'] : '', $store['featuredProducts']))
                 : 'Sem destaques cadastrados';
             $schedule = menzzu_marketplace_store_schedule_state($store);
             $count = isset($store['productsCount']) ? absint($store['productsCount']) : 0;
@@ -554,14 +554,14 @@ if (!function_exists('menzzu_marketplace_render_restaurants_block')) {
             <div class="menzzu-marketplace-catalog-head">
                 <div>
                     <h2>Restaurantes</h2>
-                    <p><?php echo esc_html($total > 0 ? ($total === 1 ? '1 restaurante disponÃ­vel' : sprintf('%d restaurantes disponÃ­veis', $total)) : 'Nenhum restaurante encontrado.'); ?></p>
+                    <p><?php echo esc_html($total > 0 ? ($total === 1 ? '1 restaurante disponível' : sprintf('%d restaurantes disponíveis', $total)) : 'Nenhum restaurante encontrado.'); ?></p>
                 </div>
                 <span class="menzzu-marketplace-catalog-count"><?php echo esc_html((string) $total); ?></span>
             </div>
 
             <?php echo menzzu_marketplace_render_store_rail_section('Destaques', $featured, '', 'featured', empty($featured)); ?>
-            <?php echo menzzu_marketplace_render_store_rail_section('Frete grÃ¡tis', $freeDelivery, '', 'freeDelivery', empty($freeDelivery)); ?>
-            <?php echo menzzu_marketplace_render_store_rail_section('Em promoÃ§Ã£o', $promo, '', 'promo', empty($promo)); ?>
+            <?php echo menzzu_marketplace_render_store_rail_section('Frete grátis', $freeDelivery, '', 'freeDelivery', empty($freeDelivery)); ?>
+            <?php echo menzzu_marketplace_render_store_rail_section('Em promoção', $promo, '', 'promo', empty($promo)); ?>
 
             <div class="menzzu-marketplace-restaurants-grid">
                 <?php echo menzzu_marketplace_render_restaurant_cards($restaurants); ?>
@@ -783,8 +783,8 @@ if (!function_exists('menzzu_marketplace_short_address')) {
             'estrada' => 'Est.',
             'alameda' => 'Al.',
             'rodovia' => 'Rod.',
-            'praÃ§a' => 'PÃ§.',
-            'praca' => 'PÃ§.',
+            'praça' => 'Pç.',
+            'praca' => 'Pç.',
             'viela' => 'Vl.',
             'beco' => 'Bc.',
             'ladeira' => 'Ld.',

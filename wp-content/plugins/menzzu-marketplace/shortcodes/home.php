@@ -9,7 +9,7 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
     {
         $atts = shortcode_atts([
             'title' => 'Tudo pra facilitar seu dia a dia',
-            'description' => 'Digite seu endereÃ§o para comeÃ§ar.',
+            'description' => 'Digite seu endereço para começar.',
             'limit' => 18,
             'key' => 'menzzu_marketplace',
             'maps_key' => ''
@@ -75,8 +75,8 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
                     <div class="menzzu-marketplace-landing-grid">
                         <div class="menzzu-marketplace-landing-copy">
                             <span class="menzzu-marketplace-landing-badge">
-                                <span aria-hidden="true">âš¡</span>
-                                <span>CardÃ¡pio digital inteligente</span>
+                                <span aria-hidden="true">⚡</span>
+                                <span>Cardápio digital inteligente</span>
                             </span>
                             <h1><?php echo esc_html($atts['title']); ?></h1>
                             <p><?php echo esc_html($atts['description']); ?></p>
@@ -85,7 +85,7 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
                                 <input
                                     type="text"
                                     data-address-input
-                                    placeholder="<?php echo esc_attr('Digite seu endereÃ§o completo'); ?>"
+                                    placeholder="<?php echo esc_attr('Digite seu endereço completo'); ?>"
                                     autocomplete="off"
                                     spellcheck="false"
                                     inputmode="text">
@@ -137,17 +137,17 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
                     </div>
 
                     <div class="menzzu-marketplace-directory-toolbar" data-directory-controls>
-                        <div class="menzzu-marketplace-directory-filters" role="tablist" aria-label="Filtros do diretÃ³rio">
+                        <div class="menzzu-marketplace-directory-filters" role="tablist" aria-label="Filtros do diretório">
                             <button class="menzzu-marketplace-directory-filter is-active" type="button" data-filter-pill="all">Todos</button>
                             <button class="menzzu-marketplace-directory-filter" type="button" data-filter-pill="featured">Destaques</button>
-                            <button class="menzzu-marketplace-directory-filter" type="button" data-filter-pill="freeDelivery">Frete grÃ¡tis</button>
-                            <button class="menzzu-marketplace-directory-filter" type="button" data-filter-pill="promo">Em promoÃ§Ã£o</button>
+                            <button class="menzzu-marketplace-directory-filter" type="button" data-filter-pill="freeDelivery">Frete grátis</button>
+                            <button class="menzzu-marketplace-directory-filter" type="button" data-filter-pill="promo">Em promoção</button>
                             <button class="menzzu-marketplace-directory-filter" type="button" data-filter-pill="open">Aberto agora</button>
                         </div>
                         <label class="menzzu-marketplace-directory-sort">
                             <span>Ordenar</span>
                             <select data-sort-select>
-                                <option value="recommended">RelevÃ¢ncia</option>
+                                <option value="recommended">Relevância</option>
                                 <option value="orders">Mais pedidos</option>
                                 <option value="rating">Melhor avaliados</option>
                                 <option value="az">A-Z</option>
@@ -156,12 +156,12 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
                     </div>
 
                     <?php echo menzzu_marketplace_render_store_rail_section('Destaques', $initialData['featuredStores'] ?? [], menzzu_marketplace_restaurants_url(), 'featured', empty($initialData['featuredStores'])); ?>
-                    <?php echo menzzu_marketplace_render_store_rail_section('Frete grÃ¡tis', $initialData['freeDeliveryStores'] ?? [], menzzu_marketplace_restaurants_url(), 'freeDelivery', empty($initialData['freeDeliveryStores'])); ?>
-                    <?php echo menzzu_marketplace_render_store_rail_section('Em promoÃ§Ã£o', $initialData['promoStores'] ?? [], menzzu_marketplace_restaurants_url(), 'promo', empty($initialData['promoStores'])); ?>
+                    <?php echo menzzu_marketplace_render_store_rail_section('Frete grátis', $initialData['freeDeliveryStores'] ?? [], menzzu_marketplace_restaurants_url(), 'freeDelivery', empty($initialData['freeDeliveryStores'])); ?>
+                    <?php echo menzzu_marketplace_render_store_rail_section('Em promoção', $initialData['promoStores'] ?? [], menzzu_marketplace_restaurants_url(), 'promo', empty($initialData['promoStores'])); ?>
 
                     <div class="menzzu-marketplace-catalog-head">
                         <div>
-                            <h2>Restaurantes perto de vocÃª</h2>
+                            <h2>Restaurantes perto de você</h2>
                         </div>
                         <a class="menzzu-marketplace-catalog-action" href="<?php echo esc_url(menzzu_marketplace_restaurants_url()); ?>">Ver mais</a>
                     </div>
