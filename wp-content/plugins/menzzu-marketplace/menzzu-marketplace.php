@@ -1,8 +1,9 @@
 <?php
+
 /**
  * Plugin Name: Menzzu Marketplace
  * Description: Marketplace Menzzu com descoberta de lojas, busca e catalogo.
- * Version: 3.1.6
+ * Version: 3.1.7
  * Author: Menzzu
  */
 
@@ -10,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MENZZU_MARKETPLACE_VERSION', '3.1.6');
+define('MENZZU_MARKETPLACE_VERSION', '3.1.7');
 define('MENZZU_MARKETPLACE_FILE', __FILE__);
 define('MENZZU_MARKETPLACE_DIR', plugin_dir_path(__FILE__));
 define('MENZZU_MARKETPLACE_URL', plugin_dir_url(__FILE__));
@@ -70,7 +71,7 @@ if (!function_exists('menzzu_marketplace_render_settings_page')) {
         if (!current_user_can('manage_options')) {
             return;
         }
-        ?>
+?>
         <div class="wrap">
             <h1>Menzzu Marketplace</h1>
             <p>Configure a integração usada para sugerir endereços no marketplace.</p>
@@ -97,7 +98,7 @@ if (!function_exists('menzzu_marketplace_render_settings_page')) {
                 <?php submit_button('Salvar configuração'); ?>
             </form>
         </div>
-        <?php
+<?php
     }
 }
 

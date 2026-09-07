@@ -597,7 +597,7 @@
       const name = String(store?.name || 'Restaurante');
       const slug = String(store?.slug || '');
       const category = String(store?.category || '');
-      const image = store?.logoUrl || placeholderLogo(name, store?.accentColor || '#e11d48');
+      const image = store?.logoUrl || placeholderLogo(name, '#64748b');
       const schedule = getStoreScheduleState(store);
       const ratingVisible = Number(store?.orderCount || 0) > 0;
       const ratingLabel = String(store?.ratingLabel || '');
@@ -664,6 +664,33 @@
     };
   }
 
+  function getStoreCategories(store) {
+    const source = Array.isArray(store?.categories) && store.categories.length > 0
+      ? store.categories
+      : String(store?.category || '').split(/[·,|]/);
+
+    return [...new Set(source.map((item) => String(item || '').trim()).filter(Boolean))].slice(0, 2);
+  }
+
+  function getStoreFulfillmentMethods(store) {
+    const methods = store?.fulfillmentMethods && typeof store.fulfillmentMethods === 'object'
+      ? store.fulfillmentMethods
+      : {};
+    const mode = String(store?.deliveryMode || '').toLowerCase();
+    const labels = [];
+    if (methods.delivery || (!Object.keys(methods).length && ['hibrido', 'delivery', 'entrega'].includes(mode))) labels.push('Entrega');
+    if (methods.pickup || (!Object.keys(methods).length && ['hibrido', 'pickup', 'retirada'].includes(mode))) labels.push('Retirada');
+    if (methods.local || (!Object.keys(methods).length && ['local', 'consumo'].includes(mode))) labels.push('Consumo no local');
+    return labels;
+  }
+
+  function formatDistance(distanceKm) {
+    const distance = Number(distanceKm);
+    if (!Number.isFinite(distance) || distance < 0) return '';
+    if (distance < 1) return `${Math.round(distance * 1000)} m`;
+    return `${distance.toFixed(1).replace('.', ',')} km`;
+  }
+
   function renderRestaurantCards(restaurants) {
     if (!Array.isArray(restaurants) || restaurants.length === 0) {
       return '<div class="menzzu-marketplace-empty-results">Nenhum restaurante encontrado.</div>';
@@ -672,23 +699,21 @@
     return restaurants.map((store) => {
       const name = String(store?.name || 'Restaurante');
       const slug = String(store?.slug || '');
-      const category = String(store?.category || '');
-      const address = String(store?.address || 'Endereco nao informado');
-      const image = store?.logoUrl || placeholderLogo(name, store?.accentColor || '#e11d48');
+      const categories = getStoreCategories(store);
+      const image = store?.logoUrl || placeholderLogo(name, '#64748b');
       const featuredLine = Array.isArray(store?.featuredProducts) && store.featuredProducts.length > 0
         ? store.featuredProducts.map((item) => String(item?.name || '')).filter(Boolean).join(' · ')
         : 'Sem destaques cadastrados';
       const schedule = getStoreScheduleState(store);
-      const count = Number(store?.productsCount || 0);
+      const fulfillmentMethods = getStoreFulfillmentMethods(store);
+      const prepTime = String(store?.prepTime || '').trim();
+      const distance = formatDistance(store?.distanceKm);
       const ratingVisible = Number(store?.orderCount || 0) > 0;
       const ratingLabel = String(store?.ratingLabel || '');
       const ratingCount = Number(store?.ratingCount || 0);
       const ratingText = ratingVisible
         ? `${ratingLabel || '5,0'}${ratingCount > 0 ? ` (${ratingCount})` : ''}`
         : '';
-      const promoBadge = store?.hasPromotion ? '<span class="menzzu-marketplace-store-badge menzzu-marketplace-store-badge-promo">Promo</span>' : '';
-      const freeBadge = store?.freeDeliveryEnabled ? '<span class="menzzu-marketplace-store-badge menzzu-marketplace-store-badge-free">Frete gratis</span>' : '';
-
       return `
         <article class="menzzu-marketplace-restaurant-card ${schedule.isOpenNow ? '' : 'is-closed'}">
           <a class="menzzu-marketplace-restaurant-link ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}" data-store-link>
@@ -696,14 +721,14 @@
             <span class="menzzu-marketplace-restaurant-body">
               <span class="menzzu-marketplace-restaurant-head">
                 <strong>${escapeHtml(name)}</strong>
-                <span class="menzzu-marketplace-restaurant-status ${schedule.statusClass}">${escapeHtml(schedule.statusLabel)}</span>
               </span>
-              <span class="menzzu-marketplace-restaurant-category">${escapeHtml(category)}</span>
-              <span class="menzzu-marketplace-restaurant-badges">${promoBadge}${freeBadge}</span>
+              <span class="menzzu-marketplace-restaurant-category">${escapeHtml(categories.join(' · '))}</span>
               <span class="menzzu-marketplace-restaurant-meta">
-                <span>${count} item${count === 1 ? '' : 's'}</span>
                 ${ratingVisible ? `<span class="menzzu-marketplace-rating-chip">${ratingStarSvg(true)}<span class="menzzu-marketplace-rating-text">${escapeHtml(ratingText)}</span></span>` : ''}
+                ${prepTime ? `<span>${escapeHtml(prepTime)}</span>` : ''}
+                ${distance ? `<span>${escapeHtml(distance)}</span>` : ''}
               </span>
+              ${fulfillmentMethods.length ? `<span class="menzzu-marketplace-restaurant-badges">${fulfillmentMethods.map((method) => `<span class="menzzu-marketplace-store-badge">${escapeHtml(method)}</span>`).join('')}</span>` : ''}
             </span>
           </a>
         </article>

@@ -1816,6 +1816,8 @@
   width: fit-content;
   border-radius: 999px;
   padding: 4px 8px;
+  background: #f4f5f5;
+  color: #303536;
   font-size: .68rem;
   font-weight: 800;
   line-height: 1;
@@ -1862,6 +1864,10 @@
 
 .menzzu-marketplace-restaurant-card {
   min-width: 0;
+}
+
+.menzzu-marketplace-restaurant-card .menzzu-marketplace-restaurant-status {
+  display: none;
 }
 
 .menzzu-marketplace-restaurant-link {
@@ -1976,7 +1982,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #9a5f00;
+  color: #f2ae00;
   background: transparent;
   padding: 0;
   border-radius: 0;
@@ -2571,4 +2577,8 @@
   .menzzu-marketplace-footer-nav-link.is-active {
     background: rgba(17, 24, 39, 0.02);
   }
+}
+
+.menzzu-marketplace-rating-text {
+  color: #303536;
 }
