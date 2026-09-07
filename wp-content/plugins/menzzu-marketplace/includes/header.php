@@ -85,6 +85,11 @@ if (!function_exists('menzzu_marketplace_render_directory_header')) {
                     </span>
                 </button>
 
+                <button type="button" class="menzzu-marketplace-theme-toggle" data-theme-toggle aria-label="Ativar modo escuro" aria-pressed="false">
+                    <span class="menzzu-marketplace-theme-toggle-icon" aria-hidden="true">☾</span>
+                    <span class="menzzu-marketplace-theme-toggle-label">Tema</span>
+                </button>
+
                 <div class="menzzu-marketplace-header-actions menzzu-marketplace-header-actions-guest" data-guest-actions>
                     <a class="menzzu-marketplace-button menzzu-marketplace-button-ghost" href="<?php echo esc_url($args['loginUrl']); ?>">Entrar</a>
                     <a class="menzzu-marketplace-button menzzu-marketplace-button-primary" href="<?php echo esc_url($args['registerUrl']); ?>">Criar conta</a>

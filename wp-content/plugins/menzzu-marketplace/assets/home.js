@@ -352,10 +352,46 @@
     const landing = root.querySelector('[data-landing]');
     const catalog = root.querySelector('[data-catalog]');
     const appActions = root.querySelector('[data-app-actions]');
+    const keepHomeShell = root.dataset.homeShell === '1';
 
-    if (landing) landing.hidden = mode !== 'landing';
+    if (landing) landing.hidden = keepHomeShell ? false : mode !== 'landing';
     if (catalog) catalog.hidden = mode !== 'app';
     if (appActions) appActions.hidden = mode !== 'app';
+  }
+
+  function bindThemeToggle(root) {
+    const button = root.querySelector('[data-theme-toggle]');
+    if (!button || button.dataset.bound === '1') {
+      return;
+    }
+
+    const storageKey = 'menzzu_marketplace_theme';
+    const applyTheme = (theme) => {
+      const isDark = theme === 'dark';
+      root.dataset.theme = isDark ? 'dark' : 'light';
+      button.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+      button.setAttribute('aria-label', isDark ? 'Ativar modo claro' : 'Ativar modo escuro');
+      const icon = button.querySelector('.menzzu-marketplace-theme-toggle-icon');
+      if (icon) icon.textContent = isDark ? '☀' : '☾';
+    };
+
+    let savedTheme = 'light';
+    try {
+      savedTheme = window.localStorage.getItem(storageKey) === 'dark' ? 'dark' : 'light';
+    } catch (error) {
+      savedTheme = 'light';
+    }
+    applyTheme(savedTheme);
+    button.dataset.bound = '1';
+    button.addEventListener('click', () => {
+      const nextTheme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+      try {
+        window.localStorage.setItem(storageKey, nextTheme);
+      } catch (error) {
+        // Theme still applies for the current page when storage is unavailable.
+      }
+    });
   }
 
   function setLoading(root, isLoading) {
@@ -992,6 +1028,7 @@
     syncAddressUI(root);
     bindHeaderScroll(root);
     bindFooterNav(root);
+    bindThemeToggle(root);
 
     if (form && input) {
       input.addEventListener('focus', () => {

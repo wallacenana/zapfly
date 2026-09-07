@@ -56,7 +56,8 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
             data-blog-url="<?php echo esc_attr(menzzu_marketplace_blog_url()); ?>"
             data-storage-key="menzzu_home_address"
             data-limit="<?php echo esc_attr($limit); ?>"
-            data-maps-key="<?php echo esc_attr($mapsKey); ?>">
+            data-maps-key="<?php echo esc_attr($mapsKey); ?>"
+            data-home-shell="1">
             <?php echo menzzu_marketplace_render_directory_header([
                 'active' => 'home',
                 'homeUrl' => home_url('/'),
@@ -71,7 +72,57 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
             <main class="menzzu-marketplace-main">
                 <?php echo menzzu_marketplace_render_directory_skeleton('home'); ?>
 
-                <section class="menzzu-marketplace-landing" id="inicio" data-landing <?php echo $hasSelectedAddress ? 'hidden' : ''; ?>>
+                <section class="menzzu-marketplace-landing" id="inicio" data-landing>
+                    <div class="menzzu-marketplace-home-hero">
+                        <span class="menzzu-marketplace-home-eyebrow">O marketplace local da sua cidade</span>
+                        <h1>O cardápio do seu<br><em>próximo pedido</em>, está aqui.</h1>
+                        <p>Encontre restaurantes na sua região, explore os cardápios e faça seu pedido diretamente pelo Menzzu.</p>
+                        <form class="menzzu-marketplace-address-form menzzu-marketplace-home-search" data-address-form>
+                            <span class="menzzu-marketplace-home-search-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></span>
+                            <input type="text" data-address-input placeholder="Buscar restaurante, prato ou cozinha..." autocomplete="off" spellcheck="false" inputmode="text">
+                            <span class="menzzu-marketplace-home-search-location" aria-hidden="true">⌖ <strong>São Luís - MA</strong></span>
+                            <button type="submit" class="menzzu-marketplace-button menzzu-marketplace-button-primary" data-address-continue disabled>Buscar</button>
+                        </form>
+                    </div>
+
+                    <div class="menzzu-marketplace-home-categories" data-categories>
+                        <div class="menzzu-marketplace-categories-track" data-categories-track>
+                            <?php
+                            $homeCategories = is_array($initialData['categories'] ?? null) ? $initialData['categories'] : [];
+                            if (!$homeCategories) {
+                                $homeCategories = array_map(static function ($name) {
+                                    return ['name' => $name, 'count' => 0];
+                                }, ['Lanches', 'Pizzas', 'Brasileira', 'Japonesa', 'Doces & Bolos', 'Bebidas', 'Saudável', 'Mexicana', 'Marmitas']);
+                            }
+                            foreach ($homeCategories as $category) :
+                                $categoryName = (string) ($category['name'] ?? 'Categoria');
+                                $categorySlug = function_exists('menzzu_marketplace_category_slug') ? menzzu_marketplace_category_slug($categoryName) : '';
+                                $categoryLogo = function_exists('menzzu_marketplace_category_image_url') ? menzzu_marketplace_category_image_url($categoryName) : '';
+                                if ($categoryLogo === '' && function_exists('menzzu_marketplace_placeholder_logo')) {
+                                    $categoryLogo = menzzu_marketplace_placeholder_logo($categoryName, '#82f026');
+                                }
+                            ?>
+                                <a class="menzzu-marketplace-category-card" href="<?php echo esc_url(menzzu_marketplace_restaurants_url($categorySlug)); ?>" data-category="<?php echo esc_attr($categorySlug); ?>">
+                                    <span class="menzzu-marketplace-category-thumb"><img src="<?php echo esc_url($categoryLogo); ?>" alt="" loading="lazy" decoding="async"></span>
+                                    <span class="menzzu-marketplace-category-label"><strong><?php echo esc_html($categoryName); ?></strong></span>
+                                </a>
+                            <?php endforeach; ?>
+                            <a class="menzzu-marketplace-category-card menzzu-marketplace-category-more" href="<?php echo esc_url(menzzu_marketplace_restaurants_url()); ?>"><span class="menzzu-marketplace-category-thumb">+</span><span class="menzzu-marketplace-category-label"><strong>Ver mais</strong></span></a>
+                        </div>
+                    </div>
+
+                    <section class="menzzu-marketplace-home-banner">
+                        <div><span>Descubra novos sabores</span><p>Restaurantes parceiros com cardápios incríveis à sua espera.</p><a href="<?php echo esc_url(menzzu_marketplace_restaurants_url()); ?>">Explorar restaurantes <b aria-hidden="true">→</b></a></div>
+                        <div class="menzzu-marketplace-home-banner-art" aria-hidden="true"><span>Boa comida<br>mais perto<br>de você.</span></div>
+                    </section>
+
+                    <section class="menzzu-marketplace-home-benefits" aria-label="Vantagens do Menzzu">
+                        <div><span>▣</span><strong>Peça direto pelo cardápio</strong><small>Sem intermediários desnecessários.</small></div>
+                        <div><span>%</span><strong>Preços mais justos</strong><small>Apoie os restaurantes locais e economize.</small></div>
+                        <div><span>♡</span><strong>Mais variedade</strong><small>Descubra novos sabores na sua região.</small></div>
+                        <div><span>♥</span><strong>Comer bem fica mais fácil</strong><small>Tudo em um só lugar.</small></div>
+                    </section>
+
                     <div class="menzzu-marketplace-landing-grid">
                         <div class="menzzu-marketplace-landing-copy">
                             <span class="menzzu-marketplace-landing-badge">
@@ -155,7 +206,7 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
                         </label>
                     </div>
 
-                    <?php echo menzzu_marketplace_render_store_rail_section('Destaques', $initialData['featuredStores'] ?? [], menzzu_marketplace_restaurants_url(), 'featured', empty($initialData['featuredStores'])); ?>
+                    <?php echo menzzu_marketplace_render_store_rail_section('Restaurantes em destaque', $initialData['featuredStores'] ?? [], menzzu_marketplace_restaurants_url(), 'featured', empty($initialData['featuredStores'])); ?>
                     <?php echo menzzu_marketplace_render_store_rail_section('Frete grátis', $initialData['freeDeliveryStores'] ?? [], menzzu_marketplace_restaurants_url(), 'freeDelivery', empty($initialData['freeDeliveryStores'])); ?>
                     <?php echo menzzu_marketplace_render_store_rail_section('Em promoção', $initialData['promoStores'] ?? [], menzzu_marketplace_restaurants_url(), 'promo', empty($initialData['promoStores'])); ?>
 
@@ -181,6 +232,18 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
             </main>
 
             <?php echo menzzu_marketplace_render_search_modal(); ?>
+
+            <footer class="menzzu-marketplace-site-footer">
+                <div class="menzzu-marketplace-site-footer-brand">
+                    <strong>men<span>zzu</span></strong>
+                    <p>O cardápio do restaurante.<br>A praticidade do marketplace.</p>
+                </div>
+                <div><strong>Para você</strong><a href="<?php echo esc_url(menzzu_marketplace_restaurants_url()); ?>">Restaurantes</a><a href="<?php echo esc_url(menzzu_marketplace_restaurants_url()); ?>">Categorias</a><a href="#">Ajuda</a></div>
+                <div><strong>Para restaurantes</strong><a href="<?php echo esc_url($atts['register_url'] ?? home_url('/comprar/')); ?>">Cadastrar restaurante</a><a href="#">Planos e taxas</a><a href="#">Central de ajuda</a></div>
+                <div><strong>Institucional</strong><a href="#">Sobre o Menzzu</a><a href="#">Termos de uso</a><a href="#">Privacidade</a><a href="#">Contato</a></div>
+                <div><strong>Siga a gente</strong><div class="menzzu-marketplace-social-links"><a href="#" aria-label="Instagram">◎</a><a href="#" aria-label="Facebook">f</a><a href="#" aria-label="TikTok">♪</a><a href="#" aria-label="YouTube">▶</a></div></div>
+                <div class="menzzu-marketplace-site-footer-bottom"><span>© <?php echo esc_html(date('Y')); ?> Menzzu. Todos os direitos reservados.</span><span>Feito com <b>♥</b> no Brasil.</span></div>
+            </footer>
 
             <?php echo menzzu_marketplace_render_directory_footer_nav([
                 'active' => 'home',
