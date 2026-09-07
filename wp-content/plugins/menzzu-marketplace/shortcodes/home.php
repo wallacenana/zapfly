@@ -70,6 +70,7 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
             ]); ?>
 
             <main class="menzzu-marketplace-main">
+                <?php if (!$hasSelectedAddress) : ?>
                 <section class="menzzu-marketplace-landing" id="inicio" data-landing>
                     <div class="menzzu-marketplace-home-hero">
                         <h1>O cardápio do seu<br><em>próximo pedido</em>, está aqui.</h1>
@@ -157,6 +158,7 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
                         </div>
                     </div>
                 </section>
+                <?php endif; ?>
 
                 <section class="menzzu-marketplace-catalog" id="restaurantes" data-catalog <?php echo $hasSelectedAddress ? '' : 'hidden'; ?>>
                     <div class="menzzu-marketplace-categories" data-categories>

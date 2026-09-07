@@ -309,6 +309,29 @@
     }
   }
 
+  function clearAddress(root) {
+    const key = getStorageKey(root);
+    const legacyKey = String(config.legacyStorageKey || 'dz_home2_address');
+
+    try {
+      window.localStorage.removeItem(key);
+      if (legacyKey && legacyKey !== key) {
+        window.localStorage.removeItem(legacyKey);
+      }
+    } catch (error) {
+      // ignore
+    }
+
+    try {
+      document.cookie = `${key}=; path=/; max-age=0; samesite=lax`;
+      if (legacyKey && legacyKey !== key) {
+        document.cookie = `${legacyKey}=; path=/; max-age=0; samesite=lax`;
+      }
+    } catch (error) {
+      // ignore
+    }
+  }
+
   function stateFor(root) {
     if (!stateByRoot.has(root)) {
       stateByRoot.set(root, {
@@ -354,7 +377,11 @@
     const appActions = root.querySelector('[data-app-actions]');
     const keepHomeShell = root.dataset.homeShell === '1';
 
-    if (landing) landing.hidden = keepHomeShell ? false : mode !== 'landing';
+    if (keepHomeShell && mode === 'app' && landing) {
+      landing.remove();
+    } else if (landing) {
+      landing.hidden = mode !== 'landing';
+    }
     if (catalog) catalog.hidden = mode !== 'app';
     if (appActions) appActions.hidden = mode !== 'app';
   }
@@ -1134,22 +1161,8 @@
 
     if (editButton) {
       editButton.addEventListener('click', () => {
-        const current = readAddress(root);
-        const target = root.querySelector('[data-address-input]');
-        if (target) {
-          target.value = current.address || '';
-          target.focus();
-          target.select();
-        }
-        const state = stateFor(root);
-        state.addressSelected = Boolean(current.address);
-        state.selectedAddress = state.addressSelected ? current : null;
-        updateContinueState(root);
-        setMode(root, 'landing');
-        const landing = root.querySelector('[data-landing]');
-        if (landing) {
-          landing.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
+        clearAddress(root);
+        window.location.reload();
       });
     }
   }
