@@ -74,8 +74,9 @@ if (!function_exists('menzzu_marketplace_enqueue_assets')) {
             [],
             null
         );
-        wp_enqueue_style('menzzu-marketplace', menzzu_marketplace_asset_url($style_rel), [], menzzu_marketplace_asset_version($style_rel));
-        wp_enqueue_script('menzzu-marketplace', menzzu_marketplace_asset_url($script_rel), [], menzzu_marketplace_asset_version($script_rel), true);
+        $assetVersion = MENZZU_MARKETPLACE_VERSION . '.' . menzzu_marketplace_asset_version($style_rel);
+        wp_enqueue_style('menzzu-marketplace', menzzu_marketplace_asset_url($style_rel), [], $assetVersion);
+        wp_enqueue_script('menzzu-marketplace', menzzu_marketplace_asset_url($script_rel), [], $assetVersion, true);
 
         $config = [
             'apiBase' => menzzu_marketplace_api_base(),

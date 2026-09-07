@@ -123,7 +123,7 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
                         <div><span>♥</span><strong>Comer bem fica mais fácil</strong><small>Tudo em um só lugar.</small></div>
                     </section>
 
-                    <div class="menzzu-marketplace-landing-grid">
+                    <div class="menzzu-marketplace-landing-grid" hidden>
                         <div class="menzzu-marketplace-landing-copy">
                             <span class="menzzu-marketplace-landing-badge">
                                 <span aria-hidden="true">⚡</span>
