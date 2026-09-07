@@ -830,6 +830,10 @@
   height: 42px;
 }
 
+.menzzu-marketplace-brand-logo-dark { display: none; }
+.menzzu-marketplace[data-theme="dark"] .menzzu-marketplace-brand-logo-light { display: none; }
+.menzzu-marketplace[data-theme="dark"] .menzzu-marketplace-brand-logo-dark { display: block; }
+
 .menzzu-marketplace-wordmark {
   display: inline-block;
   color: var(--e-global-color-text);

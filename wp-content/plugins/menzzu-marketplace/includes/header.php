@@ -36,9 +36,10 @@ if (!function_exists('menzzu_marketplace_render_directory_header')) {
                             <?php
                             $logo_id = (int) get_theme_mod('custom_logo');
                             echo $logo_id
-                                ? wp_get_attachment_image($logo_id, 'full', false, ['class' => 'menzzu-marketplace-brand-logo', 'alt' => 'Menzzu'])
+                                ? wp_get_attachment_image($logo_id, 'full', false, ['class' => 'menzzu-marketplace-brand-logo menzzu-marketplace-brand-logo-light', 'alt' => 'Menzzu'])
                                 : '';
                             ?>
+                            <img class="menzzu-marketplace-brand-logo menzzu-marketplace-brand-logo-dark" src="https://menzzu.com/wp-content/uploads/2026/09/Logo-Menzzu-Branca.png" alt="Menzzu" loading="eager" decoding="async">
                         <?php else : ?>
                             <span class="menzzu-marketplace-wordmark" aria-label="Menzzu">men<span>zzu</span></span>
                         <?php endif; ?>
