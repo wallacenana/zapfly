@@ -336,7 +336,7 @@
     const input = root.querySelector('[data-address-input]');
 
     if (button) {
-      button.disabled = !state.addressSelected;
+      button.disabled = !state.addressSelected && !(input && input.value.trim());
     }
 
     if (input && !state.addressSelected) {
@@ -1011,7 +1011,24 @@
       form.addEventListener('submit', (event) => {
         event.preventDefault();
         const state = stateFor(root);
+        const typedAddress = input.value.trim();
         if (!state.addressSelected || !state.selectedAddress) {
+          if (typedAddress.length < 5) {
+            updateContinueState(root);
+            return;
+          }
+
+          state.selectedAddress = {
+            address: typedAddress,
+            placeId: '',
+            lat: null,
+            lng: null
+          };
+          state.addressSelected = true;
+          state.address = typedAddress;
+        }
+
+        if (!state.selectedAddress.address) {
           return;
         }
 

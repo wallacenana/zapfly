@@ -82,6 +82,7 @@ if (!function_exists('menzzu_marketplace_enqueue_assets')) {
             'categoryImageRules' => menzzu_marketplace_category_image_rules(),
             'storageKey' => 'menzzu_home_address',
             'legacyStorageKey' => 'dz_home2_address',
+            'mapsKey' => menzzu_marketplace_maps_key(),
             'searchLabel' => 'Buscar loja ou item',
             'continueLabel' => 'Continuar',
             'editLabel' => 'Alterar endereÃ§o',

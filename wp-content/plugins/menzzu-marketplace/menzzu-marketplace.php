@@ -44,6 +44,63 @@ function menzzu_marketplace_migrate_legacy_options()
 
 add_action('plugins_loaded', 'menzzu_marketplace_migrate_legacy_options', 5);
 
+add_action('admin_menu', function () {
+    add_options_page(
+        'Menzzu Marketplace',
+        'Menzzu Marketplace',
+        'manage_options',
+        'menzzu-marketplace',
+        'menzzu_marketplace_render_settings_page'
+    );
+});
+
+add_action('admin_init', function () {
+    register_setting('menzzu_marketplace', 'menzzu_maps_key', [
+        'type' => 'string',
+        'sanitize_callback' => static function ($value) {
+            return sanitize_text_field((string) $value);
+        },
+        'default' => '',
+    ]);
+});
+
+if (!function_exists('menzzu_marketplace_render_settings_page')) {
+    function menzzu_marketplace_render_settings_page()
+    {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+        ?>
+        <div class="wrap">
+            <h1>Menzzu Marketplace</h1>
+            <p>Configure a integração usada para sugerir endereços no marketplace.</p>
+            <form action="options.php" method="post">
+                <?php
+                settings_fields('menzzu_marketplace');
+                do_settings_sections('menzzu_marketplace');
+                ?>
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th scope="row"><label for="menzzu_maps_key">Chave da API do Google Maps</label></th>
+                        <td>
+                            <input
+                                type="password"
+                                class="regular-text"
+                                id="menzzu_maps_key"
+                                name="menzzu_maps_key"
+                                value="<?php echo esc_attr((string) get_option('menzzu_maps_key', '')); ?>"
+                                autocomplete="off">
+                            <p class="description">Ative Maps JavaScript API e Places API para esta chave e restrinja-a ao domínio do site.</p>
+                        </td>
+                    </tr>
+                </table>
+                <?php submit_button('Salvar configuração'); ?>
+            </form>
+        </div>
+        <?php
+    }
+}
+
 require_once MENZZU_MARKETPLACE_DIR . 'includes/helpers.php';
 require_once MENZZU_MARKETPLACE_DIR . 'includes/blog.php';
 require_once MENZZU_MARKETPLACE_DIR . 'includes/header.php';
