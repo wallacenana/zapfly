@@ -4,8 +4,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!function_exists('dzhome2_blog_render_post_card')) {
-    function dzhome2_blog_render_post_card($card, $viewsLabel = '')
+if (!function_exists('menzzu_marketplace_blog_render_post_card')) {
+    function menzzu_marketplace_blog_render_post_card($card, $viewsLabel = '')
     {
         if (empty($card) || empty($card['url'])) {
             return '';
@@ -20,13 +20,13 @@ if (!function_exists('dzhome2_blog_render_post_card')) {
 
         ob_start();
 ?>
-        <article class="dz-blog-card">
-            <a class="dz-blog-card-link" href="<?php echo esc_url($card['url']); ?>">
-                <span class="dz-blog-card-media">
+        <article class="menzzu-blog-card">
+            <a class="menzzu-blog-card-link" href="<?php echo esc_url($card['url']); ?>">
+                <span class="menzzu-blog-card-media">
                     <img src="<?php echo esc_url($image); ?>" alt="<?php echo esc_attr($title); ?>" loading="lazy" decoding="async">
                 </span>
-                <span class="dz-blog-card-copy">
-                    <span class="dz-blog-card-meta">
+                <span class="menzzu-blog-card-copy">
+                    <span class="menzzu-blog-card-meta">
                         <?php if ($viewsLabel !== '') : ?>
                             <small><?php echo esc_html($viewsLabel); ?></small>
                         <?php endif; ?>
@@ -46,8 +46,8 @@ if (!function_exists('dzhome2_blog_render_post_card')) {
     }
 }
 
-if (!function_exists('dzhome2_blog_render_popular_item')) {
-    function dzhome2_blog_render_popular_item($card, $rank)
+if (!function_exists('menzzu_marketplace_blog_render_popular_item')) {
+    function menzzu_marketplace_blog_render_popular_item($card, $rank)
     {
         if (empty($card) || empty($card['url'])) {
             return '';
@@ -59,13 +59,13 @@ if (!function_exists('dzhome2_blog_render_popular_item')) {
 
         ob_start();
     ?>
-        <article class="dz-blog-popular-item">
-            <a class="dz-blog-popular-link" href="<?php echo esc_url($card['url']); ?>">
-                <span class="dz-blog-popular-rank"><?php echo esc_html($rankLabel); ?></span>
-                <span class="dz-blog-popular-copy">
+        <article class="menzzu-blog-popular-item">
+            <a class="menzzu-blog-popular-link" href="<?php echo esc_url($card['url']); ?>">
+                <span class="menzzu-blog-popular-rank"><?php echo esc_html($rankLabel); ?></span>
+                <span class="menzzu-blog-popular-copy">
                     <strong><?php echo esc_html($title); ?></strong>
                     <?php if ($readingTime !== '') : ?>
-                        <span class="dz-blog-popular-meta"><?php echo esc_html($readingTime); ?></span>
+                        <span class="menzzu-blog-popular-meta"><?php echo esc_html($readingTime); ?></span>
                     <?php endif; ?>
                 </span>
             </a>
@@ -75,8 +75,8 @@ if (!function_exists('dzhome2_blog_render_popular_item')) {
     }
 }
 
-if (!function_exists('dzhome2_render_popular_posts_shortcode')) {
-    function dzhome2_render_popular_posts_shortcode($atts = [])
+if (!function_exists('menzzu_marketplace_render_popular_posts_shortcode')) {
+    function menzzu_marketplace_render_popular_posts_shortcode($atts = [])
     {
         $atts = shortcode_atts([
             'title' => 'Mais lidos da semana',
@@ -87,9 +87,9 @@ if (!function_exists('dzhome2_render_popular_posts_shortcode')) {
             'itens' => '',
             'titulo' => '',
             'descricao' => '',
-        ], $atts, 'digizap_home_2_popular_posts');
+        ], $atts, 'menzzu_marketplace_popular_posts');
 
-        dzhome2_enqueue_blog_assets();
+        menzzu_marketplace_enqueue_blog_assets();
 
         $daysSource = $atts['dias'] !== '' ? $atts['dias'] : $atts['days'];
         $limitSource = $atts['itens'] !== '' ? $atts['itens'] : $atts['limit'];
@@ -98,29 +98,29 @@ if (!function_exists('dzhome2_render_popular_posts_shortcode')) {
 
         $days = min(max(absint($daysSource), 1), 365);
         $limit = min(max(absint($limitSource), 1), 24);
-        $posts = function_exists('dzhome2_blog_get_popular_posts') ? dzhome2_blog_get_popular_posts($days, $limit) : [];
+        $posts = function_exists('menzzu_marketplace_blog_get_popular_posts') ? menzzu_marketplace_blog_get_popular_posts($days, $limit) : [];
 
         ob_start();
     ?>
-        <section class="dz-blog-section dz-blog-popular" data-dz-home2-popular data-days="<?php echo esc_attr($days); ?>" data-limit="<?php echo esc_attr($limit); ?>">
-            <!-- <header class="dz-blog-section-head">
+        <section class="menzzu-blog-section menzzu-blog-popular" data-menzzu-marketplace-popular data-days="<?php echo esc_attr($days); ?>" data-limit="<?php echo esc_attr($limit); ?>">
+            <!-- <header class="menzzu-blog-section-head">
                 <div>
-                    <span class="dz-blog-kicker">Blog</span>
+                    <span class="menzzu-blog-kicker">Blog</span>
                     <h3><?php // echo esc_html($title); 
                         ?></h3>
                     <p><?php // echo esc_html($description); 
                         ?></p>
                 </div>
-                <span class="dz-blog-section-pill">Ultimos <?php //echo esc_html((string) $days); 
+                <span class="menzzu-blog-section-pill">Ultimos <?php //echo esc_html((string) $days); 
                                                             ?> dias</span>
             </header> -->
 
             <?php if (empty($posts)) : ?>
-                <div class="dz-blog-empty">Nenhum post encontrado.</div>
+                <div class="menzzu-blog-empty">Nenhum post encontrado.</div>
             <?php else : ?>
-                <div class="dz-blog-popular-list">
+                <div class="menzzu-blog-popular-list">
                     <?php foreach ($posts as $index => $card) : ?>
-                        <?php echo dzhome2_blog_render_popular_item($card, $index + 1); ?>
+                        <?php echo menzzu_marketplace_blog_render_popular_item($card, $index + 1); ?>
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
@@ -130,8 +130,8 @@ if (!function_exists('dzhome2_render_popular_posts_shortcode')) {
     }
 }
 
-if (!function_exists('dzhome2_render_continue_reading_shortcode')) {
-    function dzhome2_render_continue_reading_shortcode($atts = [])
+if (!function_exists('menzzu_marketplace_render_continue_reading_shortcode')) {
+    function menzzu_marketplace_render_continue_reading_shortcode($atts = [])
     {
         $atts = shortcode_atts([
             'title' => 'Continue lendo',
@@ -139,27 +139,27 @@ if (!function_exists('dzhome2_render_continue_reading_shortcode')) {
             'empty_description' => 'Abra um post para retomar de onde parou.',
             'titulo' => '',
             'descricao' => '',
-        ], $atts, 'digizap_home_2_continue_reading');
+        ], $atts, 'menzzu_marketplace_continue_reading');
 
-        dzhome2_enqueue_blog_assets();
+        menzzu_marketplace_enqueue_blog_assets();
 
         $title = $atts['titulo'] !== '' ? $atts['titulo'] : $atts['title'];
 
         ob_start();
     ?>
         <section
-            class="dz-blog-section dz-blog-continue"
-            data-dz-home2-continue-reading
+            class="menzzu-blog-section menzzu-blog-continue"
+            data-menzzu-marketplace-continue-reading
             data-empty-title="<?php echo esc_attr($atts['empty_title']); ?>"
             data-empty-description="<?php echo esc_attr($atts['empty_description']); ?>">
-            <header class="dz-blog-section-head">
+            <header class="menzzu-blog-section-head">
                 <div>
                     <h2><?php echo esc_html($title); ?></h2>
                 </div>
             </header>
 
-            <div class="dz-blog-continue-body" data-dz-home2-continue-body aria-live="polite">
-                <div class="dz-blog-empty-state">
+            <div class="menzzu-blog-continue-body" data-menzzu-marketplace-continue-body aria-live="polite">
+                <div class="menzzu-blog-empty-state">
                     <strong><?php echo esc_html($atts['empty_title']); ?></strong>
                     <p><?php echo esc_html($atts['empty_description']); ?></p>
                 </div>
@@ -170,7 +170,9 @@ if (!function_exists('dzhome2_render_continue_reading_shortcode')) {
     }
 }
 
-add_shortcode('digizap_home_2_popular_posts', 'dzhome2_render_popular_posts_shortcode');
-add_shortcode('digizap_home_2_continue_reading', 'dzhome2_render_continue_reading_shortcode');
-add_shortcode('menzzu_popular_posts', 'dzhome2_render_popular_posts_shortcode');
-add_shortcode('menzzu_continue_reading', 'dzhome2_render_continue_reading_shortcode');
+add_shortcode('menzzu_marketplace_popular_posts', 'menzzu_marketplace_render_popular_posts_shortcode');
+add_shortcode('menzzu_marketplace_continue_reading', 'menzzu_marketplace_render_continue_reading_shortcode');
+add_shortcode('menzzu_popular_posts', 'menzzu_marketplace_render_popular_posts_shortcode');
+add_shortcode('menzzu_continue_reading', 'menzzu_marketplace_render_continue_reading_shortcode');
+add_shortcode('digizap_home_2_popular_posts', 'menzzu_marketplace_render_popular_posts_shortcode');
+add_shortcode('digizap_home_2_continue_reading', 'menzzu_marketplace_render_continue_reading_shortcode');

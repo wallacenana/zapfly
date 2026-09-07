@@ -1,5 +1,5 @@
 (function () {
-  const config = window.menzzuBlogConfig || window.dzHome2BlogConfig || {};
+  const config = window.menzzuBlogConfig || window.menzzuMarketplaceBlogConfig || {};
   const storageKey = String(config.storageKey || 'menzzu_reading_progress');
   const restBase = String(config.restBase || '').replace(/\/+$/, '');
 
@@ -77,12 +77,12 @@
       return;
     }
 
-    const section = container.closest('[data-dz-home2-continue-reading]');
+    const section = container.closest('[data-menzzu-marketplace-continue-reading]');
     const emptyTitle = section?.dataset.emptyTitle || 'Nenhuma leitura salva ainda.';
     const emptyDescription = section?.dataset.emptyDescription || 'Abra um post para retomar de onde parou.';
 
     container.innerHTML = `
-      <div class="dz-blog-empty-state">
+      <div class="menzzu-blog-empty-state">
         <strong>${escapeHtml(emptyTitle)}</strong>
         <p>${escapeHtml(emptyDescription)}</p>
       </div>
@@ -108,20 +108,20 @@
     const dateHuman = String(post.dateHuman || '');
     const mediaMarkup = image
       ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(post.title)}" loading="lazy" decoding="async">`
-      : `<span class="dz-blog-continue-media-fallback" aria-hidden="true">Blog</span>`;
+      : `<span class="menzzu-blog-continue-media-fallback" aria-hidden="true">Blog</span>`;
 
     container.innerHTML = `
-      <a class="dz-blog-continue-card" href="${escapeHtml(post.url)}">
-        <span class="dz-blog-continue-media">
+      <a class="menzzu-blog-continue-card" href="${escapeHtml(post.url)}">
+        <span class="menzzu-blog-continue-media">
           ${mediaMarkup}
         </span>
-        <span class="dz-blog-continue-copy">
-          <span class="dz-blog-continue-badge">${escapeHtml(badgeLabel)}</span>
+        <span class="menzzu-blog-continue-copy">
+          <span class="menzzu-blog-continue-badge">${escapeHtml(badgeLabel)}</span>
           <h3>${escapeHtml(post.title)}</h3>
           ${excerpt ? `<p>${escapeHtml(excerpt)}</p>` : ''}
-          <span class="dz-blog-continue-meta">
+          <span class="menzzu-blog-continue-meta">
             ${readingTime ? `
-              <span class="dz-blog-continue-meta-item">
+              <span class="menzzu-blog-continue-meta-item">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"></circle>
                   <path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
@@ -130,7 +130,7 @@
               </span>
             ` : ''}
             ${dateHuman ? `
-              <span class="dz-blog-continue-meta-item">
+              <span class="menzzu-blog-continue-meta-item">
                 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                   <rect x="3" y="5" width="18" height="16" rx="3" ry="3" fill="none" stroke="currentColor" stroke-width="2"></rect>
                   <path d="M8 3v4M16 3v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
@@ -139,7 +139,7 @@
               </span>
             ` : ''}
           </span>
-          <span class="dz-blog-continue-cta">
+          <span class="menzzu-blog-continue-cta">
             <span>${escapeHtml(ctaLabel)}</span>
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <path d="M5 12h12" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"></path>
@@ -176,7 +176,7 @@
   }
 
   async function hydrateContinueWidgets() {
-    const widgets = document.querySelectorAll('[data-dz-home2-continue-reading]');
+    const widgets = document.querySelectorAll('[data-menzzu-marketplace-continue-reading]');
     if (!widgets.length) {
       return;
     }
@@ -185,7 +185,7 @@
     const payload = await fetchContinuePayload(saved || { postId: 0, progress: 0 }).catch(() => null);
 
     for (const widget of widgets) {
-      const body = widget.querySelector('[data-dz-home2-continue-body]') || widget;
+      const body = widget.querySelector('[data-menzzu-marketplace-continue-body]') || widget;
 
       if (!restBase) {
         if (!saved) {

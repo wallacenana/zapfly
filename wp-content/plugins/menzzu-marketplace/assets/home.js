@@ -1,5 +1,5 @@
-﻿(function () {
-  const config = window.menzzuMarketplaceConfig || window.dzHome2Config || {};
+(function () {
+  const config = window.menzzuMarketplaceConfig || {};
   const categoryImageBaseUrl = String(config.categoryImageBaseUrl || '');
   const categoryImageRules = Array.isArray(config.categoryImageRules) ? config.categoryImageRules : [];
   const roots = new Set();
@@ -17,7 +17,7 @@
 
   function ratingStarSvg(filled = true) {
     return `
-      <svg class="dz-home2-rating-icon ${filled ? 'filled' : 'outline'}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <svg class="menzzu-marketplace-rating-icon ${filled ? 'filled' : 'outline'}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
         <path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="${filled ? 'currentColor' : 'none'}" stroke="${filled ? 'none' : 'currentColor'}" stroke-width="1.8"></path>
       </svg>
     `;
@@ -393,7 +393,7 @@
   }
 
   function bindHeaderScroll(root) {
-    const header = root.querySelector('.dz-home2-header');
+    const header = root.querySelector('.menzzu-marketplace-header');
     if (!header) return;
 
     const state = stateFor(root);
@@ -425,7 +425,7 @@
   }
 
   function bindFooterNav(root) {
-    const searchButton = root.querySelector('[data-dz-home2-nav-search]');
+    const searchButton = root.querySelector('[data-menzzu-marketplace-nav-search]');
     const searchModal = root.querySelector('[data-search-modal]');
     const searchModalInput = root.querySelector('[data-search-modal-input]');
     const closeButtons = root.querySelectorAll('[data-search-modal-close]');
@@ -534,18 +534,18 @@
       const ratingText = ratingVisible
         ? `${ratingLabel || '5,0'}${ratingCount > 0 ? ` (${ratingCount})` : ''}`
         : '';
-      const promoBadge = store?.hasPromotion ? '<span class="dz-home2-store-badge dz-home2-store-badge-promo">Promo</span>' : '';
-      const freeBadge = store?.freeDeliveryEnabled ? '<span class="dz-home2-store-badge dz-home2-store-badge-free">Frete gratis</span>' : '';
+      const promoBadge = store?.hasPromotion ? '<span class="menzzu-marketplace-store-badge menzzu-marketplace-store-badge-promo">Promo</span>' : '';
+      const freeBadge = store?.freeDeliveryEnabled ? '<span class="menzzu-marketplace-store-badge menzzu-marketplace-store-badge-free">Frete gratis</span>' : '';
 
       return `
-        <a class="dz-home2-featured-card ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}">
-          <span class="dz-home2-featured-media"><img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async"></span>
-          <span class="dz-home2-featured-copy">
+        <a class="menzzu-marketplace-featured-card ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}">
+          <span class="menzzu-marketplace-featured-media"><img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async"></span>
+          <span class="menzzu-marketplace-featured-copy">
             ${promoBadge}${freeBadge}
             <strong>${escapeHtml(name)}</strong>
             <small>${escapeHtml(category)}</small>
-            ${ratingVisible ? `<span class="dz-home2-hero-rating">${ratingStarSvg(true)}<span class="dz-home2-rating-text">${escapeHtml(ratingText)}</span></span>` : ''}
-            ${schedule.isOpenNow ? '' : `<span class="dz-home2-restaurant-status ${schedule.statusClass} dz-home2-featured-status">${escapeHtml(schedule.statusLabel)}</span>`}
+            ${ratingVisible ? `<span class="menzzu-marketplace-hero-rating">${ratingStarSvg(true)}<span class="menzzu-marketplace-rating-text">${escapeHtml(ratingText)}</span></span>` : ''}
+            ${schedule.isOpenNow ? '' : `<span class="menzzu-marketplace-restaurant-status ${schedule.statusClass} menzzu-marketplace-featured-status">${escapeHtml(schedule.statusLabel)}</span>`}
           </span>
         </a>
       `; 
@@ -558,7 +558,7 @@
 
   function renderCategoryCards(categories) {
     if (!Array.isArray(categories) || categories.length === 0) {
-      return '<div class="dz-home2-empty">Nenhuma categoria encontrada.</div>';
+      return '<div class="menzzu-marketplace-empty">Nenhuma categoria encontrada.</div>';
     }
 
     return categories.slice(0, 12).map((category) => {
@@ -568,11 +568,11 @@
       const image = resolveCategoryImage(name) || placeholderLogo(name, category?.accentColor || '#2dbd30');
 
       return `
-        <a class="dz-home2-category-card" href="${escapeHtml(restaurantsUrl(slug))}" data-category="${escapeHtml(slug)}">
-          <span class="dz-home2-category-thumb">
+        <a class="menzzu-marketplace-category-card" href="${escapeHtml(restaurantsUrl(slug))}" data-category="${escapeHtml(slug)}">
+          <span class="menzzu-marketplace-category-thumb">
             <img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async">
           </span>
-          <span class="dz-home2-category-label">
+          <span class="menzzu-marketplace-category-label">
             <strong>${escapeHtml(name)}</strong>
             <small>${count} restaurante${count === 1 ? '' : 's'}</small>
           </span>
@@ -595,7 +595,7 @@
 
   function renderRestaurantCards(restaurants) {
     if (!Array.isArray(restaurants) || restaurants.length === 0) {
-      return '<div class="dz-home2-empty-results">Nenhum restaurante encontrado.</div>';
+      return '<div class="menzzu-marketplace-empty-results">Nenhum restaurante encontrado.</div>';
     }
 
     return restaurants.map((store) => {
@@ -615,23 +615,23 @@
       const ratingText = ratingVisible
         ? `${ratingLabel || '5,0'}${ratingCount > 0 ? ` (${ratingCount})` : ''}`
         : '';
-      const promoBadge = store?.hasPromotion ? '<span class="dz-home2-store-badge dz-home2-store-badge-promo">Promo</span>' : '';
-      const freeBadge = store?.freeDeliveryEnabled ? '<span class="dz-home2-store-badge dz-home2-store-badge-free">Frete gratis</span>' : '';
+      const promoBadge = store?.hasPromotion ? '<span class="menzzu-marketplace-store-badge menzzu-marketplace-store-badge-promo">Promo</span>' : '';
+      const freeBadge = store?.freeDeliveryEnabled ? '<span class="menzzu-marketplace-store-badge menzzu-marketplace-store-badge-free">Frete gratis</span>' : '';
 
       return `
-        <article class="dz-home2-restaurant-card ${schedule.isOpenNow ? '' : 'is-closed'}">
-          <a class="dz-home2-restaurant-link ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}">
-            <span class="dz-home2-restaurant-media"><img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async"></span>
-            <span class="dz-home2-restaurant-body">
-              <span class="dz-home2-restaurant-head">
+        <article class="menzzu-marketplace-restaurant-card ${schedule.isOpenNow ? '' : 'is-closed'}">
+          <a class="menzzu-marketplace-restaurant-link ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}">
+            <span class="menzzu-marketplace-restaurant-media"><img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async"></span>
+            <span class="menzzu-marketplace-restaurant-body">
+              <span class="menzzu-marketplace-restaurant-head">
                 <strong>${escapeHtml(name)}</strong>
-                <span class="dz-home2-restaurant-status ${schedule.statusClass}">${escapeHtml(schedule.statusLabel)}</span>
+                <span class="menzzu-marketplace-restaurant-status ${schedule.statusClass}">${escapeHtml(schedule.statusLabel)}</span>
               </span>
-              <span class="dz-home2-restaurant-category">${escapeHtml(category)}</span>
-              <span class="dz-home2-restaurant-badges">${promoBadge}${freeBadge}</span>
-              <span class="dz-home2-restaurant-meta">
+              <span class="menzzu-marketplace-restaurant-category">${escapeHtml(category)}</span>
+              <span class="menzzu-marketplace-restaurant-badges">${promoBadge}${freeBadge}</span>
+              <span class="menzzu-marketplace-restaurant-meta">
                 <span>${count} item${count === 1 ? '' : 's'}</span>
-                ${ratingVisible ? `<span class="dz-home2-rating-chip">${ratingStarSvg(true)}<span class="dz-home2-rating-text">${escapeHtml(ratingText)}</span></span>` : ''}
+                ${ratingVisible ? `<span class="menzzu-marketplace-rating-chip">${ratingStarSvg(true)}<span class="menzzu-marketplace-rating-text">${escapeHtml(ratingText)}</span></span>` : ''}
               </span>
             </span>
           </a>
@@ -890,7 +890,7 @@
     }
 
     googleLoaderPromise = new Promise((resolve, reject) => {
-      const callbackName = `dzHome2GoogleMapsReady_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+      const callbackName = `menzzuMarketplaceGoogleMapsReady_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
       const script = document.createElement('script');
 
       window[callbackName] = () => {
@@ -1089,7 +1089,7 @@
   }
 
   function init() {
-    document.querySelectorAll('[data-dz-home2-root]').forEach((root) => {
+    document.querySelectorAll('[data-menzzu-marketplace-root]').forEach((root) => {
       if (roots.has(root)) {
         return;
       }

@@ -1,47 +1,49 @@
-﻿<?php
+<?php
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!function_exists('dzhome2_asset_path')) {
-    function dzhome2_asset_path($relative)
+if (!function_exists('menzzu_marketplace_asset_path')) {
+    function menzzu_marketplace_asset_path($relative)
     {
-        return trailingslashit(DIGIZAP_HOME2_DIR) . ltrim($relative, '/');
+        return trailingslashit(MENZZU_MARKETPLACE_DIR) . ltrim($relative, '/');
     }
 }
 
-if (!function_exists('dzhome2_asset_url')) {
-    function dzhome2_asset_url($relative)
+if (!function_exists('menzzu_marketplace_asset_url')) {
+    function menzzu_marketplace_asset_url($relative)
     {
-        return trailingslashit(DIGIZAP_HOME2_URL) . ltrim($relative, '/');
+        return trailingslashit(MENZZU_MARKETPLACE_URL) . ltrim($relative, '/');
     }
 }
 
-if (!function_exists('dzhome2_asset_version')) {
-    function dzhome2_asset_version($relative)
+if (!function_exists('menzzu_marketplace_asset_version')) {
+    function menzzu_marketplace_asset_version($relative)
     {
-        $path = dzhome2_asset_path($relative);
-        return file_exists($path) ? filemtime($path) : DIGIZAP_HOME2_VERSION;
+        $path = menzzu_marketplace_asset_path($relative);
+        return file_exists($path) ? filemtime($path) : MENZZU_MARKETPLACE_VERSION;
     }
 }
 
-if (!function_exists('dzhome2_api_base')) {
-    function dzhome2_api_base()
+if (!function_exists('menzzu_marketplace_api_base')) {
+    function menzzu_marketplace_api_base()
     {
-        return untrailingslashit((string) apply_filters('digizap_home2_api_base', 'https://api.menzzu.com'));
+        $base = apply_filters('menzzu_marketplace_api_base', 'https://api.menzzu.com');
+        return untrailingslashit((string) apply_filters('digizap_home2_api_base', $base));
     }
 }
 
-if (!function_exists('dzhome2_login_url')) {
-    function dzhome2_login_url()
+if (!function_exists('menzzu_marketplace_login_url')) {
+    function menzzu_marketplace_login_url()
     {
-        return untrailingslashit((string) apply_filters('digizap_home2_login_url', home_url('/login/')));
+        $url = apply_filters('menzzu_marketplace_login_url', home_url('/login/'));
+        return untrailingslashit((string) apply_filters('digizap_home2_login_url', $url));
     }
 }
 
-if (!function_exists('dzhome2_brand_logo_url')) {
-    function dzhome2_brand_logo_url()
+if (!function_exists('menzzu_marketplace_brand_logo_url')) {
+    function menzzu_marketplace_brand_logo_url()
     {
         $logo_id = (int) get_theme_mod('custom_logo');
         if ($logo_id > 0) {
@@ -51,12 +53,12 @@ if (!function_exists('dzhome2_brand_logo_url')) {
             }
         }
 
-        return dzhome2_placeholder_logo(get_bloginfo('name') ?: 'Menzzu');
+        return menzzu_marketplace_placeholder_logo(get_bloginfo('name') ?: 'Menzzu');
     }
 }
 
-if (!function_exists('dzhome2_enqueue_assets')) {
-    function dzhome2_enqueue_assets()
+if (!function_exists('menzzu_marketplace_enqueue_assets')) {
+    function menzzu_marketplace_enqueue_assets()
     {
         static $loaded = false;
         if ($loaded) {
@@ -66,18 +68,18 @@ if (!function_exists('dzhome2_enqueue_assets')) {
         $style_rel = 'assets/home.css';
         $script_rel = 'assets/home.js';
 
-        wp_enqueue_style('menzzu-marketplace', dzhome2_asset_url($style_rel), [], dzhome2_asset_version($style_rel));
-        wp_enqueue_script('menzzu-marketplace', dzhome2_asset_url($script_rel), [], dzhome2_asset_version($script_rel), true);
+        wp_enqueue_style('menzzu-marketplace', menzzu_marketplace_asset_url($style_rel), [], menzzu_marketplace_asset_version($style_rel));
+        wp_enqueue_script('menzzu-marketplace', menzzu_marketplace_asset_url($script_rel), [], menzzu_marketplace_asset_version($script_rel), true);
 
         $config = [
-            'apiBase' => dzhome2_api_base(),
+            'apiBase' => menzzu_marketplace_api_base(),
             'homeUrl' => home_url('/'),
-            'restaurantsUrl' => dzhome2_restaurants_url(),
-            'loginUrl' => dzhome2_login_url(),
+            'restaurantsUrl' => menzzu_marketplace_restaurants_url(),
+            'loginUrl' => menzzu_marketplace_login_url(),
             'registerUrl' => home_url('/comprar/'),
-            'blogUrl' => dzhome2_blog_url(),
-            'categoryImageBaseUrl' => dzhome2_asset_url('assets/img/'),
-            'categoryImageRules' => dzhome2_category_image_rules(),
+            'blogUrl' => menzzu_marketplace_blog_url(),
+            'categoryImageBaseUrl' => menzzu_marketplace_asset_url('assets/img/'),
+            'categoryImageRules' => menzzu_marketplace_category_image_rules(),
             'storageKey' => 'menzzu_home_address',
             'legacyStorageKey' => 'dz_home2_address',
             'searchLabel' => 'Buscar loja ou item',
@@ -87,14 +89,13 @@ if (!function_exists('dzhome2_enqueue_assets')) {
         ];
 
         wp_localize_script('menzzu-marketplace', 'menzzuMarketplaceConfig', $config);
-        wp_localize_script('menzzu-marketplace', 'dzHome2Config', $config);
 
         $loaded = true;
     }
 }
 
-if (!function_exists('dzhome2_normalize_text')) {
-    function dzhome2_normalize_text($value)
+if (!function_exists('menzzu_marketplace_normalize_text')) {
+    function menzzu_marketplace_normalize_text($value)
     {
         $value = (string) $value;
         if ($value === '') {
@@ -110,8 +111,8 @@ if (!function_exists('dzhome2_normalize_text')) {
     }
 }
 
-if (!function_exists('dzhome2_slugify_text')) {
-    function dzhome2_slugify_text($value)
+if (!function_exists('menzzu_marketplace_slugify_text')) {
+    function menzzu_marketplace_slugify_text($value)
     {
         $value = (string) $value;
         if ($value === '') {
@@ -127,15 +128,15 @@ if (!function_exists('dzhome2_slugify_text')) {
     }
 }
 
-if (!function_exists('dzhome2_category_slug')) {
-    function dzhome2_category_slug($value)
+if (!function_exists('menzzu_marketplace_category_slug')) {
+    function menzzu_marketplace_category_slug($value)
     {
-        return dzhome2_slugify_text($value);
+        return menzzu_marketplace_slugify_text($value);
     }
 }
 
-if (!function_exists('dzhome2_placeholder_logo')) {
-    function dzhome2_placeholder_logo($name, $accent = '#e11d48')
+if (!function_exists('menzzu_marketplace_placeholder_logo')) {
+    function menzzu_marketplace_placeholder_logo($name, $accent = '#e11d48')
     {
         $words = preg_split('/\s+/', trim((string) $name)) ?: [];
         $words = array_values(array_filter($words, static fn($word) => $word !== ''));
@@ -166,8 +167,8 @@ if (!function_exists('dzhome2_placeholder_logo')) {
     }
 }
 
-if (!function_exists('dzhome2_category_image_rules')) {
-    function dzhome2_category_image_rules()
+if (!function_exists('menzzu_marketplace_category_image_rules')) {
+    function menzzu_marketplace_category_image_rules()
     {
         return [
             ['match' => 'doces bolos', 'file' => 'bolos.png'],
@@ -192,10 +193,10 @@ if (!function_exists('dzhome2_category_image_rules')) {
     }
 }
 
-if (!function_exists('dzhome2_category_image_key')) {
-    function dzhome2_category_image_key($name)
+if (!function_exists('menzzu_marketplace_category_image_key')) {
+    function menzzu_marketplace_category_image_key($name)
     {
-        $normalized = dzhome2_normalize_text($name);
+        $normalized = menzzu_marketplace_normalize_text($name);
         $normalized = str_replace(['&', '/', '-', '_'], ' ', $normalized);
         $normalized = preg_replace('/\s+/', ' ', $normalized);
 
@@ -203,15 +204,15 @@ if (!function_exists('dzhome2_category_image_key')) {
     }
 }
 
-if (!function_exists('dzhome2_category_image_filename')) {
-    function dzhome2_category_image_filename($name)
+if (!function_exists('menzzu_marketplace_category_image_filename')) {
+    function menzzu_marketplace_category_image_filename($name)
     {
-        $key = dzhome2_category_image_key($name);
+        $key = menzzu_marketplace_category_image_key($name);
         if ($key === '') {
             return '';
         }
 
-        foreach (dzhome2_category_image_rules() as $rule) {
+        foreach (menzzu_marketplace_category_image_rules() as $rule) {
             $match = isset($rule['match']) ? trim((string) $rule['match']) : '';
             $file = isset($rule['file']) ? trim((string) $rule['file']) : '';
             if ($match === '' || $file === '') {
@@ -226,27 +227,27 @@ if (!function_exists('dzhome2_category_image_filename')) {
     }
 }
 
-if (!function_exists('dzhome2_category_image_url')) {
-    function dzhome2_category_image_url($name)
+if (!function_exists('menzzu_marketplace_category_image_url')) {
+    function menzzu_marketplace_category_image_url($name)
     {
-        $file = dzhome2_category_image_filename($name);
-        return $file !== '' ? dzhome2_asset_url('assets/img/' . rawurlencode($file)) : '';
+        $file = menzzu_marketplace_category_image_filename($name);
+        return $file !== '' ? menzzu_marketplace_asset_url('assets/img/' . rawurlencode($file)) : '';
     }
 }
 
-if (!function_exists('dzhome2_store_url')) {
-    function dzhome2_store_url($slug)
+if (!function_exists('menzzu_marketplace_store_url')) {
+    function menzzu_marketplace_store_url($slug)
     {
         $slug = sanitize_title((string) $slug);
         return $slug !== '' ? home_url('/' . $slug . '/') : home_url('/');
     }
 }
 
-if (!function_exists('dzhome2_restaurants_url')) {
-    function dzhome2_restaurants_url($category = '')
+if (!function_exists('menzzu_marketplace_restaurants_url')) {
+    function menzzu_marketplace_restaurants_url($category = '')
     {
         $url = home_url('/restaurantes/');
-        $category = dzhome2_category_slug($category);
+        $category = menzzu_marketplace_category_slug($category);
 
         if ($category !== '') {
             $url = add_query_arg('cat', $category, $url);
@@ -256,15 +257,15 @@ if (!function_exists('dzhome2_restaurants_url')) {
     }
 }
 
-if (!function_exists('dzhome2_escape_attr')) {
-    function dzhome2_escape_attr($value)
+if (!function_exists('menzzu_marketplace_escape_attr')) {
+    function menzzu_marketplace_escape_attr($value)
     {
         return esc_attr((string) $value);
     }
 }
 
-if (!function_exists('dzhome2_store_schedule_state')) {
-    function dzhome2_store_schedule_state($store)
+if (!function_exists('menzzu_marketplace_store_schedule_state')) {
+    function menzzu_marketplace_store_schedule_state($store)
     {
         $isOpen = array_key_exists('isOpenNow', $store)
             ? filter_var($store['isOpenNow'], FILTER_VALIDATE_BOOLEAN)
@@ -278,8 +279,8 @@ if (!function_exists('dzhome2_store_schedule_state')) {
     }
 }
 
-if (!function_exists('dzhome2_read_address_cookie')) {
-    function dzhome2_read_address_cookie($key = 'menzzu_home_address')
+if (!function_exists('menzzu_marketplace_read_address_cookie')) {
+    function menzzu_marketplace_read_address_cookie($key = 'menzzu_home_address')
     {
         $keys = [$key];
         if ($key !== 'dz_home2_address') {
@@ -323,8 +324,8 @@ if (!function_exists('dzhome2_read_address_cookie')) {
     }
 }
 
-if (!function_exists('dzhome2_fetch_directory_data')) {
-    function dzhome2_fetch_directory_data($search = '', $category = '', $location = '', $limit = 18, $locationLat = null, $locationLng = null)
+if (!function_exists('menzzu_marketplace_fetch_directory_data')) {
+    function menzzu_marketplace_fetch_directory_data($search = '', $category = '', $location = '', $limit = 18, $locationLat = null, $locationLng = null)
     {
         $args = [
             'search' => sanitize_text_field((string) $search),
@@ -335,13 +336,13 @@ if (!function_exists('dzhome2_fetch_directory_data')) {
             'limit' => min(max(absint($limit), 1), 48)
         ];
 
-        $cache_key = 'dzhome2_v3_' . md5(wp_json_encode($args));
+        $cache_key = 'menzzu_marketplace_v3_' . md5(wp_json_encode($args));
         $cached = get_transient($cache_key);
         if ($cached !== false) {
             return $cached;
         }
 
-        $url = add_query_arg($args, dzhome2_api_base() . '/public/restaurants');
+        $url = add_query_arg($args, menzzu_marketplace_api_base() . '/public/restaurants');
         $response = wp_remote_get($url, [
             'timeout' => 12,
             'headers' => [
@@ -390,11 +391,11 @@ if (!function_exists('dzhome2_fetch_directory_data')) {
     }
 }
 
-if (!function_exists('dzhome2_render_featured_cards')) {
-    function dzhome2_render_featured_cards($restaurants = [])
+if (!function_exists('menzzu_marketplace_render_featured_cards')) {
+    function menzzu_marketplace_render_featured_cards($restaurants = [])
     {
         if (empty($restaurants) || !is_array($restaurants)) {
-            return '<div class="dz-home2-empty">Sem destaques por enquanto.</div>';
+            return '<div class="menzzu-marketplace-empty">Sem destaques por enquanto.</div>';
         }
 
         $html = [];
@@ -402,20 +403,20 @@ if (!function_exists('dzhome2_render_featured_cards')) {
             $name = isset($store['name']) ? (string) $store['name'] : 'Restaurante';
             $slug = isset($store['slug']) ? (string) $store['slug'] : '';
             $category = isset($store['category']) ? (string) $store['category'] : '';
-            $logoUrl = !empty($store['logoUrl']) ? (string) $store['logoUrl'] : dzhome2_placeholder_logo($name, $store['accentColor'] ?? '#e11d48');
-            $schedule = dzhome2_store_schedule_state($store);
+            $logoUrl = !empty($store['logoUrl']) ? (string) $store['logoUrl'] : menzzu_marketplace_placeholder_logo($name, $store['accentColor'] ?? '#e11d48');
+            $schedule = menzzu_marketplace_store_schedule_state($store);
             $ratingVisible = isset($store['orderCount']) ? absint($store['orderCount']) > 0 : false;
             $ratingCount = isset($store['ratingCount']) ? absint($store['ratingCount']) : 0;
             $ratingLabel = isset($store['ratingLabel']) && (string) $store['ratingLabel'] !== '' ? (string) $store['ratingLabel'] : '5,0';
             $ratingText = $ratingVisible ? $ratingLabel . ($ratingCount > 0 ? ' (' . $ratingCount . ')' : '') : '';
-            $ratingMarkup = $ratingVisible ? '<svg class="dz-home2-rating-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="currentColor"></path></svg>' : '';
-            $promoBadge = !empty($store['hasPromotion']) ? '<span class="dz-home2-store-badge dz-home2-store-badge-promo">Promo</span>' : '';
-            $freeBadge = !empty($store['freeDeliveryEnabled']) ? '<span class="dz-home2-store-badge dz-home2-store-badge-free">Frete gratis</span>' : '';
+            $ratingMarkup = $ratingVisible ? '<svg class="menzzu-marketplace-rating-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="currentColor"></path></svg>' : '';
+            $promoBadge = !empty($store['hasPromotion']) ? '<span class="menzzu-marketplace-store-badge menzzu-marketplace-store-badge-promo">Promo</span>' : '';
+            $freeBadge = !empty($store['freeDeliveryEnabled']) ? '<span class="menzzu-marketplace-store-badge menzzu-marketplace-store-badge-free">Frete gratis</span>' : '';
 
             $html[] = sprintf(
-                '<a class="dz-home2-featured-card %s" href="%s">
-                    <span class="dz-home2-featured-media"><img src="%s" alt="%s" loading="lazy" decoding="async"></span>
-                        <span class="dz-home2-featured-copy">
+                '<a class="menzzu-marketplace-featured-card %s" href="%s">
+                    <span class="menzzu-marketplace-featured-media"><img src="%s" alt="%s" loading="lazy" decoding="async"></span>
+                        <span class="menzzu-marketplace-featured-copy">
                             %s
                             <strong>%s</strong>
                             <small>%s</small>
@@ -424,15 +425,15 @@ if (!function_exists('dzhome2_render_featured_cards')) {
                         </span>
                 </a>',
                 $schedule['isOpenNow'] ? '' : 'is-closed',
-                esc_url(dzhome2_store_url($slug)),
+                esc_url(menzzu_marketplace_store_url($slug)),
                 esc_url($logoUrl),
                 esc_attr($name),
                 $promoBadge . $freeBadge,
                 esc_html($name),
                 esc_html($category),
-                $ratingVisible ? '<span class="dz-home2-hero-rating">' . $ratingMarkup . '<span class="dz-home2-rating-text">' . esc_html($ratingText) . '</span></span>' : '',
+                $ratingVisible ? '<span class="menzzu-marketplace-hero-rating">' . $ratingMarkup . '<span class="menzzu-marketplace-rating-text">' . esc_html($ratingText) . '</span></span>' : '',
                 $schedule['isOpenNow'] ? '' : sprintf(
-                    '<span class="dz-home2-restaurant-status %s dz-home2-featured-status">%s</span>',
+                    '<span class="menzzu-marketplace-restaurant-status %s menzzu-marketplace-featured-status">%s</span>',
                     esc_attr($schedule['statusClass']),
                     esc_html($schedule['statusLabel'])
                 )
@@ -443,8 +444,8 @@ if (!function_exists('dzhome2_render_featured_cards')) {
     }
 }
 
-if (!function_exists('dzhome2_render_store_rail_section')) {
-    function dzhome2_render_store_rail_section($title, $stores = [], $actionUrl = '', $railKey = 'featured', $isHidden = false)
+if (!function_exists('menzzu_marketplace_render_store_rail_section')) {
+    function menzzu_marketplace_render_store_rail_section($title, $stores = [], $actionUrl = '', $railKey = 'featured', $isHidden = false)
     {
         $stores = is_array($stores) ? $stores : [];
         if (empty($stores) && !$isHidden) {
@@ -453,18 +454,18 @@ if (!function_exists('dzhome2_render_store_rail_section')) {
 
         ob_start();
 ?>
-        <section class="dz-home2-store-rail" data-store-rail data-rail-key="<?php echo esc_attr($railKey); ?>" <?php echo $isHidden ? 'hidden' : ''; ?>>
-            <div class="dz-home2-catalog-head dz-home2-store-rail-head">
+        <section class="menzzu-marketplace-store-rail" data-store-rail data-rail-key="<?php echo esc_attr($railKey); ?>" <?php echo $isHidden ? 'hidden' : ''; ?>>
+            <div class="menzzu-marketplace-catalog-head menzzu-marketplace-store-rail-head">
                 <div>
                     <h2><?php echo esc_html($title); ?></h2>
                     <p data-rail-summary><?php echo esc_html(count($stores) === 1 ? '1 restaurante encontrado' : sprintf('%d restaurantes encontrados', count($stores))); ?></p>
                 </div>
                 <?php if ($actionUrl !== '') : ?>
-                    <a class="dz-home2-catalog-action" href="<?php echo esc_url($actionUrl); ?>">Ver mais</a>
+                    <a class="menzzu-marketplace-catalog-action" href="<?php echo esc_url($actionUrl); ?>">Ver mais</a>
                 <?php endif; ?>
             </div>
-            <div class="dz-home2-featured-track dz-home2-store-rail-track" data-rail-track>
-                <?php echo dzhome2_render_featured_cards($stores); ?>
+            <div class="menzzu-marketplace-featured-track menzzu-marketplace-store-rail-track" data-rail-track>
+                <?php echo menzzu_marketplace_render_featured_cards($stores); ?>
             </div>
         </section>
     <?php
@@ -472,11 +473,11 @@ if (!function_exists('dzhome2_render_store_rail_section')) {
     }
 }
 
-if (!function_exists('dzhome2_render_restaurant_cards')) {
-    function dzhome2_render_restaurant_cards($restaurants = [])
+if (!function_exists('menzzu_marketplace_render_restaurant_cards')) {
+    function menzzu_marketplace_render_restaurant_cards($restaurants = [])
     {
         if (empty($restaurants) || !is_array($restaurants)) {
-            return '<div class="dz-home2-empty-results">Nenhum restaurante encontrado.</div>';
+            return '<div class="menzzu-marketplace-empty-results">Nenhum restaurante encontrado.</div>';
         }
 
         $html = [];
@@ -485,30 +486,30 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
             $slug = isset($store['slug']) ? (string) $store['slug'] : '';
             $category = isset($store['category']) ? (string) $store['category'] : '';
             $address = !empty($store['address']) ? (string) $store['address'] : 'EndereÃ§o nÃ£o informado';
-            $logoUrl = !empty($store['logoUrl']) ? (string) $store['logoUrl'] : dzhome2_placeholder_logo($name, $store['accentColor'] ?? '#e11d48');
+            $logoUrl = !empty($store['logoUrl']) ? (string) $store['logoUrl'] : menzzu_marketplace_placeholder_logo($name, $store['accentColor'] ?? '#e11d48');
             $featuredLine = !empty($store['featuredProducts'])
                 ? implode(' Â· ', array_map(static fn($item) => isset($item['name']) ? (string) $item['name'] : '', $store['featuredProducts']))
                 : 'Sem destaques cadastrados';
-            $schedule = dzhome2_store_schedule_state($store);
+            $schedule = menzzu_marketplace_store_schedule_state($store);
             $count = isset($store['productsCount']) ? absint($store['productsCount']) : 0;
             $ratingVisible = isset($store['orderCount']) ? absint($store['orderCount']) > 0 : false;
             $ratingCount = isset($store['ratingCount']) ? absint($store['ratingCount']) : 0;
             $ratingLabel = isset($store['ratingLabel']) && (string) $store['ratingLabel'] !== '' ? (string) $store['ratingLabel'] : '5,0';
             $ratingText = $ratingVisible ? $ratingLabel . ($ratingCount > 0 ? ' (' . $ratingCount . ')' : '') : '';
-            $ratingMarkup = $ratingVisible ? '<svg class="dz-home2-rating-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="currentColor"></path></svg>' : '';
+            $ratingMarkup = $ratingVisible ? '<svg class="menzzu-marketplace-rating-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="currentColor"></path></svg>' : '';
 
             $html[] = sprintf(
-                '<article class="dz-home2-restaurant-card %s">
-                    <a class="dz-home2-restaurant-link %s" href="%s">
-                        <span class="dz-home2-restaurant-media"><img src="%s" alt="%s" loading="lazy" decoding="async"></span>
-                        <span class="dz-home2-restaurant-body">
-                            <span class="dz-home2-restaurant-head">
+                '<article class="menzzu-marketplace-restaurant-card %s">
+                    <a class="menzzu-marketplace-restaurant-link %s" href="%s">
+                        <span class="menzzu-marketplace-restaurant-media"><img src="%s" alt="%s" loading="lazy" decoding="async"></span>
+                        <span class="menzzu-marketplace-restaurant-body">
+                            <span class="menzzu-marketplace-restaurant-head">
                                 <strong>%s</strong>
-                                <span class="dz-home2-restaurant-status %s">%s</span>
+                                <span class="menzzu-marketplace-restaurant-status %s">%s</span>
                             </span>
-                            <span class="dz-home2-restaurant-category">%s</span>
-                            <span class="dz-home2-restaurant-address" style="display:none">%s</span>
-                            <span class="dz-home2-restaurant-meta">
+                            <span class="menzzu-marketplace-restaurant-category">%s</span>
+                            <span class="menzzu-marketplace-restaurant-address" style="display:none">%s</span>
+                            <span class="menzzu-marketplace-restaurant-meta">
                                 <span>%d item%s</span>
                                 %s
                                 <span style="display:none">%s</span>
@@ -518,7 +519,7 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
                 </article>',
                 $schedule['isOpenNow'] ? '' : 'is-closed',
                 $schedule['isOpenNow'] ? '' : 'is-closed',
-                esc_url(dzhome2_store_url($slug)),
+                esc_url(menzzu_marketplace_store_url($slug)),
                 esc_url($logoUrl),
                 esc_attr($name),
                 esc_html($name),
@@ -528,7 +529,7 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
                 esc_html($address),
                 $count,
                 $count === 1 ? '' : 's',
-                $ratingVisible ? '<span class="dz-home2-rating-chip">' . $ratingMarkup . '<span class="dz-home2-rating-text">' . esc_html($ratingText) . '</span></span>' : '',
+                $ratingVisible ? '<span class="menzzu-marketplace-rating-chip">' . $ratingMarkup . '<span class="menzzu-marketplace-rating-text">' . esc_html($ratingText) . '</span></span>' : '',
                 esc_html($featuredLine)
             );
         }
@@ -537,8 +538,8 @@ if (!function_exists('dzhome2_render_restaurant_cards')) {
     }
 }
 
-if (!function_exists('dzhome2_render_restaurants_block')) {
-    function dzhome2_render_restaurants_block($data = [])
+if (!function_exists('menzzu_marketplace_render_restaurants_block')) {
+    function menzzu_marketplace_render_restaurants_block($data = [])
     {
         $featured = isset($data['featuredStores']) && is_array($data['featuredStores']) ? $data['featuredStores'] : [];
         $freeDelivery = isset($data['freeDeliveryStores']) && is_array($data['freeDeliveryStores']) ? $data['freeDeliveryStores'] : [];
@@ -548,21 +549,21 @@ if (!function_exists('dzhome2_render_restaurants_block')) {
 
         ob_start();
     ?>
-        <section class="dz-home2-catalog dz-home2-catalog-standalone" data-dz-home2-restaurants>
-            <div class="dz-home2-catalog-head">
+        <section class="menzzu-marketplace-catalog menzzu-marketplace-catalog-standalone" data-menzzu-marketplace-restaurants>
+            <div class="menzzu-marketplace-catalog-head">
                 <div>
                     <h2>Restaurantes</h2>
                     <p><?php echo esc_html($total > 0 ? ($total === 1 ? '1 restaurante disponÃ­vel' : sprintf('%d restaurantes disponÃ­veis', $total)) : 'Nenhum restaurante encontrado.'); ?></p>
                 </div>
-                <span class="dz-home2-catalog-count"><?php echo esc_html((string) $total); ?></span>
+                <span class="menzzu-marketplace-catalog-count"><?php echo esc_html((string) $total); ?></span>
             </div>
 
-            <?php echo dzhome2_render_store_rail_section('Destaques', $featured, '', 'featured', empty($featured)); ?>
-            <?php echo dzhome2_render_store_rail_section('Frete grÃ¡tis', $freeDelivery, '', 'freeDelivery', empty($freeDelivery)); ?>
-            <?php echo dzhome2_render_store_rail_section('Em promoÃ§Ã£o', $promo, '', 'promo', empty($promo)); ?>
+            <?php echo menzzu_marketplace_render_store_rail_section('Destaques', $featured, '', 'featured', empty($featured)); ?>
+            <?php echo menzzu_marketplace_render_store_rail_section('Frete grÃ¡tis', $freeDelivery, '', 'freeDelivery', empty($freeDelivery)); ?>
+            <?php echo menzzu_marketplace_render_store_rail_section('Em promoÃ§Ã£o', $promo, '', 'promo', empty($promo)); ?>
 
-            <div class="dz-home2-restaurants-grid">
-                <?php echo dzhome2_render_restaurant_cards($restaurants); ?>
+            <div class="menzzu-marketplace-restaurants-grid">
+                <?php echo menzzu_marketplace_render_restaurant_cards($restaurants); ?>
             </div>
         </section>
     <?php
@@ -570,8 +571,8 @@ if (!function_exists('dzhome2_render_restaurants_block')) {
     }
 }
 
-if (!function_exists('dzhome2_render_item_list_schema')) {
-    function dzhome2_render_item_list_schema($restaurants = [])
+if (!function_exists('menzzu_marketplace_render_item_list_schema')) {
+    function menzzu_marketplace_render_item_list_schema($restaurants = [])
     {
         if (empty($restaurants) || !is_array($restaurants)) {
             return '';
@@ -588,7 +589,7 @@ if (!function_exists('dzhome2_render_item_list_schema')) {
             $restaurant = [
                 '@type' => 'Restaurant',
                 'name' => $name,
-                'url' => dzhome2_store_url($slug)
+                'url' => menzzu_marketplace_store_url($slug)
             ];
 
             if ($image !== '') {
@@ -608,7 +609,7 @@ if (!function_exists('dzhome2_render_item_list_schema')) {
                 '@type' => 'ListItem',
                 'position' => $index + 1,
                 'name' => $name,
-                'url' => dzhome2_store_url($slug),
+                'url' => menzzu_marketplace_store_url($slug),
                 'item' => $restaurant
             ];
         }
@@ -621,50 +622,50 @@ if (!function_exists('dzhome2_render_item_list_schema')) {
     }
 }
 
-if (!function_exists('dzhome2_render_directory_skeleton')) {
-    function dzhome2_render_directory_skeleton($context = 'home')
+if (!function_exists('menzzu_marketplace_render_directory_skeleton')) {
+    function menzzu_marketplace_render_directory_skeleton($context = 'home')
     {
         $context = in_array($context, ['home', 'restaurants'], true) ? $context : 'home';
 
         ob_start();
     ?>
-        <div class="dz-home2-skeleton" data-home2-skeleton aria-hidden="true">
-            <div class="dz-home2-skeleton-inner">
-                <div class="dz-home2-skeleton-hero">
+        <div class="menzzu-marketplace-skeleton" data-menzzu-marketplace-skeleton aria-hidden="true">
+            <div class="menzzu-marketplace-skeleton-inner">
+                <div class="menzzu-marketplace-skeleton-hero">
                     <?php if ($context === 'restaurants') : ?>
-                        <div class="dz-home2-skeleton-back"></div>
-                        <div class="dz-home2-skeleton-title"></div>
-                        <div class="dz-home2-skeleton-line dz-home2-skeleton-line-sm"></div>
+                        <div class="menzzu-marketplace-skeleton-back"></div>
+                        <div class="menzzu-marketplace-skeleton-title"></div>
+                        <div class="menzzu-marketplace-skeleton-line menzzu-marketplace-skeleton-line-sm"></div>
                     <?php else : ?>
-                        <div class="dz-home2-skeleton-pill"></div>
-                        <div class="dz-home2-skeleton-title dz-home2-skeleton-title-lg"></div>
-                        <div class="dz-home2-skeleton-line"></div>
+                        <div class="menzzu-marketplace-skeleton-pill"></div>
+                        <div class="menzzu-marketplace-skeleton-title menzzu-marketplace-skeleton-title-lg"></div>
+                        <div class="menzzu-marketplace-skeleton-line"></div>
                     <?php endif; ?>
 
-                    <div class="dz-home2-skeleton-search">
-                        <div class="dz-home2-skeleton-search-input"></div>
-                        <div class="dz-home2-skeleton-search-button"></div>
+                    <div class="menzzu-marketplace-skeleton-search">
+                        <div class="menzzu-marketplace-skeleton-search-input"></div>
+                        <div class="menzzu-marketplace-skeleton-search-button"></div>
                     </div>
                 </div>
 
                 <?php if ($context === 'home') : ?>
-                    <div class="dz-home2-skeleton-row dz-home2-skeleton-chips">
+                    <div class="menzzu-marketplace-skeleton-row menzzu-marketplace-skeleton-chips">
                         <?php for ($i = 0; $i < 4; $i++) : ?>
-                            <div class="dz-home2-skeleton-chip"></div>
+                            <div class="menzzu-marketplace-skeleton-chip"></div>
                         <?php endfor; ?>
                     </div>
                 <?php endif; ?>
 
-                <div class="dz-home2-skeleton-section">
-                    <div class="dz-home2-skeleton-section-head"></div>
-                    <div class="dz-home2-skeleton-cards">
+                <div class="menzzu-marketplace-skeleton-section">
+                    <div class="menzzu-marketplace-skeleton-section-head"></div>
+                    <div class="menzzu-marketplace-skeleton-cards">
                         <?php for ($i = 0; $i < ($context === 'restaurants' ? 3 : 4); $i++) : ?>
-                            <div class="dz-home2-skeleton-card">
-                                <div class="dz-home2-skeleton-card-media"></div>
-                                <div class="dz-home2-skeleton-card-copy">
-                                    <div class="dz-home2-skeleton-line dz-home2-skeleton-line-md"></div>
-                                    <div class="dz-home2-skeleton-line dz-home2-skeleton-line-sm"></div>
-                                    <div class="dz-home2-skeleton-line dz-home2-skeleton-line-xs"></div>
+                            <div class="menzzu-marketplace-skeleton-card">
+                                <div class="menzzu-marketplace-skeleton-card-media"></div>
+                                <div class="menzzu-marketplace-skeleton-card-copy">
+                                    <div class="menzzu-marketplace-skeleton-line menzzu-marketplace-skeleton-line-md"></div>
+                                    <div class="menzzu-marketplace-skeleton-line menzzu-marketplace-skeleton-line-sm"></div>
+                                    <div class="menzzu-marketplace-skeleton-line menzzu-marketplace-skeleton-line-xs"></div>
                                 </div>
                             </div>
                         <?php endfor; ?>
@@ -677,8 +678,8 @@ if (!function_exists('dzhome2_render_directory_skeleton')) {
     }
 }
 
-if (!function_exists('dzhome2_hero_artwork_url')) {
-    function dzhome2_hero_artwork_url()
+if (!function_exists('menzzu_marketplace_hero_artwork_url')) {
+    function menzzu_marketplace_hero_artwork_url()
     {
         $svg = <<<SVG
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="720" viewBox="0 0 960 720" fill="none">
@@ -718,8 +719,8 @@ SVG;
     }
 }
 
-if (!function_exists('dzhome2_restaurants_hero_artwork_url')) {
-    function dzhome2_restaurants_hero_artwork_url()
+if (!function_exists('menzzu_marketplace_restaurants_hero_artwork_url')) {
+    function menzzu_marketplace_restaurants_hero_artwork_url()
     {
         $svg = <<<SVG
 <svg xmlns="http://www.w3.org/2000/svg" width="960" height="720" viewBox="0 0 960 720" fill="none">
@@ -756,8 +757,8 @@ SVG;
     }
 }
 
-if (!function_exists('dzhome2_short_address')) {
-    function dzhome2_short_address($address)
+if (!function_exists('menzzu_marketplace_short_address')) {
+    function menzzu_marketplace_short_address($address)
     {
         $address = trim((string) $address);
         if ($address === '') {
@@ -856,8 +857,8 @@ if (!function_exists('dzhome2_short_address')) {
     }
 }
 
-if (!function_exists('dzhome2_maps_key')) {
-    function dzhome2_maps_key($fallback = '')
+if (!function_exists('menzzu_marketplace_maps_key')) {
+    function menzzu_marketplace_maps_key($fallback = '')
     {
         $option = trim((string) get_option('menzzu_maps_key', ''));
         if ($option === '') {
@@ -871,8 +872,8 @@ if (!function_exists('dzhome2_maps_key')) {
     }
 }
 
-if (!function_exists('dzhome2_blog_url')) {
-    function dzhome2_blog_url()
+if (!function_exists('menzzu_marketplace_blog_url')) {
+    function menzzu_marketplace_blog_url()
     {
         $page = get_option('page_for_posts');
         if ($page) {

@@ -1,18 +1,18 @@
-﻿<?php
+<?php
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!function_exists('dzhome2_render_directory_header')) {
-    function dzhome2_render_directory_header($args = [])
+if (!function_exists('menzzu_marketplace_render_directory_header')) {
+    function menzzu_marketplace_render_directory_header($args = [])
     {
         $args = array_merge([
             'active' => 'home',
             'homeUrl' => home_url('/'),
-            'restaurantsUrl' => dzhome2_restaurants_url(),
-            'blogUrl' => dzhome2_blog_url(),
-            'loginUrl' => dzhome2_login_url(),
+            'restaurantsUrl' => menzzu_marketplace_restaurants_url(),
+            'blogUrl' => menzzu_marketplace_blog_url(),
+            'loginUrl' => menzzu_marketplace_login_url(),
             'registerUrl' => home_url('/comprar/'),
             'hasSelectedAddress' => false,
             'initialAddressLabel' => '',
@@ -28,35 +28,35 @@ if (!function_exists('dzhome2_render_directory_header')) {
 
         ob_start();
 ?>
-        <header class="dz-home2-header<?php echo $showBack ? ' has-back' : ''; ?>">
-            <div class="dz-left">
-                <div class="dz-home2-brand">
-                    <a class="dz-home2-brand-link" href="<?php echo esc_url($args['homeUrl']); ?>">
+        <header class="menzzu-marketplace-header<?php echo $showBack ? ' has-back' : ''; ?>">
+            <div class="menzzu-left">
+                <div class="menzzu-marketplace-brand">
+                    <a class="menzzu-marketplace-brand-link" href="<?php echo esc_url($args['homeUrl']); ?>">
                         <?php if (has_custom_logo()) : ?>
                             <?php
                             $logo_id = (int) get_theme_mod('custom_logo');
                             echo $logo_id
-                                ? wp_get_attachment_image($logo_id, 'full', false, ['class' => 'dz-home2-brand-logo', 'alt' => get_bloginfo('name') ?: 'Menzzu'])
+                                ? wp_get_attachment_image($logo_id, 'full', false, ['class' => 'menzzu-marketplace-brand-logo', 'alt' => get_bloginfo('name') ?: 'Menzzu'])
                                 : '';
                             ?>
                         <?php else : ?>
-                            <img decoding="async" width="300" height="300" src="<?php echo esc_url(dzhome2_brand_logo_url()); ?>" class="dz-home2-brand-logo" alt="<?php echo esc_attr(get_bloginfo('name') ?: 'Menzzu'); ?>">
-                            <span class="dz-home2-brand-name" style="display: none"><?php echo esc_html(get_bloginfo('name') ?: 'Menzzu'); ?></span>
+                            <img decoding="async" width="300" height="300" src="<?php echo esc_url(menzzu_marketplace_brand_logo_url()); ?>" class="menzzu-marketplace-brand-logo" alt="<?php echo esc_attr(get_bloginfo('name') ?: 'Menzzu'); ?>">
+                            <span class="menzzu-marketplace-brand-name" style="display: none"><?php echo esc_html(get_bloginfo('name') ?: 'Menzzu'); ?></span>
                         <?php endif; ?>
                     </a>
                 </div>
 
-                <nav class="dz-home2-nav" aria-label="Menu principal">
+                <nav class="menzzu-marketplace-nav" aria-label="Menu principal">
                     <a href="<?php echo esc_url($args['homeUrl']); ?>" class="<?php echo $active === 'home' ? 'is-active' : ''; ?>" <?php echo $active === 'home' ? 'aria-current="page"' : ''; ?>>Home</a>
                     <a href="<?php echo esc_url($args['restaurantsUrl']); ?>" class="<?php echo $active === 'restaurants' ? 'is-active' : ''; ?>" <?php echo $active === 'restaurants' ? 'aria-current="page"' : ''; ?>>Restaurantes</a>
                     <a href="<?php echo esc_url('/blog'); ?>">Ajuda</a>
                 </nav>
             </div>
 
-            <div class="dz-center">
-                <div class="dz-home2-header-actions dz-home2-header-actions-app" data-app-actions <?php echo $hasSelectedAddress ? '' : 'hidden'; ?>>
-                    <div class="dz-home2-search">
-                        <span class="dz-home2-search-icon" aria-hidden="true">
+            <div class="menzzu-center">
+                <div class="menzzu-marketplace-header-actions menzzu-marketplace-header-actions-app" data-app-actions <?php echo $hasSelectedAddress ? '' : 'hidden'; ?>>
+                    <div class="menzzu-marketplace-search">
+                        <span class="menzzu-marketplace-search-icon" aria-hidden="true">
                             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <circle cx="11" cy="11" r="7"></circle>
                                 <path d="M20 20l-3.5-3.5"></path>
@@ -67,27 +67,27 @@ if (!function_exists('dzhome2_render_directory_header')) {
                 </div>
             </div>
 
-            <div class="dz-right">
-                <button type="button" class="dz-home2-location-pill" data-edit-address>
-                    <span class="dz-home2-location-icon" aria-hidden="true">
+            <div class="menzzu-right">
+                <button type="button" class="menzzu-marketplace-location-pill" data-edit-address>
+                    <span class="menzzu-marketplace-location-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 21s6-4.35 6-11a6 6 0 1 0-12 0c0 6.65 6 11 6 11Z"></path>
                             <circle cx="12" cy="10" r="2.2"></circle>
                         </svg>
                     </span>
-                    <span class="dz-home2-location-copy">
+                    <span class="menzzu-marketplace-location-copy">
                         <strong data-address-line1><?php echo esc_html($hasSelectedAddress ? ($initialAddressLabel ?: 'Digite seu endereco') : 'Digite seu endereco'); ?></strong>
                     </span>
-                    <span class="dz-home2-location-arrow" aria-hidden="true">
+                    <span class="menzzu-marketplace-location-arrow" aria-hidden="true">
                         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M6 9l6 6 6-6"></path>
                         </svg>
                     </span>
                 </button>
 
-                <div class="dz-home2-header-actions dz-home2-header-actions-guest" data-guest-actions>
-                    <a class="dz-home2-button dz-home2-button-ghost" href="<?php echo esc_url($args['loginUrl']); ?>">Entrar</a>
-                    <a class="dz-home2-button dz-home2-button-primary" href="<?php echo esc_url($args['registerUrl']); ?>">Criar conta</a>
+                <div class="menzzu-marketplace-header-actions menzzu-marketplace-header-actions-guest" data-guest-actions>
+                    <a class="menzzu-marketplace-button menzzu-marketplace-button-ghost" href="<?php echo esc_url($args['loginUrl']); ?>">Entrar</a>
+                    <a class="menzzu-marketplace-button menzzu-marketplace-button-primary" href="<?php echo esc_url($args['registerUrl']); ?>">Criar conta</a>
                 </div>
             </div>
         </header>

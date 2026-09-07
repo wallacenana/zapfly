@@ -1,18 +1,18 @@
-﻿<?php
+<?php
 
 if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!function_exists('dzhome2_render_directory_footer_nav')) {
-    function dzhome2_render_directory_footer_nav($args = [])
+if (!function_exists('menzzu_marketplace_render_directory_footer_nav')) {
+    function menzzu_marketplace_render_directory_footer_nav($args = [])
     {
         $args = array_merge([
             'active' => 'home',
             'homeUrl' => home_url('/'),
-            'restaurantsUrl' => dzhome2_restaurants_url(),
-            'blogUrl' => dzhome2_blog_url(),
-            'loginUrl' => dzhome2_login_url(),
+            'restaurantsUrl' => menzzu_marketplace_restaurants_url(),
+            'blogUrl' => menzzu_marketplace_blog_url(),
+            'loginUrl' => menzzu_marketplace_login_url(),
             'registerUrl' => home_url('/comprar/'),
         ], $args);
 
@@ -47,16 +47,16 @@ if (!function_exists('dzhome2_render_directory_footer_nav')) {
 
         ob_start();
 ?>
-        <nav class="dz-home2-footer-nav" aria-label="Navegacao inferior">
-            <div class="dz-home2-footer-nav-inner">
+        <nav class="menzzu-marketplace-footer-nav" aria-label="Navegacao inferior">
+            <div class="menzzu-marketplace-footer-nav-inner">
                 <?php foreach ($items as $item) : ?>
                     <a
-                        class="dz-home2-footer-nav-link <?php echo $item['key'] === 'search' ? ' dz-home2-footer-nav-search' : ''; ?>"
+                        class="menzzu-marketplace-footer-nav-link <?php echo $item['key'] === 'search' ? ' menzzu-marketplace-footer-nav-search' : ''; ?>"
                         href="<?php echo esc_url($item['url']); ?>"
-                        <?php echo $item['key'] === 'search' ? 'data-dz-home2-nav-search' : ''; ?>
+                        <?php echo $item['key'] === 'search' ? 'data-menzzu-marketplace-nav-search' : ''; ?>
                         <?php echo $active === $item['key'] ? 'aria-current="page"' : ''; ?>>
-                        <span class="dz-home2-footer-nav-icon" aria-hidden="true"><?php echo $item['icon']; ?></span>
-                        <span class="dz-home2-footer-nav-label"><?php echo esc_html($item['label']); ?></span>
+                        <span class="menzzu-marketplace-footer-nav-icon" aria-hidden="true"><?php echo $item['icon']; ?></span>
+                        <span class="menzzu-marketplace-footer-nav-label"><?php echo esc_html($item['label']); ?></span>
                     </a>
                 <?php endforeach; ?>
             </div>

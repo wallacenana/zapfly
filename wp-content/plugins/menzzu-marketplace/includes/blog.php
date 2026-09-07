@@ -4,30 +4,36 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-if (!function_exists('dzhome2_blog_views_table_name')) {
-    function dzhome2_blog_views_table_name()
+if (!function_exists('menzzu_marketplace_blog_views_table_name')) {
+    function menzzu_marketplace_blog_views_table_name()
     {
         global $wpdb;
 
-        return $wpdb->prefix . 'dz_home2_post_views';
+        return $wpdb->prefix . 'menzzu_marketplace_post_views';
     }
 }
 
-if (!function_exists('dzhome2_blog_schema_version')) {
-    function dzhome2_blog_schema_version()
+if (!function_exists('menzzu_marketplace_blog_schema_version')) {
+    function menzzu_marketplace_blog_schema_version()
     {
         return '1.0.0';
     }
 }
 
-if (!function_exists('dzhome2_blog_install_schema')) {
-    function dzhome2_blog_install_schema()
+if (!function_exists('menzzu_marketplace_blog_install_schema')) {
+    function menzzu_marketplace_blog_install_schema()
     {
         global $wpdb;
 
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-        $table = dzhome2_blog_views_table_name();
+        $table = menzzu_marketplace_blog_views_table_name();
+        $legacyTable = $wpdb->prefix . 'dz_home2_post_views';
+        $tableExists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table));
+        $legacyExists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $legacyTable));
+        if (!$tableExists && $legacyExists) {
+            $wpdb->query("RENAME TABLE `{$legacyTable}` TO `{$table}`");
+        }
         $charset = $wpdb->get_charset_collate();
 
         $sql = "CREATE TABLE {$table} (
@@ -43,21 +49,22 @@ if (!function_exists('dzhome2_blog_install_schema')) {
         ) {$charset};";
 
         dbDelta($sql);
-        update_option('dz_home2_blog_schema_version', dzhome2_blog_schema_version(), false);
+        update_option('menzzu_marketplace_blog_schema_version', menzzu_marketplace_blog_schema_version(), false);
     }
 }
 
-if (!function_exists('dzhome2_blog_maybe_install_schema')) {
-    function dzhome2_blog_maybe_install_schema()
+if (!function_exists('menzzu_marketplace_blog_maybe_install_schema')) {
+    function menzzu_marketplace_blog_maybe_install_schema()
     {
-        if (get_option('dz_home2_blog_schema_version') !== dzhome2_blog_schema_version()) {
-            dzhome2_blog_install_schema();
+        if (get_option('menzzu_marketplace_blog_schema_version') !== menzzu_marketplace_blog_schema_version()
+            || get_option('dz_home2_blog_schema_version') !== false) {
+            menzzu_marketplace_blog_install_schema();
         }
     }
 }
 
-if (!function_exists('dzhome2_blog_safe_cookie_path')) {
-    function dzhome2_blog_safe_cookie_path()
+if (!function_exists('menzzu_marketplace_blog_safe_cookie_path')) {
+    function menzzu_marketplace_blog_safe_cookie_path()
     {
         if (defined('COOKIEPATH') && COOKIEPATH !== '') {
             return COOKIEPATH;
@@ -67,8 +74,8 @@ if (!function_exists('dzhome2_blog_safe_cookie_path')) {
     }
 }
 
-if (!function_exists('dzhome2_blog_safe_cookie_domain')) {
-    function dzhome2_blog_safe_cookie_domain()
+if (!function_exists('menzzu_marketplace_blog_safe_cookie_domain')) {
+    function menzzu_marketplace_blog_safe_cookie_domain()
     {
         if (defined('COOKIE_DOMAIN')) {
             return COOKIE_DOMAIN;
@@ -78,8 +85,8 @@ if (!function_exists('dzhome2_blog_safe_cookie_domain')) {
     }
 }
 
-if (!function_exists('dzhome2_blog_record_view')) {
-    function dzhome2_blog_record_view($post_id)
+if (!function_exists('menzzu_marketplace_blog_record_view')) {
+    function menzzu_marketplace_blog_record_view($post_id)
     {
         global $wpdb;
 
@@ -88,7 +95,7 @@ if (!function_exists('dzhome2_blog_record_view')) {
             return false;
         }
 
-        $table = dzhome2_blog_views_table_name();
+        $table = menzzu_marketplace_blog_views_table_name();
         $today = current_time('Y-m-d');
         $now = current_time('mysql');
 
@@ -105,8 +112,8 @@ if (!function_exists('dzhome2_blog_record_view')) {
     }
 }
 
-if (!function_exists('dzhome2_blog_track_post_view')) {
-    function dzhome2_blog_track_post_view()
+if (!function_exists('menzzu_marketplace_blog_track_post_view')) {
+    function menzzu_marketplace_blog_track_post_view()
     {
         if (is_admin() || wp_doing_ajax() || (function_exists('wp_is_json_request') && wp_is_json_request()) || is_feed() || is_preview()) {
             return;
@@ -121,22 +128,22 @@ if (!function_exists('dzhome2_blog_track_post_view')) {
             return;
         }
 
-        $cookie_name = 'dz_home2_post_view_' . $post_id;
+        $cookie_name = 'menzzu_marketplace_post_view_' . $post_id;
         $today = current_time('Ymd');
 
         if (!empty($_COOKIE[$cookie_name]) && (string) $_COOKIE[$cookie_name] === $today) {
             return;
         }
 
-        dzhome2_blog_record_view($post_id);
+        menzzu_marketplace_blog_record_view($post_id);
 
         if (!headers_sent()) {
             setcookie(
                 $cookie_name,
                 $today,
                 time() + DAY_IN_SECONDS,
-                dzhome2_blog_safe_cookie_path(),
-                dzhome2_blog_safe_cookie_domain(),
+                menzzu_marketplace_blog_safe_cookie_path(),
+                menzzu_marketplace_blog_safe_cookie_domain(),
                 is_ssl(),
                 true
             );
@@ -146,8 +153,8 @@ if (!function_exists('dzhome2_blog_track_post_view')) {
     }
 }
 
-if (!function_exists('dzhome2_blog_get_post_excerpt')) {
-    function dzhome2_blog_get_post_excerpt($post_id, $length = 22)
+if (!function_exists('menzzu_marketplace_blog_get_post_excerpt')) {
+    function menzzu_marketplace_blog_get_post_excerpt($post_id, $length = 22)
     {
         $post_id = absint($post_id);
         $length = max(8, min(absint($length), 80));
@@ -162,8 +169,8 @@ if (!function_exists('dzhome2_blog_get_post_excerpt')) {
     }
 }
 
-if (!function_exists('dzhome2_blog_get_reading_time_minutes')) {
-    function dzhome2_blog_get_reading_time_minutes($post_id, $words_per_minute = 200)
+if (!function_exists('menzzu_marketplace_blog_get_reading_time_minutes')) {
+    function menzzu_marketplace_blog_get_reading_time_minutes($post_id, $words_per_minute = 200)
     {
         $post_id = absint($post_id);
         $words_per_minute = max(50, absint($words_per_minute));
@@ -183,8 +190,8 @@ if (!function_exists('dzhome2_blog_get_reading_time_minutes')) {
     }
 }
 
-if (!function_exists('dzhome2_blog_get_primary_category_label')) {
-    function dzhome2_blog_get_primary_category_label($post_id)
+if (!function_exists('menzzu_marketplace_blog_get_primary_category_label')) {
+    function menzzu_marketplace_blog_get_primary_category_label($post_id)
     {
         $post_id = absint($post_id);
         if ($post_id < 1) {
@@ -207,7 +214,7 @@ if (!function_exists('dzhome2_blog_get_primary_category_label')) {
                 continue;
             }
 
-            if (dzhome2_normalize_text($name) !== 'uncategorized') {
+            if (menzzu_marketplace_normalize_text($name) !== 'uncategorized') {
                 return $name;
             }
 
@@ -218,8 +225,8 @@ if (!function_exists('dzhome2_blog_get_primary_category_label')) {
     }
 }
 
-if (!function_exists('dzhome2_blog_placeholder_image')) {
-    function dzhome2_blog_placeholder_image($title)
+if (!function_exists('menzzu_marketplace_blog_placeholder_image')) {
+    function menzzu_marketplace_blog_placeholder_image($title)
     {
         $title = trim((string) $title);
         $words = preg_split('/\s+/', $title) ?: [];
@@ -249,8 +256,8 @@ if (!function_exists('dzhome2_blog_placeholder_image')) {
     }
 }
 
-if (!function_exists('dzhome2_blog_get_post_card_data')) {
-    function dzhome2_blog_get_post_card_data($post_id, $views = 0)
+if (!function_exists('menzzu_marketplace_blog_get_post_card_data')) {
+    function menzzu_marketplace_blog_get_post_card_data($post_id, $views = 0)
     {
         $post_id = absint($post_id);
         $post = get_post($post_id);
@@ -262,15 +269,15 @@ if (!function_exists('dzhome2_blog_get_post_card_data')) {
         $title = get_the_title($post_id);
         $url = get_permalink($post_id);
         $image = get_the_post_thumbnail_url($post_id, 'medium_large');
-        $reading_time = dzhome2_blog_get_reading_time_minutes($post_id);
+        $reading_time = menzzu_marketplace_blog_get_reading_time_minutes($post_id);
         if (!$image) {
-            $image = dzhome2_blog_placeholder_image($title);
+            $image = menzzu_marketplace_blog_placeholder_image($title);
         }
 
         return [
             'id' => $post_id,
             'title' => html_entity_decode(wp_strip_all_tags((string) $title), ENT_QUOTES, 'UTF-8'),
-            'excerpt' => dzhome2_blog_get_post_excerpt($post_id, 22),
+            'excerpt' => menzzu_marketplace_blog_get_post_excerpt($post_id, 22),
             'url' => $url,
             'image' => $image,
             'views' => absint($views),
@@ -278,19 +285,19 @@ if (!function_exists('dzhome2_blog_get_post_card_data')) {
             'readingTimeLabel' => sprintf('%d min de leitura', $reading_time),
             'date' => get_the_date('', $post_id),
             'dateHuman' => get_the_date('j \d\e F \d\e Y', $post_id),
-            'categoryLabel' => dzhome2_blog_get_primary_category_label($post_id),
+            'categoryLabel' => menzzu_marketplace_blog_get_primary_category_label($post_id),
         ];
     }
 }
 
-if (!function_exists('dzhome2_blog_get_popular_posts')) {
-    function dzhome2_blog_get_popular_posts($days = 30, $limit = 6)
+if (!function_exists('menzzu_marketplace_blog_get_popular_posts')) {
+    function menzzu_marketplace_blog_get_popular_posts($days = 30, $limit = 6)
     {
         global $wpdb;
 
         $days = max(1, min(absint($days), 365));
         $limit = max(1, min(absint($limit), 24));
-        $table = dzhome2_blog_views_table_name();
+        $table = menzzu_marketplace_blog_views_table_name();
         $since = date('Y-m-d', strtotime('-' . max(0, $days - 1) . ' days', current_time('timestamp')));
 
         $rows = $wpdb->get_results(
@@ -310,7 +317,7 @@ if (!function_exists('dzhome2_blog_get_popular_posts')) {
         $items = [];
         if (!empty($rows)) {
             foreach ($rows as $row) {
-                $card = dzhome2_blog_get_post_card_data($row['post_id'] ?? 0, $row['total_views'] ?? 0);
+                $card = menzzu_marketplace_blog_get_post_card_data($row['post_id'] ?? 0, $row['total_views'] ?? 0);
                 if ($card) {
                     $items[] = $card;
                 }
@@ -333,7 +340,7 @@ if (!function_exists('dzhome2_blog_get_popular_posts')) {
         ]);
 
         foreach ($fallback as $fallback_id) {
-            $card = dzhome2_blog_get_post_card_data($fallback_id, 0);
+            $card = menzzu_marketplace_blog_get_post_card_data($fallback_id, 0);
             if ($card) {
                 $items[] = $card;
             }
@@ -343,8 +350,8 @@ if (!function_exists('dzhome2_blog_get_popular_posts')) {
     }
 }
 
-if (!function_exists('dzhome2_blog_get_next_post_card')) {
-    function dzhome2_blog_get_next_post_card($post_id)
+if (!function_exists('menzzu_marketplace_blog_get_next_post_card')) {
+    function menzzu_marketplace_blog_get_next_post_card($post_id)
     {
         global $wpdb;
 
@@ -369,24 +376,24 @@ if (!function_exists('dzhome2_blog_get_next_post_card')) {
         );
 
         if ($next_id > 0) {
-            return dzhome2_blog_get_post_card_data($next_id, 0);
+            return menzzu_marketplace_blog_get_post_card_data($next_id, 0);
         }
 
-        return dzhome2_blog_get_post_card_data($post_id, 0);
+        return menzzu_marketplace_blog_get_post_card_data($post_id, 0);
     }
 }
 
-if (!function_exists('dzhome2_blog_get_continue_recommendation')) {
-    function dzhome2_blog_get_continue_recommendation($post_id, $progress = 0)
+if (!function_exists('menzzu_marketplace_blog_get_continue_recommendation')) {
+    function menzzu_marketplace_blog_get_continue_recommendation($post_id, $progress = 0)
     {
         $post_id = absint($post_id);
         $progress = max(0, min(100, absint($progress)));
 
         $mode = 'continue';
-        $card = dzhome2_blog_get_post_card_data($post_id, 0);
+        $card = menzzu_marketplace_blog_get_post_card_data($post_id, 0);
 
         if ($progress >= 70) {
-            $nextCard = dzhome2_blog_get_next_post_card($post_id);
+            $nextCard = menzzu_marketplace_blog_get_next_post_card($post_id);
             if ($nextCard) {
                 $card = $nextCard;
                 $mode = 'next';
@@ -394,7 +401,7 @@ if (!function_exists('dzhome2_blog_get_continue_recommendation')) {
         }
 
         if (!$card) {
-            $popular = dzhome2_blog_get_popular_posts(30, 1);
+            $popular = menzzu_marketplace_blog_get_popular_posts(30, 1);
             $card = $popular[0] ?? null;
             $mode = 'popular';
         }
@@ -421,8 +428,8 @@ if (!function_exists('dzhome2_blog_get_continue_recommendation')) {
     }
 }
 
-if (!function_exists('dzhome2_blog_limit_search_to_posts')) {
-    function dzhome2_blog_limit_search_to_posts($query)
+if (!function_exists('menzzu_marketplace_blog_limit_search_to_posts')) {
+    function menzzu_marketplace_blog_limit_search_to_posts($query)
     {
         if (is_admin() || !$query->is_main_query() || !$query->is_search()) {
             return;
@@ -432,8 +439,8 @@ if (!function_exists('dzhome2_blog_limit_search_to_posts')) {
     }
 }
 
-if (!function_exists('dzhome2_blog_rest_popular')) {
-    function dzhome2_blog_rest_popular(WP_REST_Request $request)
+if (!function_exists('menzzu_marketplace_blog_rest_popular')) {
+    function menzzu_marketplace_blog_rest_popular(WP_REST_Request $request)
     {
         $days = absint($request->get_param('days'));
         $limit = absint($request->get_param('limit'));
@@ -441,40 +448,40 @@ if (!function_exists('dzhome2_blog_rest_popular')) {
         return rest_ensure_response([
             'days' => $days ?: 30,
             'limit' => $limit ?: 6,
-            'items' => dzhome2_blog_get_popular_posts($days ?: 30, $limit ?: 6),
+            'items' => menzzu_marketplace_blog_get_popular_posts($days ?: 30, $limit ?: 6),
         ]);
     }
 }
 
-if (!function_exists('dzhome2_blog_rest_continue')) {
-    function dzhome2_blog_rest_continue(WP_REST_Request $request)
+if (!function_exists('menzzu_marketplace_blog_rest_continue')) {
+    function menzzu_marketplace_blog_rest_continue(WP_REST_Request $request)
     {
         $post_id = absint($request->get_param('post_id'));
         $progress = absint($request->get_param('progress'));
 
-        return rest_ensure_response(dzhome2_blog_get_continue_recommendation($post_id, $progress));
+        return rest_ensure_response(menzzu_marketplace_blog_get_continue_recommendation($post_id, $progress));
     }
 }
 
-if (!function_exists('dzhome2_blog_register_rest_routes')) {
-    function dzhome2_blog_register_rest_routes()
+if (!function_exists('menzzu_marketplace_blog_register_rest_routes')) {
+    function menzzu_marketplace_blog_register_rest_routes()
     {
-        register_rest_route('digizap-home-2/v1', '/blog/popular', [
+        register_rest_route('menzzu-marketplace/v1', '/blog/popular', [
             'methods' => WP_REST_Server::READABLE,
-            'callback' => 'dzhome2_blog_rest_popular',
+            'callback' => 'menzzu_marketplace_blog_rest_popular',
             'permission_callback' => '__return_true',
         ]);
 
-        register_rest_route('digizap-home-2/v1', '/blog/continue', [
+        register_rest_route('menzzu-marketplace/v1', '/blog/continue', [
             'methods' => WP_REST_Server::READABLE,
-            'callback' => 'dzhome2_blog_rest_continue',
+            'callback' => 'menzzu_marketplace_blog_rest_continue',
             'permission_callback' => '__return_true',
         ]);
     }
 }
 
-if (!function_exists('dzhome2_enqueue_blog_assets')) {
-    function dzhome2_enqueue_blog_assets($single_post = null)
+if (!function_exists('menzzu_marketplace_enqueue_blog_assets')) {
+    function menzzu_marketplace_enqueue_blog_assets($single_post = null)
     {
         static $loaded = false;
 
@@ -482,30 +489,30 @@ if (!function_exists('dzhome2_enqueue_blog_assets')) {
         $script_rel = 'assets/blog.js';
 
         if (!$loaded) {
-            wp_enqueue_style('digizap-home-2-blog', dzhome2_asset_url($style_rel), [], dzhome2_asset_version($style_rel));
-            wp_enqueue_script('digizap-home-2-blog', dzhome2_asset_url($script_rel), [], dzhome2_asset_version($script_rel), true);
+            wp_enqueue_style('menzzu-marketplace-blog', menzzu_marketplace_asset_url($style_rel), [], menzzu_marketplace_asset_version($style_rel));
+            wp_enqueue_script('menzzu-marketplace-blog', menzzu_marketplace_asset_url($script_rel), [], menzzu_marketplace_asset_version($script_rel), true);
 
             $blog_config = [
                 'storageKey' => 'menzzu_reading_progress',
-                'restBase' => esc_url_raw(rest_url('digizap-home-2/v1')),
+                'restBase' => esc_url_raw(rest_url('menzzu-marketplace/v1')),
                 'singlePost' => $single_post,
             ];
-            wp_localize_script('digizap-home-2-blog', 'menzzuBlogConfig', $blog_config);
-            wp_localize_script('digizap-home-2-blog', 'dzHome2BlogConfig', $blog_config);
+            wp_localize_script('menzzu-marketplace-blog', 'menzzuBlogConfig', $blog_config);
+            wp_localize_script('menzzu-marketplace-blog', 'menzzuMarketplaceBlogConfig', $blog_config);
 
             $loaded = true;
         }
     }
 }
 
-add_action('init', 'dzhome2_blog_maybe_install_schema');
-add_action('template_redirect', 'dzhome2_blog_track_post_view', 20);
-add_action('pre_get_posts', 'dzhome2_blog_limit_search_to_posts', 20);
-add_action('rest_api_init', 'dzhome2_blog_register_rest_routes');
+add_action('init', 'menzzu_marketplace_blog_maybe_install_schema');
+add_action('template_redirect', 'menzzu_marketplace_blog_track_post_view', 20);
+add_action('pre_get_posts', 'menzzu_marketplace_blog_limit_search_to_posts', 20);
+add_action('rest_api_init', 'menzzu_marketplace_blog_register_rest_routes');
 add_action('wp_enqueue_scripts', function () {
     if (is_singular('post')) {
         $post_id = get_queried_object_id();
-        dzhome2_enqueue_blog_assets([
+        menzzu_marketplace_enqueue_blog_assets([
             'id' => $post_id,
             'title' => get_the_title($post_id),
             'url' => get_permalink($post_id),
