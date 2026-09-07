@@ -339,6 +339,7 @@
         categorySlug: String(root.dataset.categorySlug || ''),
         filter: 'all',
         sort: 'recommended',
+        page: 1,
         address: '',
         selectedAddress: null,
         addressSelected: false,
@@ -751,7 +752,7 @@
   function matchesFilter(store, filter) {
     switch (filter) {
       case 'featured':
-        return Array.isArray(store?.featuredProducts) && store.featuredProducts.length > 0;
+        return !!store?.isFeatured || (Array.isArray(store?.featuredProducts) && store.featuredProducts.length > 0);
       case 'freeDelivery':
         return !!store?.freeDeliveryEnabled;
       case 'promo':
@@ -782,6 +783,27 @@
     }
   }
 
+  function renderPagination(root, total, page, pageSize) {
+    const pagination = root.querySelector('[data-pagination]');
+    if (!pagination) {
+      return;
+    }
+
+    const pageCount = Math.ceil(total / pageSize);
+    pagination.hidden = pageCount <= 1;
+    if (pageCount <= 1) {
+      pagination.innerHTML = '';
+      return;
+    }
+
+    const buttons = [`<button type="button" class="menzzu-marketplace-pagination-button" data-page="${page - 1}" ${page <= 1 ? 'disabled' : ''} aria-label="Página anterior">‹</button>`];
+    for (let index = 1; index <= pageCount; index += 1) {
+      buttons.push(`<button type="button" class="menzzu-marketplace-pagination-button${index === page ? ' is-active' : ''}" data-page="${index}" aria-current="${index === page ? 'page' : 'false'}">${index}</button>`);
+    }
+    buttons.push(`<button type="button" class="menzzu-marketplace-pagination-button" data-page="${page + 1}" ${page >= pageCount ? 'disabled' : ''} aria-label="Próxima página">›</button>`);
+    pagination.innerHTML = buttons.join('');
+  }
+
   function updateView(root, data) {
     const state = stateFor(root);
     state.lastData = data || state.lastData || {};
@@ -796,57 +818,17 @@
     const visibleStores = filterAndSortStores(sourceStores, state.filter, state.sort);
     const total = visibleStores.length;
     const search = state.search || '';
-    const featuredStores = filterAndSortStores(
-      Array.isArray(state.lastData?.featuredStores) && state.lastData.featuredStores.length > 0
-        ? state.lastData.featuredStores
-        : visibleStores,
-      state.filter,
-      state.sort
-    ).slice(0, 10);
-    const freeDeliveryStores = filterAndSortStores(
-      Array.isArray(state.lastData?.freeDeliveryStores) && state.lastData.freeDeliveryStores.length > 0
-        ? state.lastData.freeDeliveryStores
-        : visibleStores,
-      state.filter,
-      state.sort
-    ).slice(0, 10);
-    const promoStores = filterAndSortStores(
-      Array.isArray(state.lastData?.promoStores) && state.lastData.promoStores.length > 0
-        ? state.lastData.promoStores
-        : visibleStores,
-      state.filter,
-      state.sort
-    ).slice(0, 10);
-
     if (categoriesTrack) {
       categoriesTrack.innerHTML = renderCategoryCards(state.lastData?.categories || []);
     }
-    [
-      { key: 'featured', title: 'Destaques', stores: featuredStores },
-      { key: 'freeDelivery', title: 'Frete grátis', stores: freeDeliveryStores },
-      { key: 'promo', title: 'Em promoção', stores: promoStores }
-    ].forEach(({ key, stores, title }) => {
-      const section = root.querySelector(`[data-rail-key="${key}"]`);
-      const track = section?.querySelector('[data-rail-track]');
-      const summary = section?.querySelector('[data-rail-summary]');
-      const items = Array.isArray(stores) ? stores : [];
-
-      if (!section || !track) {
-        return;
-      }
-
-      track.innerHTML = items.length ? renderStoreRailCards(items) : '';
-      if (summary) {
-        summary.textContent = items.length === 1
-          ? '1 restaurante encontrado'
-          : `${items.length} restaurantes encontrados`;
-      }
-      section.hidden = items.length === 0;
-      section.dataset.sectionTitle = title;
-    });
+    const pageSize = Math.max(1, Number(root.dataset.limit || 18));
+    const pageCount = Math.max(1, Math.ceil(total / pageSize));
+    state.page = Math.min(Math.max(1, Number(state.page) || 1), pageCount);
+    const pageStart = (state.page - 1) * pageSize;
     if (restaurantsGrid) {
-      restaurantsGrid.innerHTML = renderRestaurantCards(visibleStores.slice(0, Number(root.dataset.limit || 18)));
+      restaurantsGrid.innerHTML = renderRestaurantCards(visibleStores.slice(pageStart, pageStart + pageSize));
     }
+    renderPagination(root, total, state.page, pageSize);
     if (emptyResults) {
       emptyResults.hidden = total > 0;
     }
@@ -1135,6 +1117,7 @@
           return;
         }
 
+        state.page = 1;
         window.clearTimeout(state.timer);
         state.timer = window.setTimeout(() => {
           fetchDirectory(root, searchInput.value.trim(), state.address || '');
@@ -1153,6 +1136,7 @@
           return;
         }
         state.filter = nextFilter;
+        state.page = 1;
         updateControlState(root);
         updateView(root, state.lastData || {});
       });
@@ -1167,8 +1151,22 @@
           return;
         }
         state.sort = nextSort;
+        state.page = 1;
         updateControlState(root);
         updateView(root, state.lastData || {});
+      });
+    }
+
+    const pagination = root.querySelector('[data-pagination]');
+    if (pagination) {
+      pagination.addEventListener('click', (event) => {
+        const button = event.target?.closest?.('[data-page]');
+        if (!button || button.disabled) {
+          return;
+        }
+        state.page = Number(button.dataset.page) || 1;
+        updateView(root, state.lastData || {});
+        root.querySelector('[data-restaurants-grid]')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     }
 

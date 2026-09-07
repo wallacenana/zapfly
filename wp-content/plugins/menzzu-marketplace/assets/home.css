@@ -276,8 +276,8 @@
   color: var(--menzzu-marketplace-dark) !important;
   box-shadow: none !important;
   font-size: 1rem;
-  border: none!important;
-  font-weight: 700!important;
+  border: none !important;
+  font-weight: 700 !important;
 }
 
 .menzzu-marketplace-button-primary:hover {
@@ -331,7 +331,9 @@
 }
 
 .menzzu-marketplace[data-loading="1"] .menzzu-marketplace-landing,
-.menzzu-marketplace[data-loading="1"] .menzzu-marketplace-catalog { display: block; }
+.menzzu-marketplace[data-loading="1"] .menzzu-marketplace-catalog {
+  display: block;
+}
 
 .menzzu-marketplace-item-skeleton {
   display: block;
@@ -830,15 +832,14 @@
 }
 
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] {
-    --e-global-color-secondary: #fff!important;
-    --e-global-color-text: #fff!important
+  --e-global-color-secondary: #fff !important;
+  --e-global-color-text: #fff !important
 }
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-header {
   margin: 0 auto;
   padding: 16px 22px;
   background: #ffffff;
-  box-shadow: 0 8px 22px rgba(3, 22, 20, 0.06);
 }
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-header::after {
@@ -1838,6 +1839,39 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 18px 24px;
+}
+
+.menzzu-marketplace-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 28px 0 8px;
+}
+
+.menzzu-marketplace-pagination-button {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 9px;
+  border: 1px solid var(--menzzu-marketplace-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--menzzu-marketplace-muted);
+  font: inherit;
+  font-size: .84rem;
+  cursor: pointer;
+}
+
+.menzzu-marketplace-pagination-button:hover:not(:disabled),
+.menzzu-marketplace-pagination-button.is-active {
+  border-color: var(--menzzu-marketplace-primary);
+  color: var(--menzzu-marketplace-secondary);
+  background: rgba(45, 189, 48, 0.06);
+}
+
+.menzzu-marketplace-pagination-button:disabled {
+  cursor: default;
+  opacity: .4;
 }
 
 .menzzu-marketplace-restaurant-card,

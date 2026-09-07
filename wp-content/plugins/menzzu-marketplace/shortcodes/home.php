@@ -204,20 +204,11 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
                         </label>
                     </div>
 
-                    <?php echo menzzu_marketplace_render_store_rail_section('Restaurantes em destaque', $initialData['featuredStores'] ?? [], menzzu_marketplace_restaurants_url(), 'featured', empty($initialData['featuredStores'])); ?>
-                    <?php echo menzzu_marketplace_render_store_rail_section('Frete grátis', $initialData['freeDeliveryStores'] ?? [], menzzu_marketplace_restaurants_url(), 'freeDelivery', empty($initialData['freeDeliveryStores'])); ?>
-                    <?php echo menzzu_marketplace_render_store_rail_section('Em promoção', $initialData['promoStores'] ?? [], menzzu_marketplace_restaurants_url(), 'promo', empty($initialData['promoStores'])); ?>
-
-                    <div class="menzzu-marketplace-catalog-head">
-                        <div>
-                            <h2>Restaurantes perto de você</h2>
-                        </div>
-                        <a class="menzzu-marketplace-catalog-action" href="<?php echo esc_url(menzzu_marketplace_restaurants_url()); ?>">Ver mais</a>
-                    </div>
-
                     <div class="menzzu-marketplace-restaurants-grid" data-restaurants-grid>
-                        <?php echo $hasSelectedAddress ? menzzu_marketplace_render_restaurant_cards($initialData['restaurants'] ?? []) : ''; ?>
+                        <?php echo $hasSelectedAddress ? menzzu_marketplace_render_restaurant_cards(!empty($initialData['stores']) ? $initialData['stores'] : ($initialData['restaurants'] ?? [])) : ''; ?>
                     </div>
+
+                    <nav class="menzzu-marketplace-pagination" data-pagination aria-label="Paginação dos restaurantes" hidden></nav>
 
                     <!-- <div class="menzzu-marketplace-featured-track" data-featured-track>
                         <?php //echo $hasSelectedAddress ? menzzu_marketplace_render_featured_cards($initialData['featuredStores'] ?? []) : ''; ?>

@@ -156,13 +156,11 @@ if (!function_exists('menzzu_marketplace_render_restaurants_shortcode')) {
                             </select>
                         </label>
                     </div>
-                    <?php echo menzzu_marketplace_render_store_rail_section('Destaques', $initialData['featuredStores'] ?? [], menzzu_marketplace_restaurants_url($queryCategory), 'featured', empty($initialData['featuredStores'])); ?>
-                    <?php echo menzzu_marketplace_render_store_rail_section('Frete grátis', $initialData['freeDeliveryStores'] ?? [], menzzu_marketplace_restaurants_url($queryCategory), 'freeDelivery', empty($initialData['freeDeliveryStores'])); ?>
-                    <?php echo menzzu_marketplace_render_store_rail_section('Em promoção', $initialData['promoStores'] ?? [], menzzu_marketplace_restaurants_url($queryCategory), 'promo', empty($initialData['promoStores'])); ?>
-
                     <div class="menzzu-marketplace-restaurants-grid" data-restaurants-grid>
-                        <?php echo $hasSelectedAddress ? menzzu_marketplace_render_restaurant_cards($initialData['restaurants'] ?? []) : ''; ?>
+                        <?php echo $hasSelectedAddress ? menzzu_marketplace_render_restaurant_cards(!empty($initialData['stores']) ? $initialData['stores'] : ($initialData['restaurants'] ?? [])) : ''; ?>
                     </div>
+
+                    <nav class="menzzu-marketplace-pagination" data-pagination aria-label="Paginação dos restaurantes" hidden></nav>
 
                     <div class="menzzu-marketplace-empty-results" data-empty-results hidden>
                         Nenhum restaurante encontrado.
