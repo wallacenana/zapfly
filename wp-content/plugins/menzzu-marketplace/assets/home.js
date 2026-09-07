@@ -895,6 +895,11 @@
     const line1Node = root.querySelector('[data-address-line1]');
     const input = root.querySelector('[data-address-input]');
     const searchInput = root.querySelector('[data-search-input]');
+    const locationPill = root.querySelector('[data-edit-address]');
+
+    if (locationPill) {
+      locationPill.hidden = !address.address;
+    }
 
     if (line1Node) {
       line1Node.textContent = line1 || 'Digite seu endereço';

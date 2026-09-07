@@ -76,7 +76,7 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
                         <p>Faça seu pedido aqui. Seu lanche até 30% mais barato que em outros Apps.</p>
                         <form class="menzzu-marketplace-address-form menzzu-marketplace-home-search" data-address-form>
                             <span class="menzzu-marketplace-home-search-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg></span>
-                            <input type="text" data-address-input placeholder="Buscar restaurante, prato ou cozinha..." autocomplete="off" spellcheck="false" inputmode="text">
+                            <input type="text" data-address-input placeholder="Digite seu endereço de entrega" autocomplete="off" spellcheck="false" inputmode="text">
                             <button type="submit" class="menzzu-marketplace-button menzzu-marketplace-button-primary" data-address-continue disabled>Buscar</button>
                         </form>
                     </div>

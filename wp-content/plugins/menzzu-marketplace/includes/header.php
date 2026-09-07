@@ -68,7 +68,7 @@ if (!function_exists('menzzu_marketplace_render_directory_header')) {
             </div>
 
             <div class="menzzu-right">
-                <button type="button" class="menzzu-marketplace-location-pill" data-edit-address>
+                <button type="button" class="menzzu-marketplace-location-pill" data-edit-address <?php echo $hasSelectedAddress ? '' : 'hidden'; ?>>
                     <span class="menzzu-marketplace-location-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 21s6-4.35 6-11a6 6 0 1 0-12 0c0 6.65 6 11 6 11Z"></path>
