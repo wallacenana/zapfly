@@ -2023,6 +2023,10 @@
   box-shadow: none;
 }
 
+.menzzu-marketplace [hidden] {
+  display: none !important;
+}
+
 .menzzu-marketplace-location-icon {
   display: inline-flex;
   align-items: center;
