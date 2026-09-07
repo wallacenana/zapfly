@@ -2264,8 +2264,12 @@
   display: none !important;
 }
 
-.menzzu-marketplace[data-home-shell="1"] [data-landing] {
+.menzzu-marketplace[data-home-shell="1"][data-mode="landing"] [data-landing] {
   display: block !important;
+}
+
+.menzzu-marketplace[data-home-shell="1"][data-mode="app"] [data-landing] {
+  display: none !important;
 }
 
 @media (max-width: 1100px) {
