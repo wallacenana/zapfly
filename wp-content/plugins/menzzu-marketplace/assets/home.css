@@ -14,7 +14,7 @@
   --menzzu-marketplace-soft: rgba(45, 189, 48, 0.08);
   width: 100%;
   color: var(--menzzu-marketplace-secondary);
-  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background:
     radial-gradient(circle at 85% 15%, rgba(45, 189, 48, 0.06), transparent 24%),
     linear-gradient(180deg, #ffffff 0%, #fbfbfb 100%);
@@ -799,18 +799,17 @@
 .menzzu-marketplace[data-home-shell="1"] {
   --menzzu-marketplace-primary: #82f026;
   --menzzu-marketplace-accent: #66d711;
-  --menzzu-marketplace-secondary: #031614;
-  --menzzu-marketplace-text: #031614;
+  --menzzu-marketplace-secondary: var(--e-global-color-text);
+  --menzzu-marketplace-text: var(--e-global-color-text);
   --menzzu-marketplace-muted: #66737a;
   --menzzu-marketplace-border: rgba(3, 22, 20, 0.1);
   --menzzu-marketplace-surface: #ffffff;
   --menzzu-marketplace-soft: #f5faef;
   background: #ffffff;
-  color: #031614;
+  color: var(--e-global-color-text);
 }
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-header {
-  max-width: 1240px;
   margin: 0 auto;
   padding: 16px 22px;
   background: transparent;
@@ -833,8 +832,8 @@
 
 .menzzu-marketplace-wordmark {
   display: inline-block;
-  color: #031614;
-  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--e-global-color-text);
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   font-size: 2rem;
   font-weight: 800;
   letter-spacing: -0.1em;
@@ -846,13 +845,12 @@
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-nav a {
   color: #6d777b;
   font-size: 0.88rem;
-  font-weight: 700;
   border: 0;
 }
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-nav a.is-active,
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-nav a:hover {
-  color: #031614;
+  color: #000000;
 }
 
 .menzzu-marketplace-theme-toggle {
@@ -869,18 +867,25 @@
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
+  background: #00000000!important;
+  color: var( --e-global-color-primary )!important;
 }
 
 .menzzu-marketplace-theme-toggle-icon {
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
   font-size: 1.35rem;
   line-height: 1;
 }
 
+.menzzu-marketplace-theme-toggle-icon svg { display: block; width: 100%; height: 100%; }
+
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-theme-toggle-label { display: none; }
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-header-actions-guest .menzzu-marketplace-button-primary {
-  background: #031614;
-  border-color: #031614;
+  background: var(--e-global-color-text);
+  border-color: var(--e-global-color-text);
   color: #ffffff;
 }
 
@@ -910,10 +915,9 @@
 }
 
 .menzzu-marketplace-home-hero h1 {
-  max-width: 760px;
   margin: 18px auto 14px;
-  color: #031614;
-  font-size: clamp(2.6rem, 5vw, 4.7rem);
+  color: var(--e-global-color-secondary);
+  font-size: clamp(2.2rem, 5vw, 4.7rem);
   line-height: 0.98;
   letter-spacing: -0.065em;
 }
@@ -924,10 +928,9 @@
 }
 
 .menzzu-marketplace-home-hero p {
-  max-width: 650px;
   margin: 0 auto 28px;
-  color: #647176;
-  font-size: 1.05rem;
+  color: var(--e-global-color-text);
+  font-size: 1.15rem;
   line-height: 1.55;
 }
 
@@ -935,9 +938,9 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 66px;
+  min-height: 56px;
   margin: 0 auto;
-  padding: 8px 10px 8px 20px;
+  padding: 0px 3px 0px 20px;
   border: 1px solid rgba(3, 22, 20, 0.12);
   border-radius: 999px;
   background: #fff;
@@ -948,7 +951,7 @@
   display: inline-flex;
   flex: 0 0 auto;
   width: 23px;
-  color: #031614;
+  color: var(--e-global-color-secondary);
 }
 
 .menzzu-marketplace-home-search-icon svg {
@@ -964,9 +967,14 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: #031614;
+  color: var(--e-global-color-text);
   font: inherit;
-  font-size: 0.98rem;
+  font-size: 1rem;
+  margin-right: -155px;
+  margin-left: -55px;
+  padding-left: 55px;
+  border-radius: 50px;
+  padding-right: 155px;
 }
 
 .menzzu-marketplace-home-search-location {
@@ -979,15 +987,16 @@
 }
 
 .menzzu-marketplace-home-search-location strong {
-  color: #031614;
+  color: var(--e-global-color-text);
 }
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-search button {
-  min-width: 132px;
-  border-radius: 999px;
-  background: #82f026;
-  color: #031614;
-  font-weight: 900;
+    min-width: 140px;
+    border-radius: 999px;
+    background: #82f026;
+    color: var(--e-global-color-secondary) !important;
+    font-weight: 600;
+    height: 54px;
 }
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-categories {
@@ -1009,7 +1018,7 @@
   border: 1px solid transparent;
   border-radius: 18px;
   background: transparent;
-  color: #031614;
+  color: var(--e-global-color-text);
   text-align: center;
   text-decoration: none;
 }
@@ -1029,7 +1038,7 @@
   border: 1px solid rgba(3, 22, 20, 0.09);
   border-radius: 50%;
   background: #fff;
-  color: #031614;
+  color: var(--e-global-color-text);
   font-size: 1.8rem;
   font-weight: 400;
   box-shadow: 0 5px 17px rgba(3, 22, 20, 0.06);
@@ -1044,7 +1053,7 @@
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-category-label strong {
   display: block;
-  color: #031614;
+  color: var(--e-global-color-text);
   font-size: 0.75rem;
   line-height: 1.2;
 }
@@ -1069,7 +1078,7 @@
 
 .menzzu-marketplace-home-banner span {
   display: block;
-  color: #031614;
+  color: var(--e-global-color-text);
   font-size: 1.45rem;
   font-weight: 900;
   letter-spacing: -0.04em;
@@ -1087,7 +1096,7 @@
   padding: 9px 15px;
   border: 1px solid rgba(3, 22, 20, 0.16);
   border-radius: 999px;
-  color: #031614;
+  color: var(--e-global-color-text);
   font-size: 0.8rem;
   font-weight: 800;
   text-decoration: none;
@@ -1135,7 +1144,7 @@
 
 .menzzu-marketplace-home-benefits > div:last-child { border-right: 0; }
 .menzzu-marketplace-home-benefits > div > span { grid-row: span 2; color: #66d711; font-size: 1.65rem; font-weight: 900; }
-.menzzu-marketplace-home-benefits strong { color: #031614; font-size: 0.82rem; }
+.menzzu-marketplace-home-benefits strong { color: var(--e-global-color-text); font-size: 0.82rem; }
 .menzzu-marketplace-home-benefits small { color: #718087; font-size: 0.7rem; line-height: 1.35; }
 
 .menzzu-marketplace[data-home-shell="1"] [data-catalog] > .menzzu-marketplace-categories { display: none; }
@@ -1146,7 +1155,7 @@
   --menzzu-marketplace-border: rgba(255, 255, 255, 0.13);
   --menzzu-marketplace-surface: #0a2420;
   --menzzu-marketplace-soft: #102f29;
-  background: #031614;
+  background: var(--e-global-color-text);
   color: #f5fff2;
 }
 
@@ -1194,14 +1203,14 @@
   gap: 9px;
 }
 
-.menzzu-marketplace-site-footer strong { color: #031614; font-size: 0.8rem; }
+.menzzu-marketplace-site-footer strong { color: var(--e-global-color-text); font-size: 0.8rem; }
 .menzzu-marketplace-site-footer-brand > strong { font-size: 2rem; letter-spacing: -0.09em; }
 .menzzu-marketplace-site-footer-brand > strong span { color: #66d711; }
 .menzzu-marketplace-site-footer p,
 .menzzu-marketplace-site-footer a { color: #66737a; font-size: 0.78rem; line-height: 1.45; text-decoration: none; }
 .menzzu-marketplace-site-footer a:hover { color: #3ea30c; }
 .menzzu-marketplace-social-links { display: flex; gap: 14px; }
-.menzzu-marketplace-social-links a { color: #031614; font-size: 1.15rem; font-weight: 900; }
+.menzzu-marketplace-social-links a { color: var(--e-global-color-text); font-size: 1.15rem; font-weight: 900; }
 .menzzu-marketplace-site-footer-bottom { grid-column: 1 / -1; display: flex; justify-content: space-between; margin-top: 24px; padding-top: 18px; border-top: 1px solid rgba(3, 22, 20, 0.08); color: #859197; font-size: 0.72rem; }
 .menzzu-marketplace-site-footer-bottom b { color: #66d711; }
 
@@ -1768,7 +1777,7 @@
   text-align: left;
   cursor: pointer;
   background: none !important;
-  color: var(--menzzu-marketplace-secondary) !important;
+  color: var(--e-global-color-secondary) !important;
   box-shadow: none;
 }
 
@@ -1777,7 +1786,13 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  color: var(--menzzu-marketplace-accent);
+  color: #3eaa0c;
+  width: 20px;
+}
+
+.menzzu-marketplace-location-icon svg{
+    width: 20px;
+    height: 20px;
 }
 
 .menzzu-marketplace-location-copy {
@@ -1825,7 +1840,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--menzzu-marketplace-secondary);
+  color: var(--e-global-color-secondary);
   margin-left: auto;
 }
 

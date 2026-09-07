@@ -371,8 +371,6 @@
       root.dataset.theme = isDark ? 'dark' : 'light';
       button.setAttribute('aria-pressed', isDark ? 'true' : 'false');
       button.setAttribute('aria-label', isDark ? 'Ativar modo claro' : 'Ativar modo escuro');
-      const icon = button.querySelector('.menzzu-marketplace-theme-toggle-icon');
-      if (icon) icon.textContent = isDark ? '☀' : '☾';
     };
 
     let savedTheme = 'light';
