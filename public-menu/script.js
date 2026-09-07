@@ -550,8 +550,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const marketplaceBackButton = document.getElementById('marketplace-back-btn');
     let enteredFromMarketplace = false;
     try {
-        const entryTimestamp = Number(localStorage.getItem('menzzu_marketplace_store_entry') || 0);
-        enteredFromMarketplace = entryTimestamp > 0 && Date.now() - entryTimestamp < 30000;
+        const rawEntry = localStorage.getItem('menzzu_marketplace_store_entry') || '';
+        const entry = JSON.parse(rawEntry);
+        const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+        const referrer = document.referrer ? new URL(document.referrer) : null;
+        const sameSiteReferrer = referrer
+            && referrer.origin === window.location.origin
+            && (referrer.pathname.replace(/\/+$/, '') || '/') !== currentPath;
+        const validMarker = entry
+            && entry.timestamp > 0
+            && Date.now() - Number(entry.timestamp) < 30000
+            && String(entry.path || '') === currentPath;
+        enteredFromMarketplace = Boolean(validMarker || sameSiteReferrer);
         localStorage.removeItem('menzzu_marketplace_store_entry');
     } catch (error) {
         // ignore

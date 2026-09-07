@@ -226,6 +226,7 @@ h3 {
     align-items: center;
     gap: 16px 24px;
     flex-wrap: wrap;
+    position: relative;
 }
 
 .top-nav,
@@ -377,11 +378,17 @@ h3 {
     font: inherit;
     font-size: 0.86rem;
     cursor: pointer;
+    position: absolute;
+    left: -64px;
 }
 
 .marketplace-back-btn:hover {
     border-color: var(--primary-color);
     color: var(--primary-color);
+}
+
+.marketplace-back-btn[hidden] {
+    display: none !important;
 }
 
 .marketplace-back-btn svg {
@@ -940,7 +947,7 @@ h3 {
     overflow-y: auto;
 }
 
-.item-detail-panel > .modal-footer-sticky {
+.item-detail-panel>.modal-footer-sticky {
     margin: auto -20px -20px;
 }
 
@@ -1475,7 +1482,7 @@ body.theme-dark .delivery-fee-badge {
         padding: 16px;
     }
 
-    .item-detail-panel > .modal-footer-sticky {
+    .item-detail-panel>.modal-footer-sticky {
         margin: auto -16px -16px;
     }
 
@@ -1489,7 +1496,6 @@ body.theme-dark .delivery-fee-badge {
 
 @media (max-width: 599px) {
     .nav-wrapper {
-        flex-direction: column;
         align-items: stretch;
         gap: 10px;
     }
@@ -1497,6 +1503,12 @@ body.theme-dark .delivery-fee-badge {
     .store-info {
         width: 100%;
         align-items: flex-start;
+        order: 3;
+    }
+
+    .marketplace-back-btn{
+        position: relative;
+        left: 0;
     }
 
     .store-details {
@@ -1509,7 +1521,7 @@ body.theme-dark .delivery-fee-badge {
     }
 
     .store-header-actions {
-        width: 100%;
+        width: auto;
         margin-left: 0;
         justify-content: flex-end;
         order: 2;

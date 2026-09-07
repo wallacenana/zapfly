@@ -1083,7 +1083,10 @@
       }
 
       try {
-        window.localStorage.setItem('menzzu_marketplace_store_entry', String(Date.now()));
+        window.localStorage.setItem('menzzu_marketplace_store_entry', JSON.stringify({
+          timestamp: Date.now(),
+          path: new URL(link.href, window.location.href).pathname.replace(/\/+$/, '') || '/'
+        }));
       } catch (error) {
         // ignore
       }
