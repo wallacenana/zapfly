@@ -880,6 +880,9 @@
 }
 
 .menzzu-marketplace-theme-toggle-icon svg { display: block; width: 100%; height: 100%; }
+.menzzu-marketplace-theme-toggle-icon .menzzu-theme-icon-sun { display: none; }
+.menzzu-marketplace[data-theme="dark"] .menzzu-marketplace-theme-toggle-icon .menzzu-theme-icon-moon { display: none; }
+.menzzu-marketplace[data-theme="dark"] .menzzu-marketplace-theme-toggle-icon .menzzu-theme-icon-sun { display: block; }
 
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-theme-toggle-label { display: none; }
 
