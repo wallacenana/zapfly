@@ -14,7 +14,7 @@
   --menzzu-marketplace-soft: rgba(45, 189, 48, 0.08);
   width: 100%;
   color: var(--menzzu-marketplace-secondary);
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background:
     radial-gradient(circle at 85% 15%, rgba(45, 189, 48, 0.06), transparent 24%),
     linear-gradient(180deg, #ffffff 0%, #fbfbfb 100%);
@@ -831,6 +831,18 @@
   height: 42px;
 }
 
+.menzzu-marketplace-wordmark {
+  display: inline-block;
+  color: #031614;
+  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.1em;
+  line-height: 1;
+}
+
+.menzzu-marketplace-wordmark span { color: #66d711; }
+
 .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-nav a {
   color: #031614;
   font-size: 0.88rem;
@@ -1134,6 +1146,8 @@
   color: #f5fff2;
 }
 
+.menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-wordmark { color: #f5fff2; }
+
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-header::after { background: rgba(255,255,255,0.12); }
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-nav a,
 .menzzu-marketplace[data-home-shell="1"][data-theme="dark"] .menzzu-marketplace-theme-toggle,
@@ -1196,7 +1210,7 @@
 @media (max-width: 640px) {
   .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-header { padding: 12px 14px; }
   .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-nav { display: none; }
-  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-brand-logo { max-width: 112px; height: 36px; }
+  .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-wordmark { font-size: 1.65rem; }
   .menzzu-marketplace-theme-toggle-label { display: none; }
   .menzzu-marketplace-theme-toggle { min-height: 36px; padding: 0 9px; }
   .menzzu-marketplace[data-home-shell="1"] .menzzu-marketplace-home-hero { padding: 46px 14px 24px; }

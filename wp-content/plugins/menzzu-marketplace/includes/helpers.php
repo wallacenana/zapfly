@@ -68,6 +68,12 @@ if (!function_exists('menzzu_marketplace_enqueue_assets')) {
         $style_rel = 'assets/home.css';
         $script_rel = 'assets/home.js';
 
+        wp_enqueue_style(
+            'menzzu-marketplace-font',
+            'https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap',
+            [],
+            null
+        );
         wp_enqueue_style('menzzu-marketplace', menzzu_marketplace_asset_url($style_rel), [], menzzu_marketplace_asset_version($style_rel));
         wp_enqueue_script('menzzu-marketplace', menzzu_marketplace_asset_url($script_rel), [], menzzu_marketplace_asset_version($script_rel), true);
 
