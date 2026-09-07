@@ -16,10 +16,15 @@ define('MENZZU_MARKETPLACE_DIR', plugin_dir_path(__FILE__));
 define('MENZZU_MARKETPLACE_URL', plugin_dir_url(__FILE__));
 
 register_activation_hook(MENZZU_MARKETPLACE_FILE, function () {
-    $legacyPlugin = WP_PLUGIN_DIR . '/digizap-home-2/digizap-home-2.php';
-    if (file_exists($legacyPlugin)) {
+    $legacyPlugin = 'digizap-home-2/digizap-home-2.php';
+    $legacyPluginFile = WP_PLUGIN_DIR . '/' . $legacyPlugin;
+    if (file_exists($legacyPluginFile)) {
         deactivate_plugins('digizap-home-2/digizap-home-2.php', true);
     }
+
+    $activePlugins = (array) get_option('active_plugins', []);
+    $activePlugins = array_values(array_diff($activePlugins, [$legacyPlugin]));
+    update_option('active_plugins', $activePlugins);
 });
 
 // Aliases legados mantidos para instalações que ainda carregam integrações antigas.
