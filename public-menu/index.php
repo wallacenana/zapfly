@@ -330,7 +330,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.48">
+        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.41">
         <style>
             :root {
                 --primary-color:
@@ -622,6 +622,9 @@ try {
                     </div>
                 </div>
                 <div class="store-header-actions">
+                    <button class="marketplace-back-btn" id="marketplace-back-btn" type="button" hidden aria-label="Voltar para o marketplace">
+                        <i data-lucide="arrow-left"></i><span>Voltar</span>
+                    </button>
                     <button class="more-link-btn" id="history-toggle-btn" aria-label="Ver mais sobre a loja">
                         <span class="more-link-text">Ver mais</span><i data-lucide="chevron-down"></i>
                     </button>
@@ -1051,7 +1054,7 @@ try {
         </svg>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-        <script type="text/javascript" src="/cardapio/script.js?v=0.7" defer></script>
+        <script type="text/javascript" src="/cardapio/script.js?v=1.02" defer></script>
 
     </html>
 <?php

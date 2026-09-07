@@ -422,7 +422,7 @@ if (!function_exists('menzzu_marketplace_render_featured_cards')) {
             $freeBadge = !empty($store['freeDeliveryEnabled']) ? '<span class="menzzu-marketplace-store-badge menzzu-marketplace-store-badge-free">Frete gratis</span>' : '';
 
             $html[] = sprintf(
-                '<a class="menzzu-marketplace-featured-card %s" href="%s">
+                '<a class="menzzu-marketplace-featured-card %s" href="%s" data-store-link>
                     <span class="menzzu-marketplace-featured-media"><img src="%s" alt="%s" loading="lazy" decoding="async"></span>
                         <span class="menzzu-marketplace-featured-copy">
                             %s
@@ -508,7 +508,7 @@ if (!function_exists('menzzu_marketplace_render_restaurant_cards')) {
 
             $html[] = sprintf(
                 '<article class="menzzu-marketplace-restaurant-card %s">
-                    <a class="menzzu-marketplace-restaurant-link %s" href="%s">
+                    <a class="menzzu-marketplace-restaurant-link %s" href="%s" data-store-link>
                         <span class="menzzu-marketplace-restaurant-media"><img src="%s" alt="%s" loading="lazy" decoding="async"></span>
                         <span class="menzzu-marketplace-restaurant-body">
                             <span class="menzzu-marketplace-restaurant-head">

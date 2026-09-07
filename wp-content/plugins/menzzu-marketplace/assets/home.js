@@ -608,7 +608,7 @@
       const freeBadge = store?.freeDeliveryEnabled ? '<span class="menzzu-marketplace-store-badge menzzu-marketplace-store-badge-free">Frete gratis</span>' : '';
 
       return `
-        <a class="menzzu-marketplace-featured-card ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}">
+        <a class="menzzu-marketplace-featured-card ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}" data-store-link>
           <span class="menzzu-marketplace-featured-media"><img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async"></span>
           <span class="menzzu-marketplace-featured-copy">
             ${promoBadge}${freeBadge}
@@ -690,7 +690,7 @@
 
       return `
         <article class="menzzu-marketplace-restaurant-card ${schedule.isOpenNow ? '' : 'is-closed'}">
-          <a class="menzzu-marketplace-restaurant-link ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}">
+          <a class="menzzu-marketplace-restaurant-link ${schedule.isOpenNow ? '' : 'is-closed'}" href="${storeUrl(slug)}" data-store-link>
             <span class="menzzu-marketplace-restaurant-media"><img src="${escapeHtml(image)}" alt="${escapeHtml(name)}" loading="lazy" decoding="async"></span>
             <span class="menzzu-marketplace-restaurant-body">
               <span class="menzzu-marketplace-restaurant-head">
@@ -1068,6 +1068,19 @@
     bindHeaderScroll(root);
     bindFooterNav(root);
     bindThemeToggle(root);
+
+    root.addEventListener('click', (event) => {
+      const link = event.target?.closest?.('[data-store-link]');
+      if (!link) {
+        return;
+      }
+
+      try {
+        window.localStorage.setItem('menzzu_marketplace_store_entry', String(Date.now()));
+      } catch (error) {
+        // ignore
+      }
+    });
 
     if (form && input) {
       input.addEventListener('focus', () => {

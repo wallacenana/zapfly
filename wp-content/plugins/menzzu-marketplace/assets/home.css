@@ -1515,26 +1515,27 @@
 
 .menzzu-marketplace-directory-filter {
   appearance: none;
-  border: 1px solid rgba(17, 24, 39, 0.10);
-  background: #fff;
+  border: 1px solid rgba(17, 24, 39, 0.14);
+  background: transparent;
   color: var(--menzzu-marketplace-muted);
   border-radius: 999px;
   padding: 8px 12px;
   font-weight: 600;
   font-size: .84rem;
   cursor: pointer;
-  transition: background-color .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
+  transition: background-color .18s ease, border-color .18s ease, color .18s ease;
 }
 
 .menzzu-marketplace-directory-filter:hover {
-  transform: translateY(-1px);
-  border-color: rgba(17, 24, 39, 0.16);
+  border-color: var(--menzzu-marketplace-primary);
+  color: var(--menzzu-marketplace-secondary);
+  background: rgba(45, 189, 48, 0.04);
 }
 
 .menzzu-marketplace-directory-filter.is-active {
-  color: var(--menzzu-marketplace-primary);
-  border-color: rgba(45, 189, 48, 0.18);
-  background: rgba(45, 189, 48, 0.08);
+  color: var(--menzzu-marketplace-secondary);
+  border-color: var(--menzzu-marketplace-primary);
+  background: rgba(45, 189, 48, 0.06);
 }
 
 .menzzu-marketplace-directory-sort {

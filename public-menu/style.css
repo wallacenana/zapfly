@@ -364,6 +364,31 @@ h3 {
     margin-left: auto;
 }
 
+.marketplace-back-btn {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    padding: 7px 12px;
+    background: transparent;
+    color: var(--text-main);
+    font: inherit;
+    font-size: 0.86rem;
+    cursor: pointer;
+}
+
+.marketplace-back-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+.marketplace-back-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
 .more-link-btn {
     appearance: none;
     border: none;

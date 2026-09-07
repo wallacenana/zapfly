@@ -547,6 +547,27 @@ function loadCart() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const marketplaceBackButton = document.getElementById('marketplace-back-btn');
+    let enteredFromMarketplace = false;
+    try {
+        const entryTimestamp = Number(localStorage.getItem('menzzu_marketplace_store_entry') || 0);
+        enteredFromMarketplace = entryTimestamp > 0 && Date.now() - entryTimestamp < 30000;
+        localStorage.removeItem('menzzu_marketplace_store_entry');
+    } catch (error) {
+        // ignore
+    }
+
+    if (marketplaceBackButton && enteredFromMarketplace) {
+        marketplaceBackButton.hidden = false;
+        marketplaceBackButton.addEventListener('click', () => {
+            if (window.history.length > 1) {
+                window.history.back();
+                return;
+            }
+            window.location.href = 'https://menzzu.com/';
+        });
+    }
+
     // Carrega o cardápio (o servidor já garantiu que temos um slug válido aqui)
     loadCart();
     lucide.createIcons();
