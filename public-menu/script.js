@@ -749,21 +749,70 @@ function loadGoogleMaps(apiKey) {
     document.head.appendChild(script);
 }
 
+function getStoreLocation() {
+    const settings = state.publicSettings || {};
+    const lat = Number(settings.businessLat);
+    const lng = Number(settings.businessLng);
+    if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) return { lat, lng };
+    try {
+        const legacy = typeof settings.legacyBusinessLocation === 'string'
+            ? JSON.parse(settings.legacyBusinessLocation)
+            : settings.legacyBusinessLocation;
+        const legacyLat = Number(legacy?.lat);
+        const legacyLng = Number(legacy?.lng);
+        if (Number.isFinite(legacyLat) && Number.isFinite(legacyLng) && legacyLat !== 0 && legacyLng !== 0) {
+            return { lat: legacyLat, lng: legacyLng };
+        }
+    } catch (error) { /* Ignore legacy values that are not JSON. */ }
+    return null;
+}
+
+function getStoreAddress() {
+    return String(state.publicSettings?.businessAddress || '').trim();
+}
+
+function getCityRestrictedBounds(origin) {
+    if (!origin || !window.google?.maps) return null;
+    return new google.maps.LatLngBounds(
+        new google.maps.LatLng(origin.lat - 0.18, origin.lng - 0.18),
+        new google.maps.LatLng(origin.lat + 0.18, origin.lng + 0.18)
+    );
+}
+
+function placeBelongsToStoreCity(place) {
+    const storeAddress = getStoreAddress().toLowerCase();
+    if (!storeAddress) return true;
+    const components = place?.address_components || [];
+    const city = components.find(component => component.types?.includes('locality'))?.long_name?.toLowerCase() || '';
+    const stateName = components.find(component => component.types?.includes('administrative_area_level_1'))?.short_name?.toLowerCase() || '';
+    if (!city) return true;
+    const cityMatches = storeAddress.includes(city);
+    return cityMatches && (!stateName || storeAddress.includes(stateName));
+}
+
 window.initMapsAutocomplete = () => {
     const input = document.getElementById('user-address');
     if (!input) return;
 
     try {
         input.dataset.placeSelected = '0';
-        const autocomplete = new google.maps.places.Autocomplete(input);
-        autocomplete.setComponentRestrictions({
-            country: 'br'
+        const storeOrigin = getStoreLocation();
+        const autocomplete = new google.maps.places.Autocomplete(input, {
+            componentRestrictions: { country: 'br' },
+            bounds: getCityRestrictedBounds(storeOrigin),
+            strictBounds: Boolean(storeOrigin),
+            fields: ['formatted_address', 'geometry', 'address_components', 'place_id']
         });
         state.geocoder = new google.maps.Geocoder();
 
         autocomplete.addListener('place_changed', () => {
             const place = autocomplete.getPlace();
             if (!place.geometry) return;
+            if (!placeBelongsToStoreCity(place)) {
+                input.value = '';
+                input.dataset.placeSelected = '0';
+                return showAlert('Endereço fora da área', `Informe um endereço em ${getStoreAddress() || 'na cidade da loja'}.`);
+            }
             input.dataset.placeSelected = '1';
             updateLocation(place.geometry.location, place.formatted_address);
         });
@@ -802,10 +851,7 @@ function initDeliveryMap() {
     if (!mapEl || state.googleMap || !window.google) return;
 
     try {
-        const mapCenter = {
-            lat: -2.5307,
-            lng: -44.3068
-        };
+        const mapCenter = getStoreLocation() || { lat: -2.5307, lng: -44.3068 };
         state.googleMap = new google.maps.Map(mapEl, {
             zoom: 16,
             center: mapCenter,
@@ -823,6 +869,8 @@ function initDeliveryMap() {
 
         if (state.userInfo.address) {
             geocodeAddress(state.userInfo.address);
+        } else if (getStoreAddress() && !getStoreLocation()) {
+            geocodeAddress(getStoreAddress(), false);
         }
 
         state.mapMarker.addListener('dragend', () => reverseGeocode(state.mapMarker.getPosition()));
@@ -835,16 +883,25 @@ function initDeliveryMap() {
     }
 }
 
-function geocodeAddress(address) {
+function geocodeAddress(address, calculateFee = true) {
     if (!state.geocoder) return;
+    const storeAddress = getStoreAddress();
+    const query = storeAddress && !String(address).toLowerCase().includes(storeAddress.toLowerCase())
+        ? `${address}, ${storeAddress}`
+        : address;
     state.geocoder.geocode({
-        address: address
+        address: query,
+        componentRestrictions: { country: 'BR' },
+        bounds: getCityRestrictedBounds(getStoreLocation()),
+        region: 'br'
     }, (results, status) => {
-        if (status === 'OK' && results[0]) updateLocation(results[0].geometry.location, results[0].formatted_address);
+        if (status === 'OK' && results[0] && placeBelongsToStoreCity(results[0])) {
+            updateLocation(results[0].geometry.location, results[0].formatted_address, calculateFee);
+        }
     });
 }
 
-function updateLocation(location, address = null) {
+function updateLocation(location, address = null, calculateFee = true) {
     if (!state.googleMap) return;
     state.googleMap.panTo(location);
     state.mapMarker.setPosition(location);
@@ -852,7 +909,7 @@ function updateLocation(location, address = null) {
         document.getElementById('user-address').value = address;
         state.userInfo.address = address;
         localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
-        calculateDeliveryFee(address);
+        if (calculateFee) calculateDeliveryFee(address);
     }
 }
 
@@ -2179,7 +2236,7 @@ function goToStep(step) {
     openModal('checkout-modal');
 
     let title = "Ver sacola";
-    if (step === 2) title = state.activeTab === 'delivery' ? "Entrega" : "Extras do Pedido";
+    if (step === 2) title = state.activeTab === 'delivery' ? "Forma de Recebimento" : "Extras do Pedido";
     if (step === 3) title = "Forma de Pagamento";
     if (step === 4) title = "Confirmar Pedido";
 
@@ -2456,8 +2513,8 @@ function renderStep2() {
         }
     }
 
-    // Sempre carrega o mapa se deliveryType = delivery
-    if (state.deliveryType === 'delivery') {
+    // A unidade da loja também aparece nos modos de retirada e consumo.
+    if (['delivery', 'pickup', 'local'].includes(state.deliveryType)) {
         if (window.google && !state.googleMap) {
             initMapsAutocomplete();
             initDeliveryMap();
@@ -2493,10 +2550,10 @@ function setDeliveryType(type) {
         const method = btn.dataset.method;
         const isActive = method === type;
         btn.classList.toggle('active', isActive);
-        btn.style.background = isActive ? '#fff' : 'var(--bg-gray)';
-        btn.style.color = isActive ? 'var(--primary-color)' : 'var(--text-main)';
-        btn.style.border = isActive ? '2px solid var(--primary-color)' : '1px solid var(--border-color)';
-        btn.style.fontWeight = isActive ? '700' : '500';
+        btn.style.background = '';
+        btn.style.color = '';
+        btn.style.border = '';
+        btn.style.fontWeight = '';
         btn.innerHTML = isActive
             ? `<i data-lucide="check-circle-2" style="margin-right:6px; display:inline-block; vertical-align:middle; width:18px; height:18px;"></i> ${labels[method] || method}`
             : (labels[method] || method);
@@ -2505,7 +2562,19 @@ function setDeliveryType(type) {
     lucide.createIcons();
 
     const addressSection = document.getElementById('delivery-address-section');
+    const pickupSection = document.getElementById('pickup-section');
+    const localSection = document.getElementById('local-section');
     if (addressSection) addressSection.classList.toggle('hidden', type !== 'delivery');
+    if (pickupSection) pickupSection.classList.toggle('hidden', type !== 'pickup');
+    if (localSection) localSection.classList.toggle('hidden', type !== 'local');
+    const stepTitle = document.getElementById('checkout-step-title');
+    if (stepTitle && state.currentStep === 2) {
+        stepTitle.innerText = type === 'delivery' ? 'Forma de Recebimento' : type === 'pickup' ? 'Retirada na Loja' : 'Consumo no Local';
+    }
+    const nextStepButton = document.getElementById('next-step-btn');
+    if (nextStepButton && state.currentStep === 2) {
+        nextStepButton.innerText = type === 'delivery' ? 'Confirmar Endereço' : type === 'pickup' ? 'Confirmar Retirada na Loja' : 'Confirmar Consumo no Local';
+    }
 
     if (type === 'delivery') {
         if (state.userInfo.address) {
