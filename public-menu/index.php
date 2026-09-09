@@ -201,7 +201,10 @@ try {
     if (preg_match('/,\s*([^,]+?)\s*-\s*[A-Z]{2}(?:,|$)/u', $storeAddress, $cityMatch)) {
         $storeCity = trim($cityMatch[1]);
     }
-    $storeMapQuery = $businessName . ($storeCity !== '' ? ' em ' . $storeCity : '');
+    // O endereço completo é determinístico; nome/cidade sozinho pode apontar para outro estabelecimento.
+    $storeMapQuery = $storeAddress !== ''
+        ? $storeAddress . ', ' . $businessName
+        : $businessName . ($storeCity !== '' ? ' em ' . $storeCity : '');
     $businessCategory = trim((string) ($store['businessCategory'] ?? ''));
     $logoUrl = $store['logoUrl'] ?: 'https://menzzu.com/wp-content/uploads/2026/09/fallback-image_1-100.jpg';
     $faviconUrl = $store['faviconUrl'] ?: '/favicon.ico';
