@@ -330,7 +330,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.41">
+        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.50">
         <style>
             :root {
                 --primary-color:
@@ -803,23 +803,18 @@ try {
                     <!-- Step 2: Details -->
                     <div class="checkout-step hidden" id="step-2">
                         <!-- Toggle Delivery/Pickup -->
-                        <div id="checkout-type-tabs" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
-                            <button type="button" class="ifood-btn type-tab active" data-method="delivery" style="flex: 1; padding: 10px;"
-                                onclick="setDeliveryType('delivery')">Entrega</button>
-                            <button type="button" class="ifood-btn type-tab" data-method="pickup"
-                                style="flex: 1; background: var(--bg-gray); color: var(--text-main); padding: 10px;"
-                                onclick="setDeliveryType('pickup')">Retirada na Loja</button>
-                            <button type="button" class="ifood-btn type-tab" data-method="local"
-                                style="flex: 1; background: var(--bg-gray); color: var(--text-main); padding: 10px;"
-                                onclick="setDeliveryType('local')">Consumo no Local</button>
+                        <div id="checkout-type-tabs" class="checkout-type-tabs">
+                            <button type="button" class="ifood-btn type-tab active" data-method="delivery" onclick="setDeliveryType('delivery')">Entrega</button>
+                            <button type="button" class="ifood-btn type-tab" data-method="pickup" onclick="setDeliveryType('pickup')">Retirada</button>
+                            <button type="button" class="ifood-btn type-tab" data-method="local" onclick="setDeliveryType('local')">Consumo</button>
                         </div>
 
                         <!-- Address Section -->
                         <div id="delivery-address-section">
-                            <div class="form-group">
-                                <label class="field-label">Endereço de Entrega</label>
+                            <div class="form-group receiving-address-field">
+                                <label class="field-label">Endereço de entrega</label>
                                 <input type="text" id="user-address" class="ifood-input"
-                                    placeholder="Rua, número, bairro...">
+                                    placeholder="Rua, número, bairro..." autocomplete="street-address">
                             </div>
                             <div id="delivery-map"
                                 style="height:200px; width:100%; border-radius:12px; background:#e8e8e8; margin-bottom:14px; overflow:hidden;">
@@ -1054,7 +1049,7 @@ try {
         </svg>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-        <script type="text/javascript" src="/cardapio/script.js?v=1.02" defer></script>
+        <script type="text/javascript" src="/cardapio/script.js?v=1.07" defer></script>
 
     </html>
 <?php

@@ -1350,6 +1350,116 @@ body.theme-dark .var-option.selected {
     font-weight: 700;
 }
 
+/* Checkout receiving form: neutral surface with the store accent only as a state cue. */
+.checkout-content {
+    width: min(100%, 520px);
+    max-width: 520px;
+    height: auto;
+    max-height: min(92vh, 760px);
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.16);
+}
+
+.checkout-content .modal-scroll-body {
+    padding: 18px 16px 12px;
+}
+
+.checkout-content #checkout-type-tabs {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px !important;
+    padding: 4px;
+    margin: 0 0 18px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--text-main) 5%, var(--bg-color));
+}
+
+.checkout-content #checkout-type-tabs .type-tab {
+    min-height: 42px;
+    padding: 8px 6px !important;
+    border: 1px solid transparent !important;
+    border-radius: 9px;
+    background: transparent !important;
+    color: var(--text-gray) !important;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 600 !important;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.checkout-content #checkout-type-tabs .type-tab.active {
+    background: var(--bg-color) !important;
+    border-color: var(--primary-color) !important;
+    color: var(--text-main) !important;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.checkout-content #delivery-address-section {
+    display: grid;
+    gap: 4px;
+}
+
+.checkout-content #delivery-address-section.hidden {
+    display: none;
+}
+
+.checkout-content .receiving-address-field {
+    margin: 0;
+}
+
+.checkout-content .receiving-address-field .field-label {
+    margin-bottom: 7px;
+    color: var(--text-gray);
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+.checkout-content #user-address {
+    min-height: 52px;
+    margin-bottom: 8px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--text-main) 3%, var(--bg-color));
+}
+
+.checkout-content #delivery-map {
+    height: 220px !important;
+    margin: 4px 0 12px !important;
+    border: 1px solid var(--border);
+    border-radius: 14px !important;
+}
+
+.checkout-content #delivery-fee-display {
+    margin: 0 0 8px !important;
+    padding: 12px 14px !important;
+    border: 1px solid var(--border);
+    border-radius: 12px !important;
+    background: color-mix(in srgb, var(--text-main) 3%, var(--bg-color)) !important;
+    color: var(--text-gray) !important;
+    text-align: left !important;
+    font-size: 0.84rem;
+}
+
+.checkout-content .modal-footer-sticky {
+    padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+    background: var(--bg-color);
+}
+
+.checkout-content .modal-footer-sticky .primary-btn {
+    min-height: 50px;
+    border-radius: 10px;
+    background: #171717;
+    color: #fff;
+    box-shadow: none;
+}
+
+@media (max-width: 600px) {
+    .checkout-content {
+        max-height: 94vh;
+        border-radius: 18px 18px 0 0;
+    }
+}
+
 body.theme-dark .delivery-fee-badge {
     background: color-mix(in srgb, var(--primary-color) 12%, var(--surface-color));
     border-color: color-mix(in srgb, var(--primary-color) 24%, rgba(255, 255, 255, 0.08));
