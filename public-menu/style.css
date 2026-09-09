@@ -1519,6 +1519,35 @@ body.theme-dark .var-option.selected {
     background: color-mix(in srgb, var(--text-main) 5%, var(--bg-color));
 }
 
+.checkout-content .store-hours-card {
+    display: grid;
+    gap: 7px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--text-main) 2%, var(--bg-color));
+}
+
+.checkout-content .store-hours-card > strong {
+    margin-bottom: 3px;
+    color: var(--text-main);
+    font-size: 0.85rem;
+}
+
+.checkout-content .store-hours-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--text-gray);
+    font-size: 0.76rem;
+}
+
+.checkout-content .store-hours-row span:last-child {
+    color: var(--text-main);
+    font-weight: 600;
+    text-align: right;
+}
+
 .checkout-content .modal-footer-sticky {
     padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
     background: var(--bg-color);
