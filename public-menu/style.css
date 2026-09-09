@@ -1382,8 +1382,9 @@ body.theme-dark .var-option.selected {
     background: transparent !important;
     color: var(--text-gray) !important;
     font: inherit;
-    font-size: 0.82rem;
+    font-size: clamp(0.68rem, 2.2vw, 0.82rem);
     font-weight: 600 !important;
+    white-space: nowrap;
     cursor: pointer;
     box-shadow: none;
 }
@@ -1440,6 +1441,76 @@ body.theme-dark .var-option.selected {
     font-size: 0.84rem;
 }
 
+.checkout-content #delivery-fee-display strong {
+    color: var(--btn) !important;
+}
+
+.checkout-content .receiving-mode-panel {
+    display: none;
+    gap: 10px;
+    margin-top: 4px;
+}
+
+.checkout-content #checkout-type-tabs:has(.type-tab[data-method="pickup"].active) ~ #pickup-info-panel,
+.checkout-content #checkout-type-tabs:has(.type-tab[data-method="local"].active) ~ #local-info-panel {
+    display: grid;
+}
+
+.checkout-content .receiving-mode-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--text-main);
+    font-size: 0.88rem;
+}
+
+.checkout-content .receiving-mode-heading span {
+    color: var(--btn);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.checkout-content .store-location-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--text-main) 3%, var(--bg-color));
+}
+
+.checkout-content .store-location-card > div {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.checkout-content .store-location-card strong {
+    color: var(--text-main);
+    font-size: 0.9rem;
+}
+
+.checkout-content .store-location-card span {
+    color: var(--text-gray);
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
+.checkout-content .store-navigation-btn {
+    flex: 0 0 auto;
+    padding: 9px 11px;
+    border-radius: 8px;
+    background: var(--btn);
+    color: var(--btn-text);
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
 .checkout-content .modal-footer-sticky {
     padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
     background: var(--bg-color);
@@ -1448,8 +1519,8 @@ body.theme-dark .var-option.selected {
 .checkout-content .modal-footer-sticky .primary-btn {
     min-height: 50px;
     border-radius: 10px;
-    background: #171717;
-    color: #fff;
+    background: var(--btn);
+    color: var(--btn-text);
     box-shadow: none;
 }
 

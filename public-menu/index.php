@@ -330,7 +330,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.50">
+        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.52">
         <style>
             :root {
                 --primary-color:
@@ -821,6 +821,34 @@ try {
                             </div>
                             <div id="delivery-fee-display"
                                 style="margin-bottom:15px; font-weight:600; text-align:center; padding:10px; border-radius:10px; background:#f9f9f9; display:none;">
+                            </div>
+                        </div>
+
+                        <div id="pickup-info-panel" class="receiving-mode-panel">
+                            <div class="receiving-mode-heading">
+                                <strong>Retirada na loja</strong>
+                                <span>Sem taxa de entrega</span>
+                            </div>
+                            <div class="store-location-card">
+                                <div>
+                                    <strong><?php echo htmlspecialchars($businessName); ?></strong>
+                                    <span><?php echo htmlspecialchars($store['businessAddress'] ?? 'Endereço não informado'); ?></span>
+                                </div>
+                                <a class="store-navigation-btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&amp;query=<?php echo rawurlencode((string) ($store['businessAddress'] ?? $businessName)); ?>">Iniciar navegação</a>
+                            </div>
+                        </div>
+
+                        <div id="local-info-panel" class="receiving-mode-panel">
+                            <div class="receiving-mode-heading">
+                                <strong>Consumo no local</strong>
+                                <span>Sem taxa de entrega</span>
+                            </div>
+                            <div class="store-location-card">
+                                <div>
+                                    <strong><?php echo htmlspecialchars($businessName); ?></strong>
+                                    <span><?php echo htmlspecialchars($store['businessAddress'] ?? 'Endereço não informado'); ?></span>
+                                </div>
+                                <a class="store-navigation-btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&amp;query=<?php echo rawurlencode((string) ($store['businessAddress'] ?? $businessName)); ?>">Iniciar navegação</a>
                             </div>
                         </div>
 
