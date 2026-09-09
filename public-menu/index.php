@@ -215,12 +215,6 @@ try {
     $storeEmbedUrl = $storePlaceId !== '' && $mapsApiKey !== ''
         ? 'https://www.google.com/maps/embed/v1/place?key=' . rawurlencode($mapsApiKey) . '&q=place_id:' . rawurlencode($storePlaceId)
         : 'https://www.google.com/maps?q=' . rawurlencode($storeMapQuery) . '&output=embed';
-    $storeDayNames = [0 => 'Domingo', 1 => 'Segunda', 2 => 'Terça', 3 => 'Quarta', 4 => 'Quinta', 5 => 'Sexta', 6 => 'Sábado'];
-    $storeHoursByDay = [];
-    foreach ($availableSlots as $availableSlot) {
-        $day = (int) ($availableSlot['dayOfWeek'] ?? 0);
-        $storeHoursByDay[$day][] = substr((string) ($availableSlot['startTime'] ?? '00:00'), 0, 5) . ' - ' . substr((string) ($availableSlot['endTime'] ?? '00:00'), 0, 5);
-    }
     $businessCategory = trim((string) ($store['businessCategory'] ?? ''));
     $logoUrl = $store['logoUrl'] ?: 'https://menzzu.com/wp-content/uploads/2026/09/fallback-image_1-100.jpg';
     $faviconUrl = $store['faviconUrl'] ?: '/favicon.ico';
@@ -361,7 +355,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.56">
+        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.57">
         <style>
             :root {
                 --primary-color:
@@ -868,15 +862,6 @@ try {
                                 <a class="store-navigation-btn" target="_blank" rel="noopener" href="<?php echo htmlspecialchars($storeMapUrl, ENT_QUOTES, 'UTF-8'); ?>">Iniciar navegação</a>
                             </div>
                             <iframe class="store-map-embed" title="Localização da loja" loading="lazy" src="<?php echo htmlspecialchars($storeEmbedUrl, ENT_QUOTES, 'UTF-8'); ?>"></iframe>
-                            <div class="store-hours-card">
-                                <strong>Horário de funcionamento</strong>
-                                <?php for ($day = 0; $day <= 6; $day++): ?>
-                                    <div class="store-hours-row">
-                                        <span><?php echo htmlspecialchars($storeDayNames[$day]); ?></span>
-                                        <span><?php echo htmlspecialchars(!empty($storeHoursByDay[$day]) ? implode(' · ', $storeHoursByDay[$day]) : 'Fechado'); ?></span>
-                                    </div>
-                                <?php endfor; ?>
-                            </div>
                         </div>
 
                         <div id="local-info-panel" class="receiving-mode-panel">
@@ -892,15 +877,6 @@ try {
                                 <a class="store-navigation-btn" target="_blank" rel="noopener" href="<?php echo htmlspecialchars($storeMapUrl, ENT_QUOTES, 'UTF-8'); ?>">Iniciar navegação</a>
                             </div>
                             <iframe class="store-map-embed" title="Localização da loja" loading="lazy" src="<?php echo htmlspecialchars($storeEmbedUrl, ENT_QUOTES, 'UTF-8'); ?>"></iframe>
-                            <div class="store-hours-card">
-                                <strong>Horário de funcionamento</strong>
-                                <?php for ($day = 0; $day <= 6; $day++): ?>
-                                    <div class="store-hours-row">
-                                        <span><?php echo htmlspecialchars($storeDayNames[$day]); ?></span>
-                                        <span><?php echo htmlspecialchars(!empty($storeHoursByDay[$day]) ? implode(' · ', $storeHoursByDay[$day]) : 'Fechado'); ?></span>
-                                    </div>
-                                <?php endfor; ?>
-                            </div>
                         </div>
 
                         <!-- Extras da Encomenda -->
