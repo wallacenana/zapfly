@@ -1511,6 +1511,14 @@ body.theme-dark .var-option.selected {
     white-space: nowrap;
 }
 
+.checkout-content .store-map-embed {
+    width: 100%;
+    height: 190px;
+    border: 0;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--text-main) 5%, var(--bg-color));
+}
+
 .checkout-content .modal-footer-sticky {
     padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
     background: var(--bg-color);

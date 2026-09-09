@@ -148,6 +148,7 @@ try {
                 COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled,
                 COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm,
                 COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode,
+                COALESCE(sp.businessAddress, s.businessAddress, '') AS businessAddress,
                 COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm,
                 COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery,
                 COALESCE(s.dailyDeliveryItems, '{\"orderTypes\":{\"delivery\":true,\"order\":true},\"fulfillmentMethods\":{\"delivery\":true,\"pickup\":true,\"local\":true}}') AS dailyDeliveryItems
@@ -181,7 +182,7 @@ try {
 
     ob_start();
 
-    $stmt = $pdo->prepare("SELECT u.*, COALESCE(sp.businessName, s.businessName) AS businessName, COALESCE(sp.businessCategory, s.businessCategory) AS businessCategory, COALESCE(sp.prepTime, '') AS prepTime, COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl, COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl, COALESCE(sp.accentColor, s.accentColor) AS accentColor, COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor, COALESCE(sp.textColor, s.textColor) AS textColor, COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor, COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor, COALESCE(sp.seoDescription, s.seoDescription) AS seoDescription, COALESCE(s.googleApiKey, '') AS googleApiKey, COALESCE(s.deliveryRules, '[]') AS deliveryRules, COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm, COALESCE(sp.pixelId, s.pixelId) AS pixelId, COALESCE(sp.microsoftClarityId, s.microsoftClarityId) AS microsoftClarityId, COALESCE(sp.googleAnalyticsId, s.googleAnalyticsId) AS googleAnalyticsId, COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders, COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders, COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders, COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled, COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm, COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode, COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery, COALESCE(sp.menuTheme, s.menuTheme, 'light') AS menuTheme, COALESCE(s.featuredCountDesktop, 4) AS featuredCountDesktop, COALESCE(s.featuredCountTablet, 2) AS featuredCountTablet, COALESCE(s.featuredCountMobile, 1) AS featuredCountMobile, COALESCE(s.dailyDeliveryItems, '{\"orderTypes\":{\"delivery\":true,\"order\":true},\"fulfillmentMethods\":{\"delivery\":true,\"pickup\":true,\"local\":true}}') AS dailyDeliveryItems FROM user u LEFT JOIN setting s ON u.id = s.userId LEFT JOIN store_profile sp ON u.id = sp.userId WHERE u.slug = ?");
+    $stmt = $pdo->prepare("SELECT u.*, COALESCE(sp.businessName, s.businessName) AS businessName, COALESCE(sp.businessCategory, s.businessCategory) AS businessCategory, COALESCE(sp.prepTime, '') AS prepTime, COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl, COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl, COALESCE(sp.accentColor, s.accentColor) AS accentColor, COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor, COALESCE(sp.textColor, s.textColor) AS textColor, COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor, COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor, COALESCE(sp.seoDescription, s.seoDescription) AS seoDescription, COALESCE(s.googleApiKey, '') AS googleApiKey, COALESCE(s.deliveryRules, '[]') AS deliveryRules, COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm, COALESCE(sp.pixelId, s.pixelId) AS pixelId, COALESCE(sp.microsoftClarityId, s.microsoftClarityId) AS microsoftClarityId, COALESCE(sp.googleAnalyticsId, s.googleAnalyticsId) AS googleAnalyticsId, COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders, COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders, COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders, COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled, COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm, COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode, COALESCE(sp.businessAddress, s.businessAddress, '') AS businessAddress, COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery, COALESCE(sp.menuTheme, s.menuTheme, 'light') AS menuTheme, COALESCE(s.featuredCountDesktop, 4) AS featuredCountDesktop, COALESCE(s.featuredCountTablet, 2) AS featuredCountTablet, COALESCE(s.featuredCountMobile, 1) AS featuredCountMobile, COALESCE(s.dailyDeliveryItems, '{\"orderTypes\":{\"delivery\":true,\"order\":true},\"fulfillmentMethods\":{\"delivery\":true,\"pickup\":true,\"local\":true}}') AS dailyDeliveryItems FROM user u LEFT JOIN setting s ON u.id = s.userId LEFT JOIN store_profile sp ON u.id = sp.userId WHERE u.slug = ?");
     $stmt->execute([$slug]);
     $store = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -190,6 +191,7 @@ try {
     }
 
     $businessName = $store['businessName'] ?: $store['name'];
+    $storeAddress = trim((string) ($store['businessAddress'] ?? ''));
     $businessCategory = trim((string) ($store['businessCategory'] ?? ''));
     $logoUrl = $store['logoUrl'] ?: 'https://menzzu.com/wp-content/uploads/2026/09/fallback-image_1-100.jpg';
     $faviconUrl = $store['faviconUrl'] ?: '/favicon.ico';
@@ -330,7 +332,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.52">
+        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.55">
         <style>
             :root {
                 --primary-color:
@@ -832,10 +834,11 @@ try {
                             <div class="store-location-card">
                                 <div>
                                     <strong><?php echo htmlspecialchars($businessName); ?></strong>
-                                    <span><?php echo htmlspecialchars($store['businessAddress'] ?? 'Endereço não informado'); ?></span>
+                                    <span><?php echo htmlspecialchars($storeAddress ?: 'Endereço da loja'); ?></span>
                                 </div>
-                                <a class="store-navigation-btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&amp;query=<?php echo rawurlencode((string) ($store['businessAddress'] ?? $businessName)); ?>">Iniciar navegação</a>
+                                <a class="store-navigation-btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&amp;query=<?php echo rawurlencode($storeAddress ?: $businessName); ?>">Iniciar navegação</a>
                             </div>
+                            <iframe class="store-map-embed" title="Localização da loja" loading="lazy" src="https://www.google.com/maps?q=<?php echo rawurlencode($storeAddress ?: $businessName); ?>&amp;output=embed"></iframe>
                         </div>
 
                         <div id="local-info-panel" class="receiving-mode-panel">
@@ -846,10 +849,11 @@ try {
                             <div class="store-location-card">
                                 <div>
                                     <strong><?php echo htmlspecialchars($businessName); ?></strong>
-                                    <span><?php echo htmlspecialchars($store['businessAddress'] ?? 'Endereço não informado'); ?></span>
+                                    <span><?php echo htmlspecialchars($storeAddress ?: 'Endereço da loja'); ?></span>
                                 </div>
-                                <a class="store-navigation-btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&amp;query=<?php echo rawurlencode((string) ($store['businessAddress'] ?? $businessName)); ?>">Iniciar navegação</a>
+                                <a class="store-navigation-btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&amp;query=<?php echo rawurlencode($storeAddress ?: $businessName); ?>">Iniciar navegação</a>
                             </div>
+                            <iframe class="store-map-embed" title="Localização da loja" loading="lazy" src="https://www.google.com/maps?q=<?php echo rawurlencode($storeAddress ?: $businessName); ?>&amp;output=embed"></iframe>
                         </div>
 
                         <!-- Extras da Encomenda -->
