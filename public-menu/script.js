@@ -885,12 +885,8 @@ function initDeliveryMap() {
 
 function geocodeAddress(address, calculateFee = true) {
     if (!state.geocoder) return;
-    const storeAddress = getStoreAddress();
-    const query = storeAddress && !String(address).toLowerCase().includes(storeAddress.toLowerCase())
-        ? `${address}, ${storeAddress}`
-        : address;
     state.geocoder.geocode({
-        address: query,
+        address: String(address).trim(),
         componentRestrictions: { country: 'BR' },
         bounds: getCityRestrictedBounds(getStoreLocation()),
         region: 'br'
