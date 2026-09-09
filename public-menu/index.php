@@ -148,10 +148,6 @@ try {
                 COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled,
                 COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm,
                 COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode,
-                COALESCE(sp.businessAddress, s.businessAddress, '') AS businessAddress,
-                COALESCE(sp.businessLat, NULL) AS businessLat,
-                COALESCE(sp.businessLng, NULL) AS businessLng,
-                COALESCE(s.businessLocation, '') AS legacyBusinessLocation,
                 COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm,
                 COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery,
                 COALESCE(s.dailyDeliveryItems, '{\"orderTypes\":{\"delivery\":true,\"order\":true},\"fulfillmentMethods\":{\"delivery\":true,\"pickup\":true,\"local\":true}}') AS dailyDeliveryItems
@@ -185,7 +181,7 @@ try {
 
     ob_start();
 
-    $stmt = $pdo->prepare("SELECT u.*, COALESCE(sp.businessName, s.businessName) AS businessName, COALESCE(sp.businessCategory, s.businessCategory) AS businessCategory, COALESCE(sp.prepTime, '') AS prepTime, COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl, COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl, COALESCE(sp.accentColor, s.accentColor) AS accentColor, COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor, COALESCE(sp.textColor, s.textColor) AS textColor, COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor, COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor, COALESCE(sp.seoDescription, s.seoDescription) AS seoDescription, COALESCE(s.googleApiKey, '') AS googleApiKey, COALESCE(s.deliveryRules, '[]') AS deliveryRules, COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm, COALESCE(sp.pixelId, s.pixelId) AS pixelId, COALESCE(sp.microsoftClarityId, s.microsoftClarityId) AS microsoftClarityId, COALESCE(sp.googleAnalyticsId, s.googleAnalyticsId) AS googleAnalyticsId, COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders, COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders, COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders, COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled, COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm, COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode, COALESCE(sp.businessAddress, s.businessAddress, '') AS businessAddress, COALESCE(sp.businessLat, NULL) AS businessLat, COALESCE(sp.businessLng, NULL) AS businessLng, COALESCE(s.businessLocation, '') AS legacyBusinessLocation, COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery, COALESCE(sp.menuTheme, s.menuTheme, 'light') AS menuTheme, COALESCE(s.featuredCountDesktop, 4) AS featuredCountDesktop, COALESCE(s.featuredCountTablet, 2) AS featuredCountTablet, COALESCE(s.featuredCountMobile, 1) AS featuredCountMobile, COALESCE(s.dailyDeliveryItems, '{\"orderTypes\":{\"delivery\":true,\"order\":true},\"fulfillmentMethods\":{\"delivery\":true,\"pickup\":true,\"local\":true}}') AS dailyDeliveryItems FROM user u LEFT JOIN setting s ON u.id = s.userId LEFT JOIN store_profile sp ON u.id = sp.userId WHERE u.slug = ?");
+    $stmt = $pdo->prepare("SELECT u.*, COALESCE(sp.businessName, s.businessName) AS businessName, COALESCE(sp.businessCategory, s.businessCategory) AS businessCategory, COALESCE(sp.prepTime, '') AS prepTime, COALESCE(sp.logoUrl, s.logoUrl) AS logoUrl, COALESCE(sp.faviconUrl, s.faviconUrl) AS faviconUrl, COALESCE(sp.accentColor, s.accentColor) AS accentColor, COALESCE(sp.backgroundColor, s.backgroundColor) AS backgroundColor, COALESCE(sp.textColor, s.textColor) AS textColor, COALESCE(sp.buttonColor, s.buttonColor) AS buttonColor, COALESCE(sp.buttonTextColor, s.buttonTextColor) AS buttonTextColor, COALESCE(sp.seoDescription, s.seoDescription) AS seoDescription, COALESCE(s.googleApiKey, '') AS googleApiKey, COALESCE(s.deliveryRules, '[]') AS deliveryRules, COALESCE(sp.maxDeliveryKm, s.maxDeliveryKm) AS maxDeliveryKm, COALESCE(sp.pixelId, s.pixelId) AS pixelId, COALESCE(sp.microsoftClarityId, s.microsoftClarityId) AS microsoftClarityId, COALESCE(sp.googleAnalyticsId, s.googleAnalyticsId) AS googleAnalyticsId, COALESCE(sp.acceptOrders, s.acceptOrders, 1) AS acceptOrders, COALESCE(sp.accentColorOrders, s.accentColorOrders) AS accentColorOrders, COALESCE(sp.buttonColorOrders, s.buttonColorOrders) AS buttonColorOrders, COALESCE(sp.freeDeliveryEnabled, 0) AS freeDeliveryEnabled, COALESCE(sp.freeDeliveryKm, NULL) AS freeDeliveryKm, COALESCE(sp.deliveryMode, s.deliveryMode) AS deliveryMode, COALESCE(sp.allowCashOnDelivery, s.allowCashOnDelivery) AS allowCashOnDelivery, COALESCE(sp.menuTheme, s.menuTheme, 'light') AS menuTheme, COALESCE(s.featuredCountDesktop, 4) AS featuredCountDesktop, COALESCE(s.featuredCountTablet, 2) AS featuredCountTablet, COALESCE(s.featuredCountMobile, 1) AS featuredCountMobile, COALESCE(s.dailyDeliveryItems, '{\"orderTypes\":{\"delivery\":true,\"order\":true},\"fulfillmentMethods\":{\"delivery\":true,\"pickup\":true,\"local\":true}}') AS dailyDeliveryItems FROM user u LEFT JOIN setting s ON u.id = s.userId LEFT JOIN store_profile sp ON u.id = sp.userId WHERE u.slug = ?");
     $stmt->execute([$slug]);
     $store = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -272,10 +268,6 @@ try {
     // Build SSR payload
     $ssrData = [
         'businessName' => $businessName,
-        'businessAddress' => $store['businessAddress'] ?? '',
-        'businessLat' => isset($store['businessLat']) ? (float) $store['businessLat'] : null,
-        'businessLng' => isset($store['businessLng']) ? (float) $store['businessLng'] : null,
-        'legacyBusinessLocation' => $store['legacyBusinessLocation'] ?? '',
         'googleApiKey' => getenv('GOOGLE_MAPS_API_KEY') ?: getenv('GOOGLE_MAPS_KEY') ?: getenv('GOOGLE_API_KEY') ?: ($store['googleApiKey'] ?? ''),
         'deliveryRules' => $store['deliveryRules'] ?? '[]',
         'maxDeliveryKm' => (float) ($store['maxDeliveryKm'] ?? 15),
@@ -338,7 +330,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.47">
+        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.41">
         <style>
             :root {
                 --primary-color:
@@ -600,11 +592,6 @@ try {
 
         <header class="top-nav">
             <div class="container nav-wrapper">
-                <button class="marketplace-back-btn" id="marketplace-back-btn" title="Voltar para o marketplace" type="button" hidden aria-label="Voltar para o marketplace">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="800px" height="800px" viewBox="0 0 24 24" fill="none">
-                        <path d="M15 6L9 12L15 18" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                    </svg>
-                </button>
                 <div class="store-info">
                     <div class="store-logo"><img src="<?php echo $logoUrl; ?>" alt="Logo" fetchpriority="high"
                             decoding="async"></div>
@@ -635,6 +622,9 @@ try {
                     </div>
                 </div>
                 <div class="store-header-actions">
+                    <button class="marketplace-back-btn" id="marketplace-back-btn" type="button" hidden aria-label="Voltar para o marketplace">
+                        <i data-lucide="arrow-left"></i><span>Voltar</span>
+                    </button>
                     <button class="more-link-btn" id="history-toggle-btn" aria-label="Ver mais sobre a loja">
                         <span class="more-link-text">Ver mais</span><i data-lucide="chevron-down"></i>
                     </button>
@@ -812,32 +802,32 @@ try {
 
                     <!-- Step 2: Details -->
                     <div class="checkout-step hidden" id="step-2">
-                        <div id="checkout-type-tabs" class="checkout-type-tabs">
-                            <button type="button" class="type-tab active" data-method="delivery" onclick="setDeliveryType('delivery')">Entrega</button>
-                            <button type="button" class="type-tab" data-method="pickup" onclick="setDeliveryType('pickup')">Retirada</button>
-                            <button type="button" class="type-tab" data-method="local" onclick="setDeliveryType('local')">Consumo</button>
+                        <!-- Toggle Delivery/Pickup -->
+                        <div id="checkout-type-tabs" style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                            <button type="button" class="ifood-btn type-tab active" data-method="delivery" style="flex: 1; padding: 10px;"
+                                onclick="setDeliveryType('delivery')">Entrega</button>
+                            <button type="button" class="ifood-btn type-tab" data-method="pickup"
+                                style="flex: 1; background: var(--bg-gray); color: var(--text-main); padding: 10px;"
+                                onclick="setDeliveryType('pickup')">Retirada na Loja</button>
+                            <button type="button" class="ifood-btn type-tab" data-method="local"
+                                style="flex: 1; background: var(--bg-gray); color: var(--text-main); padding: 10px;"
+                                onclick="setDeliveryType('local')">Consumo no Local</button>
                         </div>
 
-                        <div id="delivery-address-section" class="receiving-section">
+                        <!-- Address Section -->
+                        <div id="delivery-address-section">
                             <div class="form-group">
-                                <label class="field-label">Endereço de entrega</label>
-                                <input type="text" id="user-address" class="ifood-input" placeholder="Rua, número, bairro...">
+                                <label class="field-label">Endereço de Entrega</label>
+                                <input type="text" id="user-address" class="ifood-input"
+                                    placeholder="Rua, número, bairro...">
                             </div>
-                            <div id="delivery-fee-display" class="receiving-info-card" style="display:none;"></div>
+                            <div id="delivery-map"
+                                style="height:200px; width:100%; border-radius:12px; background:#e8e8e8; margin-bottom:14px; overflow:hidden;">
+                            </div>
+                            <div id="delivery-fee-display"
+                                style="margin-bottom:15px; font-weight:600; text-align:center; padding:10px; border-radius:10px; background:#f9f9f9; display:none;">
+                            </div>
                         </div>
-
-                        <div id="pickup-section" class="receiving-section hidden">
-                            <div class="receiving-info-card"><span>Sem cobrança de taxa de entrega</span><strong>Grátis</strong></div>
-                            <div class="store-unit-card"><strong><?php echo htmlspecialchars($businessName); ?></strong><span><?php echo htmlspecialchars($store['businessAddress'] ?? 'Endereço da loja'); ?></span><small>Retire diretamente no balcão</small></div>
-                            <div class="pickup-fields"><input id="pickup-name" class="ifood-input" placeholder="Nome do responsável"><input id="pickup-phone" class="ifood-input" placeholder="Telefone"></div>
-                        </div>
-
-                        <div id="local-section" class="receiving-section hidden">
-                            <div class="receiving-info-card"><span>Consumo no local</span><strong>Sem taxa</strong></div>
-                            <div class="store-unit-card"><strong><?php echo htmlspecialchars($businessName); ?></strong><span><?php echo htmlspecialchars($store['businessAddress'] ?? 'Endereço da loja'); ?></span><small>Faça seu pedido e consuma na loja</small></div>
-                        </div>
-
-                        <div id="delivery-map" style="height:200px; width:100%; border-radius:12px; background:#e8e8e8; margin-bottom:14px; overflow:hidden;"></div>
 
                         <!-- Extras da Encomenda -->
                         <div id="order-step-content" class="hidden"></div>
@@ -934,33 +924,33 @@ try {
                     <?php endif; ?>
 
                     <div class="store-info-hours">
-                        <h4>Horários de abertura</h4>
-                        <div class="store-info-hours-list">
-                            <?php
-                            $dayNames = [
-                                0 => 'Dom',
-                                1 => 'Seg',
-                                2 => 'Ter',
-                                3 => 'Qua',
-                                4 => 'Qui',
-                                5 => 'Sex',
-                                6 => 'Sab'
-                            ];
-                            $slotsByDay = [];
-                            foreach ($availableSlots as $slot) {
-                                $day = (int) ($slot['dayOfWeek'] ?? 0);
-                                $slotsByDay[$day][] = substr((string) ($slot['startTime'] ?? '00:00'), 0, 5) . ' - ' . substr((string) ($slot['endTime'] ?? '00:00'), 0, 5);
-                            }
-                            for ($day = 0; $day <= 6; $day++):
-                                $dayLabel = $dayNames[$day];
-                                $dayHours = $slotsByDay[$day] ?? [];
-                            ?>
-                                <div class="store-info-hour-row<?php echo empty($dayHours) ? ' is-closed' : ''; ?>">
-                                    <span><?php echo htmlspecialchars($dayLabel); ?></span>
-                                    <strong><?php echo htmlspecialchars(empty($dayHours) ? 'Fechado' : implode(' • ', $dayHours)); ?></strong>
-                                </div>
-                            <?php endfor; ?>
-                        </div>
+                            <h4>Horários de abertura</h4>
+                            <div class="store-info-hours-list">
+                                <?php
+                                $dayNames = [
+                                    0 => 'Dom',
+                                    1 => 'Seg',
+                                    2 => 'Ter',
+                                    3 => 'Qua',
+                                    4 => 'Qui',
+                                    5 => 'Sex',
+                                    6 => 'Sab'
+                                ];
+                                $slotsByDay = [];
+                                foreach ($availableSlots as $slot) {
+                                    $day = (int) ($slot['dayOfWeek'] ?? 0);
+                                    $slotsByDay[$day][] = substr((string) ($slot['startTime'] ?? '00:00'), 0, 5) . ' - ' . substr((string) ($slot['endTime'] ?? '00:00'), 0, 5);
+                                }
+                                for ($day = 0; $day <= 6; $day++):
+                                    $dayLabel = $dayNames[$day];
+                                    $dayHours = $slotsByDay[$day] ?? [];
+                                ?>
+                                    <div class="store-info-hour-row<?php echo empty($dayHours) ? ' is-closed' : ''; ?>">
+                                        <span><?php echo htmlspecialchars($dayLabel); ?></span>
+                                        <strong><?php echo htmlspecialchars(empty($dayHours) ? 'Fechado' : implode(' • ', $dayHours)); ?></strong>
+                                    </div>
+                                <?php endfor; ?>
+                            </div>
                     </div>
                 </div>
                 <h4 class="store-info-section-title">Meus pedidos</h4>
@@ -1064,7 +1054,7 @@ try {
         </svg>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-        <script type="text/javascript" src="/cardapio/script.js?v=1.04" defer></script>
+        <script type="text/javascript" src="/cardapio/script.js?v=1.02" defer></script>
 
     </html>
 <?php
