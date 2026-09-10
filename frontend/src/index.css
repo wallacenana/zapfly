@@ -654,11 +654,16 @@ estoque-label {
   .production-type-tabs { flex-wrap: wrap; }
   .production-type-tabs button { flex: 1 1 140px; }
   .production-controls { flex-wrap: wrap; gap: 12px; }
-  .production-controls > div:first-child { width: 100% !important; max-width: 100%; justify-content: space-between; }
+  .production-controls > div:first-child { width: 100% !important; max-width: 100%; justify-content: space-between; flex-wrap: wrap; overflow: hidden; }
+  .production-controls > div:first-child > div:first-child { width: 100% !important; box-sizing: border-box; justify-content: space-between; gap: 6px !important; padding-inline: 10px !important; }
+  .production-controls > div:first-child > div:first-child button { flex-shrink: 0; }
   .production-search-actions { width: 100%; flex-wrap: wrap; }
   .production-search-actions > div { width: 100% !important; }
   .production-search-actions > button { flex: 1 1 auto; justify-content: center; }
-  .production-board { flex: 0 0 auto !important; height: calc(100vh - 300px) !important; min-height: 420px; overflow: auto !important; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; align-items: stretch; }
+  .production-board { flex: 0 0 auto !important; height: calc(100vh - 300px) !important; min-height: 420px; overflow-x: scroll !important; overflow-y: scroll !important; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: #b8c9b0 #eef4eb; align-items: stretch; }
+  .production-board::-webkit-scrollbar { width: 8px; height: 8px; }
+  .production-board::-webkit-scrollbar-track { background: #eef4eb; border-radius: 999px; }
+  .production-board::-webkit-scrollbar-thumb { background: #b8c9b0; border-radius: 999px; }
   .production-board > .kanban-column { flex: 0 0 290px !important; min-width: 290px !important; min-height: 520px; height: 100% !important; }
   .production-secondary-columns { flex: 0 0 290px !important; min-width: 290px !important; min-height: 520px; height: 100%; }
   .dashboard-page-shell { width: 100%; max-width: 100%; overflow-x: hidden; }
