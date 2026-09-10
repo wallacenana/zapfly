@@ -84,7 +84,7 @@ const MainLayout = ({ clientMode = false }) => {
       }}
     >
       <TrialBanner global onActiveChange={handleTrialVisibility} />
-      <div style={{ display: 'flex', flex: 1, minHeight: trialVisible ? 'calc(100vh - 38px)' : '100vh' }}>
+      <div style={{ display: 'block', flex: 1, minHeight: '100vh' }}>
       <div
         style={{
           width: sidebarCollapsed ? '76px' : '260px',
@@ -92,9 +92,9 @@ const MainLayout = ({ clientMode = false }) => {
           maxWidth: sidebarCollapsed ? '76px' : '260px',
           flex: `0 0 ${sidebarCollapsed ? '76px' : '260px'}`,
           height: trialVisible ? 'calc(100vh - 38px)' : '100vh',
-          position: 'sticky',
+          position: 'fixed',
           left: 0,
-          top: 0,
+          top: trialVisible ? '38px' : 0,
           bottom: 0,
           overflowY: 'auto',
           boxSizing: 'border-box',
@@ -211,11 +211,11 @@ const MainLayout = ({ clientMode = false }) => {
           {!sidebarCollapsed && 'Sair'}
         </button>
       </div>
-      <button className="sidebar-collapse-toggle" onClick={() => setSidebarCollapsed((value) => !value)} title={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'} style={{ left: sidebarCollapsed ? '63px' : '247px' }}>
+      <button className="sidebar-collapse-toggle" onClick={() => setSidebarCollapsed((value) => !value)} title={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'} style={{ left: sidebarCollapsed ? '63px' : '247px', top: trialVisible ? '60px' : '22px' }}>
         {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
       </button>
 
-      <div style={{ flex: 1, marginLeft: 0, minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3' }}>
+      <div style={{ minHeight: '100vh', marginLeft: sidebarCollapsed ? '76px' : '260px', paddingTop: trialVisible ? '38px' : 0, minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3', transition: 'margin-left 0.2s ease, padding-top 0.2s ease' }}>
         <Outlet />
         {location.pathname === '/dashboard' && !window.localStorage.getItem('menzzu_onboarding_completed') ? <GetStarted /> : null}
       </div>
