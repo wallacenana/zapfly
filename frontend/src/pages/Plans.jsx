@@ -21,6 +21,14 @@ const featureRows = [
   { label: 'Mercado Pago para PIX e cartão', value: (plan) => plan.paymentGateway ? 'Incluso' : 'Não incluso' }
 ];
 
+const cardFeatureText = (row, plan) => {
+  if (row.label === 'Cadastro de produtos') return plan.productLimit === null ? 'Produtos ilimitados' : `${plan.productLimit} produtos no cardápio`;
+  if (row.label === 'Fluxos de automação') return plan.flowLimit === null ? 'Fluxos ilimitados de automação' : `${plan.flowLimit} ${plan.flowLimit === 1 ? 'automação' : 'automações'} ativas`;
+  if (row.label === 'Taxa sobre vendas') return 'Sem comissão sobre vendas';
+  if (row.label === 'Integração Google Calendar') return plan.calendar ? 'Google Calendar incluso' : 'Google Calendar não incluso';
+  return plan.paymentGateway ? 'Mercado Pago para PIX e cartão' : 'Mercado Pago não incluso';
+};
+
 const faqs = [
   ['Como funciona o período de 7 dias grátis?', 'O período de teste dura 7 dias a partir da criação da conta, sem exigir cartão. Durante o teste, a conta utiliza os recursos do plano Básico.'],
   ['Posso trocar de plano ou cancelar a qualquer momento?', 'Sim. Você pode trocar de plano ou cancelar a assinatura sem fidelidade, conforme as condições da sua assinatura.'],
@@ -84,8 +92,9 @@ export default function Plans() {
                 <div className="plan-card-heading"><h2>{plan.name}</h2><span>{copy.badge}</span></div>
                 <p className="plan-description">{copy.description}</p>
                 <div className="plan-price"><strong>{formatPrice(selected?.price ?? plan.price)}</strong><span>{cycleSuffix[cycle]}</span></div>
+                {trial.enabled && <p className="plan-free"><Check size={14} /> {trial.days} dias grátis sem cartão</p>}
                 <div className="plan-divider" />
-                <ul>{featureRows.map((row) => <li key={row.label} className={row.value(plan) === 'Não incluso' ? 'is-disabled' : ''}>{row.value(plan) === 'Não incluso' ? <X size={15} /> : <Check size={15} />}<span>{row.value(plan)}</span><small>{row.label}</small></li>)}</ul>
+                <ul>{featureRows.map((row) => <li key={row.label} className={row.value(plan) === 'Não incluso' ? 'is-disabled' : ''}>{row.value(plan) === 'Não incluso' ? <X size={15} /> : <Check size={15} />}<span>{cardFeatureText(row, plan)}</span></li>)}</ul>
               </div>
               <button className="plan-action" onClick={() => checkout(plan.key)} disabled={Boolean(checkoutPlan)}>{checkoutPlan === plan.key ? 'Abrindo pagamento...' : `Assinar ${plan.name}`} <span>→</span></button>
             </article>;
