@@ -5,7 +5,8 @@ import { api } from '../api';
 
 const formatPrice = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 const cycleLabels = { monthly: 'Mensal', semiannual: 'Semestral', annual: 'Anual' };
-const cycleSuffix = { monthly: '/mês', semiannual: '/mês', annual: '/mês' };
+const cycleDiscounts = { semiannual: 10, annual: 20 };
+const cycleSuffix = { monthly: '/mês', semiannual: '/semestre', annual: '/ano' };
 const planCopy = {
   basic: { badge: 'Iniciantes', description: 'Para começar com uma operação simples e organizada.' },
   professional: { badge: 'Recomendado', description: 'Para negócios em expansão que precisam de agilidade.' },
@@ -15,7 +16,7 @@ const planCopy = {
 const featureRows = [
   { label: 'Cadastro de produtos', value: (plan) => plan.productLimit === null ? 'Ilimitados' : `Até ${plan.productLimit}` },
   { label: 'Fluxos de automação', value: (plan) => plan.flowLimit === null ? 'Ilimitados' : `${plan.flowLimit} ${plan.flowLimit === 1 ? 'automação' : 'automações'}` },
-  { label: 'Vendas, pedidos e clientes', value: () => 'Sem limite' },
+  { label: 'Taxa sobre vendas', value: () => 'Sem comissão' },
   { label: 'Integração Google Calendar', value: (plan) => plan.calendar ? 'Incluso' : 'Não incluso' },
   { label: 'Mercado Pago para PIX e cartão', value: (plan) => plan.paymentGateway ? 'Incluso' : 'Não incluso' }
 ];
@@ -55,10 +56,6 @@ export default function Plans() {
   };
 
   const getPlan = (key) => plans.find((plan) => plan.key === key);
-  const monthlyPlan = getPlan('professional') || plans[0];
-  const selectedCycle = monthlyPlan?.cycles?.find((item) => item.key === cycle);
-  const monthlyPrice = monthlyPlan?.price || 0;
-  const discount = selectedCycle && monthlyPrice ? Math.round((1 - selectedCycle.price / monthlyPrice) * 100) : 0;
 
   return (
     <div className="plans-page">
@@ -71,7 +68,7 @@ export default function Plans() {
 
         <div className="plans-cycle-row">
           <div className="plans-cycle-switch">
-            {Object.entries(cycleLabels).map(([key, label]) => <button key={key} className={cycle === key ? 'is-active' : ''} onClick={() => setCycle(key)}>{label}{key !== 'monthly' && discount > 0 && <small>-{discount}%</small>}</button>)}
+            {Object.entries(cycleLabels).map(([key, label]) => <button key={key} className={cycle === key ? 'is-active' : ''} onClick={() => setCycle(key)}>{label}{cycleDiscounts[key] && <small>-{cycleDiscounts[key]}%</small>}</button>)}
           </div>
           {trial.enabled && <div className="plans-trial-note"><ShieldCheck size={15} /> {trial.days} dias grátis em todos os planos, sem fidelidade</div>}
         </div>
@@ -87,7 +84,6 @@ export default function Plans() {
                 <div className="plan-card-heading"><h2>{plan.name}</h2><span>{copy.badge}</span></div>
                 <p className="plan-description">{copy.description}</p>
                 <div className="plan-price"><strong>{formatPrice(selected?.price ?? plan.price)}</strong><span>{cycleSuffix[cycle]}</span></div>
-                <p className="plan-free"><Check size={14} /> {trial.days} dias grátis sem cartão</p>
                 <div className="plan-divider" />
                 <ul>{featureRows.map((row) => <li key={row.label} className={row.value(plan) === 'Não incluso' ? 'is-disabled' : ''}>{row.value(plan) === 'Não incluso' ? <X size={15} /> : <Check size={15} />}<span>{row.value(plan)}</span><small>{row.label}</small></li>)}</ul>
               </div>
@@ -96,11 +92,11 @@ export default function Plans() {
           })}
         </section>}
 
-        <p className="plans-payment-note"><span>▣</span> Pagamento recorrente via cartão processado com segurança pela <strong>Abacate Pay</strong>.</p>
+        <p className="plans-payment-note"><span>▣</span> Pagamento recorrente via cartão processado com segurança pela <strong>Abacate Pay</strong>. Sem comissão sobre suas vendas.</p>
 
         <section className="plans-comparison">
           <button className="plans-section-toggle" onClick={() => setComparisonOpen(!comparisonOpen)}><span><strong>Comparativo detalhado de recursos</strong><small>Veja o que está incluso em cada nível de assinatura</small></span><span>{comparisonOpen ? 'Ocultar tabela' : 'Ver tabela completa'} <ChevronDown size={15} className={comparisonOpen ? 'is-open' : ''} /></span></button>
-          {comparisonOpen && <div className="comparison-scroll"><table><thead><tr><th>Recurso / funcionalidade</th>{plans.map((plan) => <th key={plan.key} className={plan.key === 'professional' ? 'is-highlighted' : ''}>{plan.name}</th>)}</tr></thead><tbody>{featureRows.map((row) => <tr key={row.label}><td>{row.label}</td>{plans.map((plan) => { const value = row.value(plan); const included = value !== 'Não incluso'; return <td key={plan.key} className={`${value === 'Não incluso' ? 'is-disabled' : ''}${plan.key === 'professional' && included ? ' is-recommended' : ''}`}>{included && ['Sem limite', 'Incluso', 'Ilimitados', 'Ilimitadas'].includes(value) && <Check size={14} />}{value}</td>; })}</tr>)}</tbody></table></div>}
+          {comparisonOpen && <div className="comparison-scroll"><table><thead><tr><th>Recurso / funcionalidade</th>{plans.map((plan) => <th key={plan.key} className={plan.key === 'professional' ? 'is-highlighted' : ''}>{plan.name}</th>)}</tr></thead><tbody>{featureRows.map((row) => <tr key={row.label}><td>{row.label}</td>{plans.map((plan) => { const value = row.value(plan); const included = value !== 'Não incluso'; return <td key={plan.key} className={`${value === 'Não incluso' ? 'is-disabled' : ''}${plan.key === 'professional' && included ? ' is-recommended' : ''}`}>{included && ['Sem comissão', 'Incluso', 'Ilimitados', 'Ilimitadas'].includes(value) && <Check size={14} />}{value}</td>; })}</tr>)}</tbody></table></div>}
         </section>
 
         <section className="plans-faq"><h2>Perguntas frequentes</h2>{faqs.map(([question, answer], index) => <div className="faq-item" key={question}><button onClick={() => setOpenFaq(openFaq === index ? null : index)}><strong>{question}</strong><span>{openFaq === index ? '−' : '+'}</span></button>{openFaq === index && <p>{answer}</p>}</div>)}</section>
