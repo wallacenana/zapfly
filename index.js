@@ -197,14 +197,15 @@ app.get('/billing/me', authenticate, async (req, res) => {
     const [subscription, setting, user] = await Promise.all([
         prisma.subscription.findUnique({ where: { userId: req.user.id } }),
         prisma.platformSetting.findUnique({ where: { id: 'default' } }),
-        prisma.user.findUnique({ where: { id: req.user.id }, select: { createdAt: true } }),
+        prisma.user.findUnique({ where: { id: req.user.id }, select: { createdAt: true, role: true } }),
     ]);
+    const isAdministrator = ['admin', 'superadmin'].includes(String(user?.role || '').trim().toLowerCase());
     const trialEnabled = setting?.trialEnabled ?? true;
     const trialDays = setting?.trialDays ?? 7;
     const trialEndsAt = user?.createdAt ? new Date(user.createdAt.getTime() + trialDays * 86400000) : null;
     const trialActive = trialEnabled && !subscription?.status?.match(/active|trialing/i) && trialEndsAt > new Date();
     const daysLeft = trialActive ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / 86400000)) : 0;
-    res.json({ subscription, plan: subscription ? getPlan(subscription.planKey) : (trialActive ? getPlan('basic') : null), trial: { enabled: trialEnabled, days: trialDays, active: trialActive, daysLeft, endsAt: trialEndsAt?.toISOString() || null }, access: { allowed: Boolean(subscription?.status?.match(/active|trialing/i)) || trialActive } });
+    res.json({ subscription, plan: isAdministrator ? getPlan('unlimited') : (subscription ? getPlan(subscription.planKey) : (trialActive ? getPlan('basic') : null)), trial: { enabled: trialEnabled, days: trialDays, active: trialActive, daysLeft, endsAt: trialEndsAt?.toISOString() || null }, access: { allowed: isAdministrator || Boolean(subscription?.status?.match(/active|trialing/i)) || trialActive } });
 });
 
 app.post('/billing/checkout', authenticate, async (req, res) => {
