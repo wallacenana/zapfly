@@ -802,10 +802,11 @@ function initDeliveryMap() {
     if (!mapEl || state.googleMap || !window.google) return;
 
     try {
-        const mapCenter = {
-            lat: -2.5307,
-            lng: -44.3068
-        };
+        const configuredLat = Number(state.publicSettings.businessLat);
+        const configuredLng = Number(state.publicSettings.businessLng);
+        const mapCenter = Number.isFinite(configuredLat) && Number.isFinite(configuredLng)
+            ? { lat: configuredLat, lng: configuredLng }
+            : { lat: -2.5307, lng: -44.3068 };
         state.googleMap = new google.maps.Map(mapEl, {
             zoom: 16,
             center: mapCenter,
