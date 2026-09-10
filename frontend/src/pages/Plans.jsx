@@ -1,11 +1,31 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Loader2, ShieldCheck, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { api } from '../api';
 
 const formatPrice = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 const cycleLabels = { monthly: 'Mensal', semiannual: 'Semestral', annual: 'Anual' };
+const cycleSuffix = { monthly: '/mês', semiannual: '/mês', annual: '/mês' };
+const planCopy = {
+  basic: { badge: 'Iniciantes', description: 'Para começar com uma operação simples e organizada.' },
+  professional: { badge: 'Recomendado', description: 'Para negócios em expansão que precisam de agilidade.' },
+  unlimited: { badge: 'Alta performance', description: 'Automação completa para operações em grande escala.' }
+};
+
+const featureRows = [
+  { label: 'Cadastro de produtos', value: (plan) => plan.productLimit === null ? 'Ilimitados' : `Até ${plan.productLimit}` },
+  { label: 'Fluxos de automação', value: (plan) => plan.flowLimit === null ? 'Ilimitados' : `${plan.flowLimit} ${plan.flowLimit === 1 ? 'automação' : 'automações'}` },
+  { label: 'Vendas, pedidos e clientes', value: () => 'Sem limite' },
+  { label: 'Integração Google Calendar', value: (plan) => plan.calendar ? 'Incluso' : 'Não incluso' },
+  { label: 'Mercado Pago para PIX e cartão', value: (plan) => plan.paymentGateway ? 'Incluso' : 'Não incluso' }
+];
+
+const faqs = [
+  ['Como funciona o período de 7 dias grátis?', 'O período de teste dura 7 dias a partir da criação da conta, sem exigir cartão. Durante o teste, a conta utiliza os recursos do plano Básico.'],
+  ['Posso trocar de plano ou cancelar a qualquer momento?', 'Sim. Você pode trocar de plano ou cancelar a assinatura sem fidelidade, conforme as condições da sua assinatura.'],
+  ['Quais pagamentos estão disponíveis em cada plano?', 'O Mercado Pago, para receber PIX e cartão dos seus clientes, está disponível apenas no plano Ilimitado. A assinatura dos planos é processada pela Abacate Pay.']
+];
 
 export default function Plans() {
   const [plans, setPlans] = useState([]);
@@ -13,9 +33,14 @@ export default function Plans() {
   const [cycle, setCycle] = useState('monthly');
   const [loading, setLoading] = useState(true);
   const [checkoutPlan, setCheckoutPlan] = useState('');
+  const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState(null);
 
   useEffect(() => {
-    api.get('/billing/plans').then(({ data }) => { setPlans(data.plans || []); setTrial(data.trial || { enabled: true, days: 7 }); }).catch(() => toast.error('Não foi possível carregar os planos.')).finally(() => setLoading(false));
+    api.get('/billing/plans')
+      .then(({ data }) => { setPlans(data.plans || []); setTrial(data.trial || { enabled: true, days: 7 }); })
+      .catch(() => toast.error('Não foi possível carregar os planos.'))
+      .finally(() => setLoading(false));
   }, []);
 
   const checkout = async (planKey) => {
@@ -24,8 +49,67 @@ export default function Plans() {
       const { data } = await api.post('/billing/checkout', { planKey, cycle });
       if (!data?.url) throw new Error('Checkout sem URL.');
       window.location.assign(data.url);
-    } catch (error) { toast.error(error?.response?.data?.error || 'Não foi possível iniciar o pagamento.'); setCheckoutPlan(''); }
+    } catch (error) {
+      toast.error(error?.response?.data?.error || 'Não foi possível iniciar o pagamento.');
+      setCheckoutPlan('');
+    }
   };
 
-  return <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', padding: 32 }}><div style={{ maxWidth: 1180, margin: '0 auto' }}><Link to="/conta" style={{ color: 'var(--accent-primary)', textDecoration: 'none', fontWeight: 700, display: 'inline-flex', gap: 8, alignItems: 'center' }}><ArrowLeft size={17} /> Minha conta</Link><div style={{ margin: '30px 0' }}><p style={{ color: 'var(--accent-primary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '.08em' }}>Planos Menzzu</p><h1 style={{ fontSize: 38, margin: '8px 0' }}>Escolha o ritmo da sua operação</h1><p style={{ color: 'var(--text-secondary)' }}>Venda sem limite. Os planos variam pela estrutura que você precisa administrar.</p><div style={{ display: 'inline-flex', gap: 6, marginTop: 18, padding: 5, borderRadius: 12, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>{Object.entries(cycleLabels).map(([key, label]) => <button key={key} onClick={() => setCycle(key)} style={{ border: 0, borderRadius: 9, padding: '9px 14px', background: cycle === key ? 'var(--accent-primary)' : 'transparent', color: cycle === key ? '#fff' : 'var(--text-secondary)', fontWeight: 800, cursor: 'pointer' }}>{label}</button>)}</div></div>{loading ? <Loader2 className="spin" /> : <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 18 }}>{plans.map((plan, index) => { const selected = plan.cycles?.find((item) => item.key === cycle); return <div key={plan.key} style={{ background: 'var(--bg-secondary)', border: `1px solid ${index === 1 ? 'var(--accent-primary)' : 'var(--border-color)'}`, borderRadius: 20, padding: 24, boxShadow: 'var(--card-shadow)' }}><h2 style={{ margin: 0 }}>{plan.name}</h2><div style={{ fontSize: 34, fontWeight: 900, margin: '20px 0 4px' }}>{formatPrice(selected?.price ?? plan.price)}<small style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-secondary)' }}>/{cycle === 'monthly' ? 'mês' : cycle === 'semiannual' ? 'semestre' : 'ano'}</small></div>{trial.enabled && <p style={{ color: 'var(--accent-primary)', fontWeight: 800 }}>{trial.days} dias grátis sem cartão</p>}<div style={{ color: 'var(--text-secondary)', lineHeight: 1.9, minHeight: 150 }}><div><Check size={16} /> {plan.productLimit || 'Produtos ilimitados'} produtos</div><div><Check size={16} /> {plan.flowLimit || 'Fluxos ilimitados'} automação(ões)</div><div><Check size={16} /> Vendas, pedidos e clientes sem limite</div><div><Check size={16} /> {plan.calendar ? 'Google Calendar incluso' : 'Google Calendar não incluso'}</div></div><button onClick={() => checkout(plan.key)} disabled={Boolean(checkoutPlan)} style={{ width: '100%', padding: 14, border: 0, borderRadius: 12, background: 'var(--accent-primary)', color: '#fff', fontWeight: 800, cursor: 'pointer' }}>{checkoutPlan === plan.key ? 'Abrindo pagamento...' : 'Assinar plano'}</button></div>; })}</div>}<p style={{ marginTop: 22, color: 'var(--text-muted)', fontSize: 13 }}>Pagamento recorrente via cartão processado pela Abacate Pay.</p></div></div>;
+  const getPlan = (key) => plans.find((plan) => plan.key === key);
+  const monthlyPlan = getPlan('professional') || plans[0];
+  const selectedCycle = monthlyPlan?.cycles?.find((item) => item.key === cycle);
+  const monthlyPrice = monthlyPlan?.price || 0;
+  const discount = selectedCycle && monthlyPrice ? Math.round((1 - selectedCycle.price / monthlyPrice) * 100) : 0;
+
+  return (
+    <div className="plans-page">
+      <header className="plans-topbar">
+        <Link to="/conta"><ArrowLeft size={14} /> Minha conta</Link>
+        {trial.enabled && <span className="plans-trial-pill"><span /> Período de teste ativo</span>}
+      </header>
+      <main className="plans-main">
+        <section className="plans-intro">
+          <span className="plans-eyebrow">Planos Menzzu</span>
+          <h1>Escolha o ritmo da sua operação</h1>
+          <p>Venda sem limite. Os planos variam pela estrutura e automação que você precisa para escalar seu negócio.</p>
+        </section>
+
+        <div className="plans-cycle-row">
+          <div className="plans-cycle-switch">
+            {Object.entries(cycleLabels).map(([key, label]) => <button key={key} className={cycle === key ? 'is-active' : ''} onClick={() => setCycle(key)}>{label}{key !== 'monthly' && discount > 0 && <small>-{discount}%</small>}</button>)}
+          </div>
+          {trial.enabled && <div className="plans-trial-note"><ShieldCheck size={15} /> {trial.days} dias grátis em todos os planos, sem fidelidade</div>}
+        </div>
+
+        {loading ? <div className="plans-loading"><Loader2 className="spin" /></div> : <section className="plans-grid">
+          {plans.map((plan) => {
+            const selected = plan.cycles?.find((item) => item.key === cycle);
+            const copy = planCopy[plan.key] || {};
+            const highlighted = plan.key === 'professional';
+            return <article key={plan.key} className={`plan-card${highlighted ? ' is-highlighted' : ''}`}>
+              {highlighted && <div className="plan-popular"><span>●</span> Mais popular</div>}
+              <div>
+                <div className="plan-card-heading"><h2>{plan.name}</h2><span>{copy.badge}</span></div>
+                <p className="plan-description">{copy.description}</p>
+                <div className="plan-price"><strong>{formatPrice(selected?.price ?? plan.price)}</strong><span>{cycleSuffix[cycle]}</span></div>
+                <p className="plan-free"><Check size={14} /> {trial.days} dias grátis sem cartão</p>
+                <div className="plan-divider" />
+                <ul>{featureRows.map((row) => <li key={row.label} className={row.value(plan) === 'Não incluso' ? 'is-disabled' : ''}>{row.value(plan) === 'Não incluso' ? <X size={15} /> : <Check size={15} />}<span>{row.value(plan)}</span><small>{row.label}</small></li>)}</ul>
+              </div>
+              <button className="plan-action" onClick={() => checkout(plan.key)} disabled={Boolean(checkoutPlan)}>{checkoutPlan === plan.key ? 'Abrindo pagamento...' : `Assinar ${plan.name}`} <span>→</span></button>
+            </article>;
+          })}
+        </section>}
+
+        <p className="plans-payment-note"><span>▣</span> Pagamento recorrente via cartão processado com segurança pela <strong>Abacate Pay</strong>.</p>
+
+        <section className="plans-comparison">
+          <button className="plans-section-toggle" onClick={() => setComparisonOpen(!comparisonOpen)}><span><strong>Comparativo detalhado de recursos</strong><small>Veja o que está incluso em cada nível de assinatura</small></span><span>{comparisonOpen ? 'Ocultar tabela' : 'Ver tabela completa'} <ChevronDown size={15} className={comparisonOpen ? 'is-open' : ''} /></span></button>
+          {comparisonOpen && <div className="comparison-scroll"><table><thead><tr><th>Recurso / funcionalidade</th>{plans.map((plan) => <th key={plan.key} className={plan.key === 'professional' ? 'is-highlighted' : ''}>{plan.name}</th>)}</tr></thead><tbody>{featureRows.map((row) => <tr key={row.label}><td>{row.label}</td>{plans.map((plan) => <td key={plan.key} className={row.value(plan) === 'Não incluso' ? 'is-disabled' : ''}>{row.value(plan)}</td>)}</tr>)}</tbody></table></div>}
+        </section>
+
+        <section className="plans-faq"><h2>Perguntas frequentes</h2>{faqs.map(([question, answer], index) => <div className="faq-item" key={question}><button onClick={() => setOpenFaq(openFaq === index ? null : index)}><strong>{question}</strong><span>{openFaq === index ? '−' : '+'}</span></button>{openFaq === index && <p>{answer}</p>}</div>)}</section>
+      </main>
+    </div>
+  );
 }
