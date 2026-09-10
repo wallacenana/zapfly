@@ -1,5 +1,5 @@
 ﻿import React, { useState, useEffect } from 'react';
-import { Palette, Layout as LayoutIcon, Globe, Upload, Save, Eye, CheckCircle, RefreshCw } from 'lucide-react';
+import { Palette, Layout as LayoutIcon, Globe, Upload, Save, Eye, CheckCircle, RefreshCw, ExternalLink } from 'lucide-react';
 import { api, API_URL, FILES_URL, PUBLIC_SITE_URL } from '../api';
 import axios from 'axios';
 import toast from 'react-hot-toast';
@@ -343,6 +343,16 @@ const SiteSettings = () => {
                     </span>
                 </button>
             </label>
+
+            <section className="site-settings-pricing-help" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '20px', marginBottom: '30px', padding: '18px 20px', border: '1px solid #cce98d', borderRadius: '16px', background: 'linear-gradient(135deg, #f4fbe8 0%, #ffffff 100%)' }}>
+                <div>
+                    <strong style={{ display: 'block', color: '#0f172a', fontSize: '14px', marginBottom: '5px' }}>Dúvidas sobre precificação?</strong>
+                    <span style={{ color: '#475569', fontSize: '13px', lineHeight: 1.5 }}>Acesse o sistema da Linda Cake para calcular preços e entender como precificar seus produtos.</span>
+                </div>
+                <a href="https://app.lindacake.com.br" target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ display: 'inline-flex', alignItems: 'center', gap: '7px', flexShrink: 0, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                    Abrir Linda Cake <ExternalLink size={15} />
+                </a>
+            </section>
 
             <div className="site-settings-layout" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '30px' }}>
 

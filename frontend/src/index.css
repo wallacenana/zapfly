@@ -657,6 +657,8 @@ estoque-label {
   .site-settings-preview { position: static !important; }
   .site-settings-preview > * { max-width: 100%; }
   .site-settings-page input, .site-settings-page textarea, .site-settings-page select { max-width: 100%; box-sizing: border-box; }
+  .site-settings-pricing-help { align-items: stretch !important; flex-direction: column; gap: 12px !important; margin-bottom: 20px !important; }
+  .site-settings-pricing-help a { justify-content: center; }
   .connections-page { width: 100%; box-sizing: border-box; padding: 16px !important; overflow-x: hidden; }
   .connections-header { align-items: stretch !important; flex-direction: column; gap: 16px; margin-bottom: 20px !important; }
   .connections-header > button { width: 100%; justify-content: center; }
