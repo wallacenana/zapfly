@@ -355,7 +355,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.57">
+        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.70">
         <style>
             :root {
                 --primary-color:
