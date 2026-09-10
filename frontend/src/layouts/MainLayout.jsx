@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -29,6 +29,7 @@ const MainLayout = ({ clientMode = false }) => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [trialVisible, setTrialVisible] = useState(false);
   const isSuperAdmin = String(user?.role || '').toLowerCase() === 'superadmin';
   const storeSlug = String(user?.slug || '').trim();
   const storeUrl = storeSlug ? `${PUBLIC_SITE_URL}/${storeSlug}` : '';
@@ -59,10 +60,13 @@ const MainLayout = ({ clientMode = false }) => {
     navigate('/login');
   };
 
+  const handleTrialVisibility = useCallback((visible) => setTrialVisible(visible), []);
+
   return (
     <div
       style={{
         display: 'flex',
+        flexDirection: 'column',
         minHeight: '100vh',
         backgroundColor: '#ffffff',
         color: '#031614',
@@ -79,14 +83,16 @@ const MainLayout = ({ clientMode = false }) => {
         '--card-shadow': '0 12px 30px rgba(15, 23, 42, 0.06)',
       }}
     >
+      <TrialBanner global onActiveChange={handleTrialVisibility} />
+      <div style={{ display: 'flex', flex: 1, minHeight: trialVisible ? 'calc(100vh - 38px)' : '100vh' }}>
       <div
         style={{
           width: sidebarCollapsed ? '76px' : '260px',
           minWidth: sidebarCollapsed ? '76px' : '260px',
           maxWidth: sidebarCollapsed ? '76px' : '260px',
           flex: `0 0 ${sidebarCollapsed ? '76px' : '260px'}`,
-          height: '100vh',
-          position: 'fixed',
+          height: trialVisible ? 'calc(100vh - 38px)' : '100vh',
+          position: 'sticky',
           left: 0,
           top: 0,
           bottom: 0,
@@ -209,10 +215,10 @@ const MainLayout = ({ clientMode = false }) => {
         {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
       </button>
 
-      <div style={{ flex: 1, marginLeft: sidebarCollapsed ? '76px' : '260px', minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3', transition: 'margin-left 0.2s ease' }}>
-        <TrialBanner embedded />
+      <div style={{ flex: 1, marginLeft: 0, minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3' }}>
         <Outlet />
         {location.pathname === '/dashboard' && !window.localStorage.getItem('menzzu_onboarding_completed') ? <GetStarted /> : null}
+      </div>
       </div>
     </div>
   );

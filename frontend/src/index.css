@@ -608,6 +608,8 @@ estoque-label {
 
 .trial-banner { display:flex; align-items:center; gap:8px; min-height:38px; margin:-32px -32px 28px; padding:8px 22px; background:#fff1dc; border-bottom:1px solid #f4d7a8; color:#9a5a00; font-size:13px; font-weight:500; }
 .trial-banner.is-embedded { margin:0 0 22px; }
+.trial-banner.is-global { position:sticky; top:0; z-index:50; justify-content:center; margin:0; width:100%; min-height:38px; border-radius:0 0 18px 18px; box-shadow:0 3px 12px rgba(146,91,0,.08); }
+.trial-banner.is-global a { margin-left:14px; }
 .trial-banner a { margin-left:auto; color:#51300a; font-weight:800; text-decoration:underline; text-underline-offset:2px; }
 .trial-banner a:hover { color:#7c4609; }
 @media (max-width:600px) { .trial-banner { margin-left:-16px; margin-right:-16px; padding-inline:16px; font-size:12px; } }
