@@ -209,8 +209,8 @@ const Prompts = () => {
               </section>
 
               {/* FAQ / Knowledge Base Section */}
-              <section style={{ borderTop: '1px solid var(--border-color)', paddingTop: '30px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <section className="prompts-knowledge-section" style={{ borderTop: '1px solid var(--border-color)', paddingTop: '30px' }}>
+                <div className="prompts-knowledge-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <div style={{ padding: '8px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', borderRadius: '8px' }}>
                       <Edit3 size={20} />

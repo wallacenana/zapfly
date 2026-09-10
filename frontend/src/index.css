@@ -647,6 +647,9 @@ estoque-label {
   .prompts-editor > div:first-child { align-items: stretch !important; flex-direction: column; gap: 14px; }
   .prompts-editor > div:first-child > div:last-child { flex-wrap: wrap; }
   .prompts-editor > div:first-child > div:last-child > * { flex: 1 1 180px; min-width: 0; }
+  .prompts-knowledge-header { align-items: stretch !important; flex-direction: column; gap: 14px; }
+  .prompts-knowledge-header > div { min-width: 0; }
+  .prompts-knowledge-header > button { width: 100%; justify-content: center; margin-left: 0 !important; }
   .prompts-page [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
   .prompts-page textarea { max-width: 100%; box-sizing: border-box; }
   .site-settings-page { width: 100% !important; max-width: 100% !important; box-sizing: border-box; padding: 16px !important; overflow-x: hidden; }
