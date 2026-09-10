@@ -624,7 +624,7 @@ const Chat = () => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: 'var(--bg-primary)' }}>
+    <div className="chat-page" style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: 'var(--bg-primary)' }}>
       {/* Horizontal Instance Tabs */}
       <div style={{
         height: '65px',
@@ -697,7 +697,7 @@ const Chat = () => {
 
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         {/* Contacts List */}
-        <div style={{
+        <div className="chat-contacts-panel" style={{
           width: '320px',
           backgroundColor: 'var(--bg-secondary)',
           borderRight: '1px solid var(--border-color)',
@@ -855,7 +855,7 @@ const Chat = () => {
         </div>
 
         {/* Main Chat Area */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundImage: 'radial-gradient(var(--border-color) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
+        <div className={`chat-main-panel${activeContact ? ' has-active-contact' : ''}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', backgroundImage: 'radial-gradient(var(--border-color) 1px, transparent 0)', backgroundSize: '24px 24px' }}>
           {activeContact ? (
             <>
               {/* Chat Header */}
@@ -1148,7 +1148,7 @@ const Chat = () => {
 
         {/* Right Sidebar (Contact Info) */}
         {showContactInfo && activeContact && (
-          <div style={{
+          <div className="chat-contact-info-panel" style={{
             width: '320px',
             backgroundColor: 'var(--bg-secondary)',
             borderLeft: '1px solid var(--border-color)',

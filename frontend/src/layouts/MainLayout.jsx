@@ -16,8 +16,6 @@ import {
   Users,
   ExternalLink,
   CreditCard,
-  PanelLeftClose,
-  PanelLeftOpen,
   Menu,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -29,14 +27,13 @@ const MainLayout = ({ clientMode = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 800);
+  const sidebarCollapsed = false;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [trialInfo, setTrialInfo] = useState(null);
   const trialVisible = Boolean(trialInfo?.active);
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth <= 800) setSidebarCollapsed(true);
       if (window.innerWidth <= 800) setMobileMenuOpen(false);
     };
     window.addEventListener('resize', handleResize);
@@ -221,17 +218,11 @@ const MainLayout = ({ clientMode = false }) => {
           {!sidebarCollapsed && 'Sair'}
         </button>
       </div>
-      <button className="sidebar-collapse-toggle" onClick={() => setSidebarCollapsed((value) => !value)} title={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'} style={{ left: sidebarCollapsed ? '63px' : '247px', top: trialVisible ? '60px' : '22px' }}>
-        {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-      </button>
-
       {mobileMenuOpen && <button className="dashboard-mobile-overlay" aria-label="Fechar menu" onClick={() => setMobileMenuOpen(false)} />}
-      <div className="dashboard-mobile-header">
+      <div className={`dashboard-mobile-header${trialVisible ? ' has-trial' : ''}`}>
         <button aria-label="Abrir menu" onClick={() => setMobileMenuOpen(true)}><Menu size={21} /></button>
-        <Link to="/conta">← Minha conta</Link>
-        {trialInfo?.active && <span>● Período de Teste Grátis ({trialInfo.daysLeft} dias restantes)</span>}
       </div>
-      <div className="dashboard-content" style={{ minHeight: '100vh', marginLeft: sidebarCollapsed ? '76px' : '260px', paddingTop: trialVisible ? '38px' : 0, minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3', transition: 'margin-left 0.2s ease, padding-top 0.2s ease' }}>
+      <div className={`dashboard-content${trialVisible ? ' has-trial' : ''}`} style={{ minHeight: '100vh', marginLeft: '260px', paddingTop: trialVisible ? '38px' : 0, minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3', transition: 'margin-left 0.2s ease, padding-top 0.2s ease' }}>
         <Outlet />
         {location.pathname === '/dashboard' && !window.localStorage.getItem('menzzu_onboarding_completed') ? <GetStarted /> : null}
       </div>

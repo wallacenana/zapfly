@@ -492,6 +492,7 @@ const Dashboard = () => {
 
   return (
     <div
+      className="dashboard-page-shell"
       style={{
         minHeight: '100vh',
         backgroundColor: '#f6f8f3',
@@ -519,8 +520,8 @@ const Dashboard = () => {
           100% { background-position: -200% 0; }
         }
       `}</style>
-      <div style={{ padding: '28px', maxWidth: '1680px', margin: '0 auto' }}>
-        <Card style={{ padding: '28px', marginBottom: '22px', background: 'linear-gradient(180deg, #ffffff 0%, #fbfdf8 100%)' }}>
+      <div className="dashboard-page-content" style={{ padding: '28px', maxWidth: '1680px', margin: '0 auto' }}>
+        <Card className="dashboard-hero-card" style={{ padding: '28px', marginBottom: '22px', background: 'linear-gradient(180deg, #ffffff 0%, #fbfdf8 100%)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap' }}>
             <div style={{ maxWidth: '920px' }}>
               <Badge tone={storeStatus === 'opened' ? 'success' : 'danger'} icon={storeStatus === 'opened' ? CheckCircle2 : ShieldAlert}>
