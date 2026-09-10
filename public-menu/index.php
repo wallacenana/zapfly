@@ -73,6 +73,43 @@ try {
         return 'Entrega ' . $normalized . 'min';
     }
 
+    function renderReceivingHours($availableSlots)
+    {
+        $dayNames = [
+            0 => 'Domingo',
+            1 => 'Segunda',
+            2 => 'Terça',
+            3 => 'Quarta',
+            4 => 'Quinta',
+            5 => 'Sexta',
+            6 => 'Sábado'
+        ];
+        $slotsByDay = [];
+        foreach (is_array($availableSlots) ? $availableSlots : [] as $slot) {
+            $day = (int) ($slot['dayOfWeek'] ?? 0);
+            $slotsByDay[$day][] = substr((string) ($slot['startTime'] ?? '00:00'), 0, 5)
+                . ' - ' . substr((string) ($slot['endTime'] ?? '00:00'), 0, 5);
+        }
+
+        ob_start();
+        ?>
+        <div class="receiving-store-hours">
+            <strong>Horário de funcionamento</strong>
+            <div class="receiving-store-hours-list">
+                <?php for ($day = 0; $day <= 6; $day++):
+                    $dayHours = $slotsByDay[$day] ?? [];
+                ?>
+                    <div class="receiving-store-hour-row<?php echo empty($dayHours) ? ' is-closed' : ''; ?>">
+                        <span><?php echo htmlspecialchars($dayNames[$day], ENT_QUOTES, 'UTF-8'); ?></span>
+                        <b><?php echo htmlspecialchars(empty($dayHours) ? 'Fechado' : implode(' • ', $dayHours), ENT_QUOTES, 'UTF-8'); ?></b>
+                    </div>
+                <?php endfor; ?>
+            </div>
+        </div>
+        <?php
+        return ob_get_clean();
+    }
+
     function parseDailyDeliveryItemsValue($value)
     {
         $default = [
@@ -197,7 +234,7 @@ try {
     if (!is_array($legacyLocation)) {
         $legacyLocation = [];
     }
-    $storeAddress = trim((string) ($legacyLocation['address'] ?? $store['businessAddress'] ?? ''));
+    $storeAddress = trim((string) ($store['businessAddress'] ?? ($legacyLocation['address'] ?? '')));
     $storePlaceId = trim((string) ($store['businessPlaceId'] ?? ($legacyLocation['placeId'] ?? '')));
     $storeCity = $storeAddress;
     if (preg_match('/,\s*([^,]+?)\s*-\s*[A-Z]{2}(?:,|$)/u', $storeAddress, $cityMatch)) {
@@ -211,10 +248,6 @@ try {
     if ($storePlaceId !== '') {
         $storeMapUrl .= '&query_place_id=' . rawurlencode($storePlaceId);
     }
-    $mapsApiKey = trim((string) (getenv('GOOGLE_MAPS_API_KEY') ?: getenv('GOOGLE_MAPS_KEY') ?: getenv('GOOGLE_API_KEY') ?: ($store['googleApiKey'] ?? '')));
-    $storeEmbedUrl = $storePlaceId !== '' && $mapsApiKey !== ''
-        ? 'https://www.google.com/maps/embed/v1/place?key=' . rawurlencode($mapsApiKey) . '&q=place_id:' . rawurlencode($storePlaceId)
-        : 'https://www.google.com/maps?q=' . rawurlencode($storeMapQuery) . '&output=embed';
     $businessCategory = trim((string) ($store['businessCategory'] ?? ''));
     $logoUrl = $store['logoUrl'] ?: 'https://menzzu.com/wp-content/uploads/2026/09/fallback-image_1-100.jpg';
     $faviconUrl = $store['faviconUrl'] ?: '/favicon.ico';
@@ -355,7 +388,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.70">
+        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.73">
         <style>
             :root {
                 --primary-color:
@@ -861,7 +894,7 @@ try {
                                 </div>
                                 <a class="store-navigation-btn" target="_blank" rel="noopener" href="<?php echo htmlspecialchars($storeMapUrl, ENT_QUOTES, 'UTF-8'); ?>">Iniciar navegação</a>
                             </div>
-                            <iframe class="store-map-embed" title="Localização da loja" loading="lazy" src="<?php echo htmlspecialchars($storeEmbedUrl, ENT_QUOTES, 'UTF-8'); ?>"></iframe>
+                            <?php echo renderReceivingHours($availableSlots); ?>
                         </div>
 
                         <div id="local-info-panel" class="receiving-mode-panel">
@@ -876,7 +909,7 @@ try {
                                 </div>
                                 <a class="store-navigation-btn" target="_blank" rel="noopener" href="<?php echo htmlspecialchars($storeMapUrl, ENT_QUOTES, 'UTF-8'); ?>">Iniciar navegação</a>
                             </div>
-                            <iframe class="store-map-embed" title="Localização da loja" loading="lazy" src="<?php echo htmlspecialchars($storeEmbedUrl, ENT_QUOTES, 'UTF-8'); ?>"></iframe>
+                            <?php echo renderReceivingHours($availableSlots); ?>
                         </div>
 
                         <!-- Extras da Encomenda -->
@@ -1104,7 +1137,7 @@ try {
         </svg>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-        <script type="text/javascript" src="/cardapio/script.js?v=2.01" defer></script>
+        <script type="text/javascript" src="/cardapio/script.js?v=2.02" defer></script>
 
     </html>
 <?php
