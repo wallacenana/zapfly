@@ -1,5 +1,6 @@
 ﻿import React from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -15,6 +16,8 @@ import {
   Users,
   ExternalLink,
   CreditCard,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { PUBLIC_SITE_URL } from '../api';
@@ -25,6 +28,7 @@ const MainLayout = ({ clientMode = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const isSuperAdmin = String(user?.role || '').toLowerCase() === 'superadmin';
   const storeSlug = String(user?.slug || '').trim();
   const storeUrl = storeSlug ? `${PUBLIC_SITE_URL}/${storeSlug}` : '';
@@ -77,10 +81,10 @@ const MainLayout = ({ clientMode = false }) => {
     >
       <div
         style={{
-          width: '260px',
-          minWidth: '260px',
-          maxWidth: '260px',
-          flex: '0 0 260px',
+          width: sidebarCollapsed ? '76px' : '260px',
+          minWidth: sidebarCollapsed ? '76px' : '260px',
+          maxWidth: sidebarCollapsed ? '76px' : '260px',
+          flex: `0 0 ${sidebarCollapsed ? '76px' : '260px'}`,
           height: '100vh',
           position: 'fixed',
           left: 0,
@@ -92,35 +96,35 @@ const MainLayout = ({ clientMode = false }) => {
           borderRight: '1px solid var(--border-color)',
           display: 'flex',
           flexDirection: 'column',
-          padding: '22px 16px',
+          padding: '18px 12px',
           boxShadow: '18px 0 40px rgba(15, 23, 42, 0.04)',
           zIndex: 20,
+          transition: 'width 0.2s ease, min-width 0.2s ease, max-width 0.2s ease',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '28px', padding: '0 8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: sidebarCollapsed ? 'center' : 'space-between', gap: '10px', marginBottom: '26px', padding: '0 4px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
             <div
               style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '12px',
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
           backgroundColor: 'rgb(102 215 17 / 12%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 overflow: 'hidden',
                 flexShrink: 0,
-                border: '1px solid rgba(102, 215, 17, 0.10)',
               }}
             >
-              <img src={brandLogo} alt="Menzzu" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '6px' }} />
+              <img src={brandLogo} alt="Menzzu" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: '5px' }} />
             </div>
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontSize: '18px', fontWeight: 800, letterSpacing: '-0.5px', color: 'var(--text-primary)', lineHeight: 1.1 }}>Menzzu</div>
+            {!sidebarCollapsed && <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: '16px', fontWeight: 800, letterSpacing: '-0.4px', color: 'var(--text-primary)', lineHeight: 1.1 }}>Menzzu</div>
               <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '3px' }}>{clientMode ? 'Área da conta' : 'Painel operacional'}</div>
-            </div>
+            </div>}
           </div>
-          {storeUrl ? (
+          {!sidebarCollapsed && storeUrl ? (
             <a
               href={storeUrl}
               target="_blank"
@@ -144,6 +148,7 @@ const MainLayout = ({ clientMode = false }) => {
               <ExternalLink size={16} color="currentColor" />
             </a>
           ) : null}
+          {!sidebarCollapsed && <button onClick={() => setSidebarCollapsed(true)} title="Recolher menu" style={{ width: '30px', height: '30px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: 0, background: 'transparent', color: '#78908a', cursor: 'pointer' }}><PanelLeftClose size={17} /></button>}
         </div>
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
@@ -156,20 +161,22 @@ const MainLayout = ({ clientMode = false }) => {
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
-                padding: '12px 16px',
-                borderRadius: '14px',
+                justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+                gap: '11px',
+                padding: sidebarCollapsed ? '11px 0' : '10px 12px',
+                borderRadius: '11px',
                 textDecoration: 'none',
                 color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
                 backgroundColor: isActive ? 'rgba(102, 215, 17, 0.12)' : 'transparent',
                 border: isActive ? '1px solid rgba(102, 215, 17, 0.18)' : '1px solid transparent',
                 transition: 'all 0.2s ease',
-                fontWeight: isActive ? 800 : 600,
-                fontSize: '14px',
+                fontWeight: isActive ? 700 : 600,
+                fontSize: '13px',
               }}
+              title={sidebarCollapsed ? item.label : undefined}
             >
               {item.icon}
-              {item.label}
+              {!sidebarCollapsed && item.label}
               </Link>
             );
           })}
@@ -180,24 +187,27 @@ const MainLayout = ({ clientMode = false }) => {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '12px',
-            padding: '12px 16px',
-            borderRadius: '14px',
+            justifyContent: sidebarCollapsed ? 'center' : 'flex-start',
+            gap: '11px',
+            padding: sidebarCollapsed ? '11px 0' : '10px 12px',
+            borderRadius: '11px',
             border: '1px solid transparent',
             backgroundColor: 'transparent',
             color: 'var(--text-secondary)',
             cursor: 'pointer',
-            fontSize: '14px',
-            fontWeight: 700,
-            marginTop: '20px',
+            fontSize: '13px',
+            fontWeight: 600,
+            marginTop: '16px',
           }}
+          title={sidebarCollapsed ? 'Sair' : undefined}
         >
           <LogOut size={20} />
-          Sair
+          {!sidebarCollapsed && 'Sair'}
         </button>
+        {sidebarCollapsed && <button onClick={() => setSidebarCollapsed(false)} title="Expandir menu" style={{ width: '100%', marginTop: '8px', padding: '10px 0', display: 'flex', justifyContent: 'center', border: 0, background: 'transparent', color: '#78908a', cursor: 'pointer' }}><PanelLeftOpen size={18} /></button>}
       </div>
 
-      <div style={{ flex: 1, marginLeft: '260px', minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3' }}>
+      <div style={{ flex: 1, marginLeft: sidebarCollapsed ? '76px' : '260px', minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3', transition: 'margin-left 0.2s ease' }}>
         <TrialBanner embedded />
         <Outlet />
         {location.pathname === '/dashboard' && !window.localStorage.getItem('menzzu_onboarding_completed') ? <GetStarted /> : null}
