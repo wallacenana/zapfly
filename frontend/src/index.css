@@ -639,6 +639,24 @@ estoque-label {
 .chat-contact-info-panel { flex: 0 0 320px; }
 
 @media (max-width:800px) {
+  .prompts-page { width: 100%; min-height: 100%; height: auto !important; box-sizing: border-box; padding: 16px !important; flex-direction: column; overflow-x: hidden; }
+  .prompts-instance-list { width: 100% !important; flex-direction: row !important; flex-wrap: wrap; gap: 10px !important; }
+  .prompts-instance-list > h3 { width: 100%; }
+  .prompts-instance-list > div { flex: 1 1 220px; min-width: 0; }
+  .prompts-editor { width: 100%; min-width: 0; }
+  .prompts-editor > div:first-child { align-items: stretch !important; flex-direction: column; gap: 14px; }
+  .prompts-editor > div:first-child > div:last-child { flex-wrap: wrap; }
+  .prompts-editor > div:first-child > div:last-child > * { flex: 1 1 180px; min-width: 0; }
+  .prompts-page [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
+  .prompts-page textarea { max-width: 100%; box-sizing: border-box; }
+  .site-settings-page { width: 100% !important; max-width: 100% !important; box-sizing: border-box; padding: 16px !important; overflow-x: hidden; }
+  .site-settings-layout { grid-template-columns: minmax(0, 1fr) !important; gap: 18px !important; }
+  .site-settings-content { min-width: 0; }
+  .site-settings-content [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
+  .site-settings-content .card { padding: 20px !important; min-width: 0; }
+  .site-settings-preview { position: static !important; }
+  .site-settings-preview > * { max-width: 100%; }
+  .site-settings-page input, .site-settings-page textarea, .site-settings-page select { max-width: 100%; box-sizing: border-box; }
   .connections-page { width: 100%; box-sizing: border-box; padding: 16px !important; overflow-x: hidden; }
   .connections-header { align-items: stretch !important; flex-direction: column; gap: 16px; margin-bottom: 20px !important; }
   .connections-header > button { width: 100%; justify-content: center; }

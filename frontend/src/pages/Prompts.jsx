@@ -103,9 +103,9 @@ const Prompts = () => {
   }
 
   return (
-    <div style={{ display: 'flex', gap: '30px', height: '100%', padding: '30px' }}>
+    <div className="prompts-page" style={{ display: 'flex', gap: '30px', height: '100%', padding: '30px' }}>
       {/* Sidebar de Instâncias */}
-      <div style={{ width: '280px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+      <div className="prompts-instance-list" style={{ width: '280px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
         <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Conexões</h3>
         {instances.map(inst => (
           <div
@@ -133,7 +133,7 @@ const Prompts = () => {
       </div>
 
       {/* Editor Principal */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '25px' }}>
+      <div className="prompts-editor" style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '25px' }}>
         {activeInstance ? (
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
