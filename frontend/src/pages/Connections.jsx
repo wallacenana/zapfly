@@ -151,8 +151,8 @@ const Connections = () => {
   };
 
   return (
-    <div style={{ padding: '30px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+    <div className="connections-page" style={{ padding: '30px' }}>
+      <div className="connections-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 700 }}>Conexões Ativas</h2>
           <p style={{ color: 'var(--text-secondary)' }}>Gerencie e conecte múltiplos números de WhatsApp</p>
@@ -162,7 +162,7 @@ const Connections = () => {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
+      <div className="connections-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px' }}>
         {instances.map(inst => (
           <div 
             key={inst.id} 
@@ -295,7 +295,7 @@ const Connections = () => {
           zIndex: 9999,
           backdropFilter: 'blur(5px)'
         }}>
-          <div className="card" style={{ width: '420px', padding: '30px' }}>
+          <div className="card connections-modal" style={{ width: '420px', padding: '30px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
                <h3 style={{ fontSize: '20px', fontWeight: 700 }}>{editingInstance ? 'Editar Conexão' : 'Nova Conexão'}</h3>
                <button onClick={() => setShowModal(false)} className="btn-icon"><X size={20} /></button>

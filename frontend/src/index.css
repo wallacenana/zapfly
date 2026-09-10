@@ -639,6 +639,14 @@ estoque-label {
 .chat-contact-info-panel { flex: 0 0 320px; }
 
 @media (max-width:800px) {
+  .connections-page { width: 100%; box-sizing: border-box; padding: 16px !important; overflow-x: hidden; }
+  .connections-header { align-items: stretch !important; flex-direction: column; gap: 16px; margin-bottom: 20px !important; }
+  .connections-header > button { width: 100%; justify-content: center; }
+  .connections-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 14px !important; }
+  .connections-grid > .card { min-width: 0; padding: 18px !important; }
+  .connections-grid > .card > div:first-child { min-width: 0; }
+  .connections-grid > .card h3 { max-width: 150px; overflow-wrap: anywhere; }
+  .connections-modal { width: calc(100vw - 32px) !important; max-width: calc(100vw - 32px); padding: 20px !important; max-height: calc(100vh - 32px); overflow-y: auto; }
   .agenda-page, .flows-page { width: 100%; box-sizing: border-box; padding: 16px !important; overflow-x: hidden; }
   .agenda-header, .flows-header { align-items: stretch !important; flex-direction: column; gap: 16px; margin-bottom: 20px !important; }
   .agenda-header > div:last-child, .flows-header > button { width: 100%; }
