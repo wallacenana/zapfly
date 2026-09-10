@@ -23,6 +23,7 @@ const Connections = () => {
   const [editingInstance, setEditingInstance] = useState(null);
   const [formName, setFormName] = useState('');
   const [formColor, setFormColor] = useState('#3b82f6');
+  const [nameError, setNameError] = useState('');
 
   useEffect(() => {
     fetchInstances();
@@ -63,6 +64,7 @@ const Connections = () => {
     setEditingInstance(null);
     setFormName('');
     setFormColor('#3b82f6');
+    setNameError('');
     setShowModal(true);
   };
 
@@ -70,17 +72,23 @@ const Connections = () => {
     setEditingInstance(inst);
     setFormName(inst.name);
     setFormColor(inst.color);
+    setNameError('');
     setShowModal(true);
   };
 
   const handleSaveInstance = async () => {
-    if (!formName) return;
+    const normalizedName = formName.trim();
+    if (!normalizedName) {
+      setNameError('Informe o nome da conexão.');
+      return;
+    }
+    setNameError('');
     setLoading(true);
     try {
       if (editingInstance) {
-        await api.patch(`/instances/${editingInstance.id}`, { name: formName, color: formColor });
+        await api.patch(`/instances/${editingInstance.id}`, { name: normalizedName, color: formColor });
       } else {
-        await api.post('/instances', { name: formName, color: formColor });
+        await api.post('/instances', { name: normalizedName, color: formColor });
       }
       setShowModal(false);
       fetchInstances();
@@ -303,21 +311,28 @@ const Connections = () => {
 
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: 600 }}>Nome da Conexão</label>
-              <input 
+              <input
+                id="connection-name"
+                required
+                aria-invalid={Boolean(nameError)}
                 style={{ 
                   width: '100%', 
                   padding: '12px 15px', 
                   borderRadius: '10px',
                   outline: 'none', 
-                  border: '1px solid var(--border-color)', 
+                  border: `1px solid ${nameError ? '#ef4444' : 'var(--border-color)'}`,
                   backgroundColor: 'var(--bg-tertiary)', 
                   color: '#fff',
                   fontSize: '14px'
                 }}
                 placeholder="Ex: Suporte Vendas"
                 value={formName}
-                onChange={(e) => setFormName(e.target.value)}
+                onChange={(e) => {
+                  setFormName(e.target.value);
+                  if (nameError) setNameError('');
+                }}
               />
+              {nameError && <div role="alert" style={{ marginTop: '6px', color: '#ef4444', fontSize: '12px', fontWeight: 600 }}>{nameError}</div>}
             </div>
 
             <div style={{ marginBottom: '30px' }}>
