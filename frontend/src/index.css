@@ -639,6 +639,28 @@ estoque-label {
 .chat-contact-info-panel { flex: 0 0 320px; }
 
 @media (max-width:800px) {
+  .estoque-page { width: 100%; box-sizing: border-box; padding: 16px !important; overflow-x: hidden; }
+  .estoque-page > div:first-child { margin-bottom: 20px !important; }
+  .estoque-page > div:first-child h2 { font-size: 23px !important; }
+  .estoque-page > .mb-30 { flex-wrap: wrap; align-items: stretch !important; }
+  .estoque-page > .mb-30 > div { flex-wrap: wrap; width: 100%; }
+  .estoque-page > .mb-30 .tab-actions { justify-content: stretch; overflow-x: auto; }
+  .estoque-page > .mb-30 .tab-actions button { flex: 1 0 auto; white-space: nowrap; }
+  .estoque-page [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
+  .estoque-page [style*="grid-template-columns"] > * { min-width: 0 !important; width: 100%; box-sizing: border-box; }
+  .estoque-page .estoque-modal { width: calc(100vw - 32px) !important; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); overflow-y: auto; }
+  .production-page { height: auto !important; min-height: calc(100vh - 94px); padding: 16px !important; overflow: visible !important; }
+  .production-toolbar { width: 100%; }
+  .production-type-tabs { flex-wrap: wrap; }
+  .production-type-tabs button { flex: 1 1 140px; }
+  .production-controls { flex-wrap: wrap; gap: 12px; }
+  .production-controls > div:first-child { width: 100% !important; max-width: 100%; justify-content: space-between; }
+  .production-search-actions { width: 100%; flex-wrap: wrap; }
+  .production-search-actions > div { width: 100% !important; }
+  .production-search-actions > button { flex: 1 1 auto; justify-content: center; }
+  .production-board { flex: 0 0 auto !important; height: calc(100vh - 300px) !important; min-height: 420px; overflow-x: auto !important; overflow-y: hidden; align-items: stretch; }
+  .production-board > .kanban-column { flex: 0 0 290px !important; min-width: 290px !important; height: 100% !important; }
+  .production-secondary-columns { flex: 0 0 290px !important; min-width: 290px !important; height: 100%; }
   .dashboard-page-shell { width: 100%; max-width: 100%; overflow-x: hidden; }
   .dashboard-skeleton { box-sizing: border-box; padding: 16px !important; }
   .dashboard-skeleton [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; width: 100%; min-width: 0 !important; }

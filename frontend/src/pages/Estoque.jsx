@@ -650,7 +650,7 @@ const Estoque = () => {
   const inp = { style: { width: '100%', padding: '10px 14px', borderRadius: '10px', backgroundColor: '#f8fafc', border: '1px solid #d8e0d7', color: '#111827', fontSize: '14px', outline: 'none' } };
 
   return (
-    <div style={{ padding: '30px', color: 'var(--text-primary)' }}>
+    <div className="estoque-page" style={{ padding: '30px', color: 'var(--text-primary)' }}>
       <div style={{ marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
           <h2 style={{ fontSize: '26px', fontWeight: 800, color: 'var(--text-primary)' }}>Catálogo & Estoque</h2>

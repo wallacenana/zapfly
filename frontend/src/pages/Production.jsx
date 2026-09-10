@@ -565,11 +565,11 @@ const Production = () => {
       overflow: 'hidden',
       boxSizing: 'border-box'
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+      <div className="production-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
 
           {/* Seletor de Tipo */}
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+          <div className="production-type-tabs" style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
             <button
               onClick={() => setActiveType('delivery')}
               style={{ ...tabBtn, backgroundColor: activeType === 'delivery' ? '#3b82f6' : '#ffffff', color: activeType === 'delivery' ? '#ffffff' : 'var(--text-primary)', border: '1px solid var(--border-color)', position: 'relative' }}
@@ -594,7 +594,7 @@ const Production = () => {
             </button>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div className="production-controls" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             {/* Navegação de Datas (Sempre Visível) */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', backgroundColor: 'var(--bg-secondary)', padding: '10px 20px', borderRadius: '15px', border: '1px solid var(--border-color)', width: 'fit-content' }}>
               <button
@@ -644,7 +644,7 @@ const Production = () => {
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <div className="production-search-actions" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <button
                 onClick={() => setShowWaitingDrawer(true)}
                 style={{
@@ -678,7 +678,7 @@ const Production = () => {
         </div>
       </div>
 
-      <div style={{
+      <div className="production-board" style={{
         display: 'flex',
         gap: '20px',
         flex: 1,
@@ -697,7 +697,7 @@ const Production = () => {
 
         <KanbanColumn col={columns.find(c => c.id === 'production')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} />
 
-        <div style={{ flex: '1 1 30%', display: 'flex', flexDirection: 'column', gap: '15px', minWidth: '320px' }}>
+        <div className="production-secondary-columns" style={{ flex: '1 1 30%', display: 'flex', flexDirection: 'column', gap: '15px', minWidth: '320px' }}>
           <KanbanColumn col={columns.find(c => c.id === 'ready')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} height="40%" />
           <KanbanColumn col={columns.find(c => c.id === 'completed')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} height="30%" />
           <KanbanColumn col={columns.find(c => c.id === 'cancelled')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} height="30%" />
@@ -750,7 +750,7 @@ const KanbanColumn = ({ col, orders, updateStatus, openDetails, height = '100%' 
   const colOrders = orders.filter(o => o.status === col.id);
 
   return (
-    <div style={{
+    <div className="kanban-column" style={{
       flex: '1 1 30%', backgroundColor: 'rgba(255,255,255,0.015)',
       borderRadius: '20px', display: 'flex', flexDirection: 'column', border: '1px solid var(--border-color)',
       minWidth: '320px', height: height, overflow: 'hidden'
