@@ -148,7 +148,6 @@ const MainLayout = ({ clientMode = false }) => {
               <ExternalLink size={16} color="currentColor" />
             </a>
           ) : null}
-          {!sidebarCollapsed && <button onClick={() => setSidebarCollapsed(true)} title="Recolher menu" style={{ width: '30px', height: '30px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', border: 0, background: 'transparent', color: '#78908a', cursor: 'pointer' }}><PanelLeftClose size={17} /></button>}
         </div>
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
@@ -158,6 +157,7 @@ const MainLayout = ({ clientMode = false }) => {
               <Link
                 key={item.path}
                 to={item.path}
+              className="dashboard-nav-item"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -166,11 +166,11 @@ const MainLayout = ({ clientMode = false }) => {
                 padding: sidebarCollapsed ? '11px 0' : '10px 12px',
                 borderRadius: '11px',
                 textDecoration: 'none',
-                color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                color: isActive ? '#3e9b00' : 'var(--text-secondary)',
                 backgroundColor: isActive ? 'rgba(102, 215, 17, 0.12)' : 'transparent',
                 border: isActive ? '1px solid rgba(102, 215, 17, 0.18)' : '1px solid transparent',
                 transition: 'all 0.2s ease',
-                fontWeight: isActive ? 700 : 600,
+                fontWeight: 500,
                 fontSize: '13px',
               }}
               title={sidebarCollapsed ? item.label : undefined}
@@ -193,10 +193,10 @@ const MainLayout = ({ clientMode = false }) => {
             borderRadius: '11px',
             border: '1px solid transparent',
             backgroundColor: 'transparent',
-            color: 'var(--text-secondary)',
+                color: 'var(--text-secondary)',
             cursor: 'pointer',
             fontSize: '13px',
-            fontWeight: 600,
+            fontWeight: 500,
             marginTop: '16px',
           }}
           title={sidebarCollapsed ? 'Sair' : undefined}
@@ -204,8 +204,10 @@ const MainLayout = ({ clientMode = false }) => {
           <LogOut size={20} />
           {!sidebarCollapsed && 'Sair'}
         </button>
-        {sidebarCollapsed && <button onClick={() => setSidebarCollapsed(false)} title="Expandir menu" style={{ width: '100%', marginTop: '8px', padding: '10px 0', display: 'flex', justifyContent: 'center', border: 0, background: 'transparent', color: '#78908a', cursor: 'pointer' }}><PanelLeftOpen size={18} /></button>}
       </div>
+      <button className="sidebar-collapse-toggle" onClick={() => setSidebarCollapsed((value) => !value)} title={sidebarCollapsed ? 'Expandir menu' : 'Recolher menu'} style={{ left: sidebarCollapsed ? '63px' : '247px' }}>
+        {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+      </button>
 
       <div style={{ flex: 1, marginLeft: sidebarCollapsed ? '76px' : '260px', minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3', transition: 'margin-left 0.2s ease' }}>
         <TrialBanner embedded />

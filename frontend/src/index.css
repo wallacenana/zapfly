@@ -606,6 +606,11 @@ estoque-label {
   border-radius: 8px;
 }
 
+.dashboard-nav-item { transition: background-color .16s ease, color .16s ease; }
+.dashboard-nav-item:hover { background-color: #f4fbe8 !important; color: #3e9b00 !important; }
+.sidebar-collapse-toggle { position: fixed; top: 22px; z-index: 30; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #d7e7d1; border-radius: 8px; background: #fff; color: #78908a; cursor: pointer; box-shadow: 0 2px 8px rgba(15,23,42,.05); transition: left .2s ease, color .16s ease, background-color .16s ease; }
+.sidebar-collapse-toggle:hover { background: #f4fbe8; color: #3e9b00; }
+
 /* Comparison table status treatment */
 .comparison-scroll td svg { display: inline-block; margin-right: 4px; vertical-align: -2px; color: #51c602; }
 .comparison-scroll td.is-recommended { color: #3e9b00; font-weight: 800; }
