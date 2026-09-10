@@ -9,8 +9,8 @@ const TrialBanner = ({ embedded = false, global = false, onActiveChange }) => {
     api.get('/billing/me').then(({ data }) => {
       const nextTrial = data?.trial || null;
       setTrial(nextTrial);
-      onActiveChange?.(Boolean(nextTrial?.active));
-    }).catch(() => onActiveChange?.(false));
+      onActiveChange?.(nextTrial?.active ? nextTrial : null);
+    }).catch(() => onActiveChange?.(null));
   }, [onActiveChange]);
   if (!trial?.active) return null;
   return <div className={`trial-banner${embedded ? ' is-embedded' : ''}${global ? ' is-global' : ''}`}><Clock3 size={15} /><span>Trial: {trial.daysLeft} {trial.daysLeft === 1 ? 'dia restante' : 'dias restantes'}</span><Link to="/comprar">Assinar agora</Link></div>;

@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -18,6 +18,7 @@ import {
   CreditCard,
   PanelLeftClose,
   PanelLeftOpen,
+  Menu,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { PUBLIC_SITE_URL } from '../api';
@@ -29,11 +30,14 @@ const MainLayout = ({ clientMode = false }) => {
   const navigate = useNavigate();
   const { logout, user } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 800);
-  const [trialVisible, setTrialVisible] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [trialInfo, setTrialInfo] = useState(null);
+  const trialVisible = Boolean(trialInfo?.active);
 
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth <= 800) setSidebarCollapsed(true);
+      if (window.innerWidth <= 800) setMobileMenuOpen(false);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -68,8 +72,6 @@ const MainLayout = ({ clientMode = false }) => {
     navigate('/login');
   };
 
-  const handleTrialVisibility = useCallback((visible) => setTrialVisible(visible), []);
-
   return (
     <div
       style={{
@@ -91,9 +93,9 @@ const MainLayout = ({ clientMode = false }) => {
         '--card-shadow': '0 12px 30px rgba(15, 23, 42, 0.06)',
       }}
     >
-      <TrialBanner global onActiveChange={handleTrialVisibility} />
+      <TrialBanner global onActiveChange={setTrialInfo} />
       <div style={{ display: 'block', flex: 1, minHeight: '100vh' }}>
-      <div
+      <div className={`dashboard-sidebar${mobileMenuOpen ? ' is-mobile-open' : ''}`}
         style={{
           width: sidebarCollapsed ? '76px' : '260px',
           minWidth: sidebarCollapsed ? '76px' : '260px',
@@ -223,7 +225,13 @@ const MainLayout = ({ clientMode = false }) => {
         {sidebarCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
       </button>
 
-      <div style={{ minHeight: '100vh', marginLeft: sidebarCollapsed ? '76px' : '260px', paddingTop: trialVisible ? '38px' : 0, minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3', transition: 'margin-left 0.2s ease, padding-top 0.2s ease' }}>
+      {mobileMenuOpen && <button className="dashboard-mobile-overlay" aria-label="Fechar menu" onClick={() => setMobileMenuOpen(false)} />}
+      <div className="dashboard-mobile-header">
+        <button aria-label="Abrir menu" onClick={() => setMobileMenuOpen(true)}><Menu size={21} /></button>
+        <Link to="/conta">← Minha conta</Link>
+        {trialInfo?.active && <span>● Período de Teste Grátis ({trialInfo.daysLeft} dias restantes)</span>}
+      </div>
+      <div className="dashboard-content" style={{ minHeight: '100vh', marginLeft: sidebarCollapsed ? '76px' : '260px', paddingTop: trialVisible ? '38px' : 0, minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3', transition: 'margin-left 0.2s ease, padding-top 0.2s ease' }}>
         <Outlet />
         {location.pathname === '/dashboard' && !window.localStorage.getItem('menzzu_onboarding_completed') ? <GetStarted /> : null}
       </div>
