@@ -156,8 +156,8 @@ const Flows = () => {
     : flows.filter(f => f.instanceId === activeTab);
 
   return (
-    <div style={{ padding: '30px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+    <div className="flows-page" style={{ padding: '30px' }}>
+      <div className="flows-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '10px' }}>
             <GitMerge color="var(--success)" /> Fluxos de Automação
@@ -170,7 +170,7 @@ const Flows = () => {
       </div>
 
       {/* Instance Tabs */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
+      <div className="flows-tabs" style={{ display: 'flex', gap: '10px', marginBottom: '20px', borderBottom: '1px solid var(--border-color)', paddingBottom: '10px' }}>
         <button
           onClick={() => setActiveTab('all')}
           style={{
@@ -209,7 +209,8 @@ const Flows = () => {
       </div>
 
       {/* Flows Table/List */}
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="card flows-table-card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="flows-table-scroll">
         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '14px' }}>
           <thead>
             <tr style={{ backgroundColor: '#ffffff', borderBottom: '1px solid var(--border-color)' }}>
@@ -293,6 +294,7 @@ const Flows = () => {
             )}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

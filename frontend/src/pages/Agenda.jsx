@@ -800,8 +800,8 @@ export default function Agenda() {
   };
 
   return (
-    <div style={{ padding: '30px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+    <div className="agenda-page" style={{ padding: '30px' }}>
+      <div className="agenda-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
         <div>
           <h2 style={{ fontSize: '24px', fontWeight: 700 }}>Agenda de Pedidos</h2>
           <p style={{ color: 'var(--text-secondary)' }}>Gerencie agendamentos, deliveries e disponibilidade</p>
@@ -817,7 +817,7 @@ export default function Agenda() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '30px' }}>
+      <div className="agenda-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '30px' }}>
         {[
           { label: 'Pedidos Hoje', value: stats.today, color: '#3b82f6', icon: '📅' },
           { label: 'Pendentes', value: stats.pending, color: '#f59e0b', icon: '⏳' },
@@ -831,7 +831,7 @@ export default function Agenda() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '24px' }}>
+      <div className="agenda-content" style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '24px' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <MiniCalendar selectedDate={selectedDate} onSelect={setSelectedDate} orders={orders} />
 

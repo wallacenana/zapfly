@@ -639,6 +639,22 @@ estoque-label {
 .chat-contact-info-panel { flex: 0 0 320px; }
 
 @media (max-width:800px) {
+  .agenda-page, .flows-page { width: 100%; box-sizing: border-box; padding: 16px !important; overflow-x: hidden; }
+  .agenda-header, .flows-header { align-items: stretch !important; flex-direction: column; gap: 16px; margin-bottom: 20px !important; }
+  .agenda-header > div:last-child, .flows-header > button { width: 100%; }
+  .agenda-header > div:last-child { flex-wrap: wrap; }
+  .agenda-header > div:last-child button, .flows-header > button { justify-content: center; flex: 1 1 180px; }
+  .agenda-stats { grid-template-columns: minmax(0, 1fr) !important; gap: 12px !important; margin-bottom: 20px !important; }
+  .agenda-content { grid-template-columns: minmax(0, 1fr) !important; gap: 18px !important; }
+  .agenda-content > div:last-child > div:first-child { align-items: flex-start !important; flex-direction: column; gap: 12px; }
+  .agenda-content > div:last-child > div:first-child > div:last-child { width: 100%; display: flex; overflow-x: auto; padding-bottom: 4px; }
+  .agenda-content > div:last-child > div:first-child > div:last-child button { flex: 0 0 auto; white-space: nowrap; }
+  .flows-tabs { overflow-x: auto; padding-bottom: 8px !important; }
+  .flows-tabs button { flex: 0 0 auto; white-space: nowrap; }
+  .flows-table-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+  .flows-table-scroll table { min-width: 760px; }
+  .flows-table-scroll::-webkit-scrollbar { height: 8px; }
+  .flows-table-scroll::-webkit-scrollbar-thumb { background: #b8c9b0; border-radius: 999px; }
   .estoque-page { width: 100%; box-sizing: border-box; padding: 16px !important; overflow-x: hidden; }
   .estoque-page > div:first-child { margin-bottom: 20px !important; }
   .estoque-page > div:first-child h2 { font-size: 23px !important; }
