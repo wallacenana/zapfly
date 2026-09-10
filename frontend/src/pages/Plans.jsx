@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, ChevronDown, Loader2, ShieldCheck, X } from 'lucide-react';
+import { Check, Loader2, ShieldCheck, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../api';
 
@@ -22,11 +22,11 @@ const featureRows = [
 ];
 
 const cardFeatureText = (row, plan) => {
-  if (row.label === 'Cadastro de produtos') return plan.productLimit === null ? 'Produtos ilimitados' : `${plan.productLimit} produtos no cardápio`;
-  if (row.label === 'Fluxos de automação') return plan.flowLimit === null ? 'Fluxos ilimitados de automação' : `${plan.flowLimit} ${plan.flowLimit === 1 ? 'automação' : 'automações'} ativas`;
-  if (row.label === 'Taxa sobre vendas') return 'Sem comissão sobre vendas';
-  if (row.label === 'Integração Google Calendar') return plan.calendar ? 'Google Calendar incluso' : 'Google Calendar não incluso';
-  return plan.paymentGateway ? 'Mercado Pago para PIX e cartão' : 'Mercado Pago não incluso';
+  if (row.label === 'Cadastro de produtos') return plan.productLimit === null ? <strong>Produtos ilimitados</strong> : <><strong>{plan.productLimit} produtos</strong> no cardápio</>;
+  if (row.label === 'Fluxos de automação') return plan.flowLimit === null ? <><strong>Fluxos ilimitados</strong> de automação</> : <><strong>{plan.flowLimit} {plan.flowLimit === 1 ? 'automação' : 'automações'}</strong> ativas</>;
+  if (row.label === 'Taxa sobre vendas') return <><strong>Sem comissão</strong> sobre vendas</>;
+  if (row.label === 'Integração Google Calendar') return plan.calendar ? <strong>Google Calendar incluso</strong> : 'Google Calendar não incluso';
+  return plan.paymentGateway ? <strong>Mercado Pago incluso</strong> : 'Mercado Pago não incluso';
 };
 
 const faqs = [
@@ -41,7 +41,6 @@ export default function Plans() {
   const [cycle, setCycle] = useState('monthly');
   const [loading, setLoading] = useState(true);
   const [checkoutPlan, setCheckoutPlan] = useState('');
-  const [comparisonOpen, setComparisonOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(null);
 
   useEffect(() => {
@@ -102,11 +101,6 @@ export default function Plans() {
         </section>}
 
         <p className="plans-payment-note"><span>▣</span> Pagamento recorrente via cartão processado com segurança pela <strong>Abacate Pay</strong>. Sem comissão sobre suas vendas.</p>
-
-        <section className="plans-comparison">
-          <button className="plans-section-toggle" onClick={() => setComparisonOpen(!comparisonOpen)}><span><strong>Comparativo detalhado de recursos</strong><small>Veja o que está incluso em cada nível de assinatura</small></span><span>{comparisonOpen ? 'Ocultar tabela' : 'Ver tabela completa'} <ChevronDown size={15} className={comparisonOpen ? 'is-open' : ''} /></span></button>
-          {comparisonOpen && <div className="comparison-scroll"><table><thead><tr><th>Recurso / funcionalidade</th>{plans.map((plan) => <th key={plan.key} className={plan.key === 'professional' ? 'is-highlighted' : ''}>{plan.name}</th>)}</tr></thead><tbody>{featureRows.map((row) => <tr key={row.label}><td>{row.label}</td>{plans.map((plan) => { const value = row.value(plan); const included = value !== 'Não incluso'; return <td key={plan.key} className={`${value === 'Não incluso' ? 'is-disabled' : ''}${plan.key === 'professional' && included ? ' is-recommended' : ''}`}>{included && ['Sem comissão', 'Incluso', 'Ilimitados', 'Ilimitadas'].includes(value) && <Check size={14} />}{value}</td>; })}</tr>)}</tbody></table></div>}
-        </section>
 
         <section className="plans-faq"><h2>Perguntas frequentes</h2>{faqs.map(([question, answer], index) => <div className="faq-item" key={question}><button onClick={() => setOpenFaq(openFaq === index ? null : index)}><strong>{question}</strong><span>{openFaq === index ? '−' : '+'}</span></button>{openFaq === index && <p>{answer}</p>}</div>)}</section>
       </main>
