@@ -84,14 +84,14 @@ const MainLayout = ({ clientMode = false }) => {
       }}
     >
       <TrialBanner global onActiveChange={handleTrialVisibility} />
-      <div style={{ display: 'flex', flex: 1, minHeight: '100vh' }}>
+      <div style={{ display: 'flex', flex: 1, minHeight: trialVisible ? 'calc(100vh - 38px)' : '100vh' }}>
       <div
         style={{
           width: sidebarCollapsed ? '76px' : '260px',
           minWidth: sidebarCollapsed ? '76px' : '260px',
           maxWidth: sidebarCollapsed ? '76px' : '260px',
           flex: `0 0 ${sidebarCollapsed ? '76px' : '260px'}`,
-          height: '100vh',
+          height: trialVisible ? 'calc(100vh - 38px)' : '100vh',
           position: 'sticky',
           left: 0,
           top: 0,
