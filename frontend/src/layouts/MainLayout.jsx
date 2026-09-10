@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 import { Link, useLocation, Outlet, useNavigate } from 'react-router-dom';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   Package,
@@ -28,8 +28,16 @@ const MainLayout = ({ clientMode = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout, user } = useAuth();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 800);
   const [trialVisible, setTrialVisible] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth <= 800) setSidebarCollapsed(true);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const isSuperAdmin = String(user?.role || '').toLowerCase() === 'superadmin';
   const storeSlug = String(user?.slug || '').trim();
   const storeUrl = storeSlug ? `${PUBLIC_SITE_URL}/${storeSlug}` : '';
