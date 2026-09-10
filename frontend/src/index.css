@@ -613,7 +613,7 @@ estoque-label {
 .dashboard-mobile-header, .dashboard-mobile-overlay { display: none; }
 @media (max-width: 800px) {
   .trial-banner.is-global { display: flex; position: fixed; top: 0; }
-  .dashboard-sidebar { width: 260px !important; min-width: 260px !important; max-width: 260px !important; top: 0 !important; height: 100vh !important; transform: translateX(-100%); transition: transform .2s ease; z-index: 100; }
+  .dashboard-sidebar { width: 260px !important; min-width: 260px !important; max-width: 260px !important; top: 0 !important; height: 100vh !important; transform: translateX(-100%); transition: transform .2s ease; z-index: 110 !important; }
   .dashboard-sidebar.is-mobile-open { transform: translateX(0); }
   .sidebar-collapse-toggle { display: none; }
   .dashboard-content { width: 100%; margin-left: 0 !important; padding-top: 56px !important; overflow-x: hidden; }
