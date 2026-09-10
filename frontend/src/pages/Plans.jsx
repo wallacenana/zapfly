@@ -23,7 +23,7 @@ const featureRows = [
 
 const cardFeatureText = (row, plan) => {
   if (row.label === 'Cadastro de produtos') return plan.productLimit === null ? <strong>Produtos ilimitados</strong> : <><strong>{plan.productLimit} produtos</strong> no cardápio</>;
-  if (row.label === 'Fluxos de automação') return plan.flowLimit === null ? <><strong>Fluxos ilimitados</strong> de automação</> : <><strong>{plan.flowLimit} {plan.flowLimit === 1 ? 'automação' : 'automações'}</strong> ativas</>;
+  if (row.label === 'Fluxos de automação') return plan.flowLimit === null ? <><strong>Fluxos ilimitados</strong> de automação</> : <><strong>{plan.flowLimit} {plan.flowLimit === 1 ? 'automação ativa' : 'automações ativas'}</strong></>;
   if (row.label === 'Taxa sobre vendas') return <><strong>Sem comissão</strong> sobre vendas</>;
   if (row.label === 'Integração Google Calendar') return plan.calendar ? <strong>Google Calendar incluso</strong> : 'Google Calendar não incluso';
   return plan.paymentGateway ? <strong>Mercado Pago incluso</strong> : 'Mercado Pago não incluso';
@@ -93,7 +93,7 @@ export default function Plans() {
                 <div className="plan-price"><strong>{formatPrice(selected?.price ?? plan.price)}</strong><span>{cycleSuffix[cycle]}</span></div>
                 {trial.enabled && <p className="plan-free"><Check size={14} /> {trial.days} dias grátis sem cartão</p>}
                 <div className="plan-divider" />
-                <ul>{featureRows.map((row) => <li key={row.label} className={row.value(plan) === 'Não incluso' ? 'is-disabled' : ''}>{row.value(plan) === 'Não incluso' ? <X size={15} /> : <Check size={15} />}<span>{cardFeatureText(row, plan)}</span></li>)}</ul>
+                <ul>{featureRows.map((row) => <li key={row.label} className={`${row.value(plan) === 'Não incluso' ? 'is-disabled' : ''}${row.label === 'Taxa sobre vendas' ? ' is-no-commission' : ''}`}>{row.value(plan) === 'Não incluso' ? <X size={15} /> : <Check size={15} />}<span>{cardFeatureText(row, plan)}</span></li>)}</ul>
               </div>
               <button className="plan-action" onClick={() => checkout(plan.key)} disabled={Boolean(checkoutPlan)}>{checkoutPlan === plan.key ? 'Abrindo pagamento...' : `Assinar ${plan.name}`} <span>→</span></button>
             </article>;

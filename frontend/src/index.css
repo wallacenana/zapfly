@@ -606,6 +606,10 @@ estoque-label {
   border-radius: 8px;
 }
 
+.plan-card li.is-no-commission { margin: 2px -8px; padding: 8px; border: 1px solid #fecaca; border-radius: 9px; background: #fff1f2; color: #b42318; font-weight: 600; }
+.plan-card li.is-no-commission svg { color: #dc2626; }
+.plan-card li.is-no-commission strong { color: #991b1b; }
+
 .trial-banner { display:flex; align-items:center; gap:8px; min-height:38px; margin:-32px -32px 28px; padding:8px 22px; background:#fff1dc; border-bottom:1px solid #f4d7a8; color:#9a5a00; font-size:13px; font-weight:500; }
 .trial-banner.is-embedded { margin:0 0 22px; }
 .trial-banner.is-global { position:fixed; top:0; left:0; right:0; z-index:1000; justify-content:center; margin:0; width:100%; min-height:38px; border-radius:0 0 18px 18px; box-shadow:0 3px 12px rgba(146,91,0,.08); }
