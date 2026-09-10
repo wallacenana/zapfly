@@ -92,7 +92,7 @@ const MainLayout = ({ clientMode = false }) => {
     >
       <TrialBanner global onActiveChange={setTrialInfo} />
       <div style={{ display: 'block', flex: 1, minHeight: '100vh' }}>
-      <div className={`dashboard-sidebar${mobileMenuOpen ? ' is-mobile-open' : ''}`}
+      <div className={`dashboard-sidebar${mobileMenuOpen ? ' is-mobile-open' : ''}${trialVisible ? ' has-trial' : ''}`}
         style={{
           width: sidebarCollapsed ? '76px' : '260px',
           minWidth: sidebarCollapsed ? '76px' : '260px',
