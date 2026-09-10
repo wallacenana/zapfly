@@ -643,7 +643,8 @@ estoque-label {
   .agenda-header, .flows-header { align-items: stretch !important; flex-direction: column; gap: 16px; margin-bottom: 20px !important; }
   .agenda-header > div:last-child, .flows-header > button { width: 100%; }
   .agenda-header > div:last-child { flex-wrap: wrap; }
-  .agenda-header > div:last-child button, .flows-header > button { justify-content: center; flex: 1 1 180px; }
+  .agenda-header > div:last-child button { justify-content: center; flex: 1 1 180px; }
+  .flows-header > button { justify-content: center; flex: 0 0 auto; }
   .agenda-stats { grid-template-columns: minmax(0, 1fr) !important; gap: 12px !important; margin-bottom: 20px !important; }
   .agenda-content { grid-template-columns: minmax(0, 1fr) !important; gap: 18px !important; }
   .agenda-content > div:last-child > div:first-child { align-items: flex-start !important; flex-direction: column; gap: 12px; }
