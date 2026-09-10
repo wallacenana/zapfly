@@ -651,6 +651,7 @@ estoque-label {
   .dashboard-page-shell [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; width: 100%; min-width: 0 !important; }
   .dashboard-page-shell [style*="grid-template-columns"] > * { width: 100%; min-width: 0 !important; box-sizing: border-box; }
   .chat-page { height: calc(100vh - 56px); }
+  .chat-instance-tabs:not(.has-instances) { display: none !important; }
   .chat-contacts-panel { flex: 1 1 auto; width: 100% !important; border-right: 0 !important; }
   .chat-main-panel { display: none !important; width: 100%; flex: 1 1 auto; }
   .chat-main-panel.has-active-contact { display: flex !important; }

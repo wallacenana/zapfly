@@ -516,7 +516,7 @@ const Chat = () => {
     }, [jid]);
 
     return (
-      <div style={{
+      <div className={`chat-instance-tabs${instances.length ? ' has-instances' : ''}`} style={{
         width: '32px',
         height: '32px',
         borderRadius: '50%',
