@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Check, ChevronDown, Loader2, ShieldCheck, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Check, ChevronDown, Loader2, ShieldCheck, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { api } from '../api';
 
@@ -63,10 +62,6 @@ export default function Plans() {
 
   return (
     <div className="plans-page">
-      <header className="plans-topbar">
-        <Link to="/conta"><ArrowLeft size={14} /> Minha conta</Link>
-        {trial.enabled && <span className="plans-trial-pill"><span /> Período de teste ativo</span>}
-      </header>
       <main className="plans-main">
         <section className="plans-intro">
           <span className="plans-eyebrow">Planos Menzzu</span>
