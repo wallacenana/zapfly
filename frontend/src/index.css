@@ -649,7 +649,7 @@ estoque-label {
   .estoque-page [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
   .estoque-page [style*="grid-template-columns"] > * { min-width: 0 !important; width: 100%; box-sizing: border-box; }
   .estoque-page .estoque-modal { width: calc(100vw - 32px) !important; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); overflow-y: auto; }
-  .production-page { height: auto !important; min-height: calc(100vh - 94px); padding: 16px !important; overflow: auto !important; overscroll-behavior: contain; }
+  .production-page { height: auto !important; min-height: calc(100vh - 94px); padding: 16px !important; overflow: visible !important; }
   .production-toolbar { width: 100%; }
   .production-type-tabs { flex-wrap: wrap; }
   .production-type-tabs button { flex: 1 1 140px; }
@@ -660,12 +660,10 @@ estoque-label {
   .production-search-actions { width: 100%; flex-wrap: wrap; }
   .production-search-actions > div { width: 100% !important; }
   .production-search-actions > button { flex: 1 1 auto; justify-content: center; }
-  .production-board { flex: 0 0 auto !important; height: calc(100vh - 300px) !important; min-height: 420px; overflow-x: scroll !important; overflow-y: scroll !important; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: #b8c9b0 #eef4eb; align-items: stretch; }
-  .production-board::-webkit-scrollbar { width: 8px; height: 8px; }
-  .production-board::-webkit-scrollbar-track { background: #eef4eb; border-radius: 999px; }
-  .production-board::-webkit-scrollbar-thumb { background: #b8c9b0; border-radius: 999px; }
-  .production-board > .kanban-column { flex: 0 0 290px !important; min-width: 290px !important; min-height: 520px; height: 100% !important; }
-  .production-secondary-columns { flex: 0 0 290px !important; min-width: 290px !important; min-height: 520px; height: 100%; }
+  .production-board { flex-direction: column; flex: 0 0 auto !important; height: auto !important; min-height: 0; overflow: visible !important; align-items: stretch; }
+  .production-board > .kanban-column { flex: 0 0 auto !important; width: 100%; min-width: 0 !important; min-height: 420px; height: 420px !important; }
+  .production-secondary-columns { width: 100%; flex: 0 0 auto !important; min-width: 0 !important; min-height: 0; height: auto; }
+  .production-secondary-columns > .kanban-column { flex: 0 0 auto; min-height: 300px; height: 300px !important; }
   .dashboard-page-shell { width: 100%; max-width: 100%; overflow-x: hidden; }
   .dashboard-skeleton { box-sizing: border-box; padding: 16px !important; }
   .dashboard-skeleton [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; width: 100%; min-width: 0 !important; }
