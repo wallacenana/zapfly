@@ -278,7 +278,7 @@ const SkeletonBlock = ({ height = 18, width = '100%', radius = 12 }) => (
 );
 
 const DashboardSkeleton = () => (
-  <div style={{ padding: '28px', display: 'grid', gap: '24px' }}>
+  <div className="dashboard-skeleton dashboard-page-shell" style={{ padding: '28px', display: 'grid', gap: '24px' }}>
     <Card style={{ padding: '28px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: '20px', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: '280px' }}>

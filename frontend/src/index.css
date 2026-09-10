@@ -640,6 +640,10 @@ estoque-label {
 
 @media (max-width:800px) {
   .dashboard-page-shell { width: 100%; max-width: 100%; overflow-x: hidden; }
+  .dashboard-skeleton { box-sizing: border-box; padding: 16px !important; }
+  .dashboard-skeleton [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; width: 100%; min-width: 0 !important; }
+  .dashboard-skeleton [style*="grid-template-columns"] > * { width: 100%; min-width: 0 !important; box-sizing: border-box; }
+  .dashboard-skeleton [style*="width:"] { max-width: 100%; }
   .dashboard-page-content { width: 100%; box-sizing: border-box; padding: 16px !important; }
   .dashboard-hero-card { padding: 22px !important; border-radius: 22px !important; }
   .dashboard-hero-card h1 { font-size: 32px !important; }
