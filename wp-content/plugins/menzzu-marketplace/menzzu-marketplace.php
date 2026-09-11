@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Menzzu Marketplace
  * Description: Marketplace Menzzu com descoberta de lojas, busca e catalogo.
- * Version: 3.1.11
+ * Version: 3.1.12
  * Author: Menzzu
  */
 
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MENZZU_MARKETPLACE_VERSION', '3.1.11');
+define('MENZZU_MARKETPLACE_VERSION', '3.1.12');
 define('MENZZU_MARKETPLACE_FILE', __FILE__);
 define('MENZZU_MARKETPLACE_DIR', plugin_dir_path(__FILE__));
 define('MENZZU_MARKETPLACE_URL', plugin_dir_url(__FILE__));
@@ -42,7 +42,58 @@ function menzzu_marketplace_render_public_menu_route()
         $_SERVER['REQUEST_URI'] = '/cardapio/' . rawurlencode($slug) . '/';
     }
 
+    ob_start();
     require MENZZU_MARKETPLACE_DIR . 'public-menu/index.php';
+    $legacyHtml = (string) ob_get_clean();
+
+    if (!preg_match('/<body\b[^>]*>(.*)<\/html>/is', $legacyHtml, $bodyMatch)) {
+        status_header(500);
+        wp_die('Não foi possível carregar o cardápio público.');
+    }
+
+    $bodyContent = (string) $bodyMatch[1];
+    $bodyContent = preg_replace('/<header\b[^>]*class="[^"]*top-nav[^"]*"[^>]*>.*?<\/header>/is', '', $bodyContent, 1);
+    $bodyContent = preg_replace('/<script\b[^>]*src="[^"]*(?:sweetalert|public-menu\/script\.js)[^"]*"[^>]*>\s*<\/script>/is', '', $bodyContent);
+    $bodyContent = preg_replace('/<\/footer>\s*<!-- MODAL DETALHE -->/i', '<!-- MODAL DETALHE -->', $bodyContent, 1);
+
+    // Mantém somente as variáveis SSR e os estilos específicos do cardápio.
+    preg_match_all('/<script>.*?<\/script>/is', $legacyHtml, $inlineScripts);
+    preg_match_all('/<style>.*?<\/style>/is', $legacyHtml, $inlineStyles);
+    wp_enqueue_style(
+        'menzzu-public-menu',
+        MENZZU_MARKETPLACE_URL . 'public-menu/style.css',
+        [],
+        filemtime(MENZZU_MARKETPLACE_DIR . 'public-menu/style.css')
+    );
+    wp_enqueue_script(
+        'menzzu-public-menu-swal',
+        'https://cdn.jsdelivr.net/npm/sweetalert2@11',
+        [],
+        '11',
+        true
+    );
+    wp_enqueue_script(
+        'menzzu-public-menu',
+        MENZZU_MARKETPLACE_URL . 'public-menu/script.js',
+        ['menzzu-public-menu-swal'],
+        filemtime(MENZZU_MARKETPLACE_DIR . 'public-menu/script.js'),
+        true
+    );
+
+    echo '<!doctype html><html ' . get_language_attributes() . '><head>';
+    wp_head();
+    echo '</head><body class="' . esc_attr(implode(' ', get_body_class(['menzzu-public-menu']))) . '">';
+    do_action('wp_body_open');
+    foreach ($inlineStyles[0] ?? [] as $style) {
+        echo $style;
+    }
+    foreach ($inlineScripts[0] ?? [] as $script) {
+        if (strpos($script, 'window.__STORE_SLUG__') !== false || strpos($script, 'window.__SSR__') !== false) {
+            echo $script;
+        }
+    }
+    echo $bodyContent;
+    get_footer();
     $_SERVER['REQUEST_URI'] = $originalRequestUri;
     exit;
 }
