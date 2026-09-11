@@ -1,0 +1,19 @@
+{
+  "name": "Menzzu Marketplace",
+  "slug": "menzzu-marketplace",
+  "version": "3.1.9",
+  "homepage": "https://menzzu.com/",
+  "download_url": "https://github.com/wallacenana/menzzu-marketplace/archive/refs/heads/main.zip",
+  "requires": "6.0",
+  "tested": "7.0.2",
+  "requires_php": "7.4",
+  "author": "Menzzu",
+  "author_url": "https://github.com/wallacenana",
+  "last_updated": "2026-09-11",
+  "sections": {
+    "description": "Marketplace e cardápio público do Menzzu.",
+    "installation": "Atualize diretamente pelo painel do WordPress.",
+    "changelog": "Estrutura inicial do plugin independente.",
+    "faq": "O pacote é distribuído pelo repositório público do Menzzu."
+  }
+}

@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Menzzu Marketplace
  * Description: Marketplace Menzzu com descoberta de lojas, busca e catalogo.
- * Version: 3.1.8
+ * Version: 3.1.9
  * Author: Menzzu
  */
 
@@ -11,10 +11,43 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MENZZU_MARKETPLACE_VERSION', '3.1.8');
+define('MENZZU_MARKETPLACE_VERSION', '3.1.9');
 define('MENZZU_MARKETPLACE_FILE', __FILE__);
 define('MENZZU_MARKETPLACE_DIR', plugin_dir_path(__FILE__));
 define('MENZZU_MARKETPLACE_URL', plugin_dir_url(__FILE__));
+
+function menzzu_marketplace_render_public_menu_route()
+{
+    if (is_admin() || wp_doing_ajax() || (defined('REST_REQUEST') && REST_REQUEST) || !defined('ABSPATH')) {
+        return;
+    }
+
+    $requestPath = trim((string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/');
+    $segments = $requestPath === '' ? [] : explode('/', $requestPath);
+    $legacyStoreSlug = sanitize_title((string) ($_GET['menzzu_store'] ?? ''));
+    $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    $platformHosts = ['menzzu.com', 'www.menzzu.com', 'cardapio.menzzu.com', 'origin.menzzu.com'];
+    $isCustomDomain = $host !== '' && !in_array(preg_replace('/:\d+$/', '', $host), $platformHosts, true);
+    $isCardapioPath = count($segments) === 2 && $segments[0] === 'cardapio' && $segments[1] !== '';
+    $isLegacyStorePath = ($legacyStoreSlug !== '') || (is_404() && count($segments) === 1 && $segments[0] !== '');
+    $isCustomDomainHome = $isCustomDomain && count($segments) === 0;
+
+    if (!$isCardapioPath && !$isLegacyStorePath && !$isCustomDomainHome) {
+        return;
+    }
+
+    $originalRequestUri = $_SERVER['REQUEST_URI'] ?? '/';
+    if ($isLegacyStorePath) {
+        $slug = $legacyStoreSlug !== '' ? $legacyStoreSlug : sanitize_title($segments[0]);
+        $_SERVER['REQUEST_URI'] = '/cardapio/' . rawurlencode($slug) . '/';
+    }
+
+    require MENZZU_MARKETPLACE_DIR . 'public-menu/index.php';
+    $_SERVER['REQUEST_URI'] = $originalRequestUri;
+    exit;
+}
+
+add_action('template_redirect', 'menzzu_marketplace_render_public_menu_route', 0);
 
 register_activation_hook(MENZZU_MARKETPLACE_FILE, function () {
     $legacyPlugin = 'digizap-home-2/digizap-home-2.php';
@@ -108,6 +141,7 @@ require_once MENZZU_MARKETPLACE_DIR . 'includes/header.php';
 require_once MENZZU_MARKETPLACE_DIR . 'includes/footer-nav.php';
 require_once MENZZU_MARKETPLACE_DIR . 'includes/search-modal.php';
 require_once MENZZU_MARKETPLACE_DIR . 'includes/address-modal.php';
+require_once MENZZU_MARKETPLACE_DIR . 'includes/updater.php';
 require_once MENZZU_MARKETPLACE_DIR . 'shortcodes/home.php';
 require_once MENZZU_MARKETPLACE_DIR . 'shortcodes/restaurants.php';
 require_once MENZZU_MARKETPLACE_DIR . 'shortcodes/blog.php';
