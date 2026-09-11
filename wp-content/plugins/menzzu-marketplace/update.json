@@ -3,7 +3,7 @@
   "slug": "menzzu-marketplace",
   "version": "3.1.14",
   "homepage": "https://menzzu.com/",
-  "download_url": "https://github.com/wallacenana/menzzu-marketplace/releases/download/v3.1.14/menzzu-marketplace-3.1.14.zip",
+  "download_url": "https://github.com/wallacenana/menzzu-marketplace/releases/download/v3.1.14/menzzu-marketplace-3.1.14-fixed.zip",
   "requires": "6.0",
   "tested": "7.0.2",
   "requires_php": "7.4",
