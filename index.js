@@ -2874,6 +2874,11 @@ app.get('/instances', authenticate, async (req, res) => {
 app.post('/instances', authenticate, async (req, res) => {
     try {
         const { name, color } = req.body;
+        try {
+            await checkEntitlement(prisma, req.user.id, 'connectionLimit', await prisma.instance.count({ where: { userId: req.user.id } }));
+        } catch (error) {
+            return res.status(403).json({ error: error.message, code: error.code, limit: error.limit });
+        }
         const instance = await prisma.instance.create({
             data: {
                 name,

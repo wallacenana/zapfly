@@ -14,6 +14,7 @@ const planCopy = {
 };
 
 const featureRows = [
+  { label: 'Conexões WhatsApp', value: (plan) => `${plan.connectionLimit} ${plan.connectionLimit === 1 ? 'conexão' : 'conexões'}` },
   { label: 'Cadastro de produtos', value: (plan) => plan.productLimit === null ? 'Ilimitados' : `Até ${plan.productLimit}` },
   { label: 'Fluxos de automação', value: (plan) => plan.flowLimit === null ? 'Ilimitados' : `${plan.flowLimit} ${plan.flowLimit === 1 ? 'automação' : 'automações'}` },
   { label: 'Taxa sobre vendas', value: () => 'Sem comissão' },
@@ -22,6 +23,7 @@ const featureRows = [
 ];
 
 const cardFeatureText = (row, plan) => {
+  if (row.label === 'Conexões WhatsApp') return <><strong>{plan.connectionLimit} {plan.connectionLimit === 1 ? 'conexão' : 'conexões'} WhatsApp</strong> conectada{plan.connectionLimit === 1 ? '' : 's'}</>;
   if (row.label === 'Cadastro de produtos') return plan.productLimit === null ? <strong>Produtos ilimitados</strong> : <><strong>{plan.productLimit} produtos</strong> no cardápio</>;
   if (row.label === 'Fluxos de automação') return plan.flowLimit === null ? <><strong>Fluxos ilimitados</strong> de automação</> : <><strong>{plan.flowLimit} {plan.flowLimit === 1 ? 'automação ativa' : 'automações ativas'}</strong></>;
   if (row.label === 'Taxa sobre vendas') return <><strong>Sem comissão</strong> sobre vendas</>;
