@@ -751,6 +751,7 @@ window.initMapsAutocomplete = () => {
 
     try {
         input.dataset.placeSelected = '0';
+        let selectedPlaceValue = '';
         const autocomplete = new google.maps.places.Autocomplete(input);
         autocomplete.setComponentRestrictions({
             country: 'br'
@@ -761,30 +762,34 @@ window.initMapsAutocomplete = () => {
             const place = autocomplete.getPlace();
             if (!place.geometry) return;
             input.dataset.placeSelected = '1';
+            selectedPlaceValue = input.value.trim();
             updateLocation(place.geometry.location, place.formatted_address);
         });
 
         input.addEventListener('input', () => {
-            input.dataset.placeSelected = '0';
+            if (input.value.trim() !== selectedPlaceValue) {
+                input.dataset.placeSelected = '0';
+            }
         }, { passive: true });
 
-        input.addEventListener('change', () => {
+        const syncTypedAddress = () => {
             const value = input.value.trim();
             if (!value || input.dataset.placeSelected === '1') return;
+            state.userInfo.address = value;
+            localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
+            calculateDeliveryFee(value);
             setTimeout(() => geocodeAddress(value), 120);
-        });
+        };
 
-        input.addEventListener('blur', () => {
-            const value = input.value.trim();
-            if (!value || input.dataset.placeSelected === '1') return;
-            setTimeout(() => geocodeAddress(value), 120);
-        });
+        input.addEventListener('change', syncTypedAddress);
+
+        input.addEventListener('blur', syncTypedAddress);
 
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const value = input.value.trim();
-                if (value) geocodeAddress(value);
+                if (value) syncTypedAddress();
                 input.blur();
             }
         });
