@@ -18,6 +18,22 @@ if (!class_exists('Menzzu_Marketplace_Updater')) {
             $this->plugin_basename = plugin_basename($plugin_file);
             add_filter('site_transient_update_plugins', [$this, 'inject_update']);
             add_filter('plugins_api', [$this, 'plugin_information'], 20, 3);
+            add_filter('upgrader_source_selection', [$this, 'normalize_package_source'], 10, 4);
+        }
+
+        public function normalize_package_source($source, $remote_source, $upgrader, $hook_extra)
+        {
+            if (!is_array($hook_extra) || ($hook_extra['plugin'] ?? '') !== $this->plugin_basename) return $source;
+            global $wp_filesystem;
+            if (!is_object($wp_filesystem)) return $source;
+
+            $source = untrailingslashit((string) $source);
+            $target = trailingslashit(dirname($source)) . basename(dirname($this->plugin_basename));
+            if (basename($source) === basename($target)) return $source;
+            if ($wp_filesystem->is_dir($target)) $wp_filesystem->delete($target, true);
+            return $wp_filesystem->move($source, $target, true)
+                ? $target
+                : new WP_Error('menzzu_marketplace_update_folder', 'Não foi possível preparar a pasta do plugin Menzzu Marketplace.');
         }
 
         private function manifest($force = false)
