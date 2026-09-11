@@ -1,9 +1,9 @@
 {
   "name": "Menzzu Marketplace",
   "slug": "menzzu-marketplace",
-  "version": "3.1.14",
+  "version": "3.1.15",
   "homepage": "https://menzzu.com/",
-  "download_url": "https://github.com/wallacenana/menzzu-marketplace/releases/download/v3.1.14/menzzu-marketplace-3.1.14-fixed.zip",
+  "download_url": "https://github.com/wallacenana/menzzu-marketplace/releases/download/v3.1.15/menzzu-marketplace-3.1.15.zip",
   "requires": "6.0",
   "tested": "7.0.2",
   "requires_php": "7.4",
@@ -17,7 +17,7 @@
   "sections": {
     "description": "Marketplace e cardápio público do Menzzu.",
     "installation": "Atualize diretamente pelo painel do WordPress.",
-    "changelog": "Versao de teste da atualizacao automatica, com icone do plugin disponivel no painel.",
+    "changelog": "Corrige o status 404 das lojas em slug raiz e mantém o ícone do plugin no painel.",
     "faq": "O pacote é distribuído pelo repositório público do Menzzu."
   }
 }

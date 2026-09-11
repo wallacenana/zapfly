@@ -13,7 +13,7 @@ RewriteRule ^ - [L]
 # e devolve 404 antes de chegar no index.php do WordPress.
 RewriteCond %{REQUEST_URI} !^/(wp-admin|wp-content|wp-includes|wp-json|wp-login\.php|xmlrpc\.php|blog|privacidade|politica-de-privacidade|termos|termos-de-uso|contato|sobre|ajuda)(/|$) [NC]
 
-# Todo slug raiz restante vira cardápio.
+# Todo slug raiz restante vira cardápio pelo front controller do WordPress.
 RewriteRule ^([a-zA-Z0-9_-]+)/?$ /index.php?menzzu_store=$1 [L,QSA]
 </IfModule>
 # END DigiZap Cardapio Custom Rules

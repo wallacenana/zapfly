@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Menzzu Marketplace
  * Description: Marketplace Menzzu com descoberta de lojas, busca e catalogo.
- * Version: 3.1.14
+ * Version: 3.1.15
  * Author: Menzzu
  */
 
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MENZZU_MARKETPLACE_VERSION', '3.1.14');
+define('MENZZU_MARKETPLACE_VERSION', '3.1.15');
 define('MENZZU_MARKETPLACE_FILE', __FILE__);
 define('MENZZU_MARKETPLACE_DIR', plugin_dir_path(__FILE__));
 define('MENZZU_MARKETPLACE_URL', plugin_dir_url(__FILE__));
@@ -34,6 +34,15 @@ function menzzu_marketplace_render_public_menu_route()
 
     if (!$isCardapioPath && !$isLegacyStorePath && !$isCustomDomainHome) {
         return;
+    }
+
+    // A loja raiz não é uma página do WordPress; o cardápio renderizado deve responder 200.
+    global $wp_query;
+    if (is_404()) {
+        if (is_object($wp_query)) {
+            $wp_query->is_404 = false;
+        }
+        status_header(200);
     }
 
     $originalRequestUri = $_SERVER['REQUEST_URI'] ?? '/';
