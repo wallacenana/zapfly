@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Menzzu Marketplace
  * Description: Marketplace Menzzu com descoberta de lojas, busca e catalogo.
- * Version: 3.1.21
+ * Version: 3.1.22
  * Author: Menzzu
  */
 
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MENZZU_MARKETPLACE_VERSION', '3.1.21');
+define('MENZZU_MARKETPLACE_VERSION', '3.1.22');
 define('MENZZU_MARKETPLACE_FILE', __FILE__);
 define('MENZZU_MARKETPLACE_DIR', plugin_dir_path(__FILE__));
 define('MENZZU_MARKETPLACE_URL', plugin_dir_url(__FILE__));
@@ -89,6 +89,19 @@ function menzzu_marketplace_render_public_menu_route()
         true
     );
 
+    // O cardápio é uma aplicação independente e não deve executar o frontend do Elementor.
+    $removeElementorAssets = static function () {
+        foreach (['elementor-frontend', 'elementor-webpack-runtime', 'elementor-pro-frontend', 'e-waypoints'] as $scriptHandle) {
+            wp_dequeue_script($scriptHandle);
+            wp_deregister_script($scriptHandle);
+        }
+        foreach (['elementor-frontend', 'elementor-icons', 'elementor-common', 'elementor-galleries', 'elementor-pro'] as $styleHandle) {
+            wp_dequeue_style($styleHandle);
+        }
+    };
+    add_action('wp_enqueue_scripts', $removeElementorAssets, 1000);
+    $removeElementorAssets();
+
     echo '<!doctype html><html ' . get_language_attributes() . '><head>';
     wp_head();
     echo '</head><body class="' . esc_attr(implode(' ', get_body_class(['menzzu-public-menu']))) . '">';
@@ -102,6 +115,7 @@ function menzzu_marketplace_render_public_menu_route()
         }
     }
     echo $bodyContent;
+
     get_footer();
     $_SERVER['REQUEST_URI'] = $originalRequestUri;
     exit;

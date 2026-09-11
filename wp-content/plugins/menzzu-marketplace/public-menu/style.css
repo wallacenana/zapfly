@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+
 :root {
     --primary-color: #82F026;
     --primary-hover: #a2e403;
@@ -180,8 +182,6 @@ body.modal-open {
     overscroll-behavior: none;
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
-
 * {
     margin: 0;
     padding: 0;
@@ -189,6 +189,11 @@ body.modal-open {
     -webkit-tap-highlight-color: transparent;
     font-family: "Plus Jakarta Sans", sans-serif;
     line-height: 1.4;
+}
+
+body.menzzu-public-menu,
+body.menzzu-public-menu * {
+    font-family: "Plus Jakarta Sans", sans-serif;
 }
 
 .container {
