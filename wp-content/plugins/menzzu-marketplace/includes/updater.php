@@ -69,7 +69,8 @@ if (!class_exists('Menzzu_Marketplace_Updater')) {
                     'plugin' => $this->plugin_basename,
                     'new_version' => $manifest['version'],
                     'url' => $manifest['homepage'] ?? home_url('/'),
-                    'package' => $manifest['download_url']
+                    'package' => $manifest['download_url'],
+                    'icons' => $manifest['icons'] ?? []
                 ];
             }
             return $transient;
@@ -85,7 +86,8 @@ if (!class_exists('Menzzu_Marketplace_Updater')) {
                 'author' => $manifest['author'], 'homepage' => $manifest['homepage'],
                 'download_link' => $manifest['download_url'], 'requires' => $manifest['requires'],
                 'tested' => $manifest['tested'], 'requires_php' => $manifest['requires_php'],
-                'last_updated' => $manifest['last_updated'], 'sections' => $manifest['sections']
+                'last_updated' => $manifest['last_updated'], 'sections' => $manifest['sections'],
+                'icons' => $manifest['icons'] ?? []
             ];
         }
     }

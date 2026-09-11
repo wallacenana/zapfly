@@ -1,7 +1,7 @@
 {
   "name": "Menzzu Marketplace",
   "slug": "menzzu-marketplace",
-  "version": "3.1.10",
+  "version": "3.1.11",
   "homepage": "https://menzzu.com/",
   "download_url": "https://github.com/wallacenana/menzzu-marketplace/archive/refs/heads/main.zip",
   "requires": "6.0",
@@ -10,6 +10,10 @@
   "author": "Menzzu",
   "author_url": "https://github.com/wallacenana",
   "last_updated": "2026-09-11",
+  "icons": {
+    "1x": "https://raw.githubusercontent.com/wallacenana/menzzu-marketplace/main/assets/img/menzzu-logo.png",
+    "2x": "https://raw.githubusercontent.com/wallacenana/menzzu-marketplace/main/assets/img/menzzu-logo.png"
+  },
   "sections": {
     "description": "Marketplace e cardápio público do Menzzu.",
     "installation": "Atualize diretamente pelo painel do WordPress.",
