@@ -331,7 +331,6 @@ try {
     // Build SSR payload
     $ssrData = [
         'businessName' => $businessName,
-        'storeAddress' => $storeAddress,
         'businessLat' => $storeLat,
         'businessLng' => $storeLng,
         'googleApiKey' => getenv('GOOGLE_MAPS_API_KEY') ?: getenv('GOOGLE_MAPS_KEY') ?: getenv('GOOGLE_API_KEY') ?: ($store['googleApiKey'] ?? ''),
