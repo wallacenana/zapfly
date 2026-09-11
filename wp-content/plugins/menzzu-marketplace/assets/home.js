@@ -356,18 +356,21 @@
 
   function updateContinueState(root) {
     const state = stateFor(root);
-    const button = root.querySelector('[data-address-continue]');
-    const input = root.querySelector('[data-address-input]');
+    const inputs = root.querySelectorAll('[data-address-input]');
+    const buttons = root.querySelectorAll('[data-address-continue]');
+    const hasTypedAddress = Array.from(inputs).some((input) => input.value.trim());
 
-    if (button) {
-      button.disabled = !state.addressSelected && !(input && input.value.trim());
-    }
+    buttons.forEach((button) => {
+      button.disabled = !state.addressSelected && !hasTypedAddress;
+    });
 
-    if (input && !state.addressSelected) {
-      input.setAttribute('aria-invalid', input.value.trim() ? 'true' : 'false');
-    } else if (input) {
-      input.removeAttribute('aria-invalid');
-    }
+    inputs.forEach((input) => {
+      if (!state.addressSelected) {
+        input.setAttribute('aria-invalid', input.value.trim() ? 'true' : 'false');
+      } else {
+        input.removeAttribute('aria-invalid');
+      }
+    });
   }
 
   function setMode(root, mode) {
@@ -701,11 +704,7 @@
       const slug = String(store?.slug || '');
       const categories = getStoreCategories(store);
       const image = store?.logoUrl || placeholderLogo(name, '#64748b');
-      const featuredLine = Array.isArray(store?.featuredProducts) && store.featuredProducts.length > 0
-        ? store.featuredProducts.map((item) => String(item?.name || '')).filter(Boolean).join(' · ')
-        : 'Sem destaques cadastrados';
       const schedule = getStoreScheduleState(store);
-      const fulfillmentMethods = getStoreFulfillmentMethods(store);
       const prepTime = String(store?.prepTime || '').trim();
       const distance = formatDistance(store?.distanceKm);
       const ratingVisible = Number(store?.orderCount || 0) > 0;
@@ -728,7 +727,6 @@
                 ${prepTime ? `<span>${escapeHtml(prepTime)}</span>` : ''}
                 ${distance ? `<span>${escapeHtml(distance)}</span>` : ''}
               </span>
-              ${fulfillmentMethods.length ? `<span class="menzzu-marketplace-restaurant-badges">${fulfillmentMethods.map((method) => `<span class="menzzu-marketplace-store-badge">${escapeHtml(method)}</span>`).join('')}</span>` : ''}
             </span>
           </a>
         </article>
@@ -1001,8 +999,8 @@
     return googleLoaderPromise;
   }
 
-  function attachAutocomplete(root) {
-    const input = root.querySelector('[data-address-input]');
+  function attachAutocomplete(root, targetInput = null) {
+    const input = targetInput || root.querySelector('[data-address-input]');
     if (!input || input.dataset.autocompleteReady === '1' || input.dataset.autocompleteReady === 'loading') {
       return;
     }
@@ -1064,8 +1062,7 @@
   }
 
   function bindRoot(root) {
-    const form = root.querySelector('[data-address-form]');
-    const input = root.querySelector('[data-address-input]');
+    const forms = root.querySelectorAll('[data-address-form]');
     const searchInput = root.querySelector('[data-search-input]');
     const editButton = root.querySelector('[data-edit-address]');
     const controls = root.querySelector('[data-directory-controls]');
@@ -1092,51 +1089,71 @@
       }
     });
 
-    if (form && input) {
+    forms.forEach((form) => {
+      const input = form.querySelector('[data-address-input]');
+      if (!input) return;
+
       input.addEventListener('focus', () => {
-        attachAutocomplete(root);
+        attachAutocomplete(root, input);
       }, { passive: true });
 
       input.addEventListener('input', () => {
         if (input.dataset.autocompleteReady !== '1') {
-          attachAutocomplete(root);
+          attachAutocomplete(root, input);
         }
-        const state = stateFor(root);
-        state.addressSelected = false;
-        state.selectedAddress = null;
+        const currentState = stateFor(root);
+        currentState.addressSelected = false;
+        currentState.selectedAddress = null;
         updateContinueState(root);
       });
 
       form.addEventListener('submit', (event) => {
         event.preventDefault();
-        const state = stateFor(root);
+        const currentState = stateFor(root);
         const typedAddress = input.value.trim();
-        if (!state.addressSelected || !state.selectedAddress) {
+        if (!currentState.addressSelected || !currentState.selectedAddress) {
           if (typedAddress.length < 5) {
             updateContinueState(root);
             return;
           }
 
-          state.selectedAddress = {
+          currentState.selectedAddress = {
             address: typedAddress,
             placeId: '',
             lat: null,
             lng: null
           };
-          state.addressSelected = true;
-          state.address = typedAddress;
+          currentState.addressSelected = true;
+          currentState.address = typedAddress;
         }
 
-        if (!state.selectedAddress.address) {
+        if (!currentState.selectedAddress.address) {
           return;
         }
 
-        saveAddress(root, state.selectedAddress);
+        saveAddress(root, currentState.selectedAddress);
+        const addressModal = root.querySelector('[data-address-modal]');
+        if (addressModal) addressModal.hidden = true;
         syncAddressUI(root);
         if (searchInput) {
           searchInput.focus();
         }
       });
+    });
+
+    const addressModal = root.querySelector('[data-address-modal]');
+    if (addressModal) {
+      addressModal.querySelectorAll('[data-address-modal-close]').forEach((button) => {
+        button.addEventListener('click', () => {
+          addressModal.hidden = true;
+        });
+      });
+      if (!state.addressSelected) {
+        window.requestAnimationFrame(() => {
+          addressModal.hidden = false;
+          addressModal.querySelector('[data-address-input]')?.focus({ preventScroll: true });
+        });
+      }
     }
 
     if (searchInput) {

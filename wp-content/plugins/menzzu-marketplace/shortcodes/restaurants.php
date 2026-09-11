@@ -168,6 +168,7 @@ if (!function_exists('menzzu_marketplace_render_restaurants_shortcode')) {
                 </section>
             </main>
 
+            <?php if (!$hasSelectedAddress) echo menzzu_marketplace_render_address_modal(); ?>
             <?php echo menzzu_marketplace_render_search_modal(); ?>
 
             <?php echo menzzu_marketplace_render_directory_footer_nav([

@@ -107,6 +107,7 @@ require_once MENZZU_MARKETPLACE_DIR . 'includes/blog.php';
 require_once MENZZU_MARKETPLACE_DIR . 'includes/header.php';
 require_once MENZZU_MARKETPLACE_DIR . 'includes/footer-nav.php';
 require_once MENZZU_MARKETPLACE_DIR . 'includes/search-modal.php';
+require_once MENZZU_MARKETPLACE_DIR . 'includes/address-modal.php';
 require_once MENZZU_MARKETPLACE_DIR . 'shortcodes/home.php';
 require_once MENZZU_MARKETPLACE_DIR . 'shortcodes/restaurants.php';
 require_once MENZZU_MARKETPLACE_DIR . 'shortcodes/blog.php';
