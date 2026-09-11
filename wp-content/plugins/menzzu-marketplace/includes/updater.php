@@ -73,6 +73,12 @@ if (!class_exists('Menzzu_Marketplace_Updater')) {
                 return $source;
             }
 
+            // Reaproveita uma pasta válida deixada por uma tentativa anterior.
+            if ($wp_filesystem->is_dir($target) && $wp_filesystem->exists($target . '/menzzu-marketplace.php')) {
+                $this->log('Pasta de destino já contém um plugin válido; reutilizando', ['target' => $target]);
+                return $target;
+            }
+
             if (function_exists('move_dir')) {
                 $moved = move_dir($source, $target, true);
                 if (!is_wp_error($moved) && $moved) {
