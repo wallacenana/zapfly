@@ -12,6 +12,15 @@ if (!class_exists('Menzzu_Marketplace_Updater')) {
         private $manifest_url = 'https://raw.githubusercontent.com/wallacenana/menzzu-marketplace/main/update.json';
         private $cache_key = 'menzzu_marketplace_update_manifest';
 
+        private function log($message, $context = [])
+        {
+            $suffix = '';
+            if (!empty($context)) {
+                $suffix = ' ' . wp_json_encode($context, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            }
+            error_log('[Menzzu Marketplace Updater] ' . $message . $suffix);
+        }
+
         public function __construct($plugin_file)
         {
             $this->plugin_file = $plugin_file;
@@ -30,31 +39,63 @@ if (!class_exists('Menzzu_Marketplace_Updater')) {
 
         public function normalize_package_source($source, $remote_source, $upgrader, $hook_extra)
         {
+            $this->log('normalize_package_source iniciado', [
+                'source' => is_string($source) ? $source : (is_object($source) ? get_class($source) : gettype($source)),
+                'remote_source' => (string) $remote_source,
+                'plugin' => is_array($hook_extra) ? ($hook_extra['plugin'] ?? '') : '',
+            ]);
             if (!$this->is_target_update($hook_extra) || is_wp_error($source)) {
+                $this->log('normalize_package_source ignorado', [
+                    'target_update' => $this->is_target_update($hook_extra) ? 'yes' : 'no',
+                    'source_error' => is_wp_error($source) ? $source->get_error_code() : 'no',
+                ]);
                 return $source;
             }
 
             $source = untrailingslashit((string) $source);
             if (basename($source) === 'menzzu-marketplace') {
+                $this->log('Pasta recebida já está normalizada', ['source' => $source]);
                 return $source;
             }
 
             $target = trailingslashit(dirname($source)) . 'menzzu-marketplace';
             global $wp_filesystem;
+            $this->log('Preparando movimentação da pasta', [
+                'source' => $source,
+                'target' => $target,
+                'source_exists' => file_exists($source) ? 'yes' : 'no',
+                'target_exists' => is_object($wp_filesystem) && $wp_filesystem->is_dir($target) ? 'yes' : 'no',
+                'filesystem' => is_object($wp_filesystem) ? get_class($wp_filesystem) : 'none',
+                'move_dir_available' => function_exists('move_dir') ? 'yes' : 'no',
+            ]);
             if (!is_object($wp_filesystem)) {
+                $this->log('Filesystem do WordPress indisponível');
                 return $source;
             }
 
             if (function_exists('move_dir')) {
                 $moved = move_dir($source, $target, true);
                 if (!is_wp_error($moved) && $moved) {
+                    $this->log('move_dir concluiu a normalização', ['target' => $target]);
                     return $target;
                 }
+                $this->log('move_dir falhou', [
+                    'error' => is_wp_error($moved) ? $moved->get_error_code() . ': ' . $moved->get_error_message() : var_export($moved, true),
+                ]);
             }
 
-            return $wp_filesystem->move($source, $target, true)
-                ? $target
-                : new WP_Error('menzzu_marketplace_update_folder', 'Não foi possível preparar a pasta do plugin Menzzu Marketplace.');
+            $moved = $wp_filesystem->move($source, $target, true);
+            if ($moved) {
+                $this->log('Filesystem move concluiu a normalização', ['target' => $target]);
+                return $target;
+            }
+
+            $this->log('Filesystem move falhou', [
+                'source' => $source,
+                'target' => $target,
+                'target_exists_after' => $wp_filesystem->is_dir($target) ? 'yes' : 'no',
+            ]);
+            return new WP_Error('menzzu_marketplace_update_folder', 'Não foi possível preparar a pasta do plugin Menzzu Marketplace.');
         }
 
         public function recover_package_validation($source, $remote_source, $upgrader, $hook_extra)
@@ -62,6 +103,11 @@ if (!class_exists('Menzzu_Marketplace_Updater')) {
             if (!$this->is_target_update($hook_extra) || !is_wp_error($source) || $source->get_error_code() !== 'incompatible_archive_no_plugins') {
                 return $source;
             }
+
+            $this->log('Tentando recuperar validação do pacote', [
+                'remote_source' => (string) $remote_source,
+                'error' => $source->get_error_code(),
+            ]);
 
             global $wp_filesystem;
             if (!is_object($wp_filesystem)) return $source;
@@ -72,9 +118,13 @@ if (!class_exists('Menzzu_Marketplace_Updater')) {
                 if (!is_array($entry) || (($entry['type'] ?? 'd') !== 'd')) continue;
                 $candidate = trailingslashit($remote_source) . trim((string) $name, '/');
                 $pluginFile = trailingslashit($candidate) . 'menzzu-marketplace.php';
-                if ($wp_filesystem->exists($pluginFile)) return trailingslashit($candidate);
+                if ($wp_filesystem->exists($pluginFile)) {
+                    $this->log('Pacote recuperado', ['candidate' => $candidate]);
+                    return trailingslashit($candidate);
+                }
             }
 
+            $this->log('Não foi possível recuperar a validação do pacote');
             return $source;
         }
 
