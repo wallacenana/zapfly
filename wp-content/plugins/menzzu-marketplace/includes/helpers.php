@@ -37,7 +37,7 @@ if (!function_exists('menzzu_marketplace_api_base')) {
 if (!function_exists('menzzu_marketplace_login_url')) {
     function menzzu_marketplace_login_url()
     {
-        $url = apply_filters('menzzu_marketplace_login_url', home_url('/login/'));
+        $url = apply_filters('menzzu_marketplace_login_url', 'https://app.menzzu.com/login');
         return untrailingslashit((string) apply_filters('digizap_home2_login_url', $url));
     }
 }
@@ -83,7 +83,7 @@ if (!function_exists('menzzu_marketplace_enqueue_assets')) {
             'homeUrl' => home_url('/'),
             'restaurantsUrl' => menzzu_marketplace_restaurants_url(),
             'loginUrl' => menzzu_marketplace_login_url(),
-            'registerUrl' => home_url('/comprar/'),
+            'registerUrl' => home_url('/planos/'),
             'blogUrl' => menzzu_marketplace_blog_url(),
             'categoryImageBaseUrl' => menzzu_marketplace_asset_url('assets/img/'),
             'categoryImageRules' => menzzu_marketplace_category_image_rules(),
@@ -411,8 +411,13 @@ if (!function_exists('menzzu_marketplace_render_featured_cards')) {
             $name = isset($store['name']) ? (string) $store['name'] : 'Restaurante';
             $slug = isset($store['slug']) ? (string) $store['slug'] : '';
             $category = isset($store['category']) ? (string) $store['category'] : '';
+            $address = !empty($store['address']) ? (string) $store['address'] : 'Endereço não informado';
             $logoUrl = !empty($store['logoUrl']) ? (string) $store['logoUrl'] : menzzu_marketplace_placeholder_logo($name, $store['accentColor'] ?? '#e11d48');
+            $featuredLine = !empty($store['featuredProducts'])
+                ? implode(' · ', array_map(static fn($item) => isset($item['name']) ? (string) $item['name'] : '', $store['featuredProducts']))
+                : 'Sem destaques cadastrados';
             $schedule = menzzu_marketplace_store_schedule_state($store);
+            $count = isset($store['productsCount']) ? absint($store['productsCount']) : 0;
             $ratingVisible = isset($store['orderCount']) ? absint($store['orderCount']) > 0 : false;
             $ratingCount = isset($store['ratingCount']) ? absint($store['ratingCount']) : 0;
             $ratingLabel = isset($store['ratingLabel']) && (string) $store['ratingLabel'] !== '' ? (string) $store['ratingLabel'] : '5,0';
@@ -493,13 +498,8 @@ if (!function_exists('menzzu_marketplace_render_restaurant_cards')) {
             $name = isset($store['name']) ? (string) $store['name'] : 'Restaurante';
             $slug = isset($store['slug']) ? (string) $store['slug'] : '';
             $category = isset($store['category']) ? (string) $store['category'] : '';
-            $address = !empty($store['address']) ? (string) $store['address'] : 'Endereço não informado';
             $logoUrl = !empty($store['logoUrl']) ? (string) $store['logoUrl'] : menzzu_marketplace_placeholder_logo($name, $store['accentColor'] ?? '#e11d48');
-            $featuredLine = !empty($store['featuredProducts'])
-                ? implode(' · ', array_map(static fn($item) => isset($item['name']) ? (string) $item['name'] : '', $store['featuredProducts']))
-                : 'Sem destaques cadastrados';
             $schedule = menzzu_marketplace_store_schedule_state($store);
-            $count = isset($store['productsCount']) ? absint($store['productsCount']) : 0;
             $ratingVisible = isset($store['orderCount']) ? absint($store['orderCount']) > 0 : false;
             $ratingCount = isset($store['ratingCount']) ? absint($store['ratingCount']) : 0;
             $ratingLabel = isset($store['ratingLabel']) && (string) $store['ratingLabel'] !== '' ? (string) $store['ratingLabel'] : '5,0';
@@ -927,4 +927,3 @@ add_action('elementor/query/jornada_conhecer_ferramentas', function ($query) {
         ],
     ]);
 });
-
