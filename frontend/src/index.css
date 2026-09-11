@@ -647,6 +647,12 @@ estoque-label {
   .settings-main-card { width: 100%; box-sizing: border-box; padding: 20px !important; }
   .settings-business-head { align-items: flex-start !important; flex-direction: column; gap: 14px; }
   .settings-status-pill { min-width: 0 !important; width: 100%; box-sizing: border-box; }
+  .settings-main-card .settings-grid,
+  .settings-main-card .settings-grid--two,
+  .settings-main-card .settings-option-grid,
+  .settings-main-card .settings-option-grid--two,
+  .settings-main-card .settings-reminder-grid { grid-template-columns: minmax(0, 1fr) !important; }
+  .settings-main-card .settings-toggle-card { width: 100%; min-width: 0; box-sizing: border-box; }
   .settings-main-card [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
   .settings-main-card [style*="grid-template-columns"] > * { min-width: 0 !important; width: 100%; box-sizing: border-box; }
   .settings-main-card input, .settings-main-card select, .settings-main-card textarea { max-width: 100%; box-sizing: border-box; }
