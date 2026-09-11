@@ -18,6 +18,7 @@ if (!class_exists('Menzzu_Marketplace_Updater')) {
             $this->plugin_basename = plugin_basename($plugin_file);
             add_filter('site_transient_update_plugins', [$this, 'inject_update']);
             add_filter('plugins_api', [$this, 'plugin_information'], 20, 3);
+            add_filter('upgrader_source_selection', [$this, 'normalize_package_source'], 10, 4);
             add_filter('upgrader_source_selection', [$this, 'recover_package_validation'], 99, 4);
         }
 
@@ -25,6 +26,35 @@ if (!class_exists('Menzzu_Marketplace_Updater')) {
         {
             $requested = is_array($hook_extra) ? (string) ($hook_extra['plugin'] ?? '') : '';
             return $requested !== '' && ($requested === $this->plugin_basename || basename($requested) === basename($this->plugin_basename));
+        }
+
+        public function normalize_package_source($source, $remote_source, $upgrader, $hook_extra)
+        {
+            if (!$this->is_target_update($hook_extra) || is_wp_error($source)) {
+                return $source;
+            }
+
+            $source = untrailingslashit((string) $source);
+            if (basename($source) === 'menzzu-marketplace') {
+                return $source;
+            }
+
+            $target = trailingslashit(dirname($source)) . 'menzzu-marketplace';
+            global $wp_filesystem;
+            if (!is_object($wp_filesystem)) {
+                return $source;
+            }
+
+            if (function_exists('move_dir')) {
+                $moved = move_dir($source, $target, true);
+                if (!is_wp_error($moved) && $moved) {
+                    return $target;
+                }
+            }
+
+            return $wp_filesystem->move($source, $target, true)
+                ? $target
+                : new WP_Error('menzzu_marketplace_update_folder', 'Não foi possível preparar a pasta do plugin Menzzu Marketplace.');
         }
 
         public function recover_package_validation($source, $remote_source, $upgrader, $hook_extra)
