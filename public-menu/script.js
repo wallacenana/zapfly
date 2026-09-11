@@ -2903,7 +2903,9 @@ async function handlePlaceOrder() {
                     location.reload();
                 });
             } else {
-                alert('Pedido registrado, mas houve um problema ao gerar o link de pagamento. Por favor, entre em contato.');
+                btn.disabled = false;
+                btn.innerHTML = 'Fazer pedido';
+                alert(data.paymentError || 'Pedido registrado, mas houve um problema ao gerar o link de pagamento. Por favor, entre em contato.');
             }
         } else {
             throw new Error(data.error);

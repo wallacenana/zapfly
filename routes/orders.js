@@ -1099,17 +1099,28 @@ router.post('/', async (req, res) => {
     let order = await prisma.order.create({ data: orderData });
 
     // NOVO: Gerar link de pagamento se não for manual e nem pagamento em dinheiro
-    if (!isManual && paymentMethod !== 'Dinheiro' && order.totalValue > 0) {
-      const paymentLink = await createPaymentLink(order, settings);
+    let paymentError = null;
+    const isCashPayment = String(paymentMethod || '').trim().toLowerCase() === 'dinheiro';
+    if (!isManual && !isCashPayment && order.totalValue > 0) {
+      const gatewayEnabled = await hasPlanFeature(prisma, userId, 'paymentGateway');
+      if (!gatewayEnabled) {
+        paymentError = 'O pagamento online está disponível apenas no plano Ilimitado.';
+      } else if (!settings?.mercadopagoToken) {
+        paymentError = 'O Mercado Pago ainda não foi configurado para esta loja.';
+      }
+
+      const paymentLink = paymentError ? null : await createPaymentLink(order, settings);
       if (paymentLink) {
         order = await prisma.order.update({
           where: { id: order.id },
           data: { paymentLink, status: 'waiting_payment' }
         });
+      } else if (!paymentError) {
+        paymentError = 'Não foi possível gerar o link do Mercado Pago. Verifique a integração.';
       }
     }
 
-    res.json(order);
+    res.json(paymentError ? { ...order, paymentError } : order);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1733,7 +1744,8 @@ router.patch('/:id', authenticate, async (req, res) => {
     const settings = await getSettings(userId);
 
     // 4. Regenerar link de pagamento se não for em dinheiro e o valor for maior que 0
-    if (order.paymentMethod !== 'Dinheiro' && order.totalValue > 0) {
+    const isCashPayment = String(order.paymentMethod || '').trim().toLowerCase() === 'dinheiro';
+    if (!isCashPayment && order.totalValue > 0) {
       const paymentLink = await createPaymentLink(order, settings);
       if (paymentLink) {
         order = await prisma.order.update({
