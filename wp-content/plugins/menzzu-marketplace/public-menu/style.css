@@ -221,9 +221,8 @@ h3 {
 
 /* Top Nav */
 .top-nav {
-    position: sticky;
-    top: 0;
-    z-index: 100;
+    position: relative;
+    z-index: 1;
     padding: 18px 0 10px;
     background: var(--bg-color);
     border-bottom: 1px solid var(--border);
@@ -1792,7 +1791,8 @@ body.theme-dark .delivery-fee-badge {
     }
 
     .category-nav {
-        top: 0 !important;
+        position: relative;
+        top: auto !important;
         padding-top: 8px;
         padding-bottom: 8px;
     }
@@ -2398,8 +2398,8 @@ body.theme-dark .delivery-fee-badge {
     background: var(--bg-color);
     padding-top: 10px;
     padding-bottom: 10px;
-    position: sticky;
-    top: var(--category-nav-top, 0px);
+    position: relative;
+    top: auto;
     z-index: 90;
     border-bottom: 1px solid var(--border-color);
 }
