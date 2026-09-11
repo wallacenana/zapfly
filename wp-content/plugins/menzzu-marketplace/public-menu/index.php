@@ -688,7 +688,7 @@ try {
                     </div>
                 </div>
                 <div class="store-header-actions">
-                    <button class="marketplace-back-btn" id="marketplace-back-btn" type="button" hidden aria-label="Voltar para o marketplace">
+                    <button class="marketplace-back-btn" id="marketplace-back-btn" type="button" aria-label="Voltar para o marketplace">
                         <i data-lucide="arrow-left"></i><span>Voltar</span>
                     </button>
                     <button class="more-link-btn" id="history-toggle-btn" aria-label="Ver mais sobre a loja">

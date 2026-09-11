@@ -567,10 +567,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // ignore
     }
 
-    if (marketplaceBackButton && enteredFromMarketplace) {
+    if (marketplaceBackButton) {
         marketplaceBackButton.hidden = false;
         marketplaceBackButton.addEventListener('click', () => {
-            if (window.history.length > 1) {
+            if (enteredFromMarketplace && window.history.length > 1) {
                 window.history.back();
                 return;
             }
