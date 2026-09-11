@@ -639,6 +639,27 @@ estoque-label {
 .chat-contact-info-panel { flex: 0 0 320px; }
 
 @media (max-width:800px) {
+  .settings-page { width: 100% !important; max-width: 100% !important; box-sizing: border-box; padding: 16px !important; overflow-x: hidden; }
+  .settings-header { align-items: flex-start !important; flex-direction: column; gap: 12px; margin-bottom: 20px !important; }
+  .settings-layout { display: flex !important; flex-direction: column; gap: 16px !important; }
+  .settings-nav { width: 100% !important; flex-direction: row !important; overflow-x: auto; gap: 8px !important; padding-bottom: 4px; }
+  .settings-tab { flex: 0 0 auto; white-space: nowrap; }
+  .settings-main-card { width: 100%; box-sizing: border-box; padding: 20px !important; }
+  .settings-business-head { align-items: flex-start !important; flex-direction: column; gap: 14px; }
+  .settings-status-pill { min-width: 0 !important; width: 100%; box-sizing: border-box; }
+  .settings-main-card [style*="grid-template-columns"] { grid-template-columns: minmax(0, 1fr) !important; }
+  .settings-main-card [style*="grid-template-columns"] > * { min-width: 0 !important; width: 100%; box-sizing: border-box; }
+  .settings-main-card input, .settings-main-card select, .settings-main-card textarea { max-width: 100%; box-sizing: border-box; }
+  .settings-main-card .settings-reminder-inline { flex-wrap: wrap; }
+  .settings-main-card .settings-reminder-input { width: 100% !important; }
+  .plans-page { width: 100%; min-width: 0; overflow-x: hidden; }
+  .plans-main { box-sizing: border-box; width: calc(100% - 28px); padding-bottom: 40px; }
+  .plans-cycle-switch { overflow-x: auto; }
+  .plans-cycle-switch button { white-space: nowrap; }
+  .plan-card { width: 100%; box-sizing: border-box; }
+  .plan-card li { min-width: 0; }
+  .plan-card li > span { min-width: 0; overflow-wrap: anywhere; }
+  .plans-payment-note { line-height: 1.5; }
   .prompts-page { width: 100%; min-height: 100%; height: auto !important; box-sizing: border-box; padding: 16px !important; flex-direction: column; overflow-x: hidden; }
   .prompts-instance-list { width: 100% !important; flex-direction: row !important; flex-wrap: wrap; gap: 10px !important; }
   .prompts-instance-list > h3 { width: 100%; }
