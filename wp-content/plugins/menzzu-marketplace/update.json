@@ -1,7 +1,7 @@
 {
   "name": "Menzzu Marketplace",
   "slug": "menzzu-marketplace",
-  "version": "3.1.20",
+  "version": "3.1.21",
   "homepage": "https://menzzu.com/",
   "download_url": "https://github.com/wallacenana/menzzu-marketplace/archive/refs/heads/main.zip",
   "requires": "6.0",
@@ -17,7 +17,7 @@
   "sections": {
     "description": "Marketplace e cardápio público do Menzzu.",
     "installation": "Atualize diretamente pelo painel do WordPress.",
-    "changelog": "Atualizacao de teste com diagnostico detalhado do instalador.",
+    "changelog": "Teste de atualizacao apos a limpeza da pasta temporaria do WordPress.",
     "faq": "O pacote é distribuído pelo repositório público do Menzzu."
   }
 }
