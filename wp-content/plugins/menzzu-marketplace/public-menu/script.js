@@ -804,9 +804,11 @@ function initDeliveryMap() {
     try {
         const configuredLat = Number(state.publicSettings.businessLat);
         const configuredLng = Number(state.publicSettings.businessLng);
-        const mapCenter = Number.isFinite(configuredLat) && Number.isFinite(configuredLng)
+        const hasConfiguredLocation = Number.isFinite(configuredLat) && Number.isFinite(configuredLng);
+        // Sem coordenadas salvas, o centro será resolvido pelo endereço da loja.
+        const mapCenter = hasConfiguredLocation
             ? { lat: configuredLat, lng: configuredLng }
-            : { lat: -2.5307, lng: -44.3068 };
+            : { lat: -15.7939, lng: -47.8828 };
         state.googleMap = new google.maps.Map(mapEl, {
             zoom: 16,
             center: mapCenter,
@@ -821,6 +823,17 @@ function initDeliveryMap() {
             draggable: true,
             animation: google.maps.Animation.DROP
         });
+
+        if (!hasConfiguredLocation && state.publicSettings.storeAddress && state.geocoder) {
+            state.geocoder.geocode({
+                address: `${state.publicSettings.storeAddress}, Brasil`
+            }, (results, status) => {
+                if (status !== 'OK' || !results[0]) return;
+                const storeLocation = results[0].geometry.location;
+                state.googleMap.setCenter(storeLocation);
+                state.mapMarker.setPosition(storeLocation);
+            });
+        }
 
         if (state.userInfo.address) {
             geocodeAddress(state.userInfo.address);
