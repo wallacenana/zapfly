@@ -2786,6 +2786,16 @@ async function handlePlaceOrder() {
     btn.disabled = true;
     btn.innerHTML = 'Processando Pagamento...';
 
+    // Revalida o horário no último passo para impedir delivery com a loja fechada.
+    checkStoreStatus();
+    if (state.activeTab === 'delivery' && !state.isOpen) {
+        btn.disabled = false;
+        btn.innerHTML = 'Fazer pedido';
+        return showAlert('Loja Fechada', isOrderEnabled()
+            ? 'Estamos fechados para pronta entrega no momento. Utilize a aba de Encomendas para agendar.'
+            : 'Estamos fechados para pronta entrega no momento.');
+    }
+
     if (state.activeTab === 'order') {
         if (!state.orderSchedule?.date || !state.orderSchedule?.time) {
             btn.disabled = false;
