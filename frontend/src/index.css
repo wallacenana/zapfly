@@ -642,8 +642,8 @@ estoque-label {
   .settings-page { width: 100% !important; max-width: 100% !important; box-sizing: border-box; padding: 16px !important; overflow-x: hidden; }
   .settings-header { align-items: flex-start !important; flex-direction: column; gap: 12px; margin-bottom: 20px !important; }
   .settings-layout { display: flex !important; flex-direction: column; gap: 16px !important; }
-  .settings-nav { width: 100% !important; flex-direction: row !important; overflow-x: auto; gap: 8px !important; padding-bottom: 4px; }
-  .settings-tab { flex: 0 0 auto; white-space: nowrap; }
+  .settings-nav { width: 100% !important; flex-direction: column !important; overflow: visible; gap: 8px !important; padding-bottom: 0; }
+  .settings-tab { width: 100%; flex: 0 0 auto; white-space: normal; justify-content: flex-start; }
   .settings-main-card { width: 100%; box-sizing: border-box; padding: 20px !important; }
   .settings-business-head { align-items: flex-start !important; flex-direction: column; gap: 14px; }
   .settings-status-pill { min-width: 0 !important; width: 100%; box-sizing: border-box; }
