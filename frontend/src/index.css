@@ -637,6 +637,7 @@ estoque-label {
 .chat-contacts-panel { flex: 0 0 320px; min-width: 0; }
 .chat-main-panel { min-width: 0; }
 .chat-contact-info-panel { flex: 0 0 320px; }
+.chat-page input::placeholder { color: #78908a; opacity: 1; }
 
 @media (max-width:800px) {
   .settings-page { width: 100% !important; max-width: 100% !important; box-sizing: border-box; padding: 16px !important; overflow-x: hidden; }

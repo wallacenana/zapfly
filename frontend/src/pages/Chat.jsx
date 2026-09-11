@@ -721,7 +721,7 @@ const Chat = () => {
                   borderRadius: '10px',
                   border: '1px solid var(--border-color)',
                   backgroundColor: 'var(--bg-tertiary)',
-                  color: '#fff',
+                  color: 'var(--text-primary)',
                   fontSize: '14px',
                   outline: 'none'
                 }}
@@ -1103,7 +1103,7 @@ const Chat = () => {
                         backgroundColor: 'transparent',
                         border: 'none',
                         outline: 'none',
-                        color: '#fff',
+                        color: 'var(--text-primary)',
                         fontSize: '14px',
                         padding: '8px 0'
                       }}
