@@ -790,6 +790,12 @@ window.initMapsAutocomplete = () => {
             updateLocation(place.geometry.location, place.formatted_address);
         });
 
+        const geocodeTypedAddress = (value) => {
+            const cleanValue = String(value || '').trim();
+            if (!cleanValue || input.dataset.placeSelected === '1' || input.value.trim() !== cleanValue) return;
+            geocodeAddress(cleanValue);
+        };
+
         input.addEventListener('input', () => {
             input.dataset.placeSelected = '0';
         }, { passive: true });
@@ -797,13 +803,13 @@ window.initMapsAutocomplete = () => {
         input.addEventListener('change', () => {
             const value = input.value.trim();
             if (!value || input.dataset.placeSelected === '1') return;
-            setTimeout(() => geocodeAddress(value), 120);
+            setTimeout(() => geocodeTypedAddress(value), 120);
         });
 
         input.addEventListener('blur', () => {
             const value = input.value.trim();
             if (!value || input.dataset.placeSelected === '1') return;
-            setTimeout(() => geocodeAddress(value), 120);
+            setTimeout(() => geocodeTypedAddress(value), 120);
         });
 
         input.addEventListener('keydown', (e) => {
@@ -886,7 +892,11 @@ function updateLocation(location, address = null) {
         state.mapMarker.setPosition(location);
     }
     if (address) {
-        document.getElementById('user-address').value = address;
+        const addressInput = document.getElementById('user-address');
+        if (addressInput) {
+            addressInput.value = address;
+            addressInput.dataset.placeSelected = '1';
+        }
         const addressDisplay = document.getElementById('delivery-address-display');
         if (addressDisplay) addressDisplay.textContent = address;
         state.userInfo.address = address;
@@ -918,7 +928,13 @@ function syncSelectedAddress(address) {
     const addressDisplay = document.getElementById('delivery-address-display');
     if (addressDisplay) addressDisplay.textContent = cleanAddress;
     calculateDeliveryFee(cleanAddress);
-    if (state.geocoder) geocodeAddress(cleanAddress);
+
+    // A selected Places result already has reliable coordinates. Do not geocode
+    // its formatted text again, since ambiguous street names can resolve elsewhere.
+    const addressInput = document.getElementById('user-address');
+    if (state.geocoder && addressInput?.dataset.placeSelected !== '1') {
+        geocodeAddress(cleanAddress);
+    }
 }
 
 function getDeliveryFeeCacheKey() {

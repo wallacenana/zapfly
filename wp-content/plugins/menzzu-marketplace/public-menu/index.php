@@ -395,7 +395,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=3.94'); ?>">
+        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=3.95'); ?>">
         <style>
             :root {
                 --primary-color:
@@ -1200,12 +1200,26 @@ try {
                     } catch (error) {
                         saved = {};
                     }
+                    let savedCoordinates = {
+                        lat: null,
+                        lng: null
+                    };
+                    if (input.dataset.placeSelected === '1') {
+                        try {
+                            const savedAddress = JSON.parse(localStorage.getItem('menzzu_home_address') || '{}');
+                            savedCoordinates = {
+                                lat: savedAddress.lat ?? null,
+                                lng: savedAddress.lng ?? null
+                            };
+                        } catch (error) {
+                            // Coordinates remain empty when the selection has no saved position.
+                        }
+                    }
                     localStorage.setItem('menzzu_home_address', JSON.stringify({
                         ...saved,
                         address,
                         formatted_address: address,
-                        lat: null,
-                        lng: null
+                        ...savedCoordinates
                     }));
                     window.dispatchEvent(new CustomEvent('menzzu-address-selected', {
                         detail: { address }
@@ -1225,7 +1239,7 @@ try {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.15'); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.16'); ?>" defer></script>
 
     </html>
 <?php
