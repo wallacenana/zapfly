@@ -878,11 +878,8 @@ try {
                         <div id="delivery-address-section">
                             <div class="form-group receiving-address-field">
                                 <label class="field-label">Endereço de entrega</label>
-                                <input type="text" id="user-address" class="ifood-input"
-                                    placeholder="Rua, número, bairro..." autocomplete="off">
-                            </div>
-                            <div id="delivery-map"
-                                style="height:200px; width:100%; border-radius:12px; background:#e8e8e8; margin-bottom:14px; overflow:hidden;">
+                                <div id="delivery-address-display" class="delivery-address-display">Informe seu endereço</div>
+                                <button type="button" class="change-address-btn" onclick="openRestaurantLocationModal()">Alterar endereço</button>
                             </div>
                             <div id="delivery-fee-display"
                                 style="margin-bottom:15px; font-weight:600; text-align:center; padding:10px; border-radius:10px; background:#f9f9f9; display:none;">
@@ -1082,8 +1079,9 @@ try {
                 <h2 id="restaurant-location-title">Onde você está?</h2>
                 <p>Informe seu endereço para calcular a entrega e mostrar as lojas mais próximas.</p>
                 <form id="restaurant-location-form">
-                    <input type="text" id="restaurant-location-input" placeholder="Rua, número, bairro..." autocomplete="off" spellcheck="false">
-                    <button type="submit" class="primary-btn">Continuar</button>
+                    <input type="text" id="user-address" class="ifood-input" placeholder="Rua, número, bairro..." autocomplete="off" spellcheck="false">
+                    <div id="delivery-map" class="restaurant-location-map"></div>
+                    <button type="submit" class="primary-btn">Confirmar endereço</button>
                 </form>
             </div>
         </div>
@@ -1160,8 +1158,19 @@ try {
             (() => {
                 const modal = document.getElementById('restaurant-location-modal');
                 const form = document.getElementById('restaurant-location-form');
-                const input = document.getElementById('restaurant-location-input');
+                const input = document.getElementById('user-address');
                 if (!modal || !form || !input) return;
+
+                window.openRestaurantLocationModal = () => {
+                    modal.classList.remove('hidden');
+                    if (window.google && typeof window.initDeliveryMap === 'function') {
+                        window.initDeliveryMap();
+                        if (window.state?.googleMap) {
+                            setTimeout(() => google.maps.event.trigger(window.state.googleMap, 'resize'), 100);
+                        }
+                    }
+                    input.focus({ preventScroll: true });
+                };
 
                 const hasSavedAddress = () => {
                     try {

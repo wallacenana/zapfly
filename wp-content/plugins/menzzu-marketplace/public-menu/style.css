@@ -1703,6 +1703,36 @@ body.theme-dark .delivery-fee-badge {
     gap: 10px;
 }
 
+.restaurant-location-map {
+    width: 100%;
+    height: 220px;
+    overflow: hidden;
+    border: 1px solid rgba(3, 22, 20, 0.12);
+    border-radius: 12px;
+    background: #e8e8e8;
+}
+
+.delivery-address-display {
+    min-height: 50px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-main);
+    background: var(--bg-gray);
+    overflow-wrap: anywhere;
+}
+
+.change-address-btn {
+    margin-top: 8px;
+    border: 0;
+    background: transparent;
+    color: var(--primary-color);
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
 .restaurant-location-panel input {
     width: 100%;
     min-height: 50px;

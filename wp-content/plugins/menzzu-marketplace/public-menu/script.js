@@ -760,6 +760,9 @@ window.initMapsAutocomplete = () => {
             country: 'br'
         });
         state.geocoder = new google.maps.Geocoder();
+        if (document.getElementById('restaurant-location-modal') && typeof initDeliveryMap === 'function') {
+            initDeliveryMap();
+        }
 
         autocomplete.addListener('place_changed', () => {
             const place = autocomplete.getPlace();
@@ -851,6 +854,8 @@ function updateLocation(location, address = null) {
     state.mapMarker.setPosition(location);
     if (address) {
         document.getElementById('user-address').value = address;
+        const addressDisplay = document.getElementById('delivery-address-display');
+        if (addressDisplay) addressDisplay.textContent = address;
         state.userInfo.address = address;
         localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
         calculateDeliveryFee(address);
@@ -2137,6 +2142,8 @@ function initEventListeners() {
     document.getElementById('user-name').value = state.userInfo.name || '';
     document.getElementById('user-phone').value = state.userInfo.phone || '';
     document.getElementById('user-address').value = state.userInfo.address || '';
+    const addressDisplay = document.getElementById('delivery-address-display');
+    if (addressDisplay) addressDisplay.textContent = state.userInfo.address || 'Informe seu endereço';
 
     const phoneInput = document.getElementById('user-phone');
     if (phoneInput) {
