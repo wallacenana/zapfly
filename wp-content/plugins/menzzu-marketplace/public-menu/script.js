@@ -791,35 +791,14 @@ window.initMapsAutocomplete = () => {
             updateLocation(place.geometry.location, place.formatted_address);
         });
 
-        let addressTypingTimer = null;
         input.addEventListener('input', () => {
             input.dataset.placeSelected = '0';
             state.deliveryCoordinates = { lat: null, lng: null };
-            window.clearTimeout(addressTypingTimer);
-            const value = input.value.trim();
-            if (value.length >= 5) {
-                addressTypingTimer = window.setTimeout(() => geocodeAddress(value), 500);
-            }
         }, { passive: true });
-
-        input.addEventListener('change', () => {
-            const value = input.value.trim();
-            if (!value || input.dataset.placeSelected === '1') return;
-            setTimeout(() => geocodeAddress(value), 120);
-        });
-
-        input.addEventListener('blur', () => {
-            const value = input.value.trim();
-            if (!value || input.dataset.placeSelected === '1') return;
-            setTimeout(() => geocodeAddress(value), 120);
-        });
 
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                const value = input.value.trim();
-                if (value) geocodeAddress(value);
-                input.blur();
             }
         });
 
