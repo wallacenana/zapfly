@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Menzzu Marketplace
  * Description: Marketplace Menzzu com descoberta de lojas, busca e catalogo.
- * Version: 3.1.31
+ * Version: 3.1.32
  * Author: Menzzu
  */
 
