@@ -669,7 +669,7 @@ try {
                                         <span id="store-status-badge" class="status-badge <?php echo $marketplaceReady ? 'open' : 'closed'; ?>"><?php echo $marketplaceReady ? 'Aberto' : 'Inativo'; ?></span>
                                     <?php if ($prepTimeLabel !== ''): ?>
                                         <span class="store-meta-separator" aria-hidden="true">•</span>
-                                        <span id="store-prep-time" class="store-prep-time"><svg class="store-meta-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><?php echo htmlspecialchars($prepTimeLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <span id="store-prep-time" class="store-prep-time"><svg class="store-meta-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><?php echo htmlspecialchars(str_replace('Entrega ', '', $prepTimeLabel), ENT_QUOTES, 'UTF-8'); ?></span>
                                     <?php endif; ?>
                                     <span id="store-delivery-fee" class="store-delivery-fee" hidden></span>
                                 </div>
