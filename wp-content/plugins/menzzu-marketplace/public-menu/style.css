@@ -2589,6 +2589,145 @@ body.theme-dark .delivery-fee-badge {
     }
 }
 
+/* Mobile restaurant layout: prevent desktop widths from escaping the viewport. */
+@media (max-width: 767px) {
+    html,
+    body {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+    }
+
+    .container {
+        width: 100%;
+        max-width: none;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .top-nav {
+        padding: 12px 0 10px;
+    }
+
+    .nav-wrapper {
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .store-info {
+        flex: 1 1 100%;
+        min-width: 0;
+        order: 1;
+    }
+
+    .store-logo {
+        width: 48px;
+        height: 48px;
+        flex: 0 0 48px;
+    }
+
+    .store-details,
+    .store-title-block {
+        min-width: 0;
+    }
+
+    .store-name-row {
+        gap: 8px;
+    }
+
+    .store-details h1 {
+        font-size: 1.25rem;
+        overflow-wrap: anywhere;
+    }
+
+    .store-header-actions {
+        width: 100%;
+        order: 2;
+        justify-content: space-between;
+        margin-left: 0;
+    }
+
+    .category-tabs {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+    }
+
+    .tabs-scroll {
+        gap: 8px;
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .tabs-scroll .cat-tab {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .main-menu {
+        padding-bottom: 88px;
+    }
+
+    .menu-section {
+        padding: 20px 0 4px;
+    }
+
+    .product-list {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+    }
+
+    .product-card {
+        width: 100%;
+        min-width: 0;
+        gap: 12px;
+        padding: 14px 0;
+    }
+
+    .product-img {
+        width: 92px;
+        height: 92px;
+        flex: 0 0 92px;
+    }
+
+    .product-info {
+        min-width: 0;
+    }
+
+    .product-info h3,
+    .product-info p {
+        overflow-wrap: anywhere;
+    }
+
+    .product-info p {
+        margin-bottom: 8px;
+    }
+
+    .product-footer {
+        gap: 8px;
+    }
+
+    .product-price {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .cart-footer {
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+
+    .modal-content,
+    .checkout-content {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #delivery-map {
+        min-height: 180px;
+    }
+}
+
 /* Checkout Payment Methods */
 #payment-options {
     display: flex;
