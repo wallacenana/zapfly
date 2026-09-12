@@ -1075,6 +1075,21 @@ try {
             </div>
         </footer>
 
+        <div id="restaurant-location-modal" class="restaurant-location-modal hidden" role="dialog" aria-modal="true" aria-labelledby="restaurant-location-title">
+            <div class="restaurant-location-backdrop" data-location-close></div>
+            <div class="restaurant-location-panel">
+                <button type="button" class="restaurant-location-close" data-location-close aria-label="Fechar">&times;</button>
+                <span class="restaurant-location-kicker">Antes de começar</span>
+                <h2 id="restaurant-location-title">Onde você está?</h2>
+                <p>Informe seu endereço para calcular a entrega e mostrar as lojas mais próximas.</p>
+                <form id="restaurant-location-form">
+                    <input type="text" id="restaurant-location-input" placeholder="Rua, número, bairro..." autocomplete="off" spellcheck="false">
+                    <button type="submit" class="primary-btn">Continuar</button>
+                </form>
+                <button type="button" class="restaurant-location-skip" data-location-close>Continuar sem informar</button>
+            </div>
+        </div>
+
         <?php include 'componentes/footer.php'; ?>
 
         <!-- Inline SVG Sprite: only the icons we use (~3 KiB vs 92 KiB full Lucide) -->
@@ -1142,6 +1157,70 @@ try {
                 <path d="M16 10a4 4 0 0 1-8 0" />
             </symbol>
         </svg>
+
+        <script>
+            (() => {
+                const modal = document.getElementById('restaurant-location-modal');
+                const form = document.getElementById('restaurant-location-form');
+                const input = document.getElementById('restaurant-location-input');
+                if (!modal || !form || !input) return;
+
+                const hasSavedAddress = () => {
+                    try {
+                        const saved = JSON.parse(localStorage.getItem('menzzu_home_address') || '{}');
+                        return Boolean(String(saved.address || saved.formatted_address || '').trim());
+                    } catch (error) {
+                        return false;
+                    }
+                };
+
+                const close = () => {
+                    modal.classList.add('hidden');
+                    sessionStorage.setItem('menzzu_location_prompt_seen', '1');
+                };
+
+                modal.querySelectorAll('[data-location-close]').forEach((button) => {
+                    button.addEventListener('click', close);
+                });
+
+                form.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    const address = input.value.trim();
+                    if (!address) {
+                        input.focus();
+                        return;
+                    }
+
+                    let saved = {};
+                    try {
+                        saved = JSON.parse(localStorage.getItem('menzzu_home_address') || '{}');
+                    } catch (error) {
+                        saved = {};
+                    }
+                    localStorage.setItem('menzzu_home_address', JSON.stringify({
+                        ...saved,
+                        address,
+                        formatted_address: address,
+                        lat: null,
+                        lng: null
+                    }));
+                    close();
+                });
+
+                let seen = false;
+                try {
+                    seen = sessionStorage.getItem('menzzu_location_prompt_seen') === '1';
+                } catch (error) {
+                    seen = false;
+                }
+                if (!hasSavedAddress() && !seen) {
+                    setTimeout(() => {
+                        modal.classList.remove('hidden');
+                        input.focus({ preventScroll: true });
+                    }, 250);
+                }
+            })();
+        </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
                 <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.07'); ?>" defer></script>

@@ -1638,6 +1638,114 @@ body.theme-dark .delivery-fee-badge {
     color: var(--text-gray);
 }
 
+.restaurant-location-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.restaurant-location-modal.hidden {
+    display: none;
+}
+
+.restaurant-location-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(3, 22, 20, 0.58);
+}
+
+.restaurant-location-panel {
+    position: relative;
+    width: min(100%, 460px);
+    padding: 30px;
+    border-radius: 20px;
+    background: var(--bg-color);
+    color: var(--text-main);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+}
+
+.restaurant-location-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    border: 0;
+    background: transparent;
+    color: var(--text-gray);
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.restaurant-location-kicker {
+    display: block;
+    margin-bottom: 8px;
+    color: var(--primary-color);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.restaurant-location-panel h2 {
+    margin-bottom: 8px;
+    font-size: 1.35rem;
+}
+
+.restaurant-location-panel p {
+    margin-bottom: 20px;
+    color: var(--text-gray);
+    font-size: 0.9rem;
+}
+
+.restaurant-location-panel form {
+    display: grid;
+    gap: 10px;
+}
+
+.restaurant-location-panel input {
+    width: 100%;
+    min-height: 50px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-gray);
+    color: var(--text-main);
+    font: inherit;
+    outline: none;
+}
+
+.restaurant-location-panel input:focus {
+    border-color: var(--primary-color);
+}
+
+.restaurant-location-skip {
+    display: block;
+    margin: 14px auto 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-gray);
+    font: inherit;
+    font-size: 0.82rem;
+    cursor: pointer;
+}
+
+@media (max-width: 520px) {
+    .restaurant-location-modal {
+        align-items: flex-end;
+        padding: 0;
+    }
+
+    .restaurant-location-panel {
+        width: 100%;
+        padding: 26px 18px calc(20px + env(safe-area-inset-bottom));
+        border-radius: 20px 20px 0 0;
+    }
+}
+
 .spinner {
     width: 32px;
     height: 32px;
