@@ -16,6 +16,7 @@ if (!class_exists('Menzzu_Marketplace_Updater')) {
         {
             $this->plugin_file = $plugin_file;
             $this->plugin_basename = plugin_basename($plugin_file);
+            add_filter('pre_set_site_transient_update_plugins', [$this, 'inject_update']);
             add_filter('site_transient_update_plugins', [$this, 'inject_update']);
             add_filter('plugins_api', [$this, 'plugin_information'], 20, 3);
             add_filter('upgrader_source_selection', [$this, 'normalize_package_source'], 10, 4);
