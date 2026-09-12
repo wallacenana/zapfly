@@ -1075,7 +1075,7 @@ try {
                 <form id="restaurant-location-form">
                     <input type="text" id="user-address" class="ifood-input" placeholder="Rua, número, bairro..." autocomplete="off" spellcheck="false">
                     <div id="restaurant-location-fee" class="restaurant-location-fee" hidden></div>
-                    <button type="submit" class="primary-btn">Confirmar endereço</button>
+                    <button type="submit" class="primary-btn" disabled>Salvar endereço</button>
                 </form>
             </div>
         </div>
@@ -1157,6 +1157,10 @@ try {
 
                 window.openRestaurantLocationModal = () => {
                     modal.classList.remove('hidden');
+                    if (submitButton) {
+                        submitButton.disabled = !input.value.trim();
+                        submitButton.innerText = 'Salvar endereço';
+                    }
                     input.focus({
                         preventScroll: true
                     });
@@ -1184,8 +1188,8 @@ try {
                         feeDisplay.innerHTML = '';
                     }
                     if (submitButton) {
-                        submitButton.disabled = false;
-                        submitButton.innerText = 'Calcular taxa';
+                        submitButton.disabled = !input.value.trim();
+                        submitButton.innerText = 'Salvar endereço';
                     }
                 });
 
@@ -1209,11 +1213,6 @@ try {
                         return;
                     }
 
-                    if (modal.dataset.calculatedAddress === address) {
-                        close();
-                        return;
-                    }
-
                     let saved = {};
                     try {
                         saved = JSON.parse(localStorage.getItem('menzzu_home_address') || '{}');
@@ -1229,14 +1228,10 @@ try {
                         formatted_address: address,
                         ...selectedCoordinates
                     }));
-                    window.dispatchEvent(new CustomEvent('menzzu-address-selected', {
+                    window.dispatchEvent(new CustomEvent('menzzu-address-saved', {
                         detail: { address, coordinates: selectedCoordinates }
                     }));
-                    modal.dataset.calculatedAddress = address;
-                    if (submitButton) {
-                        submitButton.disabled = true;
-                        submitButton.innerText = 'Calculando...';
-                    }
+                    close();
                 });
 
                 if (!hasSavedAddress()) {
@@ -1251,7 +1246,7 @@ try {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.22'); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.23'); ?>" defer></script>
 
     </html>
 <?php
