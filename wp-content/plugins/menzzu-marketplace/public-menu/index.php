@@ -395,7 +395,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=3.90'); ?>">
+        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=3.91'); ?>">
         <style>
             :root {
                 --primary-color:
@@ -669,7 +669,7 @@ try {
                                         <span id="store-status-badge" class="status-badge <?php echo $marketplaceReady ? 'open' : 'closed'; ?>"><?php echo $marketplaceReady ? 'Aberto' : 'Inativo'; ?></span>
                                     <?php if ($prepTimeLabel !== ''): ?>
                                         <span class="store-meta-separator" aria-hidden="true">•</span>
-                                        <span id="store-prep-time" class="store-prep-time"><?php echo htmlspecialchars($prepTimeLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                                        <span id="store-prep-time" class="store-prep-time"><svg class="store-meta-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><?php echo htmlspecialchars($prepTimeLabel, ENT_QUOTES, 'UTF-8'); ?></span>
                                     <?php endif; ?>
                                     <span id="store-delivery-fee" class="store-delivery-fee" hidden></span>
                                 </div>
@@ -1221,7 +1221,7 @@ try {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.11'); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.12'); ?>" defer></script>
 
     </html>
 <?php

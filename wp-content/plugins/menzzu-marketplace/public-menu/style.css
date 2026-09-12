@@ -324,8 +324,9 @@ h3 {
 
 .menzzu-baixo {
     display: flex;
-    gap: 15px;
+    gap: 10px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .store-meta-separator {
@@ -335,6 +336,9 @@ h3 {
 }
 
 .store-prep-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     font-size: 0.8rem;
     font-weight: 400;
     color: var(--text-gray);
@@ -342,11 +346,26 @@ h3 {
 }
 
 .store-delivery-fee {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
     font-family: inherit;
     color: var(--text-gray);
     font-size: 0.9rem;
     font-weight: 700;
     white-space: nowrap;
+}
+
+.store-meta-icon {
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+    color: var(--primary-color);
 }
 
 .store-delivery-fee[hidden] {

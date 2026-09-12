@@ -845,7 +845,7 @@ function getDeliveryFeeCacheKey() {
 function setHeaderDeliveryFee(fee) {
     const headerFee = document.getElementById('store-delivery-fee');
     if (!headerFee || !Number.isFinite(Number(fee))) return;
-    headerFee.textContent = `• Taxa R$ ${Number(fee).toFixed(2).replace('.', ',')}`;
+    headerFee.innerHTML = `<span class="store-meta-separator" aria-hidden="true">•</span><svg class="store-meta-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="17" r="3"></circle><circle cx="18" cy="17" r="3"></circle><path d="m6 17 3-8h5l4 8M9 9l3 4h5M5 9h4"></path></svg>Taxa R$ ${Number(fee).toFixed(2).replace('.', ',')}`;
     headerFee.hidden = false;
 }
 
