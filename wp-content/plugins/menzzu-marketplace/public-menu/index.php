@@ -1075,10 +1075,9 @@ try {
             </div>
         </footer>
 
-        <div id="restaurant-location-modal" class="restaurant-location-modal hidden" role="dialog" aria-modal="true" aria-labelledby="restaurant-location-title">
-            <div class="restaurant-location-backdrop" data-location-close></div>
+        <div id="restaurant-location-modal" class="restaurant-location-modal hidden" role="dialog" aria-modal="true" aria-labelledby="restaurant-location-title" style="--store-accent: <?php echo htmlspecialchars($accentColor, ENT_QUOTES, 'UTF-8'); ?>;">
+            <div class="restaurant-location-backdrop"></div>
             <div class="restaurant-location-panel">
-                <button type="button" class="restaurant-location-close" data-location-close aria-label="Fechar">&times;</button>
                 <span class="restaurant-location-kicker">Antes de começar</span>
                 <h2 id="restaurant-location-title">Onde você está?</h2>
                 <p>Informe seu endereço para calcular a entrega e mostrar as lojas mais próximas.</p>
@@ -1086,7 +1085,6 @@ try {
                     <input type="text" id="restaurant-location-input" placeholder="Rua, número, bairro..." autocomplete="off" spellcheck="false">
                     <button type="submit" class="primary-btn">Continuar</button>
                 </form>
-                <button type="button" class="restaurant-location-skip" data-location-close>Continuar sem informar</button>
             </div>
         </div>
 
@@ -1176,12 +1174,19 @@ try {
 
                 const close = () => {
                     modal.classList.add('hidden');
-                    sessionStorage.setItem('menzzu_location_prompt_seen', '1');
                 };
 
-                modal.querySelectorAll('[data-location-close]').forEach((button) => {
-                    button.addEventListener('click', close);
-                });
+                try {
+                    const rawEntry = localStorage.getItem('menzzu_marketplace_store_entry') || '';
+                    const entry = JSON.parse(rawEntry);
+                    const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+                    const fromMarketplace = entry
+                        && String(entry.path || '') === currentPath
+                        && Date.now() - Number(entry.timestamp || 0) < 30000;
+                    modal.classList.toggle('is-marketplace-entry', Boolean(fromMarketplace));
+                } catch (error) {
+                    // Use the store accent when the navigation marker is unavailable.
+                }
 
                 form.addEventListener('submit', (event) => {
                     event.preventDefault();
@@ -1207,13 +1212,7 @@ try {
                     close();
                 });
 
-                let seen = false;
-                try {
-                    seen = sessionStorage.getItem('menzzu_location_prompt_seen') === '1';
-                } catch (error) {
-                    seen = false;
-                }
-                if (!hasSavedAddress() && !seen) {
+                if (!hasSavedAddress()) {
                     setTimeout(() => {
                         modal.classList.remove('hidden');
                         input.focus({ preventScroll: true });

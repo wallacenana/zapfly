@@ -1645,7 +1645,7 @@ body.theme-dark .delivery-fee-badge {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
+    padding: 0;
 }
 
 .restaurant-location-modal.hidden {
@@ -1655,35 +1655,32 @@ body.theme-dark .delivery-fee-badge {
 .restaurant-location-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(3, 22, 20, 0.58);
+    background: var(--location-accent, #82F026);
 }
 
 .restaurant-location-panel {
     position: relative;
-    width: min(100%, 460px);
+    z-index: 1;
+    width: min(100%, 520px);
     padding: 30px;
-    border-radius: 20px;
-    background: var(--bg-color);
-    color: var(--text-main);
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.24);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.96);
+    color: #031614;
+    box-shadow: 0 24px 70px rgba(3, 22, 20, 0.22);
 }
 
-.restaurant-location-close {
-    position: absolute;
-    top: 12px;
-    right: 14px;
-    border: 0;
-    background: transparent;
-    color: var(--text-gray);
-    font-size: 28px;
-    line-height: 1;
-    cursor: pointer;
+.restaurant-location-modal.is-marketplace-entry {
+    --location-accent: #82F026;
+}
+
+.restaurant-location-modal:not(.is-marketplace-entry) {
+    --location-accent: var(--store-accent, #82F026);
 }
 
 .restaurant-location-kicker {
     display: block;
     margin-bottom: 8px;
-    color: var(--primary-color);
+    color: #031614;
     font-size: 0.76rem;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -1697,7 +1694,7 @@ body.theme-dark .delivery-fee-badge {
 
 .restaurant-location-panel p {
     margin-bottom: 20px;
-    color: var(--text-gray);
+    color: rgba(3, 22, 20, 0.72);
     font-size: 0.9rem;
 }
 
@@ -1713,7 +1710,7 @@ body.theme-dark .delivery-fee-badge {
     border: 1px solid var(--border);
     border-radius: 10px;
     background: var(--bg-gray);
-    color: var(--text-main);
+    color: #031614;
     font: inherit;
     outline: none;
 }
@@ -1722,27 +1719,15 @@ body.theme-dark .delivery-fee-badge {
     border-color: var(--primary-color);
 }
 
-.restaurant-location-skip {
-    display: block;
-    margin: 14px auto 0;
-    border: 0;
-    background: transparent;
-    color: var(--text-gray);
-    font: inherit;
-    font-size: 0.82rem;
-    cursor: pointer;
-}
-
 @media (max-width: 520px) {
     .restaurant-location-modal {
-        align-items: flex-end;
-        padding: 0;
+        align-items: center;
     }
 
     .restaurant-location-panel {
-        width: 100%;
-        padding: 26px 18px calc(20px + env(safe-area-inset-bottom));
-        border-radius: 20px 20px 0 0;
+        width: calc(100% - 32px);
+        padding: 26px 18px;
+        border-radius: 20px;
     }
 }
 
