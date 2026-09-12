@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MENZZU_MARKETPLACE_VERSION', '3.1.68');
+define('MENZZU_MARKETPLACE_VERSION', '3.1.70');
 define('MENZZU_MARKETPLACE_FILE', __FILE__);
 define('MENZZU_MARKETPLACE_DIR', plugin_dir_path(__FILE__));
 define('MENZZU_MARKETPLACE_URL', plugin_dir_url(__FILE__));
