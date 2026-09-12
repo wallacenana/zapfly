@@ -1260,27 +1260,6 @@ app.delete('/marketing-assets/:id', authenticate, async (req, res) => {
     }
 });
 
-// Lista mínima para o sitemap do marketplace, sem expor dados da loja.
-app.get('/public/store-slugs', async (req, res) => {
-    try {
-        const stores = await prisma.$queryRawUnsafe(`
-            SELECT u.slug
-            FROM \`user\` u
-            LEFT JOIN \`store_profile\` sp ON sp.userId = u.id
-            WHERE COALESCE(sp.active, u.active) = 1
-              AND u.slug IS NOT NULL
-              AND TRIM(u.slug) <> ''
-            ORDER BY u.slug ASC
-        `);
-
-        res.setHeader('Cache-Control', 'public, max-age=900, s-maxage=1800');
-        res.json({ stores: stores.map((store) => String(store.slug).trim()).filter(Boolean) });
-    } catch (err) {
-        console.error('[Public Store Slugs Error]', err);
-        res.status(500).json({ error: 'Erro ao carregar lojas públicas.' });
-    }
-});
-
 //  GOOGLE CALENDAR OAUTH 
 
 const GCAL_SCOPES = ['https://www.googleapis.com/auth/calendar'];

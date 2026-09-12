@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Menzzu Marketplace
  * Description: Marketplace Menzzu com descoberta de lojas, busca e catalogo.
- * Version: 3.1.41
+ * Version: 3.1.42
  * Author: Menzzu
  */
 
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MENZZU_MARKETPLACE_VERSION', '3.1.41');
+define('MENZZU_MARKETPLACE_VERSION', '3.1.42');
 define('MENZZU_MARKETPLACE_FILE', __FILE__);
 define('MENZZU_MARKETPLACE_DIR', plugin_dir_path(__FILE__));
 define('MENZZU_MARKETPLACE_URL', plugin_dir_url(__FILE__));
@@ -23,7 +23,7 @@ function menzzu_marketplace_render_store_sitemap()
         return;
     }
 
-    $cached = get_transient('menzzu_marketplace_store_sitemap_v2');
+    $cached = get_transient('menzzu_marketplace_store_sitemap_v3');
     if (is_string($cached) && $cached !== '') {
         status_header(200);
         header('Content-Type: application/xml; charset=UTF-8');
@@ -32,14 +32,20 @@ function menzzu_marketplace_render_store_sitemap()
         exit;
     }
 
-    $response = wp_remote_get(menzzu_marketplace_api_base() . '/public/store-slugs', [
-        'timeout' => 12,
-        'headers' => ['Accept' => 'application/json']
-    ]);
     $slugs = [];
-    if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
-        $payload = json_decode(wp_remote_retrieve_body($response), true);
-        $slugs = is_array($payload['stores'] ?? null) ? $payload['stores'] : [];
+    try {
+        require_once MENZZU_MARKETPLACE_DIR . 'public-menu/config.php';
+        $db = menzzu_marketplace_external_db_config();
+        $pdo = new PDO(
+            "mysql:host={$db['host']};dbname={$db['db']};charset=utf8mb4",
+            $db['user'],
+            $db['pass'],
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]
+        );
+        $stmt = $pdo->query("SELECT u.slug FROM `user` u LEFT JOIN store_profile sp ON sp.userId = u.id WHERE COALESCE(sp.active, u.active) = 1 AND u.slug IS NOT NULL AND TRIM(u.slug) <> '' ORDER BY u.slug ASC");
+        $slugs = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    } catch (Throwable $error) {
+        $slugs = [];
     }
 
     $urls = [];
@@ -56,7 +62,7 @@ function menzzu_marketplace_render_store_sitemap()
         . implode("\n", $urls)
         . "\n</urlset>\n";
 
-    set_transient('menzzu_marketplace_store_sitemap_v2', $xml, 15 * MINUTE_IN_SECONDS);
+    set_transient('menzzu_marketplace_store_sitemap_v3', $xml, 15 * MINUTE_IN_SECONDS);
     status_header(200);
     header('Content-Type: application/xml; charset=UTF-8');
     header('Cache-Control: public, max-age=900, s-maxage=1800');
