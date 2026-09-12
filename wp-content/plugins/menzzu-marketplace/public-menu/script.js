@@ -953,6 +953,8 @@ async function calculateDeliveryFee(address) {
     const requestId = ++state.deliveryFeeRequestId;
     const cleanAddress = String(address || '').trim();
     if (!cleanAddress) return;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 15000);
 
     try {
         const response = await fetch(`${API_BASE}/orders/calculate-fee`, {
@@ -960,6 +962,7 @@ async function calculateDeliveryFee(address) {
             headers: {
                 'Content-Type': 'application/json'
             },
+            signal: controller.signal,
             body: JSON.stringify({
                 address: cleanAddress,
                 slug: STORE_SLUG,
@@ -968,6 +971,7 @@ async function calculateDeliveryFee(address) {
             })
         });
         const data = await response.json();
+        window.clearTimeout(timeoutId);
         if (requestId !== state.deliveryFeeRequestId) return null;
         const display = document.getElementById('delivery-fee-display');
         const locationFeeDisplay = document.getElementById('restaurant-location-fee');
@@ -1018,6 +1022,7 @@ async function calculateDeliveryFee(address) {
         }
         return data;
     } catch (err) {
+        window.clearTimeout(timeoutId);
         console.error('Erro ao calcular frete:', err);
         const locationFeeDisplay = document.getElementById('restaurant-location-fee');
         if (locationFeeDisplay) {
@@ -2134,7 +2139,7 @@ function initEventListeners() {
         const result = await syncSelectedAddress(address, event.detail?.coordinates || null);
         const modal = document.getElementById('restaurant-location-modal');
         const submitButton = modal?.querySelector('button[type="submit"]');
-        if (result?.fee !== undefined && submitButton) {
+        if (!result?.error && submitButton) {
             submitButton.disabled = false;
             submitButton.innerText = 'Confirmar endereço';
         } else if (submitButton) {
