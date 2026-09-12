@@ -83,6 +83,7 @@ let state = {
     currentStep: 1,
     deliveryFee: 0,
     deliveryFeeRequestId: 0,
+    deliveryCoordinates: { lat: null, lng: null },
     googleMap: null,
     mapMarker: null,
     geocoder: null,
@@ -792,6 +793,7 @@ window.initMapsAutocomplete = () => {
 
         input.addEventListener('input', () => {
             input.dataset.placeSelected = '0';
+            state.deliveryCoordinates = { lat: null, lng: null };
         }, { passive: true });
 
         input.addEventListener('change', () => {
@@ -827,6 +829,15 @@ function geocodeAddress(address) {
         address: address
     }, (results, status) => {
         if (status === 'OK' && results[0]) updateLocation(results[0].geometry.location, results[0].formatted_address);
+    });
+}
+
+function reverseGeocode(latLng) {
+    if (!state.geocoder || !latLng) return;
+    state.geocoder.geocode({ location: latLng }, (results, status) => {
+        if (status === 'OK' && results[0]) {
+            updateLocation(latLng, results[0].formatted_address);
+        }
     });
 }
 
@@ -876,6 +887,11 @@ function updateLocation(location, address = null) {
         state.googleMap.panTo(location);
         state.mapMarker.setPosition(location);
     }
+    const lat = typeof location?.lat === 'function' ? location.lat() : Number(location?.lat);
+    const lng = typeof location?.lng === 'function' ? location.lng() : Number(location?.lng);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        state.deliveryCoordinates = { lat, lng };
+    }
     if (address) {
         document.getElementById('user-address').value = address;
         const addressDisplay = document.getElementById('delivery-address-display');
@@ -886,7 +902,7 @@ function updateLocation(location, address = null) {
     }
 }
 
-function syncSelectedAddress(address) {
+function syncSelectedAddress(address, coordinates = null) {
     const cleanAddress = String(address || '').trim();
     if (!cleanAddress) return;
 
@@ -894,8 +910,16 @@ function syncSelectedAddress(address) {
     localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
     const addressDisplay = document.getElementById('delivery-address-display');
     if (addressDisplay) addressDisplay.textContent = cleanAddress;
+    if (coordinates && Number.isFinite(Number(coordinates.lat)) && Number.isFinite(Number(coordinates.lng))) {
+        state.deliveryCoordinates = {
+            lat: Number(coordinates.lat),
+            lng: Number(coordinates.lng)
+        };
+    } else {
+        state.deliveryCoordinates = { lat: null, lng: null };
+    }
     calculateDeliveryFee(cleanAddress);
-    if (state.geocoder) geocodeAddress(cleanAddress);
+    if (!coordinates && state.geocoder) geocodeAddress(cleanAddress);
 }
 
 function getDeliveryFeeCacheKey() {
@@ -937,7 +961,9 @@ async function calculateDeliveryFee(address) {
             },
             body: JSON.stringify({
                 address: cleanAddress,
-                slug: STORE_SLUG
+                slug: STORE_SLUG,
+                lat: Number.isFinite(Number(state.deliveryCoordinates?.lat)) ? Number(state.deliveryCoordinates.lat) : undefined,
+                lng: Number.isFinite(Number(state.deliveryCoordinates?.lng)) ? Number(state.deliveryCoordinates.lng) : undefined
             })
         });
         const data = await response.json();
@@ -2084,7 +2110,7 @@ function initEventListeners() {
     const searchContainer = document.getElementById('search-container');
 
     window.addEventListener('menzzu-address-selected', (event) => {
-        syncSelectedAddress(event.detail?.address || '');
+        syncSelectedAddress(event.detail?.address || '', event.detail?.coordinates || null);
     });
 
     if (searchInput) {

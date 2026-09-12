@@ -274,7 +274,7 @@ router.get('/settings/public', async (req, res) => {
 
 router.post('/calculate-fee', async (req, res) => {
   try {
-    const { address, slug } = req.body;
+    const { address, slug, lat, lng } = req.body;
     if (!address) return res.status(400).json({ error: 'Endereço é obrigatório' });
 
     let userId = req.user?.id;
@@ -285,7 +285,10 @@ router.post('/calculate-fee', async (req, res) => {
     if (!userId) return res.status(400).json({ error: 'User ID ou Slug não identificado.' });
 
     const { calculateFee } = require('../lib/maps');
-    const result = await calculateFee(address, userId);
+    const coordinates = Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))
+      ? { lat: Number(lat), lng: Number(lng) }
+      : null;
+    const result = await calculateFee(address, userId, coordinates);
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

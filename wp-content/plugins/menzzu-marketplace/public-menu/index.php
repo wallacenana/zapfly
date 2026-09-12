@@ -1200,15 +1200,17 @@ try {
                     } catch (error) {
                         saved = {};
                     }
+                    const selectedCoordinates = input.dataset.placeSelected === '1'
+                        ? { lat: saved.lat ?? null, lng: saved.lng ?? null }
+                        : { lat: null, lng: null };
                     localStorage.setItem('menzzu_home_address', JSON.stringify({
                         ...saved,
                         address,
                         formatted_address: address,
-                        lat: null,
-                        lng: null
+                        ...selectedCoordinates
                     }));
                     window.dispatchEvent(new CustomEvent('menzzu-address-selected', {
-                        detail: { address }
+                        detail: { address, coordinates: selectedCoordinates }
                     }));
                     close();
                 });
@@ -1225,7 +1227,7 @@ try {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.18'); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.21'); ?>" defer></script>
 
     </html>
 <?php
