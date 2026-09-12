@@ -512,7 +512,8 @@ try {
 
             /* Google Autocomplete Fix */
             .pac-container {
-                z-index: 1100 !important;
+                /* The Places dropdown is appended to body, above the location modal. */
+                z-index: 1305 !important;
                 border-radius: 8px;
                 border: none;
                 margin-top: 2px;

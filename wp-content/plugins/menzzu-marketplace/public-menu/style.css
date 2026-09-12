@@ -1451,8 +1451,8 @@ body.theme-dark .var-option.selected {
     margin-top: 4px;
 }
 
-.checkout-content #checkout-type-tabs:has(.type-tab[data-method="pickup"].active) ~ #pickup-info-panel,
-.checkout-content #checkout-type-tabs:has(.type-tab[data-method="local"].active) ~ #local-info-panel {
+.checkout-content #checkout-type-tabs:has(.type-tab[data-method="pickup"].active)~#pickup-info-panel,
+.checkout-content #checkout-type-tabs:has(.type-tab[data-method="local"].active)~#local-info-panel {
     display: grid;
 }
 
@@ -1482,7 +1482,7 @@ body.theme-dark .var-option.selected {
     background: color-mix(in srgb, var(--text-main) 3%, var(--bg-color));
 }
 
-.checkout-content .store-location-card > div {
+.checkout-content .store-location-card>div {
     min-width: 0;
     display: grid;
     gap: 4px;
@@ -1520,7 +1520,7 @@ body.theme-dark .var-option.selected {
     background: color-mix(in srgb, var(--text-main) 3%, var(--bg-color));
 }
 
-.checkout-content .receiving-store-hours > strong {
+.checkout-content .receiving-store-hours>strong {
     color: var(--text-main);
     font-size: 0.84rem;
 }
@@ -1667,6 +1667,7 @@ body.theme-dark .delivery-fee-badge {
     background: rgba(255, 255, 255, 0.96);
     color: #031614;
     box-shadow: 0 24px 70px rgba(3, 22, 20, 0.22);
+    text-align: center;
 }
 
 .restaurant-location-illustration {
@@ -1857,7 +1858,7 @@ body.theme-dark .delivery-fee-badge {
         order: 3;
     }
 
-    .marketplace-back-btn{
+    .marketplace-back-btn {
         position: relative;
         left: 0;
     }
@@ -2723,6 +2724,7 @@ body.theme-dark .delivery-fee-badge {
 
 /* Mobile restaurant layout: prevent desktop widths from escaping the viewport. */
 @media (max-width: 767px) {
+
     html,
     body {
         width: 100%;
