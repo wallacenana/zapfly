@@ -816,7 +816,7 @@ window.initMapsAutocomplete = () => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const value = input.value.trim();
-                if (value) geocodeAddress(value);
+                if (value && input.dataset.placeSelected !== '1') geocodeTypedAddress(value);
                 input.blur();
             }
         });
