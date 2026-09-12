@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Menzzu Marketplace
  * Description: Marketplace Menzzu com descoberta de lojas, busca e catalogo.
- * Version: 3.1.32
+ * Version: 3.1.33
  * Author: Menzzu
  */
 
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MENZZU_MARKETPLACE_VERSION', '3.1.29');
+define('MENZZU_MARKETPLACE_VERSION', '3.1.33');
 define('MENZZU_MARKETPLACE_FILE', __FILE__);
 define('MENZZU_MARKETPLACE_DIR', plugin_dir_path(__FILE__));
 define('MENZZU_MARKETPLACE_URL', plugin_dir_url(__FILE__));
@@ -36,97 +36,13 @@ function menzzu_marketplace_render_public_menu_route()
         return;
     }
 
-    // A loja raiz não é uma página do WordPress; o cardápio renderizado deve responder 200.
-    global $wp_query;
-    if (is_404()) {
-        if (is_object($wp_query)) {
-            $wp_query->is_404 = false;
-        }
-        status_header(200);
-    }
-
     $originalRequestUri = $_SERVER['REQUEST_URI'] ?? '/';
     if ($isLegacyStorePath) {
         $slug = $legacyStoreSlug !== '' ? $legacyStoreSlug : sanitize_title($segments[0]);
         $_SERVER['REQUEST_URI'] = '/cardapio/' . rawurlencode($slug) . '/';
     }
 
-    ob_start();
     require MENZZU_MARKETPLACE_DIR . 'public-menu/index.php';
-    $legacyHtml = (string) ob_get_clean();
-
-    if (!preg_match('/<body\b[^>]*>(.*)<\/html>/is', $legacyHtml, $bodyMatch)) {
-        status_header(500);
-        wp_die('Não foi possível carregar o cardápio público.');
-    }
-
-    $bodyContent = (string) $bodyMatch[1];
-    $restaurantTitle = '';
-    if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $legacyHtml, $titleMatch)) {
-        $restaurantTitle = trim(wp_strip_all_tags(html_entity_decode((string) $titleMatch[1], ENT_QUOTES, 'UTF-8')));
-    }
-    if ($restaurantTitle !== '') {
-        add_filter('pre_get_document_title', static function () use ($restaurantTitle) {
-            return $restaurantTitle;
-        }, 99);
-    }
-    $bodyContent = preg_replace('/<script\b[^>]*src="[^"]*(?:sweetalert|public-menu\/script\.js)[^"]*"[^>]*>\s*<\/script>/is', '', $bodyContent);
-    $bodyContent = preg_replace('/<\/footer>\s*<!-- MODAL DETALHE -->/i', '<!-- MODAL DETALHE -->', $bodyContent, 1);
-    $bodyContent = preg_replace('/<\/body>\s*<\/html>\s*$/is', '', $bodyContent);
-
-    // Mantém somente as variáveis SSR e os estilos específicos do cardápio.
-    preg_match_all('/<script>.*?<\/script>/is', $legacyHtml, $inlineScripts);
-    preg_match_all('/<style>.*?<\/style>/is', $legacyHtml, $inlineStyles);
-    wp_enqueue_style(
-        'menzzu-public-menu',
-        MENZZU_MARKETPLACE_URL . 'public-menu/style.css',
-        [],
-        filemtime(MENZZU_MARKETPLACE_DIR . 'public-menu/style.css')
-    );
-    wp_enqueue_script(
-        'menzzu-public-menu-swal',
-        'https://cdn.jsdelivr.net/npm/sweetalert2@11',
-        [],
-        '11',
-        true
-    );
-    wp_enqueue_script(
-        'menzzu-public-menu',
-        MENZZU_MARKETPLACE_URL . 'public-menu/script.js',
-        ['menzzu-public-menu-swal'],
-        filemtime(MENZZU_MARKETPLACE_DIR . 'public-menu/script.js'),
-        true
-    );
-
-    // O cardápio é uma aplicação independente e não deve executar o frontend do Elementor.
-    $removeElementorAssets = static function () {
-        foreach (['elementor-frontend', 'elementor-webpack-runtime', 'elementor-pro-frontend', 'e-waypoints'] as $scriptHandle) {
-            wp_dequeue_script($scriptHandle);
-            wp_deregister_script($scriptHandle);
-        }
-        foreach (['elementor-frontend', 'elementor-icons', 'elementor-common', 'elementor-galleries', 'elementor-pro'] as $styleHandle) {
-            wp_dequeue_style($styleHandle);
-        }
-    };
-    add_action('wp_enqueue_scripts', $removeElementorAssets, 1000);
-    $removeElementorAssets();
-
-    echo '<!doctype html><html ' . get_language_attributes() . '><head>';
-    wp_head();
-    echo '</head><body class="' . esc_attr(implode(' ', get_body_class(['menzzu-public-menu']))) . '">';
-    do_action('wp_body_open');
-    foreach ($inlineStyles[0] ?? [] as $style) {
-        echo $style;
-    }
-    foreach ($inlineScripts[0] ?? [] as $script) {
-        if (strpos($script, 'window.__STORE_SLUG__') !== false || strpos($script, 'window.__SSR__') !== false) {
-            echo $script;
-        }
-    }
-    echo $bodyContent;
-
-    wp_footer();
-    echo '</body></html>';
     $_SERVER['REQUEST_URI'] = $originalRequestUri;
     exit;
 }

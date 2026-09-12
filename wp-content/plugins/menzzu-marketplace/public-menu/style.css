@@ -1,5 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
-
 :root {
     --primary-color: #82F026;
     --primary-hover: #a2e403;
@@ -182,6 +180,8 @@ body.modal-open {
     overscroll-behavior: none;
 }
 
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+
 * {
     margin: 0;
     padding: 0;
@@ -189,11 +189,6 @@ body.modal-open {
     -webkit-tap-highlight-color: transparent;
     font-family: "Plus Jakarta Sans", sans-serif;
     line-height: 1.4;
-}
-
-body.menzzu-public-menu,
-body.menzzu-public-menu * {
-    font-family: "Plus Jakarta Sans", sans-serif;
 }
 
 .container {
@@ -221,11 +216,8 @@ h3 {
 
 /* Top Nav */
 .top-nav {
-    position: relative;
-    z-index: 1;
     padding: 18px 0 10px;
     background: var(--bg-color);
-    border-bottom: 1px solid var(--border);
 }
 
 .nav-wrapper {
@@ -1791,8 +1783,7 @@ body.theme-dark .delivery-fee-badge {
     }
 
     .category-nav {
-        position: relative;
-        top: auto !important;
+        top: 0 !important;
         padding-top: 8px;
         padding-bottom: 8px;
     }
@@ -2398,8 +2389,8 @@ body.theme-dark .delivery-fee-badge {
     background: var(--bg-color);
     padding-top: 10px;
     padding-bottom: 10px;
-    position: relative;
-    top: auto;
+    position: sticky;
+    top: var(--category-nav-top, 0px);
     z-index: 90;
     border-bottom: 1px solid var(--border-color);
 }

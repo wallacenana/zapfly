@@ -553,20 +553,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const rawEntry = localStorage.getItem('menzzu_marketplace_store_entry') || '';
         const entry = JSON.parse(rawEntry);
         const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+        const referrer = document.referrer ? new URL(document.referrer) : null;
+        const sameSiteReferrer = referrer
+            && referrer.origin === window.location.origin
+            && (referrer.pathname.replace(/\/+$/, '') || '/') !== currentPath;
         const validMarker = entry
             && entry.timestamp > 0
             && Date.now() - Number(entry.timestamp) < 30000
             && String(entry.path || '') === currentPath;
-        enteredFromMarketplace = Boolean(validMarker);
+        enteredFromMarketplace = Boolean(validMarker || sameSiteReferrer);
         localStorage.removeItem('menzzu_marketplace_store_entry');
     } catch (error) {
         // ignore
     }
 
-    if (marketplaceBackButton) {
+    if (marketplaceBackButton && enteredFromMarketplace) {
         marketplaceBackButton.hidden = false;
         marketplaceBackButton.addEventListener('click', () => {
-            if (enteredFromMarketplace && window.history.length > 1) {
+            if (window.history.length > 1) {
                 window.history.back();
                 return;
             }

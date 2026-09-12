@@ -879,7 +879,7 @@ try {
                             <div class="form-group receiving-address-field">
                                 <label class="field-label">Endereço de entrega</label>
                                 <input type="text" id="user-address" class="ifood-input"
-                                    placeholder="Rua, número, bairro..." autocomplete="off">
+                                    placeholder="Rua, número, bairro..." autocomplete="street-address">
                             </div>
                             <div id="delivery-map"
                                 style="height:200px; width:100%; border-radius:12px; background:#e8e8e8; margin-bottom:14px; overflow:hidden;">

@@ -13,7 +13,7 @@ if (!function_exists('menzzu_marketplace_render_directory_header')) {
             'restaurantsUrl' => menzzu_marketplace_restaurants_url(),
             'blogUrl' => menzzu_marketplace_blog_url(),
             'loginUrl' => menzzu_marketplace_login_url(),
-            'registerUrl' => home_url('/planos/'),
+            'registerUrl' => home_url('/comprar/'),
             'hasSelectedAddress' => false,
             'initialAddressLabel' => '',
             'showBack' => false,
@@ -99,7 +99,7 @@ if (!function_exists('menzzu_marketplace_render_directory_header')) {
 
                 <div class="menzzu-marketplace-header-actions menzzu-marketplace-header-actions-guest" data-guest-actions>
                     <a class="menzzu-marketplace-button menzzu-marketplace-button-ghost" href="<?php echo esc_url($args['loginUrl']); ?>">Entrar</a>
-                    <a class="menzzu-marketplace-button menzzu-marketplace-button-primary" href="<?php echo esc_url($args['registerUrl']); ?>">Começar grátis</a>
+                    <a class="menzzu-marketplace-button menzzu-marketplace-button-primary" href="<?php echo esc_url($args['registerUrl']); ?>">Criar conta</a>
                 </div>
             </div>
         </header>
