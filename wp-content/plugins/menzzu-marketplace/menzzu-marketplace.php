@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Menzzu Marketplace
  * Description: Marketplace Menzzu com descoberta de lojas, busca e catalogo.
- * Version: 3.1.39
+ * Version: 3.1.40
  * Author: Menzzu
  */
 
@@ -11,10 +11,60 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MENZZU_MARKETPLACE_VERSION', '3.1.39');
+define('MENZZU_MARKETPLACE_VERSION', '3.1.40');
 define('MENZZU_MARKETPLACE_FILE', __FILE__);
 define('MENZZU_MARKETPLACE_DIR', plugin_dir_path(__FILE__));
 define('MENZZU_MARKETPLACE_URL', plugin_dir_url(__FILE__));
+
+function menzzu_marketplace_render_store_sitemap()
+{
+    $requestPath = (string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+    if (untrailingslashit($requestPath) !== '/sitemap-lojas.xml') {
+        return;
+    }
+
+    $cached = get_transient('menzzu_marketplace_store_sitemap');
+    if (is_string($cached) && $cached !== '') {
+        status_header(200);
+        header('Content-Type: application/xml; charset=UTF-8');
+        header('Cache-Control: public, max-age=900, s-maxage=1800');
+        echo $cached;
+        exit;
+    }
+
+    $response = wp_remote_get(menzzu_marketplace_api_base() . '/public/store-slugs', [
+        'timeout' => 12,
+        'headers' => ['Accept' => 'application/json']
+    ]);
+    $slugs = [];
+    if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
+        $payload = json_decode(wp_remote_retrieve_body($response), true);
+        $slugs = is_array($payload['stores'] ?? null) ? $payload['stores'] : [];
+    }
+
+    $urls = [];
+    foreach ($slugs as $slug) {
+        $slug = sanitize_title((string) $slug);
+        if ($slug === '') {
+            continue;
+        }
+        $urls[] = '  <url><loc>' . esc_xml(home_url('/' . $slug . '/')) . '</loc></url>';
+    }
+
+    $xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+        . "<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n"
+        . implode("\n", $urls)
+        . "\n</urlset>\n";
+
+    set_transient('menzzu_marketplace_store_sitemap', $xml, 15 * MINUTE_IN_SECONDS);
+    status_header(200);
+    header('Content-Type: application/xml; charset=UTF-8');
+    header('Cache-Control: public, max-age=900, s-maxage=1800');
+    echo $xml;
+    exit;
+}
+
+add_action('template_redirect', 'menzzu_marketplace_render_store_sitemap', -1);
 
 function menzzu_marketplace_render_public_menu_route()
 {
