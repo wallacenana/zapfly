@@ -855,11 +855,6 @@ async function calculateDeliveryFee(address) {
         if (data.fee !== undefined) {
             state.deliveryFee = data.fee;
             state.allowCash = data.type === 'estimated' ? false : (data.allowCash !== false);
-            const headerFee = document.getElementById('store-delivery-fee');
-            if (headerFee) {
-                headerFee.innerHTML = `<i data-lucide="bike" class="menzzu-store-header-meta-icon" aria-hidden="true"></i>Taxa R$ ${Number(data.fee).toFixed(2).replace('.', ',')}`;
-                if (window.lucide) lucide.createIcons({ nodes: [headerFee] });
-            }
             if (display) {
                 display.style.display = 'block';
                 display.innerHTML = `Taxa de entrega: <strong style="color:var(--primary-color)">R$ ${data.fee.toFixed(2)}</strong>`;
@@ -2922,8 +2917,8 @@ function updateStoreRatingBadge() {
     if (!badge) return;
 
     const summary = state.storeReviewSummary || {};
-    const count = Number(summary.reviewCount || 0);
-    if (count < 1) {
+    const orderCount = Number(summary.orderCount || 0);
+    if (orderCount < 1) {
         badge.hidden = true;
         badge.innerHTML = '';
         return;
@@ -2932,8 +2927,10 @@ function updateStoreRatingBadge() {
     const average = summary.averageRating !== null && summary.averageRating !== undefined ?
         Number(summary.averageRating) :
         5;
+    const count = Number(summary.reviewCount || 0);
+
     badge.hidden = false;
-    badge.className = 'menzzu-store-header-rating';
+    badge.className = 'rating-badge has-rating';
 
     if (Number.isFinite(average)) {
         const avgText = average.toFixed(1).replace('.', ',');

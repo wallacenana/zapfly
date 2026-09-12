@@ -283,23 +283,6 @@ try {
     $textSecondary = $isDarkTheme ? 'rgba(255,255,255,0.72)' : ($textColor ? $textColor . '99' : 'rgba(102,102,102,0.6)');
     $acceptOrders = isset($store['acceptOrders']) ? (bool) $store['acceptOrders'] : true;
     $prepTimeLabel = formatPrepTimeLabel($store['prepTime'] ?? '');
-    $deliveryRulesForHeader = json_decode((string) ($store['deliveryRules'] ?? '[]'), true);
-    $headerDeliveryFee = null;
-    if (is_array($deliveryRulesForHeader)) {
-        foreach ($deliveryRulesForHeader as $deliveryRule) {
-            if (is_array($deliveryRule) && is_numeric($deliveryRule['fee'] ?? null)) {
-                $fee = (float) $deliveryRule['fee'];
-                $headerDeliveryFee = $headerDeliveryFee === null ? $fee : min($headerDeliveryFee, $fee);
-            }
-        }
-    }
-    $headerMinimumOrder = null;
-    foreach (['minimumOrderValue', 'minOrderValue', 'minimumOrder'] as $minimumKey) {
-        if (is_numeric($store[$minimumKey] ?? null)) {
-            $headerMinimumOrder = (float) $store[$minimumKey];
-            break;
-        }
-    }
 
     $stmt = $pdo->prepare("SELECT * FROM category WHERE userId = ? ORDER BY `order` ASC");
     $stmt->execute([$store['id']]);
@@ -412,7 +395,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=3.76'); ?>">
+        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=3.75'); ?>">
         <style>
             :root {
                 --primary-color:
@@ -674,33 +657,35 @@ try {
     <body class="<?php echo $isDarkTheme ? 'theme-dark' : 'theme-light'; ?>">
 
         <header class="top-nav">
-            <div class="menzzu-store-header container">
-                <div class="menzzu-store-header-main">
-                    <div class="menzzu-store-header-title-row">
-                        <h1 id="store-name" class="menzzu-store-header-name"><?php echo htmlspecialchars($businessName, ENT_QUOTES, 'UTF-8'); ?></h1>
-                        <div id="store-rating-badge" class="menzzu-store-header-rating">
-                            <span aria-hidden="true">★</span>
-                            <strong><?php echo number_format($reviewAverage, 1, ',', '.'); ?></strong>
-                            <?php if ($reviewCount > 0): ?><small>(<?php echo (int) $reviewCount; ?>)</small><?php endif; ?>
+            <div class="container nav-wrapper">
+                <div class="store-info">
+                    <div class="store-logo"><img src="<?php echo $logoUrl; ?>" alt="Logo" fetchpriority="high"
+                            decoding="async"></div>
+                    <div class="store-details">
+                        <div class="store-name-row">
+                            <div class="store-title-block">
+                                <h1 id="store-name"><?php echo htmlspecialchars($businessName, ENT_QUOTES, 'UTF-8'); ?></h1>
+                                <?php if ($businessCategory !== ''): ?>
+                                    <div class="store-category"><?php echo htmlspecialchars($businessCategory, ENT_QUOTES, 'UTF-8'); ?></div>
+                                <?php endif; ?>
+                                <div class="store-meta-line">
+                                    <span id="store-status-badge" class="status-badge <?php echo $marketplaceReady ? 'open' : 'closed'; ?>"><?php echo $marketplaceReady ? 'Aberto' : 'Inativo'; ?></span>
+                                    <?php if ($prepTimeLabel !== ''): ?>
+                                        <span class="store-meta-separator" aria-hidden="true">•</span>
+                                        <span id="store-prep-time" class="store-prep-time"><?php echo htmlspecialchars($prepTimeLabel, ENT_QUOTES, 'UTF-8'); ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <?php if ($orderCount > 0): ?>
+                                <div id="store-rating-badge" class="rating-badge has-rating">
+                                    <svg class="rating-star-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="currentColor"></path>
+                                    </svg>
+                                    <?php echo number_format($reviewAverage, 1, ',', '.'); ?><?php if ($reviewCount > 0): ?> (<?php echo (int) $reviewCount; ?> <?php echo $reviewCount === 1 ? 'avaliação' : 'avaliações'; ?>)<?php endif; ?>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     </div>
-                    <?php if ($businessCategory !== ''): ?>
-                        <div class="menzzu-store-header-category"><?php echo htmlspecialchars($businessCategory, ENT_QUOTES, 'UTF-8'); ?></div>
-                    <?php endif; ?>
-                    <div class="menzzu-store-header-meta">
-                        <?php if ($prepTimeLabel !== ''): ?>
-                            <span class="menzzu-store-header-meta-item"><i data-lucide="clock-3" class="menzzu-store-header-meta-icon" aria-hidden="true"></i><span id="store-prep-time"><?php echo htmlspecialchars(str_replace('Entrega ', '', $prepTimeLabel), ENT_QUOTES, 'UTF-8'); ?></span></span>
-                        <?php endif; ?>
-                        <?php if ($headerDeliveryFee !== null): ?>
-                            <span class="menzzu-store-header-separator" aria-hidden="true">•</span>
-                            <span id="store-delivery-fee" class="menzzu-store-header-meta-item"><i data-lucide="bike" class="menzzu-store-header-meta-icon" aria-hidden="true"></i>Taxa R$ <?php echo number_format($headerDeliveryFee, 2, ',', '.'); ?></span>
-                        <?php endif; ?>
-                        <?php if ($headerMinimumOrder !== null): ?>
-                            <span class="menzzu-store-header-separator" aria-hidden="true">•</span>
-                            <span class="menzzu-store-header-meta-item">Mín. R$ <?php echo number_format($headerMinimumOrder, 2, ',', '.'); ?></span>
-                        <?php endif; ?>
-                    </div>
-                    <span id="store-status-badge" class="menzzu-store-header-status <?php echo $marketplaceReady ? 'open' : 'closed'; ?>" hidden><?php echo $marketplaceReady ? 'Aberto' : 'Inativo'; ?></span>
                 </div>
                 <div class="store-header-actions">
                     <button class="marketplace-back-btn" id="marketplace-back-btn" type="button" hidden aria-label="Voltar para o marketplace">
@@ -1241,7 +1226,7 @@ try {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.08'); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.07'); ?>" defer></script>
 
     </html>
 <?php
