@@ -838,6 +838,30 @@ function updateLocation(location, address = null) {
     }
 }
 
+function getDeliveryFeeCacheKey() {
+    return `menzzu_delivery_fee_${STORE_SLUG}`;
+}
+
+function setHeaderDeliveryFee(fee) {
+    const headerFee = document.getElementById('store-delivery-fee');
+    if (!headerFee || !Number.isFinite(Number(fee))) return;
+    headerFee.textContent = `• Taxa R$ ${Number(fee).toFixed(2).replace('.', ',')}`;
+    headerFee.hidden = false;
+}
+
+function restoreCachedDeliveryFee(address) {
+    try {
+        const cached = JSON.parse(localStorage.getItem(getDeliveryFeeCacheKey()) || 'null');
+        const isFresh = cached && Date.now() - Number(cached.updatedAt || 0) < 15 * 60 * 1000;
+        if (isFresh && cached.address === address && Number.isFinite(Number(cached.fee))) {
+            state.deliveryFee = Number(cached.fee);
+            setHeaderDeliveryFee(state.deliveryFee);
+        }
+    } catch (error) {
+        // Ignore invalid or unavailable local storage.
+    }
+}
+
 async function calculateDeliveryFee(address) {
     try {
         const response = await fetch(`${API_BASE}/orders/calculate-fee`, {
@@ -855,10 +879,15 @@ async function calculateDeliveryFee(address) {
         if (data.fee !== undefined) {
             state.deliveryFee = data.fee;
             state.allowCash = data.type === 'estimated' ? false : (data.allowCash !== false);
-            const headerFee = document.getElementById('store-delivery-fee');
-            if (headerFee) {
-                headerFee.textContent = `• Taxa R$ ${Number(data.fee).toFixed(2).replace('.', ',')}`;
-                headerFee.hidden = false;
+            setHeaderDeliveryFee(data.fee);
+            try {
+                localStorage.setItem(getDeliveryFeeCacheKey(), JSON.stringify({
+                    address,
+                    fee: Number(data.fee),
+                    updatedAt: Date.now()
+                }));
+            } catch (error) {
+                // The checkout remains functional if local storage is unavailable.
             }
             if (display) {
                 display.style.display = 'block';
@@ -871,7 +900,7 @@ async function calculateDeliveryFee(address) {
             state.deliveryFee = 0;
             state.allowCash = false;
             const headerFee = document.getElementById('store-delivery-fee');
-            if (headerFee) headerFee.hidden = true;
+            if (headerFee && !headerFee.textContent) headerFee.hidden = true;
             if (display) {
                 display.style.display = 'block';
                 display.innerHTML = `⚠️ ${data.error}`;
@@ -2120,6 +2149,7 @@ function initEventListeners() {
     const addressDisplay = document.getElementById('delivery-address-display');
     if (addressDisplay) addressDisplay.textContent = state.userInfo.address || 'Informe seu endereço';
     if (state.userInfo.address) {
+        restoreCachedDeliveryFee(state.userInfo.address);
         calculateDeliveryFee(state.userInfo.address);
     }
 
