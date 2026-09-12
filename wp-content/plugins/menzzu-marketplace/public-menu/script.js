@@ -741,7 +741,26 @@ function checkStoreStatus() {
 }
 
 function loadGoogleMaps(apiKey) {
-    if (window.google || document.querySelector('script[src*="maps.googleapis.com"]')) return;
+    const initialize = () => {
+        if (window.google?.maps?.places?.Autocomplete) {
+            window.initMapsAutocomplete();
+            return true;
+        }
+        return false;
+    };
+
+    if (initialize()) return;
+
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existingScript) {
+        let attempts = 0;
+        const waitForPlaces = window.setInterval(() => {
+            attempts += 1;
+            if (initialize() || attempts >= 40) window.clearInterval(waitForPlaces);
+        }, 250);
+        return;
+    }
+
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMapsAutocomplete`;
     script.async = true;
@@ -752,8 +771,10 @@ function loadGoogleMaps(apiKey) {
 window.initMapsAutocomplete = () => {
     const input = document.getElementById('user-address');
     if (!input) return;
+    if (!window.google?.maps?.places?.Autocomplete || input.dataset.autocompleteReady === '1') return;
 
     try {
+        input.dataset.autocompleteReady = '1';
         input.dataset.placeSelected = '0';
         const autocomplete = new google.maps.places.Autocomplete(input);
         autocomplete.setComponentRestrictions({
