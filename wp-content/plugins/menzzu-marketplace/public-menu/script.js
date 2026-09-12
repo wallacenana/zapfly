@@ -898,7 +898,7 @@ function updateLocation(location, address = null) {
         if (addressDisplay) addressDisplay.textContent = address;
         state.userInfo.address = address;
         localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
-        calculateDeliveryFee(address);
+        return calculateDeliveryFee(address);
     }
 }
 
@@ -918,9 +918,19 @@ function syncSelectedAddress(address, coordinates = null) {
     } else {
         state.deliveryCoordinates = { lat: null, lng: null };
     }
-    const feePromise = calculateDeliveryFee(cleanAddress);
-    if (!coordinates && state.geocoder) geocodeAddress(cleanAddress);
-    return feePromise;
+    if (!coordinates && state.geocoder) {
+        return new Promise((resolve) => {
+            state.geocoder.geocode({ address: cleanAddress }, (results, status) => {
+                if (status === 'OK' && results[0]?.geometry) {
+                    resolve(updateLocation(results[0].geometry.location, results[0].formatted_address));
+                    return;
+                }
+                resolve(calculateDeliveryFee(cleanAddress));
+            });
+        });
+    }
+
+    return calculateDeliveryFee(cleanAddress);
 }
 
 function getDeliveryFeeCacheKey() {
