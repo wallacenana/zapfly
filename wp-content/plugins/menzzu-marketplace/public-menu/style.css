@@ -188,7 +188,6 @@ body.modal-open {
     box-sizing: border-box;
     -webkit-tap-highlight-color: transparent;
     font-family: "Plus Jakarta Sans", sans-serif;
-    line-height: 1.4;
 }
 
 .container {
@@ -295,14 +294,16 @@ h3 {
 .store-title-block {
     min-width: 0;
     display: flex;
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 2px;
+    align-items: center;
 }
 
 .store-details h1 {
     margin-bottom: 2px;
-    font-size: clamp(1.2rem, 2.4vw, 1.75rem);
+    font-size: clamp(1.2rem, 2.4vw, 1.50rem);
     line-height: 1.05;
+    margin-right: 11px;
 }
 
 .store-category {
@@ -314,10 +315,17 @@ h3 {
 
 .store-meta-line {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    gap: 2px;
     flex-wrap: wrap;
     min-height: 20px;
+    flex-direction: column;
+    width: 100%;
+}
+
+.menzzu-baixo {
+    display: flex;
+    gap: 15px;
+    align-items: center;
 }
 
 .store-meta-separator {
@@ -327,10 +335,21 @@ h3 {
 }
 
 .store-prep-time {
-    font-size: 0.9rem;
-    font-weight: 600;
+    font-size: 0.8rem;
+    font-weight: 400;
     color: var(--text-gray);
     white-space: nowrap;
+}
+
+.store-delivery-fee {
+    color: var(--text-gray);
+    font-size: 0.9rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.store-delivery-fee[hidden] {
+    display: none !important;
 }
 
 .store-status {
@@ -424,7 +443,7 @@ h3 {
 .rating-badge {
     padding: 0;
     border-radius: 0;
-    font-size: 0.96rem;
+    font-size: 0.75rem;
     font-weight: 700;
     display: inline-flex;
     align-items: center;
@@ -467,7 +486,11 @@ h3 {
 }
 
 .rating-badge.has-rating {
-    color: #f59e0b;
+    color: #c37b00;
+    background: #f59e0b20;
+    border: 1px solid #f59e0b50;
+    border-radius: 39px;
+    padding: 2px 7px;
 }
 
 .rating-badge.no-rating {
@@ -480,7 +503,6 @@ h3 {
     font-size: 0.9rem;
     font-weight: 700;
     margin-bottom: 0;
-    line-height: 1.1;
 }
 
 .status-badge.open {

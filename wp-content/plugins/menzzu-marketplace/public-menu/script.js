@@ -855,6 +855,11 @@ async function calculateDeliveryFee(address) {
         if (data.fee !== undefined) {
             state.deliveryFee = data.fee;
             state.allowCash = data.type === 'estimated' ? false : (data.allowCash !== false);
+            const headerFee = document.getElementById('store-delivery-fee');
+            if (headerFee) {
+                headerFee.textContent = `• Taxa R$ ${Number(data.fee).toFixed(2).replace('.', ',')}`;
+                headerFee.hidden = false;
+            }
             if (display) {
                 display.style.display = 'block';
                 display.innerHTML = `Taxa de entrega: <strong style="color:var(--primary-color)">R$ ${data.fee.toFixed(2)}</strong>`;
@@ -865,6 +870,8 @@ async function calculateDeliveryFee(address) {
         } else if (data.error) {
             state.deliveryFee = 0;
             state.allowCash = false;
+            const headerFee = document.getElementById('store-delivery-fee');
+            if (headerFee) headerFee.hidden = true;
             if (display) {
                 display.style.display = 'block';
                 display.innerHTML = `⚠️ ${data.error}`;

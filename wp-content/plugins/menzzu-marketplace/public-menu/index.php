@@ -90,7 +90,7 @@ try {
         }
 
         ob_start();
-        ?>
+?>
         <div class="receiving-store-hours">
             <strong>Horário de funcionamento</strong>
             <div class="receiving-store-hours-list">
@@ -104,7 +104,7 @@ try {
                 <?php endfor; ?>
             </div>
         </div>
-        <?php
+    <?php
         return ob_get_clean();
     }
 
@@ -373,7 +373,7 @@ try {
         'hasLogo' => !empty($store['logoUrl'])
     ];
 
-?>
+    ?>
     <!DOCTYPE html>
     <html lang="pt-BR">
 
@@ -395,7 +395,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=3.75'); ?>">
+        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=3.89'); ?>">
         <style>
             :root {
                 --primary-color:
@@ -596,18 +596,6 @@ try {
                 border-radius: 12px;
             }
 
-            .rating-badge {
-                padding: 0;
-                border-radius: 0;
-                font-size: 0.96rem;
-                font-weight: 700;
-                display: inline-flex;
-                align-items: center;
-                gap: 6px;
-                white-space: nowrap;
-                color: #f59e0b;
-            }
-
             .rating-badge.has-rating {
                 color: #f59e0b;
             }
@@ -665,25 +653,28 @@ try {
                         <div class="store-name-row">
                             <div class="store-title-block">
                                 <h1 id="store-name"><?php echo htmlspecialchars($businessName, ENT_QUOTES, 'UTF-8'); ?></h1>
-                                <?php if ($businessCategory !== ''): ?>
-                                    <div class="store-category"><?php echo htmlspecialchars($businessCategory, ENT_QUOTES, 'UTF-8'); ?></div>
+                                <?php if ($orderCount > 0): ?>
+                                    <div id="store-rating-badge" class="rating-badge has-rating">
+                                        <svg class="rating-star-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                            <path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="currentColor"></path>
+                                        </svg>
+                                        <?php echo number_format($reviewAverage, 1, ',', '.'); ?><?php if ($reviewCount > 0): ?> (<?php echo (int) $reviewCount; ?> <?php echo $reviewCount === 1 ? 'avaliação' : 'avaliações'; ?>)<?php endif; ?>
+                                    </div>
                                 <?php endif; ?>
                                 <div class="store-meta-line">
-                                    <span id="store-status-badge" class="status-badge <?php echo $marketplaceReady ? 'open' : 'closed'; ?>"><?php echo $marketplaceReady ? 'Aberto' : 'Inativo'; ?></span>
+                                    <?php if ($businessCategory !== ''): ?>
+                                        <div class="store-category"><?php echo htmlspecialchars($businessCategory, ENT_QUOTES, 'UTF-8'); ?></div>
+                                    <?php endif; ?>
+                                    <div class="menzzu-baixo">
+                                        <span id="store-status-badge" class="status-badge <?php echo $marketplaceReady ? 'open' : 'closed'; ?>"><?php echo $marketplaceReady ? 'Aberto' : 'Inativo'; ?></span>
                                     <?php if ($prepTimeLabel !== ''): ?>
                                         <span class="store-meta-separator" aria-hidden="true">•</span>
                                         <span id="store-prep-time" class="store-prep-time"><?php echo htmlspecialchars($prepTimeLabel, ENT_QUOTES, 'UTF-8'); ?></span>
                                     <?php endif; ?>
+                                    <span id="store-delivery-fee" class="store-delivery-fee" hidden></span>
+                                </div>
                                 </div>
                             </div>
-                            <?php if ($orderCount > 0): ?>
-                                <div id="store-rating-badge" class="rating-badge has-rating">
-                                    <svg class="rating-star-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                        <path d="M12 2.5l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9L12 2.5z" fill="currentColor"></path>
-                                    </svg>
-                                    <?php echo number_format($reviewAverage, 1, ',', '.'); ?><?php if ($reviewCount > 0): ?> (<?php echo (int) $reviewCount; ?> <?php echo $reviewCount === 1 ? 'avaliação' : 'avaliações'; ?>)<?php endif; ?>
-                                </div>
-                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -1012,33 +1003,33 @@ try {
                     <?php endif; ?>
 
                     <div class="store-info-hours">
-                            <h4>Horários de abertura</h4>
-                            <div class="store-info-hours-list">
-                                <?php
-                                $dayNames = [
-                                    0 => 'Dom',
-                                    1 => 'Seg',
-                                    2 => 'Ter',
-                                    3 => 'Qua',
-                                    4 => 'Qui',
-                                    5 => 'Sex',
-                                    6 => 'Sab'
-                                ];
-                                $slotsByDay = [];
-                                foreach ($availableSlots as $slot) {
-                                    $day = (int) ($slot['dayOfWeek'] ?? 0);
-                                    $slotsByDay[$day][] = substr((string) ($slot['startTime'] ?? '00:00'), 0, 5) . ' - ' . substr((string) ($slot['endTime'] ?? '00:00'), 0, 5);
-                                }
-                                for ($day = 0; $day <= 6; $day++):
-                                    $dayLabel = $dayNames[$day];
-                                    $dayHours = $slotsByDay[$day] ?? [];
-                                ?>
-                                    <div class="store-info-hour-row<?php echo empty($dayHours) ? ' is-closed' : ''; ?>">
-                                        <span><?php echo htmlspecialchars($dayLabel); ?></span>
-                                        <strong><?php echo htmlspecialchars(empty($dayHours) ? 'Fechado' : implode(' • ', $dayHours)); ?></strong>
-                                    </div>
-                                <?php endfor; ?>
-                            </div>
+                        <h4>Horários de abertura</h4>
+                        <div class="store-info-hours-list">
+                            <?php
+                            $dayNames = [
+                                0 => 'Dom',
+                                1 => 'Seg',
+                                2 => 'Ter',
+                                3 => 'Qua',
+                                4 => 'Qui',
+                                5 => 'Sex',
+                                6 => 'Sab'
+                            ];
+                            $slotsByDay = [];
+                            foreach ($availableSlots as $slot) {
+                                $day = (int) ($slot['dayOfWeek'] ?? 0);
+                                $slotsByDay[$day][] = substr((string) ($slot['startTime'] ?? '00:00'), 0, 5) . ' - ' . substr((string) ($slot['endTime'] ?? '00:00'), 0, 5);
+                            }
+                            for ($day = 0; $day <= 6; $day++):
+                                $dayLabel = $dayNames[$day];
+                                $dayHours = $slotsByDay[$day] ?? [];
+                            ?>
+                                <div class="store-info-hour-row<?php echo empty($dayHours) ? ' is-closed' : ''; ?>">
+                                    <span><?php echo htmlspecialchars($dayLabel); ?></span>
+                                    <strong><?php echo htmlspecialchars(empty($dayHours) ? 'Fechado' : implode(' • ', $dayHours)); ?></strong>
+                                </div>
+                            <?php endfor; ?>
+                        </div>
                     </div>
                 </div>
                 <h4 class="store-info-section-title">Meus pedidos</h4>
@@ -1164,7 +1155,9 @@ try {
 
                 window.openRestaurantLocationModal = () => {
                     modal.classList.remove('hidden');
-                    input.focus({ preventScroll: true });
+                    input.focus({
+                        preventScroll: true
+                    });
                 };
 
                 const hasSavedAddress = () => {
@@ -1184,9 +1177,9 @@ try {
                     const rawEntry = localStorage.getItem('menzzu_marketplace_store_entry') || '';
                     const entry = JSON.parse(rawEntry);
                     const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
-                    const fromMarketplace = entry
-                        && String(entry.path || '') === currentPath
-                        && Date.now() - Number(entry.timestamp || 0) < 30000;
+                    const fromMarketplace = entry &&
+                        String(entry.path || '') === currentPath &&
+                        Date.now() - Number(entry.timestamp || 0) < 30000;
                     modal.classList.toggle('is-marketplace-entry', Boolean(fromMarketplace));
                 } catch (error) {
                     // Use the store accent when the navigation marker is unavailable.
@@ -1219,14 +1212,16 @@ try {
                 if (!hasSavedAddress()) {
                     setTimeout(() => {
                         modal.classList.remove('hidden');
-                        input.focus({ preventScroll: true });
+                        input.focus({
+                            preventScroll: true
+                        });
                     }, 250);
                 }
             })();
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.07'); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.09'); ?>" defer></script>
 
     </html>
 <?php
