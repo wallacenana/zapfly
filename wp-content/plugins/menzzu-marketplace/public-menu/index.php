@@ -395,7 +395,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=3.92'); ?>">
+        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=3.93'); ?>">
         <style>
             :root {
                 --primary-color:
@@ -873,6 +873,7 @@ try {
                                 <div id="delivery-address-display" class="delivery-address-display">Informe seu endereço</div>
                                 <button type="button" class="change-address-btn" onclick="openRestaurantLocationModal()">Alterar endereço</button>
                             </div>
+                            <div id="delivery-map" aria-label="Mapa do endereço de entrega"></div>
                             <div id="delivery-fee-display"
                                 style="margin-bottom:15px; font-weight:600; text-align:center; padding:10px; border-radius:10px; background:#f9f9f9; display:none;">
                             </div>
@@ -1206,6 +1207,9 @@ try {
                         lat: null,
                         lng: null
                     }));
+                    window.dispatchEvent(new CustomEvent('menzzu-address-selected', {
+                        detail: { address }
+                    }));
                     close();
                 });
 
@@ -1221,7 +1225,7 @@ try {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.13'); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.14'); ?>" defer></script>
 
     </html>
 <?php

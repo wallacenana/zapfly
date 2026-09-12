@@ -82,6 +82,7 @@ let state = {
     },
     currentStep: 1,
     deliveryFee: 0,
+    deliveryFeeRequestId: 0,
     googleMap: null,
     mapMarker: null,
     geocoder: null,
@@ -813,6 +814,8 @@ window.initMapsAutocomplete = () => {
                 input.blur();
             }
         });
+
+        initDeliveryMap();
     } catch (e) {
         console.error('Autocomplete init error:', e);
     }
@@ -827,7 +830,52 @@ function geocodeAddress(address) {
     });
 }
 
+function initDeliveryMap() {
+    const mapEl = document.getElementById('delivery-map');
+    if (!mapEl || state.googleMap || !window.google?.maps) return;
+
+    const configuredLat = Number(state.publicSettings.businessLat);
+    const configuredLng = Number(state.publicSettings.businessLng);
+    const hasConfiguredOrigin = Number.isFinite(configuredLat) && Number.isFinite(configuredLng)
+        && configuredLat !== 0 && configuredLng !== 0;
+    const mapCenter = hasConfiguredOrigin
+        ? { lat: configuredLat, lng: configuredLng }
+        : { lat: -2.5307, lng: -44.3068 };
+
+    try {
+        state.googleMap = new google.maps.Map(mapEl, {
+            center: mapCenter,
+            zoom: 16,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: false
+        });
+        state.mapMarker = new google.maps.Marker({
+            map: state.googleMap,
+            position: mapCenter,
+            draggable: true,
+            title: 'Local de entrega'
+        });
+
+        state.mapMarker.addListener('dragend', () => reverseGeocode(state.mapMarker.getPosition()));
+        state.googleMap.addListener('click', (event) => {
+            if (!event.latLng) return;
+            state.mapMarker.setPosition(event.latLng);
+            state.googleMap.panTo(event.latLng);
+            reverseGeocode(event.latLng);
+        });
+
+        if (state.userInfo.address) geocodeAddress(state.userInfo.address);
+    } catch (error) {
+        console.error('Delivery map init error:', error);
+    }
+}
+
 function updateLocation(location, address = null) {
+    if (state.googleMap && state.mapMarker && location) {
+        state.googleMap.panTo(location);
+        state.mapMarker.setPosition(location);
+    }
     if (address) {
         document.getElementById('user-address').value = address;
         const addressDisplay = document.getElementById('delivery-address-display');
@@ -836,6 +884,18 @@ function updateLocation(location, address = null) {
         localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
         calculateDeliveryFee(address);
     }
+}
+
+function syncSelectedAddress(address) {
+    const cleanAddress = String(address || '').trim();
+    if (!cleanAddress) return;
+
+    state.userInfo.address = cleanAddress;
+    localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
+    const addressDisplay = document.getElementById('delivery-address-display');
+    if (addressDisplay) addressDisplay.textContent = cleanAddress;
+    calculateDeliveryFee(cleanAddress);
+    if (state.geocoder) geocodeAddress(cleanAddress);
 }
 
 function getDeliveryFeeCacheKey() {
@@ -865,6 +925,10 @@ function restoreCachedDeliveryFee(address) {
 }
 
 async function calculateDeliveryFee(address) {
+    const requestId = ++state.deliveryFeeRequestId;
+    const cleanAddress = String(address || '').trim();
+    if (!cleanAddress) return;
+
     try {
         const response = await fetch(`${API_BASE}/orders/calculate-fee`, {
             method: 'POST',
@@ -872,11 +936,12 @@ async function calculateDeliveryFee(address) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                address,
+                address: cleanAddress,
                 slug: STORE_SLUG
             })
         });
         const data = await response.json();
+        if (requestId !== state.deliveryFeeRequestId) return;
         const display = document.getElementById('delivery-fee-display');
         if (data.fee !== undefined) {
             state.deliveryFee = data.fee;
@@ -2018,6 +2083,10 @@ function initEventListeners() {
     const mobileSearchToggle = document.getElementById('mobile-search-toggle');
     const searchContainer = document.getElementById('search-container');
 
+    window.addEventListener('menzzu-address-selected', (event) => {
+        syncSelectedAddress(event.detail?.address || '');
+    });
+
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             state.searchQuery = e.target.value;
@@ -2474,9 +2543,16 @@ function renderStep2() {
         }
     }
 
-    // O checkout usa somente o endereco selecionado no autocomplete.
-    if (state.deliveryType === 'delivery' && window.google && !state.geocoder) {
+    // Mantem o mapa visual sincronizado com o endereco selecionado.
+    if (state.deliveryType === 'delivery' && window.google?.maps) {
         initMapsAutocomplete();
+        initDeliveryMap();
+        if (state.googleMap) {
+            setTimeout(() => {
+                google.maps.event.trigger(state.googleMap, 'resize');
+                if (state.mapMarker) state.googleMap.panTo(state.mapMarker.getPosition());
+            }, 100);
+        }
     }
 }
 
