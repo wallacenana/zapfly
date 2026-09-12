@@ -1,7 +1,7 @@
 {
   "name": "Menzzu Marketplace",
   "slug": "menzzu-marketplace",
-  "version": "3.1.63",
+  "version": "3.1.64",
   "homepage": "https://menzzu.com/",
   "download_url": "https://github.com/wallacenana/menzzu-marketplace/archive/refs/heads/main.zip",
   "requires": "6.0",

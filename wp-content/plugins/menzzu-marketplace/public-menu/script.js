@@ -830,15 +830,6 @@ function geocodeAddress(address) {
     });
 }
 
-function reverseGeocode(latLng) {
-    if (!state.geocoder || !latLng) return;
-    state.geocoder.geocode({ location: latLng }, (results, status) => {
-        if (status === 'OK' && results[0]) {
-            updateLocation(latLng, results[0].formatted_address);
-        }
-    });
-}
-
 function initDeliveryMap() {
     const mapEl = document.getElementById('delivery-map');
     if (!mapEl || state.googleMap || !window.google?.maps) return;
@@ -891,20 +882,6 @@ function updateLocation(location, address = null) {
         if (addressDisplay) addressDisplay.textContent = address;
         state.userInfo.address = address;
         localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
-        try {
-            const saved = JSON.parse(localStorage.getItem('menzzu_home_address') || '{}');
-            const lat = typeof location?.lat === 'function' ? location.lat() : null;
-            const lng = typeof location?.lng === 'function' ? location.lng() : null;
-            localStorage.setItem('menzzu_home_address', JSON.stringify({
-                ...saved,
-                address,
-                formatted_address: address,
-                lat: Number.isFinite(lat) ? lat : (saved.lat ?? null),
-                lng: Number.isFinite(lng) ? lng : (saved.lng ?? null)
-            }));
-        } catch (error) {
-            // O checkout continua funcionando mesmo sem persistencia local.
-        }
         calculateDeliveryFee(address);
     }
 }
