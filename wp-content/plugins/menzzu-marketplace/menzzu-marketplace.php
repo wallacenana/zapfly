@@ -3,7 +3,7 @@
 /**
  * Plugin Name: Menzzu Marketplace
  * Description: Marketplace Menzzu com descoberta de lojas, busca e catalogo.
- * Version: 3.1.40
+ * Version: 3.1.41
  * Author: Menzzu
  */
 
@@ -11,7 +11,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('MENZZU_MARKETPLACE_VERSION', '3.1.40');
+define('MENZZU_MARKETPLACE_VERSION', '3.1.41');
 define('MENZZU_MARKETPLACE_FILE', __FILE__);
 define('MENZZU_MARKETPLACE_DIR', plugin_dir_path(__FILE__));
 define('MENZZU_MARKETPLACE_URL', plugin_dir_url(__FILE__));
@@ -23,7 +23,7 @@ function menzzu_marketplace_render_store_sitemap()
         return;
     }
 
-    $cached = get_transient('menzzu_marketplace_store_sitemap');
+    $cached = get_transient('menzzu_marketplace_store_sitemap_v2');
     if (is_string($cached) && $cached !== '') {
         status_header(200);
         header('Content-Type: application/xml; charset=UTF-8');
@@ -56,7 +56,7 @@ function menzzu_marketplace_render_store_sitemap()
         . implode("\n", $urls)
         . "\n</urlset>\n";
 
-    set_transient('menzzu_marketplace_store_sitemap', $xml, 15 * MINUTE_IN_SECONDS);
+    set_transient('menzzu_marketplace_store_sitemap_v2', $xml, 15 * MINUTE_IN_SECONDS);
     status_header(200);
     header('Content-Type: application/xml; charset=UTF-8');
     header('Cache-Control: public, max-age=900, s-maxage=1800');

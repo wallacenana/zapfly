@@ -1263,14 +1263,15 @@ app.delete('/marketing-assets/:id', authenticate, async (req, res) => {
 // Lista mínima para o sitemap do marketplace, sem expor dados da loja.
 app.get('/public/store-slugs', async (req, res) => {
     try {
-        const stores = await prisma.user.findMany({
-            where: {
-                active: true,
-                slug: { not: null }
-            },
-            select: { slug: true },
-            orderBy: { slug: 'asc' }
-        });
+        const stores = await prisma.$queryRawUnsafe(`
+            SELECT u.slug
+            FROM \`user\` u
+            LEFT JOIN \`store_profile\` sp ON sp.userId = u.id
+            WHERE COALESCE(sp.active, u.active) = 1
+              AND u.slug IS NOT NULL
+              AND TRIM(u.slug) <> ''
+            ORDER BY u.slug ASC
+        `);
 
         res.setHeader('Cache-Control', 'public, max-age=900, s-maxage=1800');
         res.json({ stores: stores.map((store) => String(store.slug).trim()).filter(Boolean) });
