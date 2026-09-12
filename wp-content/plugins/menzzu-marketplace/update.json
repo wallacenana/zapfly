@@ -11,8 +11,8 @@
   "author_url": "https://github.com/wallacenana",
   "last_updated": "2026-09-12",
   "icons": {
-    "1x": "https://raw.githubusercontent.com/wallacenana/menzzu-marketplace/main/assets/img/menzzu-logo.png",
-    "2x": "https://raw.githubusercontent.com/wallacenana/menzzu-marketplace/main/assets/img/menzzu-logo.png"
+    "1x": "https://cdn.jsdelivr.net/gh/wallacenana/menzzu-marketplace@main/assets/img/menzzu-logo.png",
+    "2x": "https://cdn.jsdelivr.net/gh/wallacenana/menzzu-marketplace@main/assets/img/menzzu-logo.png"
   },
   "sections": {
     "description": "Marketplace e cardápio público do Menzzu.",
