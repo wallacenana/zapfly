@@ -1075,13 +1075,12 @@ try {
         <div id="restaurant-location-modal" class="restaurant-location-modal hidden" role="dialog" aria-modal="true" aria-labelledby="restaurant-location-title" style="--store-accent: <?php echo htmlspecialchars($accentColor, ENT_QUOTES, 'UTF-8'); ?>;">
             <div class="restaurant-location-backdrop"></div>
             <div class="restaurant-location-panel">
-                <img class="restaurant-location-illustration" src="<?php echo htmlspecialchars(MENZZU_MARKETPLACE_URL . 'assets/img/andres.png', ENT_QUOTES, 'UTF-8'); ?>" alt="Escolha o endereço de entrega">
+                <img class="restaurant-location-illustration" src="<?php echo htmlspecialchars(MENZZU_MARKETPLACE_URL . 'assets/img/ativo-2.png', ENT_QUOTES, 'UTF-8'); ?>" alt="Escolha o endereço de entrega">
                 <span class="restaurant-location-kicker">Antes de começar</span>
                 <h2 id="restaurant-location-title">Onde você está?</h2>
                 <p>Informe seu endereço para calcular a entrega e mostrar as lojas mais próximas.</p>
                 <form id="restaurant-location-form">
                     <input type="text" id="user-address" class="ifood-input" placeholder="Rua, número, bairro..." autocomplete="off" spellcheck="false">
-                    <div id="delivery-map" class="restaurant-location-map"></div>
                     <button type="submit" class="primary-btn">Confirmar endereço</button>
                 </form>
             </div>
@@ -1164,12 +1163,6 @@ try {
 
                 window.openRestaurantLocationModal = () => {
                     modal.classList.remove('hidden');
-                    if (window.google && typeof window.initDeliveryMap === 'function') {
-                        window.initDeliveryMap();
-                        if (window.state?.googleMap) {
-                            setTimeout(() => google.maps.event.trigger(window.state.googleMap, 'resize'), 100);
-                        }
-                    }
                     input.focus({ preventScroll: true });
                 };
 

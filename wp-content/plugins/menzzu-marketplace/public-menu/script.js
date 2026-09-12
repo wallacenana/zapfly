@@ -760,9 +760,6 @@ window.initMapsAutocomplete = () => {
             country: 'br'
         });
         state.geocoder = new google.maps.Geocoder();
-        if (document.getElementById('restaurant-location-modal') && typeof initDeliveryMap === 'function') {
-            initDeliveryMap();
-        }
 
         autocomplete.addListener('place_changed', () => {
             const place = autocomplete.getPlace();
@@ -800,45 +797,6 @@ window.initMapsAutocomplete = () => {
     }
 };
 
-function initDeliveryMap() {
-    const mapEl = document.getElementById('delivery-map');
-    if (!mapEl || state.googleMap || !window.google) return;
-
-    try {
-        const configuredLat = Number(state.publicSettings.businessLat);
-        const configuredLng = Number(state.publicSettings.businessLng);
-        const mapCenter = Number.isFinite(configuredLat) && Number.isFinite(configuredLng)
-            ? { lat: configuredLat, lng: configuredLng }
-            : { lat: -2.5307, lng: -44.3068 };
-        state.googleMap = new google.maps.Map(mapEl, {
-            zoom: 16,
-            center: mapCenter,
-            disableDefaultUI: false,
-            mapTypeControl: false,
-            streetViewControl: false
-        });
-
-        state.mapMarker = new google.maps.Marker({
-            map: state.googleMap,
-            position: mapCenter,
-            draggable: true,
-            animation: google.maps.Animation.DROP
-        });
-
-        if (state.userInfo.address) {
-            geocodeAddress(state.userInfo.address);
-        }
-
-        state.mapMarker.addListener('dragend', () => reverseGeocode(state.mapMarker.getPosition()));
-        state.googleMap.addListener('click', (e) => {
-            updateLocation(e.latLng);
-            reverseGeocode(e.latLng);
-        });
-    } catch (e) {
-        console.error('Delivery map init error:', e);
-    }
-}
-
 function geocodeAddress(address) {
     if (!state.geocoder) return;
     state.geocoder.geocode({
@@ -849,9 +807,6 @@ function geocodeAddress(address) {
 }
 
 function updateLocation(location, address = null) {
-    if (!state.googleMap) return;
-    state.googleMap.panTo(location);
-    state.mapMarker.setPosition(location);
     if (address) {
         document.getElementById('user-address').value = address;
         const addressDisplay = document.getElementById('delivery-address-display');
@@ -860,14 +815,6 @@ function updateLocation(location, address = null) {
         localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
         calculateDeliveryFee(address);
     }
-}
-
-function reverseGeocode(latLng) {
-    state.geocoder.geocode({
-        location: latLng
-    }, (results, status) => {
-        if (status === 'OK' && results[0]) updateLocation(latLng, results[0].formatted_address);
-    });
 }
 
 async function calculateDeliveryFee(address) {
@@ -2464,22 +2411,9 @@ function renderStep2() {
         }
     }
 
-    // Sempre carrega o mapa se deliveryType = delivery
-    if (state.deliveryType === 'delivery') {
-        if (window.google && !state.googleMap) {
-            initMapsAutocomplete();
-            initDeliveryMap();
-        }
-        if (state.googleMap) {
-            setTimeout(() => {
-                google.maps.event.trigger(state.googleMap, 'resize');
-                if (state.mapMarker) {
-                    state.googleMap.panTo(state.mapMarker.getPosition());
-                } else if (state.userInfo.address) {
-                    geocodeAddress(state.userInfo.address);
-                }
-            }, 300);
-        }
+    // O checkout usa somente o endereco selecionado no autocomplete.
+    if (state.deliveryType === 'delivery' && window.google && !state.geocoder) {
+        initMapsAutocomplete();
     }
 }
 
