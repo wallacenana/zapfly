@@ -10,9 +10,8 @@ if (!function_exists('menzzu_marketplace_render_address_modal')) {
         ob_start();
         ?>
         <div class="menzzu-marketplace-address-modal" data-address-modal hidden>
-            <div class="menzzu-marketplace-address-modal-backdrop" data-address-modal-close></div>
+            <div class="menzzu-marketplace-address-modal-backdrop"></div>
             <div class="menzzu-marketplace-address-modal-panel" role="dialog" aria-modal="true" aria-labelledby="menzzu-address-modal-title">
-                <button type="button" class="menzzu-marketplace-address-modal-close" data-address-modal-close aria-label="Fechar">&times;</button>
                 <span class="menzzu-marketplace-address-modal-kicker">Antes de começar</span>
                 <h2 id="menzzu-address-modal-title">Encontre lojas que entregam perto de você</h2>
                 <p>Informe seu endereço para mostrar restaurantes e calcular a disponibilidade na sua região.</p>
@@ -20,7 +19,6 @@ if (!function_exists('menzzu_marketplace_render_address_modal')) {
                     <input type="text" data-address-input placeholder="Digite seu endereço de entrega" autocomplete="off" spellcheck="false" inputmode="text">
                     <button type="submit" class="menzzu-marketplace-button menzzu-marketplace-button-primary" data-address-continue disabled>Buscar lojas</button>
                 </form>
-                <button type="button" class="menzzu-marketplace-address-modal-skip" data-address-modal-close>Continuar sem informar</button>
             </div>
         </div>
         <?php
