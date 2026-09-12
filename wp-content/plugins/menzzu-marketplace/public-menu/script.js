@@ -2119,6 +2119,9 @@ function initEventListeners() {
     document.getElementById('user-address').value = state.userInfo.address || '';
     const addressDisplay = document.getElementById('delivery-address-display');
     if (addressDisplay) addressDisplay.textContent = state.userInfo.address || 'Informe seu endereço';
+    if (state.userInfo.address) {
+        calculateDeliveryFee(state.userInfo.address);
+    }
 
     const phoneInput = document.getElementById('user-phone');
     if (phoneInput) {
