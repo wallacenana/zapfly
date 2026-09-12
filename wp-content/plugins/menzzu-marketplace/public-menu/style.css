@@ -1669,6 +1669,15 @@ body.theme-dark .delivery-fee-badge {
     box-shadow: 0 24px 70px rgba(3, 22, 20, 0.22);
 }
 
+.restaurant-location-illustration {
+    display: block;
+    width: min(260px, 72%);
+    height: 118px;
+    object-fit: contain;
+    margin: -12px auto 16px;
+    border-radius: 14px;
+}
+
 .restaurant-location-modal.is-marketplace-entry {
     --location-accent: #82F026;
 }

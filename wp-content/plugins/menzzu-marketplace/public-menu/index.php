@@ -1075,6 +1075,7 @@ try {
         <div id="restaurant-location-modal" class="restaurant-location-modal hidden" role="dialog" aria-modal="true" aria-labelledby="restaurant-location-title" style="--store-accent: <?php echo htmlspecialchars($accentColor, ENT_QUOTES, 'UTF-8'); ?>;">
             <div class="restaurant-location-backdrop"></div>
             <div class="restaurant-location-panel">
+                <img class="restaurant-location-illustration" src="<?php echo htmlspecialchars(MENZZU_MARKETPLACE_URL . 'assets/img/andres.png', ENT_QUOTES, 'UTF-8'); ?>" alt="Escolha o endereço de entrega">
                 <span class="restaurant-location-kicker">Antes de começar</span>
                 <h2 id="restaurant-location-title">Onde você está?</h2>
                 <p>Informe seu endereço para calcular a entrega e mostrar as lojas mais próximas.</p>
