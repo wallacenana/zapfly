@@ -395,7 +395,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=3.93'); ?>">
+        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=3.96'); ?>">
         <style>
             :root {
                 --primary-color:
@@ -671,7 +671,7 @@ try {
                                         <span class="store-meta-separator" aria-hidden="true">•</span>
                                         <span id="store-prep-time" class="store-prep-time"><svg class="store-meta-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><?php echo htmlspecialchars(str_replace('Entrega ', '', $prepTimeLabel), ENT_QUOTES, 'UTF-8'); ?></span>
                                     <?php endif; ?>
-                                    <span id="store-delivery-fee" class="store-delivery-fee" hidden></span>
+                                    <button id="store-delivery-fee" class="store-delivery-fee" type="button" onclick="openRestaurantLocationModal()" aria-label="Editar endereço e taxa de entrega" hidden></button>
                                 </div>
                                 </div>
                             </div>
@@ -1074,6 +1074,7 @@ try {
                 <p>Informe seu endereço para calcular a entrega e mostrar as lojas mais próximas.</p>
                 <form id="restaurant-location-form">
                     <input type="text" id="user-address" class="ifood-input" placeholder="Rua, número, bairro..." autocomplete="off" spellcheck="false">
+                    <div id="restaurant-location-fee" class="restaurant-location-fee" hidden></div>
                     <button type="submit" class="primary-btn">Confirmar endereço</button>
                 </form>
             </div>
@@ -1174,6 +1175,20 @@ try {
                     modal.classList.add('hidden');
                 };
 
+                const feeDisplay = document.getElementById('restaurant-location-fee');
+                const submitButton = form.querySelector('button[type="submit"]');
+                input.addEventListener('input', () => {
+                    modal.dataset.calculatedAddress = '';
+                    if (feeDisplay) {
+                        feeDisplay.hidden = true;
+                        feeDisplay.innerHTML = '';
+                    }
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerText = 'Calcular taxa';
+                    }
+                });
+
                 try {
                     const rawEntry = localStorage.getItem('menzzu_marketplace_store_entry') || '';
                     const entry = JSON.parse(rawEntry);
@@ -1191,6 +1206,11 @@ try {
                     const address = input.value.trim();
                     if (!address) {
                         input.focus();
+                        return;
+                    }
+
+                    if (modal.dataset.calculatedAddress === address) {
+                        close();
                         return;
                     }
 
@@ -1212,7 +1232,11 @@ try {
                     window.dispatchEvent(new CustomEvent('menzzu-address-selected', {
                         detail: { address, coordinates: selectedCoordinates }
                     }));
-                    close();
+                    modal.dataset.calculatedAddress = address;
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        submitButton.innerText = 'Calculando...';
+                    }
                 });
 
                 if (!hasSavedAddress()) {

@@ -354,6 +354,13 @@ h3 {
     font-size: 0.8rem;
     font-weight: 700;
     white-space: nowrap;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.store-delivery-fee:hover {
+    color: var(--primary-color);
 }
 
 .store-delivery-icon {
@@ -1749,6 +1756,27 @@ body.theme-dark .delivery-fee-badge {
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+}
+
+.restaurant-location-fee {
+    margin: 10px 0 12px;
+    padding: 11px 12px;
+    border: 1px solid #dbe4df;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    text-align: left;
+}
+
+.restaurant-location-fee.is-success {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+    color: #166534;
+}
+
+.restaurant-location-fee.is-error {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
 }
 
 .restaurant-location-panel h2 {
