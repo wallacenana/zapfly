@@ -9,7 +9,7 @@ if (!class_exists('Menzzu_Marketplace_Updater')) {
     {
         private $plugin_file;
         private $plugin_basename;
-        private $manifest_url = 'https://cdn.jsdelivr.net/gh/wallacenana/menzzu-marketplace@main/update.json';
+        private $manifest_url = 'https://raw.githubusercontent.com/wallacenana/menzzu-marketplace/main/update.json';
         private $cache_key = 'menzzu_marketplace_update_manifest';
 
         public function __construct($plugin_file)
