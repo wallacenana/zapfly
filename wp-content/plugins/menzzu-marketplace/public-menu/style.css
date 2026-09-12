@@ -342,9 +342,10 @@ h3 {
 }
 
 .store-delivery-fee {
+    font-family: inherit;
     color: var(--text-gray);
     font-size: 0.9rem;
-    font-weight: 600;
+    font-weight: 700;
     white-space: nowrap;
 }
 
