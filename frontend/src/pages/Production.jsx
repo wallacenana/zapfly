@@ -17,6 +17,7 @@ const getPrintableOrderParts = (order) => {
 
 const getOrderSelectionRows = (order) => {
   const rows = [];
+  const productParts = getPrintableOrderParts(order);
   const addRow = (label, value) => {
     const cleanLabel = String(label || '').trim();
     const cleanValue = String(value || '').trim();
@@ -28,6 +29,14 @@ const getOrderSelectionRows = (order) => {
     const addons = typeof order.addons === 'string' ? JSON.parse(order.addons) : order.addons;
     (Array.isArray(addons) ? addons : []).forEach(addon => addRow(addon.groupName || 'Opção', addon.name));
   } catch (e) { }
+
+  if (!rows.length) {
+    productParts.extras.forEach(extra => {
+      const separator = extra.indexOf(':');
+      if (separator > 0) addRow(extra.slice(0, separator), extra.slice(separator + 1));
+      else addRow('Opção', extra);
+    });
+  }
   // Compatibilidade com pedidos antigos que gravavam estes campos fixos.
   addRow('Massa', order.massa);
   addRow('Recheio', order.recheio);
