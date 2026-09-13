@@ -921,9 +921,9 @@ h3 {
 
 /* O detalhe usa todo o espaço útil sem criar uma terceira área vazia. */
 #item-detail-modal .item-detail-content {
-    width: min(90vw, 1180px);
+    width: min(90vw, 500px);
     max-width: none;
-    height: 67vh;
+    min-height: 50vh;
     max-height: 86vh;
     border-radius: 16px;
 }
@@ -946,11 +946,7 @@ h3 {
 }
 
 #item-detail-body {
-    display: flex;
-    flex: 1;
-    min-height: 0;
     overflow-y: auto;
-    align-items: start;
 }
 
 .item-hero-img {
@@ -979,16 +975,7 @@ h3 {
     color: var(--primary-color);
 }
 
-.item-detail-layout {
-    display: grid;
-    grid-template-columns: minmax(280px, 0.95fr) minmax(0, 1.05fr);
-    width: 100%;
-    height: 100%;
-    min-height: 100%;
-}
-
 .item-detail-media {
-    position: sticky;
     top: 0;
     overflow: hidden;
     background: color-mix(in srgb, var(--bg-color) 90%, var(--text-main) 10%);
@@ -997,7 +984,6 @@ h3 {
 }
 
 .item-detail-media .carousel-container {
-    aspect-ratio: auto;
     height: 100%;
     min-height: 100%;
     border-radius: 0;
@@ -1044,7 +1030,6 @@ h3 {
     border-left: 1px solid var(--border);
     background: color-mix(in srgb, var(--bg-color) 96%, var(--text-main) 4%);
     min-height: 0;
-    overflow-y: auto;
 }
 
 .item-detail-panel>.modal-footer-sticky {
