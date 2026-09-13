@@ -777,20 +777,20 @@ window.initMapsAutocomplete = () => {
         input.addEventListener('change', () => {
             const value = input.value.trim();
             if (!value || input.dataset.placeSelected === '1') return;
-            setTimeout(() => geocodeAddress(value), 120);
+            setTimeout(() => state.geocoder ? geocodeAddress(value) : calculateDeliveryFee(value), 120);
         });
 
         input.addEventListener('blur', () => {
             const value = input.value.trim();
             if (!value || input.dataset.placeSelected === '1') return;
-            setTimeout(() => geocodeAddress(value), 120);
+            setTimeout(() => state.geocoder ? geocodeAddress(value) : calculateDeliveryFee(value), 120);
         });
 
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 const value = input.value.trim();
-                if (value) geocodeAddress(value);
+                if (value) state.geocoder ? geocodeAddress(value) : calculateDeliveryFee(value);
                 input.blur();
             }
         });
