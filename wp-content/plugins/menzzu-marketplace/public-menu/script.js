@@ -217,16 +217,16 @@ function minPositiveNumber(values = []) {
 function getImg(url, size = 'full') {
     if (!url) return url;
     url = normalizeMenzzuFileUrl(url);
-    if (!url.includes('files.menzzu.com')) return url; // Só funciona para o nosso servidor
+    if (!url.includes('files.menzzu.com') && !url.includes('files.digizap.com.br')) return url;
 
     if (size === 'thumb') return url.replace('.webp', '_550.webp');
     if (size === 'medium') return url.replace('.webp', '_550.webp');
     return url;
 }
 
-// URLs antigas do storage Digizap apontam para o mesmo arquivo no storage Menzzu.
+// Mantem URLs antigas e novas do storage validas sem alterar o dominio salvo.
 function normalizeMenzzuFileUrl(url) {
-    return String(url || '').replace(/^https?:\/\/files\.digizap\.com\.br/i, 'https://files.menzzu.com');
+    return String(url || '');
 }
 
 function isOrderEnabled() {
@@ -1140,7 +1140,7 @@ async function handleExternalUpload(file) {
         formData.append('secret', 'BlinkMediaSecret123!');
         formData.append('size', '500');
 
-        const res = await fetch('https://files.menzzu.com/upload.php', {
+        const res = await fetch('https://files.digizap.com.br/upload.php', {
             method: 'POST',
             body: formData
         });
