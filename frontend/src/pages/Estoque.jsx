@@ -25,6 +25,7 @@ const normalizeCustomField = (field = {}) => ({
   name: field?.name || '',
   type: ['text', 'dropdown', 'image'].includes(String(field?.type || 'text').toLowerCase()) ? String(field?.type || 'text').toLowerCase() : 'text',
   required: !!field?.required,
+  multiple: field?.multiple !== false,
   options: Array.isArray(field?.options) ? field.options.join(', ') : (field?.options || '')
 });
 
@@ -32,6 +33,7 @@ const createCustomField = () => ({
   name: '',
   type: 'text',
   required: false,
+  multiple: true,
   options: ''
 });
 
@@ -1714,6 +1716,19 @@ const Estoque = () => {
                               <option value="image">Imagem</option>
                             </select>
                           </div>
+                          {field.type === 'image' && (
+                            <div style={{ gridColumn: '1 / -1', marginTop: '-2px' }}>
+                              <label className="estoque-label estoque-label--check">
+                                <input
+                                  type="checkbox"
+                                  checked={field.multiple !== false}
+                                  onChange={e => updateCustomFieldRow(idx, 'multiple', e.target.checked)}
+                                  style={{ width: '16px', height: '16px', accentColor: '#f59e0b', cursor: 'pointer' }}
+                                />
+                                Permitir várias imagens
+                              </label>
+                            </div>
+                          )}
                           <div style={{ paddingTop: '32px' }}>
                             <label className="estoque-label estoque-label--check">
                               <input

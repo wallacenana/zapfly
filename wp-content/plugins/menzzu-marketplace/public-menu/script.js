@@ -319,11 +319,14 @@ function hasCheckoutExtras(cart = getActiveCart()) {
 }
 
 function getCustomFieldSummaryParts(item) {
-    return Object.entries(getCustomFieldAnswers(item)).map(([key, value]) => ({
-        key,
-        value,
-        isUrl: typeof value === 'string' && value.startsWith('http')
-    }));
+    return Object.entries(getCustomFieldAnswers(item)).flatMap(([key, value]) => {
+        const values = Array.isArray(value) ? value : [value];
+        return values.map(entry => ({
+            key,
+            value: entry,
+            isUrl: typeof entry === 'string' && entry.startsWith('http')
+        }));
+    });
 }
 
 function formatOrderSchedule() {
@@ -1458,9 +1461,9 @@ async function handleCustomFieldImageUpload(input, idx) {
     }
 }
 
-async function handleCheckoutFieldImageUpload(input, hiddenId, previewId) {
+async function handleCheckoutFieldImageUpload(input, hiddenId, previewId, allowMultiple = false) {
     if (!input.files || input.files.length === 0) return;
-    const file = input.files[0];
+    const files = Array.from(input.files);
     const btn = input.closest('.checkout-extra-image')?.querySelector('button[data-upload-btn="true"]') || input.previousElementSibling;
     const originalBtnText = btn?.innerHTML || '';
 
@@ -1471,13 +1474,19 @@ async function handleCheckoutFieldImageUpload(input, hiddenId, previewId) {
     }
 
     try {
-        const url = await handleExternalUpload(file);
-        if (url) {
+        const uploadedUrls = [];
+        for (const file of files) {
+            const url = await handleExternalUpload(file);
+            if (url) uploadedUrls.push(url);
+        }
+        if (uploadedUrls.length) {
             const hidden = document.getElementById(hiddenId);
-            if (hidden) hidden.value = url;
+            const previous = allowMultiple ? getCheckoutImageValues(hidden?.value || '') : [];
+            const values = allowMultiple ? [...previous, ...uploadedUrls] : [uploadedUrls[0]];
+            if (hidden) hidden.value = allowMultiple ? JSON.stringify(values) : values[0];
             const preview = document.getElementById(previewId);
             if (preview) {
-                preview.querySelector('img').src = url;
+                preview.innerHTML = renderCheckoutImagePreview(values, hiddenId, previewId);
                 preview.style.display = 'flex';
             }
         } else {
@@ -1984,17 +1993,17 @@ function renderCheckoutExtraField(item, field, idx, itemKeyBase, currentValue = 
 
     if (fieldType === 'image') {
         const previewId = `${fieldId}-preview`;
+        const imageValues = getCheckoutImageValues(currentValue);
         return `
                         <div class="checkout-extra-image" style="margin-bottom: 14px;">
                             <label style="display:block; font-size:13px; font-weight:600; color:var(--text-secondary); margin-bottom:5px;">${fieldLabel}</label>
-                            <input type="hidden" id="${fieldId}" data-field-name="${field.name}" value="${normalizeMenzzuFileUrl(currentValue)}">
+                            <input type="hidden" id="${fieldId}" data-field-name="${field.name}" value="${escapeHtmlAttribute(field.multiple !== false ? JSON.stringify(imageValues) : (imageValues[0] || ''))}">
                             <button type="button" data-upload-btn="true" onclick="document.getElementById('${fieldId}-file').click()" style="padding: 10px; border-radius: 8px; border: 1px dashed var(--primary-color); background: var(--bg-tertiary); color: var(--primary-color); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;">
-                                <i data-lucide="image" style="width:16px; height:16px;"></i> Anexar Imagem
+                                <i data-lucide="image" style="width:16px; height:16px;"></i> ${field.multiple !== false ? 'Anexar Imagens' : 'Anexar Imagem'}
                             </button>
-                            <input type="file" id="${fieldId}-file" accept="image/*" style="display:none;" onchange="handleCheckoutFieldImageUpload(this, '${fieldId}', '${previewId}')">
-                            <div id="${previewId}" style="display:${currentValue ? 'flex' : 'none'}; margin-top: 10px; align-items: center;">
-                                <img src="${normalizeMenzzuFileUrl(currentValue)}" style="max-width: 80px; max-height: 80px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: cover;">
-                                <span style="font-size: 12px; color: #ef4444; margin-left: 10px; cursor:pointer; font-weight: 700;" onclick="document.getElementById('${fieldId}').value=''; document.getElementById('${previewId}').style.display='none';">Remover</span>
+                            <input type="file" id="${fieldId}-file" accept="image/*" ${field.multiple !== false ? 'multiple' : ''} style="display:none;" onchange="handleCheckoutFieldImageUpload(this, '${fieldId}', '${previewId}', ${field.multiple !== false})">
+                            <div id="${previewId}" style="display:${imageValues.length ? 'flex' : 'none'}; flex-wrap:wrap; gap:8px; margin-top:10px; align-items:center;">
+                                ${renderCheckoutImagePreview(imageValues, fieldId, previewId)}
                             </div>
                         </div>
                     `;
@@ -2057,8 +2066,10 @@ function collectCheckoutExtraStep() {
             const field = schema[idx];
             const fieldId = `extra-${itemKeyBase}-${idx}`;
             const input = document.getElementById(fieldId);
-            const value = input?.value?.trim() || '';
-            if (field.required && !value) {
+            const isImage = String(field.type || '').toLowerCase() === 'image';
+            const imageValues = isImage ? getCheckoutImageValues(input?.value || '') : [];
+            const value = isImage ? (field.multiple !== false ? imageValues : (imageValues[0] || '')) : (input?.value?.trim() || '');
+            if (field.required && (isImage ? imageValues.length === 0 : !value)) {
                 return {
                     ok: false,
                     message: `Preencha o campo "${field.name}" do item "${item.name}".`
@@ -2377,6 +2388,22 @@ function goToStep(step) {
     if (step === 5) {
         updateStep4Summary();
     }
+}
+
+function getCheckoutImageValues(value) {
+    const parsed = parseJsonValue(value, null);
+    const values = Array.isArray(parsed) ? parsed : (value ? [value] : []);
+    return values.map(normalizeMenzzuFileUrl).filter(Boolean);
+}
+
+function escapeHtmlAttribute(value) {
+    return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function renderCheckoutImagePreview(values, fieldId, previewId) {
+    if (!values.length) return '';
+    return values.map(url => `<img src="${escapeHtmlAttribute(url)}" style="width:80px; height:80px; border-radius:8px; border:1px solid var(--border-color); object-fit:cover;" alt="Imagem enviada">`).join('')
+        + `<span style="font-size:12px; color:#ef4444; cursor:pointer; font-weight:700;" onclick="document.getElementById('${fieldId}').value=''; document.getElementById('${previewId}').innerHTML=''; document.getElementById('${previewId}').style.display='none';">Remover</span>`;
 }
 
 // Persist/restore checkout progress so the user can resume where they left off
