@@ -2881,12 +2881,13 @@ body.theme-dark .delivery-fee-badge {
     }
 
     .top-nav {
-        padding: 12px 0 10px;
+        padding: 10px 0 8px;
     }
 
     .nav-wrapper {
         align-items: flex-start;
         gap: 0;
+        flex-wrap: nowrap;
     }
 
     .store-info {
@@ -2894,12 +2895,17 @@ body.theme-dark .delivery-fee-badge {
         width: auto;
         min-width: 0;
         order: 1;
+        padding-right: 28px;
     }
 
     .store-logo {
-        width: 48px;
-        height: 48px;
-        flex: 0 0 48px;
+        width: 44px;
+        height: 44px;
+        flex: 0 0 44px;
+    }
+
+    .store-info {
+        gap: 10px;
     }
 
     .store-details,
@@ -2912,11 +2918,32 @@ body.theme-dark .delivery-fee-badge {
     }
 
     .store-details h1 {
-        font-size: 1.25rem;
+        font-size: 1.18rem;
         overflow-wrap: anywhere;
     }
 
+    .menzzu-baixo {
+        gap: 6px;
+        flex-wrap: nowrap;
+        min-width: 0;
+    }
+
+    .status-badge,
+    .store-prep-time,
+    .store-delivery-fee {
+        font-size: 0.72rem;
+    }
+
+    .store-delivery-icon {
+        width: 15px;
+        height: 15px;
+        flex-basis: 15px;
+    }
+
     .store-header-actions {
+        position: absolute;
+        top: 0;
+        right: 16px;
         width: auto;
         order: 2;
         flex: 0 0 auto;
