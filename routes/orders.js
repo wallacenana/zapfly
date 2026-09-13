@@ -990,6 +990,7 @@ router.get('/', authenticate, async (req, res) => {
     where.OR = [
       { type: 'order', status: { in: ['waiting_payment', 'pending'] } },
       { type: null, status: { in: ['waiting_payment', 'pending'] } },
+      { type: 'delivery', scheduledDate: date, status: 'waiting_payment' },
       { scheduledDate: date, status: { notIn: ['waiting_payment', 'pending'] } }
     ];
   } else {
