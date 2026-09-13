@@ -216,11 +216,17 @@ function minPositiveNumber(values = []) {
  */
 function getImg(url, size = 'full') {
     if (!url) return url;
+    url = normalizeMenzzuFileUrl(url);
     if (!url.includes('files.menzzu.com')) return url; // Só funciona para o nosso servidor
 
     if (size === 'thumb') return url.replace('.webp', '_550.webp');
     if (size === 'medium') return url.replace('.webp', '_550.webp');
     return url;
+}
+
+// URLs antigas do storage Digizap apontam para o mesmo arquivo no storage Menzzu.
+function normalizeMenzzuFileUrl(url) {
+    return String(url || '').replace(/^https?:\/\/files\.digizap\.com\.br/i, 'https://files.menzzu.com');
 }
 
 function isOrderEnabled() {
@@ -1143,7 +1149,7 @@ async function handleExternalUpload(file) {
         }
         const data = await res.json();
         Swal.close();
-        return data?.url || null;
+        return normalizeMenzzuFileUrl(data?.url || '');
     } catch (err) {
         console.error(err);
         Swal.close();
@@ -1981,13 +1987,13 @@ function renderCheckoutExtraField(item, field, idx, itemKeyBase, currentValue = 
         return `
                         <div class="checkout-extra-image" style="margin-bottom: 14px;">
                             <label style="display:block; font-size:13px; font-weight:600; color:var(--text-secondary); margin-bottom:5px;">${fieldLabel}</label>
-                            <input type="hidden" id="${fieldId}" data-field-name="${field.name}" value="${currentValue || ''}">
+                            <input type="hidden" id="${fieldId}" data-field-name="${field.name}" value="${normalizeMenzzuFileUrl(currentValue)}">
                             <button type="button" data-upload-btn="true" onclick="document.getElementById('${fieldId}-file').click()" style="padding: 10px; border-radius: 8px; border: 1px dashed var(--primary-color); background: var(--bg-tertiary); color: var(--primary-color); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;">
                                 <i data-lucide="image" style="width:16px; height:16px;"></i> Anexar Imagem
                             </button>
                             <input type="file" id="${fieldId}-file" accept="image/*" style="display:none;" onchange="handleCheckoutFieldImageUpload(this, '${fieldId}', '${previewId}')">
                             <div id="${previewId}" style="display:${currentValue ? 'flex' : 'none'}; margin-top: 10px; align-items: center;">
-                                <img src="${currentValue || ''}" style="max-width: 80px; max-height: 80px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: cover;">
+                                <img src="${normalizeMenzzuFileUrl(currentValue)}" style="max-width: 80px; max-height: 80px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: cover;">
                                 <span style="font-size: 12px; color: #ef4444; margin-left: 10px; cursor:pointer; font-weight: 700;" onclick="document.getElementById('${fieldId}').value=''; document.getElementById('${previewId}').style.display='none';">Remover</span>
                             </div>
                         </div>
