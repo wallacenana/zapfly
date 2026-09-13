@@ -180,6 +180,14 @@ body.modal-open {
     overscroll-behavior: none;
 }
 
+body.restaurant-location-open {
+    overflow: hidden;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    overscroll-behavior: none;
+}
+
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
 
 * {
@@ -541,8 +549,8 @@ h3 {
 }
 
 .status-badge {
-    font-size: 0.9rem;
-    font-weight: 700;
+    font-size: 0.75rem;
+    font-weight: 500;
     margin-bottom: 0;
 }
 
@@ -1881,6 +1889,14 @@ body.theme-dark .delivery-fee-badge {
     border-color: var(--primary-color);
 }
 
+.pac-container {
+    max-height: min(42vh, 320px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+}
+
 @media (max-width: 520px) {
     .restaurant-location-modal {
         align-items: center;
@@ -2056,6 +2072,9 @@ body.theme-dark .delivery-fee-badge {
         padding: 4px;
         min-width: 36px;
         min-height: 36px;
+        position: absolute;
+        top: 0;
+        right: 0;
     }
 
     .more-link-text {
@@ -2867,7 +2886,7 @@ body.theme-dark .delivery-fee-badge {
 
     .nav-wrapper {
         align-items: flex-start;
-        gap: 12px;
+        gap: 0;
     }
 
     .store-info {
@@ -2938,7 +2957,7 @@ body.theme-dark .delivery-fee-badge {
         width: 100%;
         min-width: 0;
         gap: 12px;
-        padding: 14px 0;
+        padding: 16px 0;
     }
 
     .product-img {

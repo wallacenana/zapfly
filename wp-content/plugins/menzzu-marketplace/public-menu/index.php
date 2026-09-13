@@ -395,7 +395,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=4.00'); ?>">
+        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=4.01'); ?>">
         <style>
             :root {
                 --primary-color:
@@ -1157,6 +1157,7 @@ try {
 
                 window.openRestaurantLocationModal = () => {
                     modal.classList.remove('hidden');
+                    lockPage();
                     if (submitButton) {
                         submitButton.disabled = !input.value.trim();
                         submitButton.innerText = 'Salvar endereço';
@@ -1177,10 +1178,28 @@ try {
 
                 const close = () => {
                     modal.classList.add('hidden');
+                    unlockPage();
                 };
 
                 const feeDisplay = document.getElementById('restaurant-location-fee');
                 const submitButton = form.querySelector('button[type="submit"]');
+                const lockPage = () => {
+                    if (document.body.classList.contains('restaurant-location-open')) return;
+                    modal.dataset.scrollY = String(window.scrollY || window.pageYOffset || 0);
+                    document.body.classList.add('restaurant-location-open');
+                    document.body.style.top = `-${modal.dataset.scrollY}px`;
+                    document.body.style.left = '0';
+                    document.body.style.right = '0';
+                };
+                const unlockPage = () => {
+                    if (!document.body.classList.contains('restaurant-location-open')) return;
+                    const scrollY = Number(modal.dataset.scrollY || 0);
+                    document.body.classList.remove('restaurant-location-open');
+                    document.body.style.top = '';
+                    document.body.style.left = '';
+                    document.body.style.right = '';
+                    window.scrollTo(0, scrollY);
+                };
                 input.addEventListener('input', () => {
                     modal.dataset.calculatedAddress = '';
                     if (feeDisplay) {
@@ -1237,6 +1256,7 @@ try {
                 if (!hasSavedAddress()) {
                     setTimeout(() => {
                         modal.classList.remove('hidden');
+                        lockPage();
                         input.focus({
                             preventScroll: true
                         });
