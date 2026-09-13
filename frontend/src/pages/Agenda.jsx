@@ -6,7 +6,9 @@ import Swal from 'sweetalert2';
 const getPrintableOrderParts = (order) => {
   const rawProduct = String(order.product || 'Produto');
   const extrasMatch = rawProduct.match(/\s*\[([^\]]+)\]\s*$/);
-  const productName = (extrasMatch ? rawProduct.slice(0, extrasMatch.index) : rawProduct).trim();
+  let productName = (extrasMatch ? rawProduct.slice(0, extrasMatch.index) : rawProduct).trim();
+  const variation = String(order.variation || '').trim();
+  if (variation && productName.endsWith(`(${variation})`)) productName = productName.slice(0, -(variation.length + 2)).trim();
   const extras = extrasMatch ? extrasMatch[1].split(/,\s*/).filter(Boolean) : [];
   return { productName, extras };
 };
@@ -318,8 +320,8 @@ function OrderCard({ order, onUpdate }) {
     const itemsSubtotal = unitPrice * quantity;
     const selectionRows = getOrderSelectionRows(order);
     const detailRows = selectionRows.filter(([label]) => label !== 'Variação');
-    const selectionHtml = selectionRows.length
-      ? `<div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 13px; line-height: 1.6;">${selectionRows.map(([label, value]) => `<div><b>${label}:</b><br><span style="padding-left: 8px;">${value}</span></div>`).join('')}</div>`
+    const selectionHtml = detailRows.length
+      ? `<div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 13px; line-height: 1.6;">${detailRows.map(([label, value]) => `<div><b>${label}:</b><br><span style="padding-left: 8px;">${value}</span></div>`).join('')}</div>`
       : '';
 
     let notesHtml = '';
@@ -491,7 +493,7 @@ function OrderCard({ order, onUpdate }) {
           `;
 
           if (opts.client) content += `<p style="font-size: 18px; margin: 8px 0;"><b>👤 CLIENTE:</b> ${order.clientName}</p>`;
-          if (opts.prod) content += `<div style="margin: 10px 0; padding-bottom: 10px; border-bottom: 1px solid #000;"><div style="font-size: 18px; font-weight: 900;">ITEM ${order.quantity || 1}x${order.massa ? ` (${order.massa})` : ''}</div><div style="font-size: 20px; margin-top: 5px;">${printParts.productName}</div>${order.variation ? `<div style="font-size: 16px;">Variação: ${order.variation}</div>` : ''}</div>`;
+          if (opts.prod) content += `<div style="margin: 10px 0; padding-bottom: 10px; border-bottom: 1px solid #000;"><div style="font-size: 18px; font-weight: 900;">ITEM ${order.quantity || 1}x</div><div style="font-size: 20px; margin-top: 5px;">${printParts.productName}</div>${order.variation ? `<div style="font-size: 16px;">Variação: ${order.variation}</div>` : ''}</div>`;
 
           if (opts.massa && detailRows.length) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${detailRows.map(([label, value]) => `<div><b>${label}:</b><br><span style="padding-left: 8px;">${value}</span></div>`).join('')}</div>`;
           if (opts.notes && order.notes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>📝 OBS:</b> ${order.notes}</p>`;
