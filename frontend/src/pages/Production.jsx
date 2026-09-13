@@ -329,6 +329,7 @@ const Production = () => {
     const freightStr = freightValue.toFixed(2);
     const selectionSections = getOrderSelectionSections(order);
     const detailRows = selectionSections.flatMap(section => section.values.map(([value, isAttachment]) => [section.label, value, isAttachment]));
+    const printSelectionHtml = selectionSections.map(section => `<div style="margin-bottom: 8px;"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 10px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}">Clique para ver anexo</a>` : value}</div>`).join('')}</div>`).join('');
     const detailSummaryHtml = detailRows.length
 ? `<div style="font-size: 13px; color: #475569; margin-top: 12px; padding-top: 0; line-height: 1.6;">${detailRows.map(([label, value, isAttachment]) => `<div><b>${label}:</b><br><span style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Clique para ver anexo</a>` : value}</span></div>`).join('')}</div>`
       : '';
@@ -426,17 +427,12 @@ const Production = () => {
           if (opts.client) content += `<p style="font-size: 18px; margin: 8px 0;"><b>👤 CLIENTE:</b> ${order.clientName}</p>`;
           if (opts.prod) content += `<div style="margin: 10px 0; padding-bottom: 10px; border-bottom: 1px solid #000;"><div style="font-size: 18px; font-weight: 900;">ITEM ${order.quantity || 1}x</div><div style="font-size: 20px; margin-top: 5px;">${printParts.productName}</div>${order.variation ? `<div style="font-size: 16px;">Variação: ${order.variation}</div>` : ''}</div>`;
 
-          if (opts.massa && detailRows.length) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${detailRows.map(([label, value]) => `<div><b>${label}:</b><br><span style="padding-left: 8px;">${value}</span></div>`).join('')}</div>`;
+          if (opts.massa && printSelectionHtml) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${printSelectionHtml}</div>`;
           if (opts.notes && order.notes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>📝 OBS:</b> ${order.notes}</p>`;
           if (opts.addr && order.deliveryAddress) content += `<p style="font-size: 16px; margin: 10px 0;"><b>📍 ENTREGA:</b> ${order.deliveryAddress}</p>`;
           if (opts.value) content += `<div style="margin-top: 15px; border-top: 2px solid #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 24px;">TOTAL: R$ ${order.totalValue?.toFixed(2)}</h2></div>`;
 
-          content += `
-              <div style="text-align: center; margin-top: 30px; font-size: 14px; border-top: 1px dashed #000; padding-top: 10px;">
-                CUPOM DE PRODUÇÃO - ZAPFLY
-              </div>
-            </div>
-          `;
+          content += '</div>';
 
           const printWindow = window.open('', '_blank', 'width=600,height=800');
           if (printWindow) {
