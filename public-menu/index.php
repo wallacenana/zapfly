@@ -1145,7 +1145,7 @@ try {
         </svg>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-        <script type="text/javascript" src="/cardapio/script.js?v=2.09" defer></script>
+        <script type="text/javascript" src="/cardapio/script.js?v=2.08" defer></script>
 
     </html>
 <?php
