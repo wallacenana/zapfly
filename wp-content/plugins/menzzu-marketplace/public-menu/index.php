@@ -870,8 +870,13 @@ try {
                         </div>
                     </div>
 
-                    <!-- Step 2: Details -->
+                    <!-- Step 2: Order extras -->
                     <div class="checkout-step hidden" id="step-2">
+                        <div id="order-extra-step-content"></div>
+                    </div>
+
+                    <!-- Step 3: Delivery or pickup details -->
+                    <div class="checkout-step hidden" id="step-3">
                         <!-- Toggle Delivery/Pickup -->
                         <div id="checkout-type-tabs" class="checkout-type-tabs">
                             <button type="button" class="ifood-btn type-tab active" data-method="delivery" onclick="setDeliveryType('delivery')">Entrega</button>
@@ -922,19 +927,17 @@ try {
                             <?php echo renderReceivingHours($availableSlots); ?>
                         </div>
 
-                        <!-- Extras da Encomenda -->
-                        <div id="order-step-content" class="hidden"></div>
                     </div>
 
-                    <!-- Step 3: Payment Method -->
-                    <div class="checkout-step hidden" id="step-3">
+                    <!-- Step 4: Payment Method -->
+                    <div class="checkout-step hidden" id="step-4">
                         <h3 style="font-size:1rem; font-weight:700; margin-bottom:18px; color:var(--text-main);">Forma de
                             Pagamento</h3>
                         <div id="payment-options" style="display:flex; flex-direction:column; gap:12px;"></div>
                     </div>
 
-                    <!-- Step 4: Summary -->
-                    <div class="checkout-step hidden" id="step-4">
+                    <!-- Step 5: Summary -->
+                    <div class="checkout-step hidden" id="step-5">
                         <div id="order-summary-content">
                             <div class="summary-section">
                                 <h3 class="field-label" style="font-size: 1.1rem; margin-bottom: 12px;">Resumo dos Itens
@@ -1279,7 +1282,7 @@ try {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.27'); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.28'); ?>" defer></script>
 
     </html>
 <?php

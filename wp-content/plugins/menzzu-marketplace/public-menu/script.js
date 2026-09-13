@@ -394,7 +394,8 @@ async function commitScheduleAndMaybeAdd() {
     } else if (state.currentStep === 1 && state.activeTab === 'order') {
         goToStep(hasCheckoutExtras() ? 2 : 3);
     } else if (state.currentStep >= 2 && state.activeTab === 'order') {
-        renderStep2();
+        if (state.currentStep === 2) renderCheckoutExtraStep();
+        if (state.currentStep === 3) renderStep2();
     }
 }
 
@@ -2003,14 +2004,12 @@ function renderCheckoutExtraField(item, field, idx, itemKeyBase, currentValue = 
 
 function renderCheckoutExtraStep() {
     const container = document.getElementById('order-extra-step-content');
-    const orderStepContent = document.getElementById('order-step-content');
-    if (!container || !orderStepContent) return false;
+    if (!container) return false;
 
     const cart = getActiveCart();
     const itemsWithExtras = cart.filter(item => getCustomFieldSchema(item).length > 0);
     if (state.activeTab !== 'order' || itemsWithExtras.length === 0) {
         container.innerHTML = '';
-        orderStepContent.classList.add('hidden');
         return false;
     }
 
@@ -2031,7 +2030,6 @@ function renderCheckoutExtraStep() {
                     `;
     }).join('');
 
-    orderStepContent.classList.remove('hidden');
     lucide.createIcons();
     return true;
 }
@@ -2345,6 +2343,7 @@ function goToStep(step) {
     document.getElementById('step-2')?.classList.add('hidden');
     document.getElementById('step-3')?.classList.add('hidden');
     document.getElementById('step-4')?.classList.add('hidden');
+    document.getElementById('step-5')?.classList.add('hidden');
 
     // Mostra apenas o atual
     document.getElementById(`step-${step}`)?.classList.remove('hidden');
@@ -2352,22 +2351,24 @@ function goToStep(step) {
     openModal('checkout-modal');
 
     let title = "Ver sacola";
-    if (step === 2) title = state.activeTab === 'delivery'
+    if (step === 2) title = "Informações da encomenda";
+    if (step === 3) title = state.activeTab === 'delivery'
         ? "Entrega"
         : (state.deliveryType === 'delivery' ? "Entrega da encomenda" : "Retirada da encomenda");
-    if (step === 3) title = "Forma de Pagamento";
-    if (step === 4) title = "Confirmar Pedido";
+    if (step === 4) title = "Forma de Pagamento";
+    if (step === 5) title = "Confirmar Pedido";
 
     document.getElementById('checkout-step-title').innerText = title;
 
-    const isLast = step === 4;
+    const isLast = step === 5;
     document.getElementById('next-step-btn').classList.toggle('hidden', isLast);
     document.getElementById('place-order-btn').classList.toggle('hidden', !isLast);
 
     if (step === 1) renderStep1();
-    if (step === 2) renderStep2();
-    if (step === 3) renderStep3();
-    if (step === 4) {
+    if (step === 2) renderCheckoutExtraStep();
+    if (step === 3) renderStep2();
+    if (step === 4) renderStep3();
+    if (step === 5) {
         updateStep4Summary();
     }
 }
@@ -2438,30 +2439,30 @@ function getResumeStep() {
     const phone = state.userInfo.phone || '';
     if (!state.userInfo.name || !phone || phone.length < 14) return 1;
 
-    // Step 3 requires step 2 data: address + delivery fee for delivery; schedule + extras for order
+    // Details are step 3; order extras are collected in the dedicated step 2.
     if (state.activeTab === 'delivery') {
         if (state.deliveryType === 'delivery') {
-            if (!state.userInfo.address) return 2;
-            if (!state.deliveryFee) return 2;
+            if (!state.userInfo.address) return 3;
+            if (!state.deliveryFee) return 3;
         }
     } else {
         if (state.deliveryType === 'delivery') {
-            if (!state.userInfo.address || !state.deliveryFee) return 2;
+            if (!state.userInfo.address || !state.deliveryFee) return 3;
         }
         if (!state.orderSchedule?.date || !state.orderSchedule?.time) return 1;
         if (hasCheckoutExtras() && savedStep < 3) return 2;
     }
 
     // Step 4 requires payment method (defaults to 'mercadopago', but guard anyway)
-    if (!state.paymentMethod) return 3;
+    if (!state.paymentMethod) return 4;
 
-    // All data present: respect where the user actually was, capped between 1 and 4
-    return Math.max(1, Math.min(4, savedStep));
+    // All data present: respect where the user actually was, capped between 1 and 5
+    return Math.max(1, Math.min(5, savedStep));
 }
 
 document.getElementById('checkout-back-btn')?.addEventListener('click', () => {
     if (state.currentStep > 1) {
-        const previousStep = (state.activeTab === 'order' && !hasCheckoutExtras() && state.currentStep === 3) ? 1 : state.currentStep - 1;
+        const previousStep = (state.currentStep === 3 && !hasCheckoutExtras()) ? 1 : state.currentStep - 1;
         goToStep(previousStep);
     } else closeWithAnimation('checkout-modal');
 });
@@ -2590,7 +2591,6 @@ function renderStep3() {
 
 function renderStep2() {
     const isDelivery = state.deliveryType === 'delivery';
-    const isDeliveryTab = state.activeTab === 'delivery';
     const enabledMethods = getEnabledFulfillmentMethods();
 
     const typeTabs = document.getElementById('checkout-type-tabs');
@@ -2613,26 +2613,7 @@ function renderStep2() {
     }
 
     const deliveryContent = document.getElementById('delivery-step-content');
-    const orderContent = document.getElementById('order-step-content');
     if (deliveryContent) deliveryContent.classList.toggle('hidden', !isDelivery);
-    if (orderContent) {
-        if (isDeliveryTab && isDelivery) {
-            orderContent.classList.add('hidden');
-            orderContent.innerHTML = '';
-        } else if (state.activeTab === 'order') {
-            const hasExtras = hasCheckoutExtras();
-            if (hasExtras) {
-                orderContent.classList.remove('hidden');
-                orderContent.innerHTML = `
-                                <div id="order-extra-step-content"></div>
-                            `;
-                renderCheckoutExtraStep();
-            } else {
-                orderContent.classList.add('hidden');
-                orderContent.innerHTML = '';
-            }
-        }
-    }
 
     // Mantem o mapa visual sincronizado com o endereco selecionado.
     if (state.deliveryType === 'delivery' && window.google?.maps) {
@@ -2713,32 +2694,33 @@ async function handleNextStep() {
             goToStep(hasCheckoutExtras() ? 2 : 3);
             return;
         }
-        goToStep(2);
+        goToStep(3);
     } else if (state.currentStep === 2) {
+        if (state.activeTab !== 'order' || !hasCheckoutExtras()) {
+            return goToStep(3);
+        }
+        const extrasResult = collectCheckoutExtraStep();
+        if (!extrasResult.ok) {
+            return showAlert('Atenção', extrasResult.message || 'Preencha os campos extras antes de continuar.');
+        }
+        goToStep(3);
+    } else if (state.currentStep === 3) {
         if (state.activeTab === 'delivery') {
             if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
             if (state.deliveryFee === 0 && state.deliveryType === 'delivery' && state.userInfo.address) {
                 return showAlert('Taxa Indisponível', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereço está no raio de entrega.');
             }
-        } else if (state.activeTab === 'order') {
+        } else {
             if (!isOrderEnabled()) return showAlert('Encomendas desativadas', 'No momento não estamos aceitando encomendas.');
             if (state.deliveryType === 'delivery') {
                 if (!state.userInfo.address) return showAlert('Endereço Ausente', 'Informe o endereço para a entrega da encomenda.');
                 if (!state.deliveryFee) return showAlert('Taxa Indisponível', 'Aguarde o cálculo da taxa de entrega da encomenda.');
             }
-            if (hasCheckoutExtras()) {
-                const extrasResult = collectCheckoutExtraStep();
-                if (!extrasResult.ok) {
-                    return showAlert('Atenção', extrasResult.message || 'Preencha os campos extras antes de continuar.');
-                }
-            }
-            goToStep(3);
-            return;
         }
-        goToStep(3);
-    } else if (state.currentStep === 3) {
-        if (!state.paymentMethod) return showAlert('Atenção', 'Selecione uma forma de pagamento.');
         goToStep(4);
+    } else if (state.currentStep === 4) {
+        if (!state.paymentMethod) return showAlert('Atenção', 'Selecione uma forma de pagamento.');
+        goToStep(5);
     }
 }
 
