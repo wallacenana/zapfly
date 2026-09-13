@@ -349,7 +349,7 @@ function OrderCard({ order, onUpdate }) {
     const selectionSections = getOrderSelectionSections(order);
     const detailRows = selectionSections.flatMap(section => section.values.map(([value, isAttachment]) => [section.label, value, isAttachment]));
     const selectionHtml = selectionSections.length
-      ? `<div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 13px; line-height: 1.6;">${selectionSections.map(section => `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.16);"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Ver imagem</a>` : value}</div>`).join('')}</div>`).join('')}</div>`
+      ? `<div style="margin-top: 12px; padding-top: 0; font-size: 13px; line-height: 1.6;">${selectionSections.map(section => `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.16);"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Ver imagem</a>` : value}</div>`).join('')}</div>`).join('')}</div>`
       : '';
 
     let notesHtml = '';

@@ -321,7 +321,7 @@ const Production = () => {
     const selectionSections = getOrderSelectionSections(order);
     const detailRows = selectionSections.flatMap(section => section.values.map(([value, isAttachment]) => [section.label, value, isAttachment]));
     const detailSummaryHtml = detailRows.length
-      ? `<div style="font-size: 13px; color: #475569; margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0; line-height: 1.6;">${detailRows.map(([label, value, isAttachment]) => `<div><b>${label}:</b><br><span style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Ver imagem</a>` : value}</span></div>`).join('')}</div>`
+      ? `<div style="font-size: 13px; color: #475569; margin-top: 12px; padding-top: 0; line-height: 1.6;">${detailRows.map(([label, value, isAttachment]) => `<div><b>${label}:</b><br><span style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Ver imagem</a>` : value}</span></div>`).join('')}</div>`
       : '';
 
     const selectionSummaryHtml = selectionSections.length
