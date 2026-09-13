@@ -1726,6 +1726,16 @@ function getSelectedAddons() {
     };
 }
 
+function getSelectedCustomFields(item) {
+    return getCustomFieldSummaryParts(item).map(({ key, value, isUrl }) => ({
+        groupName: key,
+        name: value,
+        isCustomField: true,
+        isAttachment: isUrl,
+        price: 0
+    }));
+}
+
 function updateDetailFooter() {
     const basePrice = state.currentVariation
         ? getEffectiveProductPrice(state.currentVariation)
@@ -2681,8 +2691,6 @@ function commitAddToCart() {
         addons,
         addonTotal
     } = getSelectedAddons();
-    const addonsJSON = addons.length > 0 ? JSON.stringify(addons) : null;
-
     const basePrice = variation
         ? getEffectiveProductPrice(variation)
         : getEffectiveProductPrice(item);
@@ -2691,6 +2699,9 @@ function commitAddToCart() {
     const customFieldSchema = getCustomFieldSchema(item);
     const customFieldSchemaJSON = customFieldSchema.length > 0 ? JSON.stringify(customFieldSchema) : null;
     const customAnswersJSON = Object.keys(customAnswers).length > 0 ? JSON.stringify(customAnswers) : null;
+    const customFieldItem = { ...item, customFieldSchema: customFieldSchemaJSON, customFieldValues: customAnswersJSON };
+    const orderSelections = [...addons, ...getSelectedCustomFields(customFieldItem)];
+    const addonsJSON = orderSelections.length > 0 ? JSON.stringify(orderSelections) : null;
     const sigKey = (customAnswersJSON || '') + (addonsJSON || '');
     const itemKeyBase = variation ? `${item.id}-${variation.name}` : item.id;
     const itemKey = sigKey ? `${itemKeyBase}-${btoa(encodeURIComponent(sigKey)).substring(0, 12)}` : itemKeyBase;
@@ -2833,7 +2844,7 @@ async function handlePlaceOrder() {
             key,
             value,
             isUrl
-        }) => extras.push(`${key}: ${isUrl ? 'Anexo' : value}`));
+        }) => extras.push(`${key}: ${value}`));
         if (extras.length > 0) base += ` [${extras.join(', ')}]`;
         return base;
     };
