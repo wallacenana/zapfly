@@ -1375,6 +1375,9 @@ body.theme-dark .var-option.selected {
 
 .ifood-input {
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     background: var(--bg-gray);
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -1383,6 +1386,15 @@ body.theme-dark .var-option.selected {
     font-family: inherit;
     font-size: 0.95rem;
     outline: none;
+}
+
+#order-schedule-modal #schedule-date,
+#order-schedule-modal #schedule-time {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
 }
 
 .ifood-input:focus {
