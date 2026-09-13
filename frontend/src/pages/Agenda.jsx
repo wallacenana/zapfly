@@ -16,22 +16,22 @@ const getPrintableOrderParts = (order) => {
 const getOrderSelectionRows = (order) => {
   const rows = [];
   const productParts = getPrintableOrderParts(order);
-  const addRow = (label, value, isAttachment = false) => {
+  const addRow = (label, value, isAttachment = false, isCustomField = false) => {
     const cleanLabel = String(label || '').trim();
     const cleanValue = String(value || '').trim();
     if (cleanLabel && cleanValue && !rows.some(([rowLabel, rowValue]) => rowLabel === cleanLabel && rowValue === cleanValue)) {
-      rows.push([cleanLabel, cleanValue, isAttachment]);
+      rows.push([cleanLabel, cleanValue, isAttachment, isCustomField]);
     }
   };
   try {
     const addons = typeof order.addons === 'string' ? JSON.parse(order.addons) : order.addons;
-    (Array.isArray(addons) ? addons : []).forEach(addon => addRow(addon.groupName || 'Opção', addon.name, addon.isAttachment));
+    (Array.isArray(addons) ? addons : []).forEach(addon => addRow(addon.groupName || 'Opção', addon.name, addon.isAttachment, addon.isCustomField));
   } catch (e) { }
 
   if (!rows.length) {
     productParts.extras.forEach(extra => {
       const separator = extra.indexOf(':');
-      if (separator > 0) addRow(extra.slice(0, separator), extra.slice(separator + 1), /^https?:\/\//i.test(extra.slice(separator + 1)));
+      if (separator > 0) addRow(extra.slice(0, separator), extra.slice(separator + 1), /^https?:\/\//i.test(extra.slice(separator + 1)), true);
       else addRow('Opção', extra, /^https?:\/\//i.test(extra));
     });
   }
@@ -40,6 +40,24 @@ const getOrderSelectionRows = (order) => {
   addRow('Topo', order.topo);
   addRow('Variação', order.variation);
   return rows;
+};
+
+const getOrderSelectionSections = (order) => {
+  const rows = getOrderSelectionRows(order);
+  const sections = [];
+  const variation = String(order.variation || '').trim();
+  if (variation) sections.push({ label: 'Escolha', values: [[variation, false]] });
+  rows.forEach(([rowLabel, value, isAttachment, isCustomField]) => {
+    if (value === variation) return;
+    const label = isCustomField ? 'Informações extras' : rowLabel || 'Opção';
+    let section = sections.find(item => item.label === label);
+    if (!section) {
+      section = { label, values: [] };
+      sections.push(section);
+    }
+    if (!section.values.some(([currentValue]) => currentValue === value)) section.values.push([value, isAttachment]);
+  });
+  return sections;
 };
 import ReactDOM from 'react-dom';
 
@@ -327,10 +345,10 @@ function OrderCard({ order, onUpdate }) {
       }
     }
     const itemsSubtotal = unitPrice * quantity;
-    const selectionRows = getOrderSelectionRows(order);
-    const detailRows = selectionRows.filter(([label]) => label !== 'Variação');
-    const selectionHtml = detailRows.length
-      ? `<div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 13px; line-height: 1.6;">${detailRows.map(([label, value, isAttachment]) => `<div><b>${label}:</b><br><span style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Ver imagem</a>` : value}</span></div>`).join('')}</div>`
+    const selectionSections = getOrderSelectionSections(order);
+    const detailRows = selectionSections.flatMap(section => section.values.map(([value, isAttachment]) => [section.label, value, isAttachment]));
+    const selectionHtml = selectionSections.length
+      ? `<div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 13px; line-height: 1.6;">${selectionSections.map(section => `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.16);"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Ver imagem</a>` : value}</div>`).join('')}</div>`).join('')}</div>`
       : '';
 
     let notesHtml = '';
