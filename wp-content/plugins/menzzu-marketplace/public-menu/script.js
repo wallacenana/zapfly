@@ -83,7 +83,6 @@ let state = {
     currentStep: 1,
     deliveryFee: 0,
     deliveryFeeCalculated: false,
-    deliveryFeeLoading: false,
     googleMap: null,
     mapMarker: null,
     geocoder: null,
@@ -855,9 +854,7 @@ function updateLocation(location, address = null) {
         document.getElementById('user-address').value = address;
         state.userInfo.address = address;
         localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
-        state.deliveryFee = 0;
-        state.deliveryFeeCalculated = false;
-        updateDeliveryFeeButtonState();
+        calculateDeliveryFee(address);
     }
 }
 
@@ -870,9 +867,6 @@ function reverseGeocode(latLng) {
 }
 
 async function calculateDeliveryFee(address) {
-    const cleanAddress = String(address || '').trim();
-    if (!cleanAddress) return;
-    state.deliveryFeeLoading = true;
     state.deliveryFeeCalculated = false;
     updateDeliveryFeeButtonState();
     try {
@@ -882,7 +876,7 @@ async function calculateDeliveryFee(address) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                address: cleanAddress,
+                address,
                 slug: STORE_SLUG
             })
         });
@@ -919,8 +913,6 @@ async function calculateDeliveryFee(address) {
         state.deliveryFeeCalculated = false;
         updateDeliveryFeeButtonState();
         console.error('Erro ao calcular frete:', err);
-    } finally {
-        state.deliveryFeeLoading = false;
     }
     updateDeliveryFeeButtonState();
 }
@@ -2121,10 +2113,6 @@ function initEventListeners() {
     });
     bindClick('next-step-btn', handleNextStep);
     bindClick('place-order-btn', handlePlaceOrder);
-    bindClick('calculate-delivery-fee-btn', () => {
-        const address = document.getElementById('user-address')?.value?.trim();
-        if (address) calculateDeliveryFee(address);
-    });
 
     updateOrderTabsVisibility(true);
     window.addEventListener('scroll', () => {
@@ -2255,14 +2243,6 @@ function updateDeliveryFeeButtonState() {
         && !state.deliveryFeeCalculated;
     const nextButton = document.getElementById('next-step-btn');
     const placeButton = document.getElementById('place-order-btn');
-    const calculateButton = document.getElementById('calculate-delivery-fee-btn');
-    if (calculateButton) {
-        const hasAddress = Boolean(String(state.userInfo.address || '').trim());
-        calculateButton.disabled = !hasAddress || state.deliveryFeeLoading;
-        calculateButton.innerText = state.deliveryFeeLoading
-            ? 'Calculando taxa...'
-            : (state.deliveryFeeCalculated ? 'Taxa calculada' : 'Definir taxa de entrega');
-    }
     if (nextButton && state.currentStep === 2) nextButton.disabled = pending;
     if (placeButton && state.currentStep === 4) placeButton.disabled = pending;
 }
@@ -2580,7 +2560,9 @@ function setDeliveryType(type) {
     if (addressSection) addressSection.classList.toggle('hidden', type !== 'delivery');
 
     if (type === 'delivery') {
-        if (!state.userInfo.address) {
+        if (state.userInfo.address) {
+            calculateDeliveryFee(state.userInfo.address);
+        } else {
             state.deliveryFee = 0;
             state.deliveryFeeCalculated = false;
             updateDeliveryFeeButtonState();
