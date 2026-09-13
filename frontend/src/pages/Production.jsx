@@ -111,6 +111,24 @@ const Production = () => {
   };
 
   const updateStatus = async (orderId, newStatus) => {
+    const targetOrder = orders.find(order => order.id === orderId);
+    if (!targetOrder) return;
+
+    if (newStatus === 'cancelled') {
+      const result = await Swal.fire({
+        title: 'Cancelar pedido?',
+        text: targetOrder.paymentStatus === 'confirmed'
+          ? 'O pagamento confirmado será estornado automaticamente.'
+          : 'O pedido será marcado como cancelado.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: targetOrder.paymentStatus === 'confirmed' ? 'Cancelar e estornar' : 'Cancelar pedido',
+        cancelButtonText: 'Voltar',
+        confirmButtonColor: '#ef4444'
+      });
+      if (!result.isConfirmed) return;
+    }
+
     // 1. Guarda o estado antigo caso dê erro no banco
     const previousOrders = [...orders];
 
@@ -292,9 +310,7 @@ const Production = () => {
 
     // Botão de ação baseado no status
     let actionBtnHtml = '';
-    if (order.status === 'waiting_payment') {
-      actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #fbbf24; color: #000; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">MOVER P/ PENDENTES (PAGO)</button>`;
-    } else if (order.status === 'pending') {
+    if (order.status === 'pending') {
       const nextLabel = order.type === 'delivery' ? 'INICIAR PRODUÇÃO' : 'ACEITAR PEDIDO';
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #8b5cf6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">${nextLabel}</button>`;
     } else if (order.status === 'accepted') {
@@ -569,7 +585,8 @@ const Production = () => {
 
     // Apenas pedidos Pendentes, Em Produção e Prontos furam o filtro de data.
     // Pedidos concluídos, cancelados ou agendados ('order' mas em accepted) obedecem à data selecionada.
-    const matchDate = o.scheduledDate === selectedDate;
+    const isGeneralOrderQueue = orderType === 'order' && ['waiting_payment', 'pending'].includes(o.status);
+    const matchDate = isGeneralOrderQueue || o.scheduledDate === selectedDate;
 
     return matchType && matchSearch && matchDate;
   });

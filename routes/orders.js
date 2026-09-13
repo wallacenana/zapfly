@@ -6,7 +6,7 @@ const router = express.Router();
 const prisma = require('../lib/prisma');
 const { checkEntitlement, hasPlanFeature } = require('../lib/plans');
 const cron = require('node-cron');
-const { MercadoPagoConfig, Preference } = require('mercadopago');
+const { MercadoPagoConfig, Preference, Payment, PaymentRefund } = require('mercadopago');
 
 const { getSettings } = require('../lib/cache');
 
@@ -670,6 +670,23 @@ async function createPaymentLink(order, settings) {
   }
 }
 
+async function refundConfirmedPayment(order, settings) {
+  if (String(order.paymentStatus || '').toLowerCase() === 'refunded') return;
+  if (String(order.paymentStatus || '').toLowerCase() !== 'confirmed') return;
+  if (!settings?.mercadopagoToken) throw new Error('Token do Mercado Pago não configurado para estorno.');
+
+  const client = new MercadoPagoConfig({ accessToken: settings.mercadopagoToken });
+  const paymentClient = new Payment(client);
+  const search = await paymentClient.search({
+    options: { external_reference: order.id, sort: 'date_created', criteria: 'desc', limit: 20 }
+  });
+  const payment = (search.results || []).find(item => item.status === 'approved' && item.id);
+  if (!payment) throw new Error('Pagamento aprovado não localizado para este pedido.');
+
+  const refundClient = new PaymentRefund(client);
+  await refundClient.total({ payment_id: payment.id });
+}
+
 // Verifica disponibilidade num dia/hora
 async function checkAvailability(userId, date, time, type = 'order', costToUse = 1) {
   try {
@@ -969,8 +986,12 @@ router.get('/', authenticate, async (req, res) => {
   const where = { userId };
 
   if (date) {
-    // A tela de produção sempre representa o dia selecionado, inclusive pagamentos pendentes.
-    where.scheduledDate = date;
+    // Encomendas aguardando decisão ficam na fila geral, independente da data agendada.
+    where.OR = [
+      { type: 'order', status: { in: ['waiting_payment', 'pending'] } },
+      { type: null, status: { in: ['waiting_payment', 'pending'] } },
+      { scheduledDate: date, status: { notIn: ['waiting_payment', 'pending'] } }
+    ];
   } else {
     where.status = { in: ['waiting_payment', 'pending', 'accepted', 'production', 'ready'] };
   }
@@ -1717,6 +1738,24 @@ router.patch('/:id', authenticate, async (req, res) => {
     const updateData = { ...req.body };
     delete updateData.id;
     delete updateData.userId;
+
+    const isCancellation = ['cancelled', 'canceled', 'cancelado'].includes(String(updateData.status || '').toLowerCase());
+    if (String(updateData.status || '').toLowerCase() === 'production'
+      && String(existing.type || 'order').toLowerCase() === 'delivery'
+      && String(existing.paymentStatus || '').toLowerCase() !== 'confirmed') {
+      return res.status(400).json({ error: 'Delivery só pode entrar em produção após a confirmação do pagamento.' });
+    }
+
+    if (isCancellation && String(existing.paymentStatus || '').toLowerCase() === 'confirmed') {
+      try {
+        await refundConfirmedPayment(existing, await getSettings(userId));
+        updateData.paymentStatus = 'refunded';
+      } catch (refundError) {
+        console.error(`[MercadoPago] Falha ao estornar pedido ${id}:`, refundError);
+        return res.status(502).json({ error: `Pedido nao cancelado: ${refundError.message}` });
+      }
+    }
+
     if (Object.prototype.hasOwnProperty.call(updateData, 'deliveryFee')) {
       updateData.deliveryFee = parseFloat(updateData.deliveryFee) || 0;
     }
@@ -1747,7 +1786,7 @@ router.patch('/:id', authenticate, async (req, res) => {
 
     // 4. Regenerar link de pagamento se não for em dinheiro e o valor for maior que 0
     const isCashPayment = String(order.paymentMethod || '').trim().toLowerCase() === 'dinheiro';
-    if (!isCashPayment && order.totalValue > 0) {
+    if (!isCancellation && !isCashPayment && order.totalValue > 0) {
       const paymentLink = await createPaymentLink(order, settings);
       if (paymentLink) {
         order = await prisma.order.update({
@@ -1769,6 +1808,15 @@ router.delete('/:id', authenticate, async (req, res) => {
   try {
     const existing = await getOwnedRecord('order', id, userId);
     if (!existing) return res.status(403).json({ error: "Não autorizado" });
+
+    if (String(existing.paymentStatus || '').toLowerCase() === 'confirmed') {
+      try {
+        await refundConfirmedPayment(existing, await getSettings(userId));
+      } catch (refundError) {
+        console.error(`[MercadoPago] Falha ao estornar pedido ${id}:`, refundError);
+        return res.status(502).json({ error: `Pedido nao excluido: ${refundError.message}` });
+      }
+    }
 
     await prisma.order.delete({ where: { id } });
     res.json({ success: true });
