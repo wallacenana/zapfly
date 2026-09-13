@@ -722,7 +722,7 @@ h3 {
 
 .product-card:hover {
     border-color: var(--primary-color);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    box-shadow: none;
 }
 
 .product-info {
@@ -732,6 +732,10 @@ h3 {
 .product-info h3 {
     margin-bottom: 4px;
     font-size: 1rem;
+}
+
+.product-card:hover .product-info h3 {
+    color: var(--primary-color);
 }
 
 .product-info p {
@@ -749,7 +753,7 @@ h3 {
 }
 
 .product-price {
-    color: var(--primary-color);
+    color: var(--text-main);
 }
 
 .product-footer {
@@ -772,7 +776,7 @@ h3 {
     justify-content: center;
     cursor: pointer;
     flex: 0 0 auto;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12);
+    box-shadow: none;
     transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease, filter 0.15s ease;
 }
 
@@ -781,6 +785,11 @@ h3 {
     color: var(--btn-text);
     filter: brightness(1.05);
     transform: translateY(-1px);
+}
+
+.product-card:hover .product-add-btn {
+    background: var(--primary-color);
+    color: var(--btn-text);
 }
 
 .product-add-btn:active {
