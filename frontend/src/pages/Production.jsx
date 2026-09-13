@@ -275,6 +275,7 @@ const Production = () => {
     const formattedDate = (order.scheduledDate || '').split('-').reverse().join('/');
     const quantity = parseFloat(order.quantity) || 1;
     const freightValue = order.deliveryFee || 0;
+    const displayParts = getPrintableOrderParts(order);
     // Pega o preço real do produto ou calcula dinamicamente subtraindo a taxa de entrega, com fallback seguro
     let unitPrice = order.productRelation?.price || 0;
     if (order.totalValue > 0) {
