@@ -1042,7 +1042,23 @@ router.get('/', authenticate, async (req, res) => {
     include: { productRelation: true },
     orderBy: [{ scheduledDate: 'asc' }, { scheduledTime: 'asc' }]
   });
-  res.json(orders);
+  const addonGroups = await prisma.addonGroup.findMany({
+    where: { userId },
+    select: { id: true, name: true, max: true, items: true }
+  });
+  const addonGroupMap = new Map(addonGroups.map(group => [group.id, group]));
+  const enrichedOrders = orders.map(order => {
+    if (!order.productRelation?.addonGroups) return order;
+    const groupIds = safeJsonParse(order.productRelation.addonGroups, []);
+    const addonGroupDefinitions = (Array.isArray(groupIds) ? groupIds : [])
+      .map(groupId => addonGroupMap.get(groupId))
+      .filter(Boolean);
+    return {
+      ...order,
+      productRelation: { ...order.productRelation, addonGroupDefinitions }
+    };
+  });
+  res.json(enrichedOrders);
 });
 
 router.post('/', async (req, res) => {

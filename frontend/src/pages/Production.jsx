@@ -15,6 +15,15 @@ const getPrintableOrderParts = (order) => {
   return { productName, extras };
 };
 
+const getLegacyGroupName = (order, value) => {
+  const groups = Array.isArray(order.productRelation?.addonGroupDefinitions) ? order.productRelation.addonGroupDefinitions : [];
+  return groups.find(group => {
+    try {
+      return JSON.parse(group.items || '[]').some(item => String(item?.name || item).trim() === String(value).trim());
+    } catch (e) { return false; }
+  })?.name || '';
+};
+
 const getOrderSelectionRows = (order) => {
   const rows = [];
   const productParts = getPrintableOrderParts(order);
@@ -34,7 +43,7 @@ const getOrderSelectionRows = (order) => {
     productParts.extras.forEach(extra => {
       const separator = extra.indexOf(':');
       if (separator > 0) addRow(extra.slice(0, separator), extra.slice(separator + 1), /^https?:\/\//i.test(extra.slice(separator + 1)), true);
-      else addRow('Opção', extra, /^https?:\/\//i.test(extra), false);
+      else addRow(getLegacyGroupName(order, extra) || 'Opção', extra, /^https?:\/\//i.test(extra), false);
     });
   }
   // Compatibilidade com pedidos antigos que gravavam estes campos fixos.
@@ -325,7 +334,7 @@ const Production = () => {
       : '';
 
     const selectionSummaryHtml = selectionSections.length
-      ? `<div style="font-size: 13px; color: #475569; margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0; line-height: 1.6;">${selectionSections.map(section => `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed #cbd5e1;"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Ver imagem</a>` : value}</div>`).join('')}</div>`).join('')}</div>`
+      ? `<div style="font-size: 13px; color: #475569; margin-top: 12px; padding-top: 0; line-height: 1.6;">${selectionSections.map((section, index) => `<div style="margin-top: 10px; padding-top: ${index ? '10px' : '0'}; ${index ? 'border-top: 1px dashed #cbd5e1;' : ''}"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Ver imagem</a>` : value}</div>`).join('')}</div>`).join('')}</div>`
       : '';
 
     let notesHtml = '';
