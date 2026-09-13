@@ -133,8 +133,9 @@ body.theme-dark .addon-option.disabled .addon-option-mark {
 }
 
 .addon-group-header {
-    background: color-mix(in srgb, var(--text-main) 8%, var(--bg-color));
-    border-bottom: 1px solid color-mix(in srgb, var(--text-main) 14%, transparent);
+    background:
+        color-mix(in srgb, var(--text-main) 5%, var(--bg-color));
+    border-bottom: 1px solid color-mix(in srgb, var(--text-main) 5%, transparent);
 }
 
 body.theme-dark .addon-option-mark {
@@ -923,7 +924,7 @@ h3 {
 #item-detail-modal .item-detail-content {
     width: min(90vw, 500px);
     max-width: none;
-    min-height: 50vh;
+    min-height: 53vh;
     max-height: 86vh;
     border-radius: 16px;
 }
@@ -965,14 +966,12 @@ h3 {
 
 .item-main-info p {
     color: var(--text-gray);
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     margin-bottom: 12px;
 }
 
 .item-main-info .price {
-    font-size: 1.1rem;
     font-weight: 700;
-    color: var(--primary-color);
 }
 
 .item-detail-media {
@@ -1028,7 +1027,7 @@ h3 {
     flex-direction: column;
     gap: 16px;
     border-left: 1px solid var(--border);
-    background: color-mix(in srgb, var(--bg-color) 96%, var(--text-main) 4%);
+    background: var(--bg-color);
     min-height: 0;
 }
 
@@ -1065,9 +1064,9 @@ h3 {
 
 .var-option {
     background: white;
-    padding: 16px;
+    padding: 15px;
     margin-bottom: 8px;
-    border-radius: 8px;
+    border-radius: 12px;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1077,7 +1076,7 @@ h3 {
 
 .var-option.selected {
     border-color: var(--primary-color);
-    background: #fff5f7;
+    background: color-mix(in srgb, var(--primary-color) 4%, var(--surface-color));
 }
 
 body.theme-dark .var-option.selected {
@@ -1092,6 +1091,7 @@ body.theme-dark .var-option.selected {
 .var-price {
     font-size: 0.85rem;
     color: var(--text-gray);
+    font-weight: 700;
 }
 
 /* Addons / Complements inside detail */
@@ -1107,8 +1107,10 @@ body.theme-dark .var-option.selected {
     margin-bottom: 12px;
     position: sticky;
     top: 0;
-    padding: 15px 14px;
+    padding: 15px 21px;
     z-index: 1;
+    margin-left: -20px;
+    margin-right: -20px;
 }
 
 .addon-group-header h4 {
@@ -1215,7 +1217,7 @@ body.theme-dark .var-option.selected {
     height: 20px;
     border-radius: 6px;
     border: 2px solid #d1d5db;
-    background: var(--text-main);
+    background: color-mix(in srgb, var(--text-main) 5%, var(--bg-color));
     flex: 0 0 auto;
     position: relative;
     transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
@@ -1224,11 +1226,11 @@ body.theme-dark .var-option.selected {
 .addon-option-mark::after {
     content: '';
     position: absolute;
-    left: 6px;
-    top: 2px;
+    left: 5px;
+    top: 1px;
     width: 5px;
     height: 10px;
-    border: solid var(--text-main);
+    border: solid var(--btn-text);
     border-width: 0 2px 2px 0;
     transform: rotate(45deg) scale(0.85);
     opacity: 0;
