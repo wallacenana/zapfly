@@ -969,10 +969,8 @@ router.get('/', authenticate, async (req, res) => {
   const where = { userId };
 
   if (date) {
-    where.OR = [
-      { status: { in: ['waiting_payment', 'pending', 'production', 'ready'] } },
-      { scheduledDate: date }
-    ];
+    // A tela de produção sempre representa o dia selecionado, inclusive pagamentos pendentes.
+    where.scheduledDate = date;
   } else {
     where.status = { in: ['waiting_payment', 'pending', 'accepted', 'production', 'ready'] };
   }
@@ -1094,7 +1092,8 @@ router.post('/', async (req, res) => {
       deliveryFee: parseFloat(deliveryFee) || 0,
       totalValue: computedTotal,
       addons: addons || null,
-      status: isManual ? 'accepted' : 'pending',
+      // Pedido público só entra na operação depois da confirmação do pagamento.
+      status: isManual ? 'accepted' : 'waiting_payment',
       paymentStatus: isManual ? 'confirmed' : 'pending',
       instanceId: instanceId || 'global'
     };

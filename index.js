@@ -1049,7 +1049,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                         const updatedOrder = await prisma.order.update({
                             where: { id: orderId },
                             data: {
-                                status: 'pending',
+                                status: order.type === 'delivery' ? 'production' : 'pending',
                                 paymentStatus: 'confirmed'
                             }
                         });
@@ -2161,10 +2161,6 @@ async function initInstance(instanceId) {
                                                             result.message = "Pedido criado. Informe que recebemos o pedido (Pagamento em Dinheiro) e que ele esta agora aguardando a aprovacao da nossa equipe. Peca para o cliente aguardar a confirmacao oficial.";
                                                         }
 
-                                                        // Se for dinheiro, já cai como pending, então dispara o DING agora
-                                                        if (args.paymentMethod === 'Dinheiro') {
-                                                            io.emit('new_order_pending', { orderId: res.data.id });
-                                                        }
                                                     }
                                                 } catch (err) {
                                                     result = { success: false, error: err.response?.data?.error || err.message };

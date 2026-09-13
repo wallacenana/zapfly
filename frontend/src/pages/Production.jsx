@@ -5,6 +5,28 @@ import { api } from '../api';
 import { socket } from '../api';
 import Swal from 'sweetalert2';
 
+const playOrderNotificationSound = () => {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const context = new AudioContextClass();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.18, context.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.45);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.45);
+    oscillator.addEventListener('ended', () => context.close());
+  } catch (error) {
+    console.warn('[Production] Som de novo pedido indisponivel:', error);
+  }
+};
+
 const Production = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -53,9 +75,10 @@ const Production = () => {
     socket.on('new_order_pending', (data) => {
       console.log('[Socket] Novo pedido pago!', data);
       fetchOrders();
+      playOrderNotificationSound();
       Swal.fire({
         title: '💰 PAGAMENTO CONFIRMADO!',
-        text: 'Um novo pedido acaba de entrar na aba de Pendentes.',
+        text: 'Um novo pedido pago acaba de entrar na produção ou nos pendentes.',
         icon: 'success',
         toast: true,
         position: 'top-end',
@@ -546,8 +569,7 @@ const Production = () => {
 
     // Apenas pedidos Pendentes, Em Produção e Prontos furam o filtro de data.
     // Pedidos concluídos, cancelados ou agendados ('order' mas em accepted) obedecem à data selecionada.
-    const bypassDateFilter = ['waiting_payment', 'pending', 'production', 'ready'].includes(o.status);
-    const matchDate = bypassDateFilter ? true : (o.scheduledDate === selectedDate);
+    const matchDate = o.scheduledDate === selectedDate;
 
     return matchType && matchSearch && matchDate;
   });
