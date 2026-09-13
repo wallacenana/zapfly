@@ -665,6 +665,12 @@ async function createPaymentLink(order, settings) {
   try {
     const client = new MercadoPagoConfig({ accessToken: settings.mercadopagoToken });
     const preference = new Preference(client);
+    const variationName = String(order.variation || '').trim();
+    const productName = String(order.product || 'Produto')
+      .replace(/\s*\[[^\]]*\]\s*$/, '')
+      .replace(/\s*\([^)]*\)\s*$/, '')
+      .trim() || 'Produto';
+    const paymentTitle = variationName || productName;
 
     const managerPhone = settings?.managerJid ? settings.managerJid.split('@')[0] : '5511999999999';
     const redirectUrl = `https://wa.me/${managerPhone}?text=Ol%C3%A1%2C+meu+pedido+%23${order.id.slice(-4).toUpperCase()}+teve+o+pagamento+processado.`;
@@ -674,7 +680,7 @@ async function createPaymentLink(order, settings) {
         items: [
           {
             id: order.id,
-            title: order.product,
+            title: paymentTitle,
             quantity: 1,
             unit_price: parseFloat(order.totalValue.toFixed(2)),
             currency_id: 'BRL'
