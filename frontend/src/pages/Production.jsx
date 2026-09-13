@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Package, Clock, CheckCircle, Search, Truck, XCircle, ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, CreditCard } from 'lucide-react';
 import { api } from '../api';
@@ -80,6 +80,7 @@ const Production = () => {
   const [activeType, setActiveType] = useState(localStorage.getItem('kanban_activeType') || 'order');
   const [selectedDate, setSelectedDate] = useState(localStorage.getItem('kanban_selectedDate') || new Date().toISOString().split('T')[0]);
   const [showWaitingDrawer, setShowWaitingDrawer] = useState(false);
+  const ordersRequestRef = useRef(null);
 
   // Persistência de estado
   useEffect(() => {
@@ -135,9 +136,19 @@ const Production = () => {
     socket.on('new_order_pending', handleNewOrder);
     socket.on('order_confirmed', refreshOrders);
 
-    const interval = setInterval(fetchOrders, 30000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') fetchOrders({ force: true });
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchOrders();
+    }, 30000);
     return () => {
       clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      ordersRequestRef.current?.abort();
+      ordersRequestRef.current = null;
       socket.off('new_order_pending', handleNewOrder);
       socket.off('order_confirmed', refreshOrders);
     };
@@ -145,13 +156,21 @@ const Production = () => {
 
 
 
-  const fetchOrders = async () => {
+  const fetchOrders = async ({ force = false } = {}) => {
+    if (document.visibilityState === 'hidden' && !force) return;
+    if (ordersRequestRef.current) return;
+
+    const controller = new AbortController();
+    ordersRequestRef.current = controller;
     try {
-      const res = await api.get(`/orders?date=${selectedDate}`);
+      const res = await api.get(`/orders?date=${selectedDate}`, { signal: controller.signal });
       setOrders(res.data);
     } catch (err) {
-      console.error(err);
+      if (err?.code !== 'ERR_CANCELED' && err?.name !== 'CanceledError') {
+        console.warn('[Production] Não foi possível atualizar os pedidos.', err?.message || err);
+      }
     } finally {
+      if (ordersRequestRef.current === controller) ordersRequestRef.current = null;
       setLoading(false);
     }
   };
