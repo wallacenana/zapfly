@@ -178,6 +178,21 @@ function getDisplayPriceText(product) {
     return `R$ ${basePrice.toFixed(2)}`;
 }
 
+function getProductPriceMarkup(product) {
+    const priceText = getDisplayPriceText(product).replace(/\./g, ',');
+    const fromMatch = priceText.match(/^A partir de (R\$ .+)$/);
+    if (fromMatch) {
+        return `<span class="product-price-label">A partir de</span><strong>${fromMatch[1]}</strong>`;
+    }
+
+    const promoMatch = priceText.match(/^de (R\$ .+) por (R\$ .+)$/);
+    if (promoMatch) {
+        return `<span class="product-price-old">de ${promoMatch[1]}</span><strong>por ${promoMatch[2]}</strong>`;
+    }
+
+    return `<span class="product-price-label">Preço</span><strong>${priceText}</strong>`;
+}
+
 function getSuggestedProductForItem(item) {
     if (!item?.suggestedItemId) return null;
     const suggestedId = String(item.suggestedItemId || '');
@@ -1380,7 +1395,7 @@ function renderProductCard(product, isPriority = false) {
                 <h3>${product.name}</h3>
                 <p>${product.description || ''}</p>
                 <div class="product-footer">
-                    <div class="product-price">${priceText}</div>
+                    <div class="product-price">${getProductPriceMarkup(product)}</div>
                     <button class="product-add-btn" type="button" aria-label="Adicionar item" onclick="event.stopPropagation(); openItemDetail('${product.id}')">
                         <i data-lucide="plus"></i>
                     </button>
