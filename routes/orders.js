@@ -1152,6 +1152,7 @@ router.post('/', async (req, res) => {
       fallbackTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     }
 
+    const isCashPayment = String(paymentMethod || '').trim().toLowerCase() === 'dinheiro';
     const orderData = {
       userId,
       productId: productId || null,
@@ -1171,7 +1172,7 @@ router.post('/', async (req, res) => {
       totalValue: computedTotal,
       addons: addons || null,
       // Pedido público só entra na operação depois da confirmação do pagamento.
-      status: isManual ? 'accepted' : 'waiting_payment',
+      status: isManual ? 'accepted' : (isCashPayment ? 'pending' : 'waiting_payment'),
       paymentStatus: isManual ? 'confirmed' : 'pending',
       instanceId: instanceId || 'global'
     };
@@ -1180,7 +1181,6 @@ router.post('/', async (req, res) => {
 
     // NOVO: Gerar link de pagamento se não for manual e nem pagamento em dinheiro
     let paymentError = null;
-    const isCashPayment = String(paymentMethod || '').trim().toLowerCase() === 'dinheiro';
     if (!isManual && !isCashPayment && order.totalValue > 0) {
       const gatewayEnabled = await hasPlanFeature(prisma, userId, 'paymentGateway');
       if (!gatewayEnabled) {

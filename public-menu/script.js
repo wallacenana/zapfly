@@ -1736,6 +1736,17 @@ function getSelectedCustomFields(item) {
     }));
 }
 
+function getOrderAddonsJSON(item) {
+    let addons = [];
+    try {
+        const parsed = typeof item?.addons === 'string' ? JSON.parse(item.addons) : item?.addons;
+        addons = Array.isArray(parsed) ? parsed.filter(addon => !addon?.isCustomField) : [];
+    } catch (e) { }
+
+    const selections = [...addons, ...getSelectedCustomFields(item)];
+    return selections.length > 0 ? JSON.stringify(selections) : null;
+}
+
 function updateDetailFooter() {
     const basePrice = state.currentVariation
         ? getEffectiveProductPrice(state.currentVariation)
@@ -2864,7 +2875,7 @@ async function handlePlaceOrder() {
         deliveryFee: state.deliveryType === 'delivery' ? state.deliveryFee : 0,
         paymentMethod: state.paymentMethod,
         totalValue: totalValue,
-        addons: cart[0].addons || null,
+        addons: getOrderAddonsJSON(cart[0]),
         carrinho_itens_extras: cart.slice(1).map(item => ({
             productId: item.productId,
             name: formatItemName(item),
