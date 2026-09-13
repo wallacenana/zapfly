@@ -788,6 +788,12 @@ window.initMapsAutocomplete = () => {
             const place = autocomplete.getPlace();
             if (!place.geometry) return;
             input.dataset.placeSelected = '1';
+            const locationFeeDisplay = document.getElementById('restaurant-location-fee');
+            if (locationFeeDisplay) {
+                locationFeeDisplay.hidden = false;
+                locationFeeDisplay.className = 'restaurant-location-fee is-loading';
+                locationFeeDisplay.innerText = 'Calculando...';
+            }
             updateLocation(place.geometry.location, place.formatted_address);
         });
 

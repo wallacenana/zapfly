@@ -1773,6 +1773,12 @@ body.theme-dark .delivery-fee-badge {
     color: #166534;
 }
 
+.restaurant-location-fee.is-loading {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    color: #475569;
+}
+
 .restaurant-location-fee.is-error {
     background: #fef2f2;
     border-color: #fecaca;
