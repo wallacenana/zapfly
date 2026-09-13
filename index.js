@@ -2194,7 +2194,7 @@ async function initInstance(instanceId) {
                                                         const internalBase = `http://127.0.0.1:${process.env.PORT || 3001}`;
                                                         const res = await axios.patch(`${internalBase}/orders/${targetOrder.id}`, updateData, {
                                                             headers: {
-                                                                'x-internal-token': process.env.INTERNAL_TOKEN || 'hotwhats-internal-bypass-key',
+                                                                'x-internal-token': process.env.INTERNAL_TOKEN || 'menzzu-internal-bypass-key',
                                                                 'x-user-id': settings.userId
                                                             }
                                                         });

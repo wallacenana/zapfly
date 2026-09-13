@@ -12,7 +12,7 @@ const { getSettings } = require('../lib/cache');
 const { authenticate, requireRole, normalizeRole } = require('../middleware/auth');
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'hotwhats-secret-key-super-safe';
+const JWT_SECRET = process.env.JWT_SECRET || 'menzzu-secret-key-super-safe';
 const APP_NAME = 'Menzzu';
 const GOOGLE_LOGIN_SCOPES = ['openid', 'email', 'profile'];
 

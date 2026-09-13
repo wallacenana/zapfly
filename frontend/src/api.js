@@ -1,8 +1,8 @@
 ﻿import axios from 'axios';
 import { io } from 'socket.io-client';
 
-export const TOKEN_KEY = 'hotwhats_token';
-export const USER_KEY = 'hotwhats_user';
+export const TOKEN_KEY = 'menzzu_token';
+export const USER_KEY = 'menzzu_user';
 
 const PUBLIC_AUTH_PATHS = new Set([
   '/auth/login',
@@ -79,7 +79,7 @@ export const isPublicAuthRequest = (url = '') => PUBLIC_AUTH_PATHS.has(getReques
 
 export const emitAuthExpired = () => {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new Event('hotwhats:auth-expired'));
+  window.dispatchEvent(new Event('menzzu:auth-expired'));
 };
 
 export const API_URL = getBaseUrl();

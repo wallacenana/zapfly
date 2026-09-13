@@ -396,7 +396,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.73">
+        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.75">
         <style>
             :root {
                 --primary-color:
@@ -880,7 +880,7 @@ try {
                             <div class="form-group receiving-address-field">
                                 <label class="field-label">Endereço de entrega</label>
                                 <input type="text" id="user-address" class="ifood-input"
-                                    placeholder="Rua, número, bairro..." autocomplete="street-address">
+                                    placeholder="Rua, número, bairro..." autocomplete="off">
                             </div>
                             <div id="delivery-map"
                                 style="height:200px; width:100%; border-radius:12px; background:#e8e8e8; margin-bottom:14px; overflow:hidden;">
@@ -1145,7 +1145,7 @@ try {
         </svg>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-        <script type="text/javascript" src="/cardapio/script.js?v=2.03" defer></script>
+        <script type="text/javascript" src="/cardapio/script.js?v=2.07" defer></script>
 
     </html>
 <?php

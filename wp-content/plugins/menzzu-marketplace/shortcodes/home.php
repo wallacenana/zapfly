@@ -251,5 +251,3 @@ if (!function_exists('menzzu_marketplace_render_home_shortcode')) {
 
 add_shortcode('menzzu_home', 'menzzu_marketplace_render_home_shortcode');
 add_shortcode('menzzu_marketplace', 'menzzu_marketplace_render_home_shortcode');
-// Compatibility alias for pages that still contain the original shortcode.
-add_shortcode('digizap_home_2', 'menzzu_marketplace_render_home_shortcode');

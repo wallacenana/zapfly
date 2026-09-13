@@ -339,7 +339,7 @@ const Settings = () => {
   };
 
   const connectGoogle = () => {
-    const token = localStorage.getItem('hotwhats_token');
+    const token = localStorage.getItem('menzzu_token');
     const width = 500;
     const height = 600;
     const left = window.screen.width / 2 - width / 2;
