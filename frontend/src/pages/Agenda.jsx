@@ -59,7 +59,6 @@ const getOrderSelectionSections = (order) => {
   return sections;
 };
 
-const renderOrderSelectionSections = (sections, dark = false) => sections.map((section, index) => `${index ? `<hr style="border: 0; border-top: 1px solid ${dark ? 'rgba(255,255,255,0.16)' : '#cbd5e1'}; margin: 12px 0;">` : ''}<div><b style="color: ${dark ? '#fff' : '#1e293b'};">${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Ver imagem</a>` : value}</div>`).join('')}</div>`).join('');
 import ReactDOM from 'react-dom';
 
 import { api } from '../api';
@@ -348,7 +347,6 @@ function OrderCard({ order, onUpdate }) {
     }
     const itemsSubtotal = unitPrice * quantity;
     const selectionSections = getOrderSelectionSections(order);
-    const groupedSelectionHtml = renderOrderSelectionSections(selectionSections, true);
     const detailRows = selectionSections.flatMap(section => section.values.map(([value, isAttachment]) => [section.label, value, isAttachment]));
     const selectionHtml = selectionSections.length
       ? `<div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 13px; line-height: 1.6;">${selectionSections.map(section => `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px dashed rgba(255,255,255,0.16);"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Ver imagem</a>` : value}</div>`).join('')}</div>`).join('')}</div>`
@@ -621,7 +619,7 @@ function OrderCard({ order, onUpdate }) {
                    <div style="font-weight: 900; font-size: 16px; color: #fff;">${displayParts.productName}</div>
                    ${displayParts.variation ? `<div style="font-size: 12px; color: #60a5fa; margin-top: 4px; font-weight: 700;">${displayParts.variation}</div>` : ''}
                    <div style="font-size: 12px; color: var(--text-muted);">Preço un.: R$ ${unitPrice.toFixed(2)}</div>
-                   ${groupedSelectionHtml}
+                   ${selectionHtml}
                 </div>
             </div>
             
