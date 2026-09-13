@@ -1176,7 +1176,7 @@ try {
                     lockPage();
                     if (submitButton) {
                         submitButton.disabled = !input.value.trim();
-                        submitButton.innerText = 'Salvar endereço';
+                        submitButton.innerText = input.value.trim() ? 'Calcular taxa' : 'Salvar endereço';
                     }
                     input.focus({
                         preventScroll: true
@@ -1224,7 +1224,7 @@ try {
                     }
                     if (submitButton) {
                         submitButton.disabled = !input.value.trim();
-                        submitButton.innerText = 'Salvar endereço';
+                        submitButton.innerText = input.value.trim() ? 'Calcular taxa' : 'Salvar endereço';
                     }
                 });
 
@@ -1257,16 +1257,29 @@ try {
                     const selectedCoordinates = input.dataset.placeSelected === '1'
                         ? { lat: saved.lat ?? null, lng: saved.lng ?? null }
                         : { lat: null, lng: null };
-                    localStorage.setItem('menzzu_home_address', JSON.stringify({
-                        ...saved,
-                        address,
-                        formatted_address: address,
-                        ...selectedCoordinates
-                    }));
-                    window.dispatchEvent(new CustomEvent('menzzu-address-saved', {
+
+                    if (modal.dataset.calculatedAddress === address) {
+                        localStorage.setItem('menzzu_home_address', JSON.stringify({
+                            ...saved,
+                            address,
+                            formatted_address: address,
+                            ...selectedCoordinates
+                        }));
+                        window.dispatchEvent(new CustomEvent('menzzu-address-saved', {
+                            detail: { address, coordinates: selectedCoordinates }
+                        }));
+                        close();
+                        return;
+                    }
+
+                    window.dispatchEvent(new CustomEvent('menzzu-address-selected', {
                         detail: { address, coordinates: selectedCoordinates }
                     }));
-                    close();
+                    modal.dataset.calculatedAddress = address;
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        submitButton.innerText = 'Calculando...';
+                    }
                 });
 
                 if (!hasSavedAddress()) {
@@ -1282,7 +1295,7 @@ try {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.39'); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.40'); ?>" defer></script>
 
     </html>
 <?php

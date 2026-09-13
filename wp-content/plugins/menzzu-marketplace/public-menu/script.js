@@ -1,4 +1,4 @@
-window.lucide = {
+﻿window.lucide = {
     createIcons: function () {
         document.querySelectorAll('i[data-lucide]').forEach(function (el) {
             if (el.dataset.processed) return;
@@ -879,6 +879,7 @@ async function calculateDeliveryFee(address) {
         });
         const data = await response.json();
         const display = document.getElementById('delivery-fee-display');
+        const locationFeeDisplay = document.getElementById('restaurant-location-fee');
         if (data.fee !== undefined) {
             state.deliveryFee = data.fee;
             state.allowCash = data.type === 'estimated' ? false : (data.allowCash !== false);
@@ -887,6 +888,11 @@ async function calculateDeliveryFee(address) {
                 display.innerHTML = `Taxa de entrega: <strong style="color:var(--primary-color)">R$ ${data.fee.toFixed(2)}</strong>`;
                 display.style.background = '#f0fdf4';
                 display.style.color = '#166534';
+            }
+            if (locationFeeDisplay) {
+                locationFeeDisplay.hidden = false;
+                locationFeeDisplay.className = 'restaurant-location-fee is-success';
+                locationFeeDisplay.innerHTML = `Taxa calculada: <strong>R$ ${Number(data.fee).toFixed(2).replace('.', ',')}</strong>`;
             }
             updateStep4Summary();
         } else if (data.error) {
@@ -899,11 +905,24 @@ async function calculateDeliveryFee(address) {
                 display.style.color = '#991b1b';
                 display.style.border = '1px solid #fee2e2';
             }
+            if (locationFeeDisplay) {
+                locationFeeDisplay.hidden = false;
+                locationFeeDisplay.className = 'restaurant-location-fee is-error';
+                locationFeeDisplay.innerText = data.error;
+            }
         } else {
             if (display) display.style.display = 'none';
         }
+        return data;
     } catch (err) {
         console.error('Erro ao calcular frete:', err);
+        const locationFeeDisplay = document.getElementById('restaurant-location-fee');
+        if (locationFeeDisplay) {
+            locationFeeDisplay.hidden = false;
+            locationFeeDisplay.className = 'restaurant-location-fee is-error';
+            locationFeeDisplay.innerText = 'Não foi possível calcular a taxa agora.';
+        }
+        return { error: 'Não foi possível calcular a taxa agora.' };
     }
 }
 
@@ -2028,6 +2047,21 @@ function initEventListeners() {
     const searchInput = document.getElementById('search-input');
     const mobileSearchToggle = document.getElementById('mobile-search-toggle');
     const searchContainer = document.getElementById('search-container');
+
+    window.addEventListener('menzzu-address-selected', async (event) => {
+        const address = event.detail?.address || '';
+        const result = await calculateDeliveryFee(address);
+        const modal = document.getElementById('restaurant-location-modal');
+        const submitButton = modal?.querySelector('button[type="submit"]');
+        if (result?.fee !== undefined && submitButton) {
+            submitButton.disabled = false;
+            submitButton.innerText = 'Confirmar endereço';
+        } else if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.innerText = 'Tentar novamente';
+            if (modal) modal.dataset.calculatedAddress = '';
+        }
+    });
 
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
