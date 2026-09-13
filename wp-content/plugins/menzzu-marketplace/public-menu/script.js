@@ -217,7 +217,7 @@ function minPositiveNumber(values = []) {
 function getImg(url, size = 'full') {
     if (!url) return url;
     url = normalizeMenzzuFileUrl(url);
-    if (!url.includes('files.menzzu.com') && !url.includes('files.digizap.com.br')) return url;
+    if (!url.includes('files.menzzu.com')) return url;
 
     if (size === 'thumb') return url.replace('.webp', '_550.webp');
     if (size === 'medium') return url.replace('.webp', '_550.webp');
@@ -1140,7 +1140,7 @@ async function handleExternalUpload(file) {
         formData.append('secret', 'BlinkMediaSecret123!');
         formData.append('size', '500');
 
-        const res = await fetch('https://files.digizap.com.br/upload.php', {
+        const res = await fetch('https://files.menzzu.com/upload.php', {
             method: 'POST',
             body: formData
         });

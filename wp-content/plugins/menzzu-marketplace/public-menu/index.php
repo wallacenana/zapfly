@@ -400,7 +400,7 @@ try {
         <link rel="icon" type="image/x-icon" href="<?php echo $faviconUrl; ?>">
         <link rel="preconnect" href="https://maps.googleapis.com" crossorigin>
         <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-        <link rel="preconnect" href="https://files.digizap.com.br" crossorigin>
+        <link rel="preconnect" href="https://files.menzzu.com" crossorigin>
         <!-- SSR Data Hydration: inject all data up front, zero API roundtrip -->
         <script>
             window.__STORE_SLUG__ = <?php echo json_encode($slug, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
@@ -1282,7 +1282,7 @@ try {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.30'); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.31'); ?>" defer></script>
 
     </html>
 <?php
