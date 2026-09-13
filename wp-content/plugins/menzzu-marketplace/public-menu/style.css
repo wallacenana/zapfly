@@ -1657,6 +1657,11 @@ body.theme-dark .var-option.selected {
         max-height: 94vh;
         border-radius: 18px 18px 0 0;
     }
+
+    .addon-group-header {
+        margin-left: 0;
+        margin-right: 0;
+    }
 }
 
 body.theme-dark .delivery-fee-badge {
@@ -1894,6 +1899,7 @@ body.theme-dark .delivery-fee-badge {
         padding: 26px 18px;
         border-radius: 20px;
     }
+
 }
 
 .spinner {
