@@ -1,4 +1,4 @@
-﻿window.lucide = {
+window.lucide = {
     createIcons: function () {
         document.querySelectorAll('i[data-lucide]').forEach(function (el) {
             if (el.dataset.processed) return;
@@ -82,8 +82,6 @@ let state = {
     },
     currentStep: 1,
     deliveryFee: 0,
-    deliveryFeeRequestId: 0,
-    deliveryCoordinates: { lat: null, lng: null },
     googleMap: null,
     mapMarker: null,
     geocoder: null,
@@ -178,21 +176,6 @@ function getDisplayPriceText(product) {
     return `R$ ${basePrice.toFixed(2)}`;
 }
 
-function getProductPriceMarkup(product) {
-    const priceText = getDisplayPriceText(product).replace(/\./g, ',');
-    const fromMatch = priceText.match(/^A partir de (R\$ .+)$/);
-    if (fromMatch) {
-        return `<span class="product-price-label">A partir de</span><strong>${fromMatch[1]}</strong>`;
-    }
-
-    const promoMatch = priceText.match(/^de (R\$ .+) por (R\$ .+)$/);
-    if (promoMatch) {
-        return `<span class="product-price-old">de ${promoMatch[1]}</span><strong>por ${promoMatch[2]}</strong>`;
-    }
-
-    return `<span class="product-price-label">Preço</span><strong>${priceText}</strong>`;
-}
-
 function getSuggestedProductForItem(item) {
     if (!item?.suggestedItemId) return null;
     const suggestedId = String(item.suggestedItemId || '');
@@ -216,17 +199,11 @@ function minPositiveNumber(values = []) {
  */
 function getImg(url, size = 'full') {
     if (!url) return url;
-    url = normalizeMenzzuFileUrl(url);
-    if (!url.includes('files.menzzu.com')) return url;
+    if (!url.includes('files.menzzu.com')) return url; // Só funciona para o nosso servidor
 
     if (size === 'thumb') return url.replace('.webp', '_550.webp');
     if (size === 'medium') return url.replace('.webp', '_550.webp');
     return url;
-}
-
-// Mantem URLs antigas e novas do storage validas sem alterar o dominio salvo.
-function normalizeMenzzuFileUrl(url) {
-    return String(url || '');
 }
 
 function isOrderEnabled() {
@@ -246,9 +223,6 @@ function getMenuDeliveryOptions() {
     const fulfillmentMethods = parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.fulfillmentMethods && typeof parsed.fulfillmentMethods === 'object'
         ? parsed.fulfillmentMethods
         : {};
-    const orderFulfillmentMethods = parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.orderFulfillmentMethods && typeof parsed.orderFulfillmentMethods === 'object'
-        ? parsed.orderFulfillmentMethods
-        : fulfillmentMethods;
 
     return {
         orderTypes: {
@@ -259,28 +233,17 @@ function getMenuDeliveryOptions() {
             delivery: fulfillmentMethods.delivery !== false,
             pickup: fulfillmentMethods.pickup !== false,
             local: fulfillmentMethods.local !== false
-        },
-        orderFulfillmentMethods: {
-            delivery: orderFulfillmentMethods.delivery !== false,
-            pickup: orderFulfillmentMethods.pickup !== false,
-            local: orderFulfillmentMethods.local !== false
         }
     };
 }
 
-function getFulfillmentMethodsForActiveTab() {
+function isFulfillmentMethodEnabled(method) {
     const options = getMenuDeliveryOptions();
-    return state.activeTab === 'order' ? options.orderFulfillmentMethods : options.fulfillmentMethods;
-}
-
-function isFulfillmentMethodEnabled(method, methodOptions = getFulfillmentMethodsForActiveTab()) {
-    return methodOptions[method] !== false;
+    return options.fulfillmentMethods[method] !== false;
 }
 
 function getEnabledFulfillmentMethods() {
-    const options = getMenuDeliveryOptions();
-    const methods = state.activeTab === 'order' ? options.orderFulfillmentMethods : options.fulfillmentMethods;
-    return ['delivery', 'pickup', 'local'].filter(method => methods[method] !== false);
+    return ['delivery', 'pickup', 'local'].filter(method => isFulfillmentMethodEnabled(method));
 }
 
 function getDefaultFulfillmentMethod() {
@@ -319,14 +282,11 @@ function hasCheckoutExtras(cart = getActiveCart()) {
 }
 
 function getCustomFieldSummaryParts(item) {
-    return Object.entries(getCustomFieldAnswers(item)).flatMap(([key, value]) => {
-        const values = Array.isArray(value) ? value : [value];
-        return values.map(entry => ({
-            key,
-            value: entry,
-            isUrl: typeof entry === 'string' && entry.startsWith('http')
-        }));
-    });
+    return Object.entries(getCustomFieldAnswers(item)).map(([key, value]) => ({
+        key,
+        value,
+        isUrl: typeof value === 'string' && value.startsWith('http')
+    }));
 }
 
 function formatOrderSchedule() {
@@ -403,8 +363,7 @@ async function commitScheduleAndMaybeAdd() {
     } else if (state.currentStep === 1 && state.activeTab === 'order') {
         goToStep(hasCheckoutExtras() ? 2 : 3);
     } else if (state.currentStep >= 2 && state.activeTab === 'order') {
-        if (state.currentStep === 2) renderCheckoutExtraStep();
-        if (state.currentStep === 3) renderStep2();
+        renderStep2();
     }
 }
 
@@ -782,26 +741,7 @@ function checkStoreStatus() {
 }
 
 function loadGoogleMaps(apiKey) {
-    const initialize = () => {
-        if (window.google?.maps?.places?.Autocomplete) {
-            window.initMapsAutocomplete();
-            return true;
-        }
-        return false;
-    };
-
-    if (initialize()) return;
-
-    const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
-    if (existingScript) {
-        let attempts = 0;
-        const waitForPlaces = window.setInterval(() => {
-            attempts += 1;
-            if (initialize() || attempts >= 40) window.clearInterval(waitForPlaces);
-        }, 250);
-        return;
-    }
-
+    if (window.google || document.querySelector('script[src*="maps.googleapis.com"]')) return;
     const script = document.createElement('script');
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initMapsAutocomplete`;
     script.async = true;
@@ -812,10 +752,8 @@ function loadGoogleMaps(apiKey) {
 window.initMapsAutocomplete = () => {
     const input = document.getElementById('user-address');
     if (!input) return;
-    if (!window.google?.maps?.places?.Autocomplete || input.dataset.autocompleteReady === '1') return;
 
     try {
-        input.dataset.autocompleteReady = '1';
         input.dataset.placeSelected = '0';
         const autocomplete = new google.maps.places.Autocomplete(input);
         autocomplete.setComponentRestrictions({
@@ -827,31 +765,76 @@ window.initMapsAutocomplete = () => {
             const place = autocomplete.getPlace();
             if (!place.geometry) return;
             input.dataset.placeSelected = '1';
-            const locationFeeDisplay = document.getElementById('restaurant-location-fee');
-            if (locationFeeDisplay) {
-                locationFeeDisplay.hidden = false;
-                locationFeeDisplay.className = 'restaurant-location-fee is-loading';
-                locationFeeDisplay.innerText = 'Calculando...';
-            }
             updateLocation(place.geometry.location, place.formatted_address);
         });
 
         input.addEventListener('input', () => {
             input.dataset.placeSelected = '0';
-            state.deliveryCoordinates = { lat: null, lng: null };
         }, { passive: true });
+
+        input.addEventListener('change', () => {
+            const value = input.value.trim();
+            if (!value || input.dataset.placeSelected === '1') return;
+            setTimeout(() => geocodeAddress(value), 120);
+        });
+
+        input.addEventListener('blur', () => {
+            const value = input.value.trim();
+            if (!value || input.dataset.placeSelected === '1') return;
+            setTimeout(() => geocodeAddress(value), 120);
+        });
 
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
+                const value = input.value.trim();
+                if (value) geocodeAddress(value);
+                input.blur();
             }
         });
-
-        initDeliveryMap();
     } catch (e) {
         console.error('Autocomplete init error:', e);
     }
 };
+
+function initDeliveryMap() {
+    const mapEl = document.getElementById('delivery-map');
+    if (!mapEl || state.googleMap || !window.google) return;
+
+    try {
+        const configuredLat = Number(state.publicSettings.businessLat);
+        const configuredLng = Number(state.publicSettings.businessLng);
+        const mapCenter = Number.isFinite(configuredLat) && Number.isFinite(configuredLng)
+            ? { lat: configuredLat, lng: configuredLng }
+            : { lat: -2.5307, lng: -44.3068 };
+        state.googleMap = new google.maps.Map(mapEl, {
+            zoom: 16,
+            center: mapCenter,
+            disableDefaultUI: false,
+            mapTypeControl: false,
+            streetViewControl: false
+        });
+
+        state.mapMarker = new google.maps.Marker({
+            map: state.googleMap,
+            position: mapCenter,
+            draggable: true,
+            animation: google.maps.Animation.DROP
+        });
+
+        if (state.userInfo.address) {
+            geocodeAddress(state.userInfo.address);
+        }
+
+        state.mapMarker.addListener('dragend', () => reverseGeocode(state.mapMarker.getPosition()));
+        state.googleMap.addListener('click', (e) => {
+            updateLocation(e.latLng);
+            reverseGeocode(e.latLng);
+        });
+    } catch (e) {
+        console.error('Delivery map init error:', e);
+    }
+}
 
 function geocodeAddress(address) {
     if (!state.geocoder) return;
@@ -862,189 +845,53 @@ function geocodeAddress(address) {
     });
 }
 
+function updateLocation(location, address = null) {
+    if (!state.googleMap) return;
+    state.googleMap.panTo(location);
+    state.mapMarker.setPosition(location);
+    if (address) {
+        document.getElementById('user-address').value = address;
+        state.userInfo.address = address;
+        localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
+        calculateDeliveryFee(address);
+    }
+}
+
 function reverseGeocode(latLng) {
-    if (!state.geocoder || !latLng) return;
-    state.geocoder.geocode({ location: latLng }, (results, status) => {
-        if (status === 'OK' && results[0]) {
-            updateLocation(latLng, results[0].formatted_address);
-        }
+    state.geocoder.geocode({
+        location: latLng
+    }, (results, status) => {
+        if (status === 'OK' && results[0]) updateLocation(latLng, results[0].formatted_address);
     });
 }
 
-function initDeliveryMap() {
-    const mapEl = document.getElementById('delivery-map');
-    if (!mapEl || state.googleMap || !window.google?.maps) return;
-
-    const configuredLat = Number(state.publicSettings.businessLat);
-    const configuredLng = Number(state.publicSettings.businessLng);
-    const hasConfiguredOrigin = Number.isFinite(configuredLat) && Number.isFinite(configuredLng)
-        && configuredLat !== 0 && configuredLng !== 0;
-    const mapCenter = hasConfiguredOrigin
-        ? { lat: configuredLat, lng: configuredLng }
-        : { lat: -2.5307, lng: -44.3068 };
-
-    try {
-        state.googleMap = new google.maps.Map(mapEl, {
-            center: mapCenter,
-            zoom: 16,
-            mapTypeControl: false,
-            streetViewControl: false,
-            fullscreenControl: false
-        });
-        state.mapMarker = new google.maps.Marker({
-            map: state.googleMap,
-            position: mapCenter,
-            draggable: true,
-            title: 'Local de entrega'
-        });
-
-        state.mapMarker.addListener('dragend', () => reverseGeocode(state.mapMarker.getPosition()));
-        state.googleMap.addListener('click', (event) => {
-            if (!event.latLng) return;
-            state.mapMarker.setPosition(event.latLng);
-            state.googleMap.panTo(event.latLng);
-            reverseGeocode(event.latLng);
-        });
-
-        if (state.userInfo.address) geocodeAddress(state.userInfo.address);
-    } catch (error) {
-        console.error('Delivery map init error:', error);
-    }
-}
-
-function updateLocation(location, address = null) {
-    if (state.googleMap && state.mapMarker && location) {
-        state.googleMap.panTo(location);
-        state.mapMarker.setPosition(location);
-    }
-    const lat = typeof location?.lat === 'function' ? location.lat() : Number(location?.lat);
-    const lng = typeof location?.lng === 'function' ? location.lng() : Number(location?.lng);
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
-        state.deliveryCoordinates = { lat, lng };
-    }
-    if (address) {
-        document.getElementById('user-address').value = address;
-        const addressDisplay = document.getElementById('delivery-address-display');
-        if (addressDisplay) addressDisplay.textContent = address;
-        state.userInfo.address = address;
-        localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
-        return calculateDeliveryFee(address);
-    }
-}
-
-function syncSelectedAddress(address, coordinates = null) {
-    const cleanAddress = String(address || '').trim();
-    if (!cleanAddress) return;
-
-    state.userInfo.address = cleanAddress;
-    localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
-    const addressDisplay = document.getElementById('delivery-address-display');
-    if (addressDisplay) addressDisplay.textContent = cleanAddress;
-    if (coordinates && Number.isFinite(Number(coordinates.lat)) && Number.isFinite(Number(coordinates.lng))) {
-        state.deliveryCoordinates = {
-            lat: Number(coordinates.lat),
-            lng: Number(coordinates.lng)
-        };
-    } else {
-        state.deliveryCoordinates = { lat: null, lng: null };
-    }
-    if (!coordinates && state.geocoder) {
-        return new Promise((resolve) => {
-            state.geocoder.geocode({ address: cleanAddress }, (results, status) => {
-                if (status === 'OK' && results[0]?.geometry) {
-                    resolve(updateLocation(results[0].geometry.location, results[0].formatted_address));
-                    return;
-                }
-                resolve(calculateDeliveryFee(cleanAddress));
-            });
-        });
-    }
-
-    return calculateDeliveryFee(cleanAddress);
-}
-
-function getDeliveryFeeCacheKey() {
-    return `menzzu_delivery_fee_${STORE_SLUG}`;
-}
-
-const DELIVERY_FEE_ICON = '<svg class="store-delivery-icon" viewBox="0 0 50 50" aria-hidden="true" focusable="false"><path d="M37.164062 9.5C35.289759 9.5 33.707216 10.100433 32.857422 11L27 11 A 1.0001 1.0001 0 1 0 27 13L32.259766 13C32.645045 14.435874 34.65739 15.5 37.164062 15.5C38.270063 15.5 38.997172 15.287031 39.451172 14.832031C40.016172 14.264031 40.014719 13.463453 40.011719 12.689453L40.009766 12.498047L40.011719 12.308594C40.014719 11.535594 40.017172 10.735969 39.451172 10.167969C38.997172 9.7119687 38.272922 9.5 37.169922 9.5L37.164062 9.5 z M 2 13C1.447 13 1 13.448 1 14L1 22C1 22.552 1.447 23 2 23L11.015625 23C11.141625 21.347 12.102 19.217484 14 19.021484L14 14C14 13.448 13.553 13 13 13L2 13 z M 33.248047 16.685547C34.111047 23.246547 32.823125 29.604359 29.828125 33.193359C28.272125 35.056359 26.401578 36 24.267578 36C23.280578 36 22.695906 35.350687 22.378906 34.804688C21.522906 33.329687 21.375734 30.4365 23.302734 26.5625C22.012734 26.8515 20.394547 27 18.435547 27C17.257114 27 14.548266 26.991755 12.748047 26.035156C12.564418 25.937694 12.392472 25.829279 12.230469 25.710938C11.915435 25.480918 11.640065 25.214349 11.435547 24.894531C11.363467 24.927922 11.299313 24.965842 11.228516 25L1 25C0.447 25 0 25.448 0 26C0 26.553 0.447 27 1 27L8.140625 27C5.1303891 29.545041 4.0970005 32.516944 4.0371094 32.726562C3.9621094 32.992562 3.9995781 33.278625 4.1425781 33.515625C4.2855781 33.752625 4.5190625 33.920516 4.7890625 33.978516L19.869141 38L31.058594 38C31.023594 37.69 31 37.362 31 37C31 31.673 36.14 27 42 27C42.181 27 42.352391 27.009578 42.525391 27.017578C42.167391 23.010578 40.234813 19.650906 38.507812 17.378906C38.093812 17.451906 37.653062 17.5 37.164062 17.5C35.690063 17.5 34.351047 17.202547 33.248047 16.685547 z M 14.28125 21C14.184077 21 14.090938 21.029755 14 21.076172C13.998509 21.076936 13.997583 21.079303 13.996094 21.080078C13.882067 21.139256 13.775918 21.234863 13.675781 21.351562C13.662059 21.367468 13.648179 21.381642 13.634766 21.398438C13.535952 21.522709 13.444734 21.665208 13.365234 21.828125C13.265172 22.032233 13.18821 22.260101 13.126953 22.494141C13.107622 22.56791 13.098893 22.636507 13.083984 22.710938C13.064878 22.805995 13.03673 22.899883 13.025391 22.994141C13.033791 22.993923 13.04048 22.988703 13.048828 22.988281C13.033436 23.115491 13 23.246564 13 23.367188C13 24.385188 14.858547 25 18.435547 25C22.014547 25 25 24.386188 25 23.367188C25 22.350188 24.426797 21 23.716797 21L14.28125 21 z M 42 29C37.475 29 33 32.574 33 37C33 39.74 34.19 40 35 40C36.659 40 36 36.598 40 35C41.175 34.531 42.330391 34.384766 43.400391 34.384766C45.209391 34.384766 46.774109 34.804688 47.787109 34.804688C48.552109 34.804688 49.001953 34.564703 49.001953 33.720703C49.000953 32.999703 47.704 29 42 29 z M 43.179688 36.392578C42.282688 36.414578 41.479187 36.563422 40.742188 36.857422C40.554188 36.932422 40.385562 37.012703 40.226562 37.095703C40.087562 37.369703 40 37.673 40 38C40 39.103 40.897 40 42 40C43.103 40 44 39.103 44 38C44 37.339 43.674687 36.756578 43.179688 36.392578 z M 6.1933594 36.421875C6.0743594 36.937875 6 37.465 6 38C6 41.859 9.141 45 13 45C16.172 45 18.853938 42.876516 19.710938 39.978516C19.590938 39.969516 19.470516 39.964594 19.353516 39.933594L16.78125 39.246094C16.25425 40.839094 14.768 42 13 42C10.794 42 9 40.206 9 38C9 37.723 9.0348437 37.454359 9.0898438 37.193359L6.1933594 36.421875 z M 45.732422 36.59375C45.898422 37.03375 46 37.504 46 38C46 40.206 44.206 42 42 42C40.262 42 38.795141 40.880125 38.244141 39.328125C38.220141 39.376125 38.196828 39.424656 38.173828 39.472656C37.816828 40.207656 37.264 41.317297 36.125 41.779297C37.384 43.731297 39.565 45 42 45C45.859 45 49 41.859 49 38C49 37.545 48.940938 37.096297 48.853516 36.654297C48.534516 36.742297 48.190156 36.804688 47.785156 36.804688C47.208156 36.804688 46.583875 36.715141 45.921875 36.619141C45.861875 36.610141 45.793422 36.60275 45.732422 36.59375 z M 11.029297 37.712891C11.015297 37.807891 11 37.902 11 38C11 39.103 11.897 40 13 40C13.843 40 14.562469 39.472422 14.855469 38.732422L11.029297 37.712891 z"/></svg>';
-
-function setHeaderDeliveryFee(fee) {
-    const headerFee = document.getElementById('store-delivery-fee');
-    if (!headerFee || !Number.isFinite(Number(fee))) return;
-    headerFee.innerHTML = `<span class="store-meta-separator" aria-hidden="true">•</span>${DELIVERY_FEE_ICON}Taxa R$ ${Number(fee).toFixed(2).replace('.', ',')}`;
-    headerFee.hidden = false;
-}
-
-function restoreCachedDeliveryFee(address) {
-    try {
-        const cached = JSON.parse(localStorage.getItem(getDeliveryFeeCacheKey()) || 'null');
-        const isFresh = cached && Date.now() - Number(cached.updatedAt || 0) < 15 * 60 * 1000;
-        if (isFresh && cached.address === address && Number.isFinite(Number(cached.fee))) {
-            state.deliveryFee = Number(cached.fee);
-            setHeaderDeliveryFee(state.deliveryFee);
-        }
-    } catch (error) {
-        // Ignore invalid or unavailable local storage.
-    }
-}
-
 async function calculateDeliveryFee(address) {
-    const requestId = ++state.deliveryFeeRequestId;
-    const cleanAddress = String(address || '').trim();
-    if (!cleanAddress) return;
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 15000);
-
     try {
         const response = await fetch(`${API_BASE}/orders/calculate-fee`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            signal: controller.signal,
             body: JSON.stringify({
-                address: cleanAddress,
-                slug: STORE_SLUG,
-                lat: Number.isFinite(Number(state.deliveryCoordinates?.lat)) ? Number(state.deliveryCoordinates.lat) : undefined,
-                lng: Number.isFinite(Number(state.deliveryCoordinates?.lng)) ? Number(state.deliveryCoordinates.lng) : undefined
+                address,
+                slug: STORE_SLUG
             })
         });
         const data = await response.json();
-        window.clearTimeout(timeoutId);
-        if (requestId !== state.deliveryFeeRequestId) return null;
         const display = document.getElementById('delivery-fee-display');
-        const locationFeeDisplay = document.getElementById('restaurant-location-fee');
         if (data.fee !== undefined) {
             state.deliveryFee = data.fee;
             state.allowCash = data.type === 'estimated' ? false : (data.allowCash !== false);
-            setHeaderDeliveryFee(data.fee);
-            try {
-                localStorage.setItem(getDeliveryFeeCacheKey(), JSON.stringify({
-                    address,
-                    fee: Number(data.fee),
-                    updatedAt: Date.now()
-                }));
-            } catch (error) {
-                // The checkout remains functional if local storage is unavailable.
-            }
             if (display) {
                 display.style.display = 'block';
                 display.innerHTML = `Taxa de entrega: <strong style="color:var(--primary-color)">R$ ${data.fee.toFixed(2)}</strong>`;
                 display.style.background = '#f0fdf4';
                 display.style.color = '#166534';
             }
-            if (locationFeeDisplay) {
-                locationFeeDisplay.hidden = false;
-                locationFeeDisplay.className = 'restaurant-location-fee is-success';
-                locationFeeDisplay.innerHTML = `Taxa calculada: <strong>R$ ${Number(data.fee).toFixed(2).replace('.', ',')}</strong>`;
-            }
             updateStep4Summary();
         } else if (data.error) {
             state.deliveryFee = 0;
             state.allowCash = false;
-            const headerFee = document.getElementById('store-delivery-fee');
-            if (headerFee && !headerFee.textContent) headerFee.hidden = true;
             if (display) {
                 display.style.display = 'block';
                 display.innerHTML = `⚠️ ${data.error}`;
@@ -1052,25 +899,11 @@ async function calculateDeliveryFee(address) {
                 display.style.color = '#991b1b';
                 display.style.border = '1px solid #fee2e2';
             }
-            if (locationFeeDisplay) {
-                locationFeeDisplay.hidden = false;
-                locationFeeDisplay.className = 'restaurant-location-fee is-error';
-                locationFeeDisplay.innerText = data.error;
-            }
         } else {
             if (display) display.style.display = 'none';
         }
-        return data;
     } catch (err) {
-        window.clearTimeout(timeoutId);
         console.error('Erro ao calcular frete:', err);
-        const locationFeeDisplay = document.getElementById('restaurant-location-fee');
-        if (locationFeeDisplay) {
-            locationFeeDisplay.hidden = false;
-            locationFeeDisplay.className = 'restaurant-location-fee is-error';
-            locationFeeDisplay.innerText = 'Não foi possível calcular a taxa agora.';
-        }
-        return { error: 'Não foi possível calcular a taxa agora.' };
     }
 }
 
@@ -1152,7 +985,7 @@ async function handleExternalUpload(file) {
         }
         const data = await res.json();
         Swal.close();
-        return normalizeMenzzuFileUrl(data?.url || '');
+        return data?.url || null;
     } catch (err) {
         console.error(err);
         Swal.close();
@@ -1419,7 +1252,7 @@ function renderProductCard(product, isPriority = false) {
                 <h3>${product.name}</h3>
                 <p>${product.description || ''}</p>
                 <div class="product-footer">
-                    <div class="product-price">${getProductPriceMarkup(product)}</div>
+                    <div class="product-price">${priceText}</div>
                     <button class="product-add-btn" type="button" aria-label="Adicionar item" onclick="event.stopPropagation(); openItemDetail('${product.id}')">
                         <i data-lucide="plus"></i>
                     </button>
@@ -1461,9 +1294,9 @@ async function handleCustomFieldImageUpload(input, idx) {
     }
 }
 
-async function handleCheckoutFieldImageUpload(input, hiddenId, previewId, allowMultiple = false) {
+async function handleCheckoutFieldImageUpload(input, hiddenId, previewId) {
     if (!input.files || input.files.length === 0) return;
-    const files = Array.from(input.files);
+    const file = input.files[0];
     const btn = input.closest('.checkout-extra-image')?.querySelector('button[data-upload-btn="true"]') || input.previousElementSibling;
     const originalBtnText = btn?.innerHTML || '';
 
@@ -1474,19 +1307,13 @@ async function handleCheckoutFieldImageUpload(input, hiddenId, previewId, allowM
     }
 
     try {
-        const uploadedUrls = [];
-        for (const file of files) {
-            const url = await handleExternalUpload(file);
-            if (url) uploadedUrls.push(url);
-        }
-        if (uploadedUrls.length) {
+        const url = await handleExternalUpload(file);
+        if (url) {
             const hidden = document.getElementById(hiddenId);
-            const previous = allowMultiple ? getCheckoutImageValues(hidden?.value || '') : [];
-            const values = allowMultiple ? [...previous, ...uploadedUrls] : [uploadedUrls[0]];
-            if (hidden) hidden.value = allowMultiple ? JSON.stringify(values) : values[0];
+            if (hidden) hidden.value = url;
             const preview = document.getElementById(previewId);
             if (preview) {
-                preview.innerHTML = renderCheckoutImagePreview(values, hiddenId, previewId);
+                preview.querySelector('img').src = url;
                 preview.style.display = 'flex';
             }
         } else {
@@ -1724,7 +1551,7 @@ function openItemDetail(productId) {
                                                     ${parseFloat(gItem.price || 0) > 0 ? `<span class="var-price addon-option-price">+ R$ ${parseFloat(gItem.price).toFixed(2)}</span>` : ''}
                                                     <span class="addon-option-mark" aria-hidden="true"></span>
                                                 </div>
-                                                <input type="checkbox" id="${inputId}" name="${inputName}" class="addon-input" data-group-id="${g.id}" data-max="${maxSelections}" data-item-name="${gItem.name.replace(/"/g, '&quot;')}" data-item-price="${parseFloat(gItem.price || 0)}">
+                                                <input type="checkbox" id="${inputId}" name="${inputName}" class="addon-input" data-group-id="${g.id}" data-group-name="${g.name.replace(/"/g, '&quot;')}" data-max="${maxSelections}" data-item-name="${gItem.name.replace(/"/g, '&quot;')}" data-item-price="${parseFloat(gItem.price || 0)}">
                                             </label>`;
                         }).join('')}
                                         </div>
@@ -1887,6 +1714,7 @@ function getSelectedAddons() {
         const price = parseFloat(input.dataset.itemPrice || 0);
         addons.push({
             groupId: input.dataset.groupId,
+            groupName: input.dataset.groupName,
             name: input.dataset.itemName,
             price
         });
@@ -1896,6 +1724,27 @@ function getSelectedAddons() {
         addons,
         addonTotal
     };
+}
+
+function getSelectedCustomFields(item) {
+    return getCustomFieldSummaryParts(item).map(({ key, value, isUrl }) => ({
+        groupName: key,
+        name: value,
+        isCustomField: true,
+        isAttachment: isUrl,
+        price: 0
+    }));
+}
+
+function getOrderAddonsJSON(item) {
+    let addons = [];
+    try {
+        const parsed = typeof item?.addons === 'string' ? JSON.parse(item.addons) : item?.addons;
+        addons = Array.isArray(parsed) ? parsed.filter(addon => !addon?.isCustomField) : [];
+    } catch (e) { }
+
+    const selections = [...addons, ...getSelectedCustomFields(item)];
+    return selections.length > 0 ? JSON.stringify(selections) : null;
 }
 
 function updateDetailFooter() {
@@ -1993,17 +1842,17 @@ function renderCheckoutExtraField(item, field, idx, itemKeyBase, currentValue = 
 
     if (fieldType === 'image') {
         const previewId = `${fieldId}-preview`;
-        const imageValues = getCheckoutImageValues(currentValue);
         return `
                         <div class="checkout-extra-image" style="margin-bottom: 14px;">
                             <label style="display:block; font-size:13px; font-weight:600; color:var(--text-secondary); margin-bottom:5px;">${fieldLabel}</label>
-                            <input type="hidden" id="${fieldId}" data-field-name="${field.name}" value="${escapeHtmlAttribute(field.multiple !== false ? JSON.stringify(imageValues) : (imageValues[0] || ''))}">
+                            <input type="hidden" id="${fieldId}" data-field-name="${field.name}" value="${currentValue || ''}">
                             <button type="button" data-upload-btn="true" onclick="document.getElementById('${fieldId}-file').click()" style="padding: 10px; border-radius: 8px; border: 1px dashed var(--primary-color); background: var(--bg-tertiary); color: var(--primary-color); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;">
-                                <i data-lucide="image" style="width:16px; height:16px;"></i> ${field.multiple !== false ? 'Anexar Imagens' : 'Anexar Imagem'}
+                                <i data-lucide="image" style="width:16px; height:16px;"></i> Anexar Imagem
                             </button>
-                            <input type="file" id="${fieldId}-file" accept="image/*" ${field.multiple !== false ? 'multiple' : ''} style="display:none;" onchange="handleCheckoutFieldImageUpload(this, '${fieldId}', '${previewId}', ${field.multiple !== false})">
-                            <div id="${previewId}" style="display:${imageValues.length ? 'flex' : 'none'}; flex-wrap:wrap; gap:8px; margin-top:10px; align-items:center;">
-                                ${renderCheckoutImagePreview(imageValues, fieldId, previewId)}
+                            <input type="file" id="${fieldId}-file" accept="image/*" style="display:none;" onchange="handleCheckoutFieldImageUpload(this, '${fieldId}', '${previewId}')">
+                            <div id="${previewId}" style="display:${currentValue ? 'flex' : 'none'}; margin-top: 10px; align-items: center;">
+                                <img src="${currentValue || ''}" style="max-width: 80px; max-height: 80px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: cover;">
+                                <span style="font-size: 12px; color: #ef4444; margin-left: 10px; cursor:pointer; font-weight: 700;" onclick="document.getElementById('${fieldId}').value=''; document.getElementById('${previewId}').style.display='none';">Remover</span>
                             </div>
                         </div>
                     `;
@@ -2019,12 +1868,14 @@ function renderCheckoutExtraField(item, field, idx, itemKeyBase, currentValue = 
 
 function renderCheckoutExtraStep() {
     const container = document.getElementById('order-extra-step-content');
-    if (!container) return false;
+    const orderStepContent = document.getElementById('order-step-content');
+    if (!container || !orderStepContent) return false;
 
     const cart = getActiveCart();
     const itemsWithExtras = cart.filter(item => getCustomFieldSchema(item).length > 0);
     if (state.activeTab !== 'order' || itemsWithExtras.length === 0) {
         container.innerHTML = '';
+        orderStepContent.classList.add('hidden');
         return false;
     }
 
@@ -2045,6 +1896,7 @@ function renderCheckoutExtraStep() {
                     `;
     }).join('');
 
+    orderStepContent.classList.remove('hidden');
     lucide.createIcons();
     return true;
 }
@@ -2066,10 +1918,8 @@ function collectCheckoutExtraStep() {
             const field = schema[idx];
             const fieldId = `extra-${itemKeyBase}-${idx}`;
             const input = document.getElementById(fieldId);
-            const isImage = String(field.type || '').toLowerCase() === 'image';
-            const imageValues = isImage ? getCheckoutImageValues(input?.value || '') : [];
-            const value = isImage ? (field.multiple !== false ? imageValues : (imageValues[0] || '')) : (input?.value?.trim() || '');
-            if (field.required && (isImage ? imageValues.length === 0 : !value)) {
+            const value = input?.value?.trim() || '';
+            if (field.required && !value) {
                 return {
                     ok: false,
                     message: `Preencha o campo "${field.name}" do item "${item.name}".`
@@ -2178,15 +2028,6 @@ function initEventListeners() {
     const searchInput = document.getElementById('search-input');
     const mobileSearchToggle = document.getElementById('mobile-search-toggle');
     const searchContainer = document.getElementById('search-container');
-
-    window.addEventListener('menzzu-address-saved', (event) => {
-        const address = event.detail?.address || '';
-        if (!address) return;
-        state.userInfo.address = address;
-        localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
-        const addressDisplay = document.getElementById('delivery-address-display');
-        if (addressDisplay) addressDisplay.textContent = address;
-    });
 
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -2318,12 +2159,6 @@ function initEventListeners() {
     document.getElementById('user-name').value = state.userInfo.name || '';
     document.getElementById('user-phone').value = state.userInfo.phone || '';
     document.getElementById('user-address').value = state.userInfo.address || '';
-    const addressDisplay = document.getElementById('delivery-address-display');
-    if (addressDisplay) addressDisplay.textContent = state.userInfo.address || 'Informe seu endereço';
-    if (state.userInfo.address) {
-        restoreCachedDeliveryFee(state.userInfo.address);
-        calculateDeliveryFee(state.userInfo.address);
-    }
 
     const phoneInput = document.getElementById('user-phone');
     if (phoneInput) {
@@ -2360,7 +2195,6 @@ function goToStep(step) {
     document.getElementById('step-2')?.classList.add('hidden');
     document.getElementById('step-3')?.classList.add('hidden');
     document.getElementById('step-4')?.classList.add('hidden');
-    document.getElementById('step-5')?.classList.add('hidden');
 
     // Mostra apenas o atual
     document.getElementById(`step-${step}`)?.classList.remove('hidden');
@@ -2368,42 +2202,22 @@ function goToStep(step) {
     openModal('checkout-modal');
 
     let title = "Ver sacola";
-    if (step === 2) title = "Informações da encomenda";
-    if (step === 3) title = state.activeTab === 'delivery'
-        ? "Entrega"
-        : (state.deliveryType === 'delivery' ? "Entrega da encomenda" : "Retirada da encomenda");
-    if (step === 4) title = "Forma de Pagamento";
-    if (step === 5) title = "Confirmar Pedido";
+    if (step === 2) title = state.activeTab === 'delivery' ? "Entrega" : "Extras do Pedido";
+    if (step === 3) title = "Forma de Pagamento";
+    if (step === 4) title = "Confirmar Pedido";
 
     document.getElementById('checkout-step-title').innerText = title;
 
-    const isLast = step === 5;
+    const isLast = step === 4;
     document.getElementById('next-step-btn').classList.toggle('hidden', isLast);
     document.getElementById('place-order-btn').classList.toggle('hidden', !isLast);
 
     if (step === 1) renderStep1();
-    if (step === 2) renderCheckoutExtraStep();
-    if (step === 3) renderStep2();
-    if (step === 4) renderStep3();
-    if (step === 5) {
+    if (step === 2) renderStep2();
+    if (step === 3) renderStep3();
+    if (step === 4) {
         updateStep4Summary();
     }
-}
-
-function getCheckoutImageValues(value) {
-    const parsed = parseJsonValue(value, null);
-    const values = Array.isArray(parsed) ? parsed : (value ? [value] : []);
-    return values.map(normalizeMenzzuFileUrl).filter(Boolean);
-}
-
-function escapeHtmlAttribute(value) {
-    return String(value || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function renderCheckoutImagePreview(values, fieldId, previewId) {
-    if (!values.length) return '';
-    return values.map(url => `<img src="${escapeHtmlAttribute(url)}" style="width:80px; height:80px; border-radius:8px; border:1px solid var(--border-color); object-fit:cover;" alt="Imagem enviada">`).join('')
-        + `<span style="font-size:12px; color:#ef4444; cursor:pointer; font-weight:700;" onclick="document.getElementById('${fieldId}').value=''; document.getElementById('${previewId}').innerHTML=''; document.getElementById('${previewId}').style.display='none';">Remover</span>`;
 }
 
 // Persist/restore checkout progress so the user can resume where they left off
@@ -2472,30 +2286,27 @@ function getResumeStep() {
     const phone = state.userInfo.phone || '';
     if (!state.userInfo.name || !phone || phone.length < 14) return 1;
 
-    // Details are step 3; order extras are collected in the dedicated step 2.
+    // Step 3 requires step 2 data: address + delivery fee for delivery; schedule + extras for order
     if (state.activeTab === 'delivery') {
         if (state.deliveryType === 'delivery') {
-            if (!state.userInfo.address) return 3;
-            if (!state.deliveryFee) return 3;
+            if (!state.userInfo.address) return 2;
+            if (!state.deliveryFee) return 2;
         }
     } else {
-        if (state.deliveryType === 'delivery') {
-            if (!state.userInfo.address || !state.deliveryFee) return 3;
-        }
         if (!state.orderSchedule?.date || !state.orderSchedule?.time) return 1;
         if (hasCheckoutExtras() && savedStep < 3) return 2;
     }
 
     // Step 4 requires payment method (defaults to 'mercadopago', but guard anyway)
-    if (!state.paymentMethod) return 4;
+    if (!state.paymentMethod) return 3;
 
-    // All data present: respect where the user actually was, capped between 1 and 5
-    return Math.max(1, Math.min(5, savedStep));
+    // All data present: respect where the user actually was, capped between 1 and 4
+    return Math.max(1, Math.min(4, savedStep));
 }
 
 document.getElementById('checkout-back-btn')?.addEventListener('click', () => {
     if (state.currentStep > 1) {
-        const previousStep = (state.currentStep === 3 && !hasCheckoutExtras()) ? 1 : state.currentStep - 1;
+        const previousStep = (state.activeTab === 'order' && !hasCheckoutExtras() && state.currentStep === 3) ? 1 : state.currentStep - 1;
         goToStep(previousStep);
     } else closeWithAnimation('checkout-modal');
 });
@@ -2623,14 +2434,15 @@ function renderStep3() {
 }
 
 function renderStep2() {
-    const isDelivery = state.deliveryType === 'delivery';
+    const isDelivery = state.activeTab === 'delivery';
     const enabledMethods = getEnabledFulfillmentMethods();
 
+    // Hide delivery toggle entirely for orders
     const typeTabs = document.getElementById('checkout-type-tabs');
     if (typeTabs) {
         const methodButtons = Array.from(typeTabs.querySelectorAll('.type-tab[data-method]'));
         const visibleButtons = methodButtons.filter(btn => isFulfillmentMethodEnabled(btn.dataset.method));
-        typeTabs.style.display = visibleButtons.length > 1 ? 'flex' : 'none';
+        typeTabs.style.display = isDelivery && visibleButtons.length ? 'flex' : 'none';
         methodButtons.forEach(btn => {
             const method = btn.dataset.method;
             const enabled = isFulfillmentMethodEnabled(method);
@@ -2646,17 +2458,42 @@ function renderStep2() {
     }
 
     const deliveryContent = document.getElementById('delivery-step-content');
+    const orderContent = document.getElementById('order-step-content');
     if (deliveryContent) deliveryContent.classList.toggle('hidden', !isDelivery);
+    if (orderContent) {
+        if (isDelivery) {
+            orderContent.classList.add('hidden');
+            orderContent.innerHTML = '';
+        } else {
+            const hasExtras = hasCheckoutExtras();
+            if (hasExtras) {
+                orderContent.classList.remove('hidden');
+                orderContent.innerHTML = `
+                                <div id="order-extra-step-content"></div>
+                            `;
+                renderCheckoutExtraStep();
+            } else {
+                orderContent.classList.add('hidden');
+                orderContent.innerHTML = '';
+            }
+        }
+    }
 
-    // Mantem o mapa visual sincronizado com o endereco selecionado.
-    if (state.deliveryType === 'delivery' && window.google?.maps) {
-        initMapsAutocomplete();
-        initDeliveryMap();
+    // Sempre carrega o mapa se deliveryType = delivery
+    if (state.deliveryType === 'delivery') {
+        if (window.google && !state.googleMap) {
+            initMapsAutocomplete();
+            initDeliveryMap();
+        }
         if (state.googleMap) {
             setTimeout(() => {
                 google.maps.event.trigger(state.googleMap, 'resize');
-                if (state.mapMarker) state.googleMap.panTo(state.mapMarker.getPosition());
-            }, 100);
+                if (state.mapMarker) {
+                    state.googleMap.panTo(state.mapMarker.getPosition());
+                } else if (state.userInfo.address) {
+                    geocodeAddress(state.userInfo.address);
+                }
+            }, 300);
         }
     }
 }
@@ -2727,33 +2564,28 @@ async function handleNextStep() {
             goToStep(hasCheckoutExtras() ? 2 : 3);
             return;
         }
-        goToStep(3);
+        goToStep(2);
     } else if (state.currentStep === 2) {
-        if (state.activeTab !== 'order' || !hasCheckoutExtras()) {
-            return goToStep(3);
-        }
-        const extrasResult = collectCheckoutExtraStep();
-        if (!extrasResult.ok) {
-            return showAlert('Atenção', extrasResult.message || 'Preencha os campos extras antes de continuar.');
-        }
-        goToStep(3);
-    } else if (state.currentStep === 3) {
         if (state.activeTab === 'delivery') {
             if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
             if (state.deliveryFee === 0 && state.deliveryType === 'delivery' && state.userInfo.address) {
                 return showAlert('Taxa Indisponível', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereço está no raio de entrega.');
             }
-        } else {
+        } else if (state.activeTab === 'order') {
             if (!isOrderEnabled()) return showAlert('Encomendas desativadas', 'No momento não estamos aceitando encomendas.');
-            if (state.deliveryType === 'delivery') {
-                if (!state.userInfo.address) return showAlert('Endereço Ausente', 'Informe o endereço para a entrega da encomenda.');
-                if (!state.deliveryFee) return showAlert('Taxa Indisponível', 'Aguarde o cálculo da taxa de entrega da encomenda.');
+            if (hasCheckoutExtras()) {
+                const extrasResult = collectCheckoutExtraStep();
+                if (!extrasResult.ok) {
+                    return showAlert('Atenção', extrasResult.message || 'Preencha os campos extras antes de continuar.');
+                }
             }
+            goToStep(3);
+            return;
         }
-        goToStep(4);
-    } else if (state.currentStep === 4) {
+        goToStep(3);
+    } else if (state.currentStep === 3) {
         if (!state.paymentMethod) return showAlert('Atenção', 'Selecione uma forma de pagamento.');
-        goToStep(5);
+        goToStep(4);
     }
 }
 
@@ -2870,8 +2702,6 @@ function commitAddToCart() {
         addons,
         addonTotal
     } = getSelectedAddons();
-    const addonsJSON = addons.length > 0 ? JSON.stringify(addons) : null;
-
     const basePrice = variation
         ? getEffectiveProductPrice(variation)
         : getEffectiveProductPrice(item);
@@ -2880,6 +2710,9 @@ function commitAddToCart() {
     const customFieldSchema = getCustomFieldSchema(item);
     const customFieldSchemaJSON = customFieldSchema.length > 0 ? JSON.stringify(customFieldSchema) : null;
     const customAnswersJSON = Object.keys(customAnswers).length > 0 ? JSON.stringify(customAnswers) : null;
+    const customFieldItem = { ...item, customFieldSchema: customFieldSchemaJSON, customFieldValues: customAnswersJSON };
+    const orderSelections = [...addons, ...getSelectedCustomFields(customFieldItem)];
+    const addonsJSON = orderSelections.length > 0 ? JSON.stringify(orderSelections) : null;
     const sigKey = (customAnswersJSON || '') + (addonsJSON || '');
     const itemKeyBase = variation ? `${item.id}-${variation.name}` : item.id;
     const itemKey = sigKey ? `${itemKeyBase}-${btoa(encodeURIComponent(sigKey)).substring(0, 12)}` : itemKeyBase;
@@ -2971,7 +2804,7 @@ function updateUI() {
 }
 
 async function handlePlaceOrder() {
-    const cart = getActiveCart();
+    let cart = getActiveCart();
     const btn = document.getElementById('place-order-btn');
     btn.disabled = true;
     btn.innerHTML = 'Processando Pagamento...';
@@ -2987,23 +2820,20 @@ async function handlePlaceOrder() {
     }
 
     if (state.activeTab === 'order') {
+        if (hasCheckoutExtras()) {
+            const extrasResult = collectCheckoutExtraStep();
+            if (!extrasResult.ok) {
+                btn.disabled = false;
+                btn.innerHTML = 'Fazer pedido';
+                showAlert('Atenção', extrasResult.message || 'Preencha os campos extras antes de concluir.');
+                return;
+            }
+            cart = extrasResult.cart;
+        }
         if (!state.orderSchedule?.date || !state.orderSchedule?.time) {
             btn.disabled = false;
             btn.innerHTML = 'Fazer pedido';
             return showAlert('Agendamento ausente', 'Escolha a data e o horário da encomenda antes de concluir.');
-        }
-        const missingExtraItem = cart.find(item => {
-            const schema = getCustomFieldSchema(item);
-            if (!schema.length) return false;
-            const answers = getCustomFieldAnswers(item);
-            return schema.some(field => field?.required && !String(answers[field.name] || '').trim());
-        });
-        if (missingExtraItem) {
-            btn.disabled = false;
-            btn.innerHTML = 'Fazer pedido';
-            showAlert('Campos extras pendentes', `Preencha os campos extras do item "${missingExtraItem.name}" antes de concluir.`);
-            goToStep(2);
-            return;
         }
     }
 
@@ -3015,14 +2845,16 @@ async function handlePlaceOrder() {
         if (item.addons) {
             try {
                 const ads = JSON.parse(item.addons);
-                ads.forEach(a => extras.push(a.name));
+                ads.forEach(a => {
+                    if (!a.isCustomField) extras.push(a.name);
+                });
             } catch (e) { }
         }
         getCustomFieldSummaryParts(item).forEach(({
             key,
             value,
             isUrl
-        }) => extras.push(`${key}: ${isUrl ? 'Anexo' : value}`));
+        }) => extras.push(`${key}: ${value}`));
         if (extras.length > 0) base += ` [${extras.join(', ')}]`;
         return base;
     };
@@ -3043,6 +2875,7 @@ async function handlePlaceOrder() {
         deliveryFee: state.deliveryType === 'delivery' ? state.deliveryFee : 0,
         paymentMethod: state.paymentMethod,
         totalValue: totalValue,
+        addons: getOrderAddonsJSON(cart[0]),
         carrinho_itens_extras: cart.slice(1).map(item => ({
             productId: item.productId,
             name: formatItemName(item),
