@@ -2923,9 +2923,14 @@ body.theme-dark .delivery-fee-badge {
     }
 
     .menzzu-baixo {
-        gap: 6px;
+        gap: 8px;
         flex-wrap: nowrap;
         min-width: 0;
+        margin-left: -52px;
+        margin-right: -27px;
+        justify-content: center;
+        margin-top: 11px;
+        font-size: 11px;
     }
 
     .status-badge,
