@@ -2793,7 +2793,7 @@ function updateUI() {
 }
 
 async function handlePlaceOrder() {
-    const cart = getActiveCart();
+    let cart = getActiveCart();
     const btn = document.getElementById('place-order-btn');
     btn.disabled = true;
     btn.innerHTML = 'Processando Pagamento...';
@@ -2809,23 +2809,20 @@ async function handlePlaceOrder() {
     }
 
     if (state.activeTab === 'order') {
+        if (hasCheckoutExtras()) {
+            const extrasResult = collectCheckoutExtraStep();
+            if (!extrasResult.ok) {
+                btn.disabled = false;
+                btn.innerHTML = 'Fazer pedido';
+                showAlert('Atenção', extrasResult.message || 'Preencha os campos extras antes de concluir.');
+                return;
+            }
+            cart = extrasResult.cart;
+        }
         if (!state.orderSchedule?.date || !state.orderSchedule?.time) {
             btn.disabled = false;
             btn.innerHTML = 'Fazer pedido';
             return showAlert('Agendamento ausente', 'Escolha a data e o horário da encomenda antes de concluir.');
-        }
-        const missingExtraItem = cart.find(item => {
-            const schema = getCustomFieldSchema(item);
-            if (!schema.length) return false;
-            const answers = getCustomFieldAnswers(item);
-            return schema.some(field => field?.required && !String(answers[field.name] || '').trim());
-        });
-        if (missingExtraItem) {
-            btn.disabled = false;
-            btn.innerHTML = 'Fazer pedido';
-            showAlert('Campos extras pendentes', `Preencha os campos extras do item "${missingExtraItem.name}" antes de concluir.`);
-            goToStep(2);
-            return;
         }
     }
 
@@ -2837,7 +2834,9 @@ async function handlePlaceOrder() {
         if (item.addons) {
             try {
                 const ads = JSON.parse(item.addons);
-                ads.forEach(a => extras.push(a.name));
+                ads.forEach(a => {
+                    if (!a.isCustomField) extras.push(a.name);
+                });
             } catch (e) { }
         }
         getCustomFieldSummaryParts(item).forEach(({
@@ -2865,7 +2864,7 @@ async function handlePlaceOrder() {
         deliveryFee: state.deliveryType === 'delivery' ? state.deliveryFee : 0,
         paymentMethod: state.paymentMethod,
         totalValue: totalValue,
-        addons: addonsJSON,
+        addons: cart[0].addons || null,
         carrinho_itens_extras: cart.slice(1).map(item => ({
             productId: item.productId,
             name: formatItemName(item),
