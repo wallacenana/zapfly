@@ -240,6 +240,9 @@ function getMenuDeliveryOptions() {
     const fulfillmentMethods = parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.fulfillmentMethods && typeof parsed.fulfillmentMethods === 'object'
         ? parsed.fulfillmentMethods
         : {};
+    const orderFulfillmentMethods = parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.orderFulfillmentMethods && typeof parsed.orderFulfillmentMethods === 'object'
+        ? parsed.orderFulfillmentMethods
+        : fulfillmentMethods;
 
     return {
         orderTypes: {
@@ -250,17 +253,28 @@ function getMenuDeliveryOptions() {
             delivery: fulfillmentMethods.delivery !== false,
             pickup: fulfillmentMethods.pickup !== false,
             local: fulfillmentMethods.local !== false
+        },
+        orderFulfillmentMethods: {
+            delivery: orderFulfillmentMethods.delivery !== false,
+            pickup: orderFulfillmentMethods.pickup !== false,
+            local: orderFulfillmentMethods.local !== false
         }
     };
 }
 
-function isFulfillmentMethodEnabled(method) {
+function getFulfillmentMethodsForActiveTab() {
     const options = getMenuDeliveryOptions();
-    return options.fulfillmentMethods[method] !== false;
+    return state.activeTab === 'order' ? options.orderFulfillmentMethods : options.fulfillmentMethods;
+}
+
+function isFulfillmentMethodEnabled(method, methodOptions = getFulfillmentMethodsForActiveTab()) {
+    return methodOptions[method] !== false;
 }
 
 function getEnabledFulfillmentMethods() {
-    return ['delivery', 'pickup', 'local'].filter(method => isFulfillmentMethodEnabled(method));
+    const options = getMenuDeliveryOptions();
+    const methods = state.activeTab === 'order' ? options.orderFulfillmentMethods : options.fulfillmentMethods;
+    return ['delivery', 'pickup', 'local'].filter(method => methods[method] !== false);
 }
 
 function getDefaultFulfillmentMethod() {
@@ -2338,7 +2352,9 @@ function goToStep(step) {
     openModal('checkout-modal');
 
     let title = "Ver sacola";
-    if (step === 2) title = state.activeTab === 'delivery' ? "Entrega" : "Extras do Pedido";
+    if (step === 2) title = state.activeTab === 'delivery'
+        ? "Entrega"
+        : (state.deliveryType === 'delivery' ? "Entrega da encomenda" : "Retirada da encomenda");
     if (step === 3) title = "Forma de Pagamento";
     if (step === 4) title = "Confirmar Pedido";
 
@@ -2429,6 +2445,9 @@ function getResumeStep() {
             if (!state.deliveryFee) return 2;
         }
     } else {
+        if (state.deliveryType === 'delivery') {
+            if (!state.userInfo.address || !state.deliveryFee) return 2;
+        }
         if (!state.orderSchedule?.date || !state.orderSchedule?.time) return 1;
         if (hasCheckoutExtras() && savedStep < 3) return 2;
     }
@@ -2570,15 +2589,15 @@ function renderStep3() {
 }
 
 function renderStep2() {
-    const isDelivery = state.activeTab === 'delivery';
+    const isDelivery = state.deliveryType === 'delivery';
+    const isDeliveryTab = state.activeTab === 'delivery';
     const enabledMethods = getEnabledFulfillmentMethods();
 
-    // Hide delivery toggle entirely for orders
     const typeTabs = document.getElementById('checkout-type-tabs');
     if (typeTabs) {
         const methodButtons = Array.from(typeTabs.querySelectorAll('.type-tab[data-method]'));
         const visibleButtons = methodButtons.filter(btn => isFulfillmentMethodEnabled(btn.dataset.method));
-        typeTabs.style.display = isDelivery && visibleButtons.length ? 'flex' : 'none';
+        typeTabs.style.display = visibleButtons.length > 1 ? 'flex' : 'none';
         methodButtons.forEach(btn => {
             const method = btn.dataset.method;
             const enabled = isFulfillmentMethodEnabled(method);
@@ -2597,10 +2616,10 @@ function renderStep2() {
     const orderContent = document.getElementById('order-step-content');
     if (deliveryContent) deliveryContent.classList.toggle('hidden', !isDelivery);
     if (orderContent) {
-        if (isDelivery) {
+        if (isDeliveryTab && isDelivery) {
             orderContent.classList.add('hidden');
             orderContent.innerHTML = '';
-        } else {
+        } else if (state.activeTab === 'order') {
             const hasExtras = hasCheckoutExtras();
             if (hasExtras) {
                 orderContent.classList.remove('hidden');
@@ -2703,6 +2722,10 @@ async function handleNextStep() {
             }
         } else if (state.activeTab === 'order') {
             if (!isOrderEnabled()) return showAlert('Encomendas desativadas', 'No momento não estamos aceitando encomendas.');
+            if (state.deliveryType === 'delivery') {
+                if (!state.userInfo.address) return showAlert('Endereço Ausente', 'Informe o endereço para a entrega da encomenda.');
+                if (!state.deliveryFee) return showAlert('Taxa Indisponível', 'Aguarde o cálculo da taxa de entrega da encomenda.');
+            }
             if (hasCheckoutExtras()) {
                 const extrasResult = collectCheckoutExtraStep();
                 if (!extrasResult.ok) {

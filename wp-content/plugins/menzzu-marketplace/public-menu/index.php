@@ -119,6 +119,11 @@ try {
                 'delivery' => true,
                 'pickup' => true,
                 'local' => true
+            ],
+            'orderFulfillmentMethods' => [
+                'delivery' => true,
+                'pickup' => true,
+                'local' => true
             ]
         ];
 
@@ -142,6 +147,9 @@ try {
 
         $orderTypes = is_array($parsed['orderTypes'] ?? null) ? $parsed['orderTypes'] : [];
         $fulfillmentMethods = is_array($parsed['fulfillmentMethods'] ?? null) ? $parsed['fulfillmentMethods'] : [];
+        $orderFulfillmentMethods = is_array($parsed['orderFulfillmentMethods'] ?? null)
+            ? $parsed['orderFulfillmentMethods']
+            : $fulfillmentMethods;
 
         return [
             'orderTypes' => [
@@ -152,6 +160,11 @@ try {
                 'delivery' => array_key_exists('delivery', $fulfillmentMethods) ? (bool) $fulfillmentMethods['delivery'] : true,
                 'pickup' => array_key_exists('pickup', $fulfillmentMethods) ? (bool) $fulfillmentMethods['pickup'] : true,
                 'local' => array_key_exists('local', $fulfillmentMethods) ? (bool) $fulfillmentMethods['local'] : true,
+            ],
+            'orderFulfillmentMethods' => [
+                'delivery' => array_key_exists('delivery', $orderFulfillmentMethods) ? (bool) $orderFulfillmentMethods['delivery'] : true,
+                'pickup' => array_key_exists('pickup', $orderFulfillmentMethods) ? (bool) $orderFulfillmentMethods['pickup'] : true,
+                'local' => array_key_exists('local', $orderFulfillmentMethods) ? (bool) $orderFulfillmentMethods['local'] : true,
             ]
         ];
     }
@@ -1266,7 +1279,7 @@ try {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.26'); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.27'); ?>" defer></script>
 
     </html>
 <?php

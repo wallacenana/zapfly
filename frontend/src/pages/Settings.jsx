@@ -41,7 +41,8 @@ function parseGoogleLocationMeta(value) {
 
 const DEFAULT_DELIVERY_MENU_OPTIONS = {
   orderTypes: { delivery: true, order: true },
-  fulfillmentMethods: { delivery: true, pickup: true, local: true }
+  fulfillmentMethods: { delivery: true, pickup: true, local: true },
+  orderFulfillmentMethods: { delivery: true, pickup: true, local: true }
 };
 
 const BUSINESS_CATEGORY_OPTIONS = [
@@ -87,7 +88,8 @@ const normalizeBusinessCategory = (value) => ({ Restaurante: 'Brasileira', Lanch
 function normalizeDeliveryMenuOptions(value) {
   const base = {
     orderTypes: { ...DEFAULT_DELIVERY_MENU_OPTIONS.orderTypes },
-    fulfillmentMethods: { ...DEFAULT_DELIVERY_MENU_OPTIONS.fulfillmentMethods }
+    fulfillmentMethods: { ...DEFAULT_DELIVERY_MENU_OPTIONS.fulfillmentMethods },
+    orderFulfillmentMethods: { ...DEFAULT_DELIVERY_MENU_OPTIONS.orderFulfillmentMethods }
   };
 
   if (!value) return base;
@@ -107,6 +109,9 @@ function normalizeDeliveryMenuOptions(value) {
 
   const orderTypes = parsed.orderTypes && typeof parsed.orderTypes === 'object' ? parsed.orderTypes : {};
   const fulfillmentMethods = parsed.fulfillmentMethods && typeof parsed.fulfillmentMethods === 'object' ? parsed.fulfillmentMethods : {};
+  const orderFulfillmentMethods = parsed.orderFulfillmentMethods && typeof parsed.orderFulfillmentMethods === 'object'
+    ? parsed.orderFulfillmentMethods
+    : fulfillmentMethods;
 
   return {
     orderTypes: {
@@ -117,6 +122,11 @@ function normalizeDeliveryMenuOptions(value) {
       delivery: fulfillmentMethods.delivery !== false,
       pickup: fulfillmentMethods.pickup !== false,
       local: fulfillmentMethods.local !== false
+    },
+    orderFulfillmentMethods: {
+      delivery: orderFulfillmentMethods.delivery !== false,
+      pickup: orderFulfillmentMethods.pickup !== false,
+      local: orderFulfillmentMethods.local !== false
     }
   };
 }
@@ -630,6 +640,45 @@ const Settings = () => {
                     })}
                   </div>
                   <p className="settings-helper">O cardápio só exibe as opções que estiverem ativadas aqui.</p>
+                  {settings.dailyDeliveryItems?.orderTypes?.order && (
+                    <div style={{ marginTop: '18px', paddingTop: '18px', borderTop: '1px solid var(--border-color)' }}>
+                      <label style={labelStyle}>Métodos de retirada para encomendas</label>
+                      <div className="settings-option-grid settings-option-grid--stack">
+                        {[
+                          { key: 'delivery', label: 'Entrega' },
+                          { key: 'pickup', label: 'Retirada na loja' },
+                          { key: 'local', label: 'Consumo no local' }
+                        ].map(item => {
+                          const checked = !!settings.dailyDeliveryItems?.orderFulfillmentMethods?.[item.key];
+                          return (
+                            <button
+                              key={`order-${item.key}`}
+                              type="button"
+                              onClick={() => setSettings(s => {
+                                const current = normalizeDeliveryMenuOptions(s.dailyDeliveryItems);
+                                return {
+                                  ...s,
+                                  dailyDeliveryItems: {
+                                    ...current,
+                                    orderFulfillmentMethods: {
+                                      ...current.orderFulfillmentMethods,
+                                      [item.key]: !checked
+                                    }
+                                  }
+                                };
+                              })}
+                              className={`settings-toggle-card settings-toggle-card--full ${checked ? 'is-on' : ''}`}
+                            >
+                              <span>{item.label}</span>
+                              <span className="settings-switch" aria-hidden="true">
+                                <span className="settings-switch__thumb" />
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
