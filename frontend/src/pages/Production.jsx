@@ -280,9 +280,6 @@ const Production = () => {
     const detailSummaryHtml = detailPairs.length
       ? `<div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 13px; line-height: 1.6;">${detailPairs.map(pair => `<div>${pair}</div>`).join('')}</div>`
       : '';
-    const extrasHtml = displayParts.extras.length
-      ? `<div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0;"><div style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">Informações do pedido</div>${displayParts.extras.map(extra => `<div style="font-size: 13px; line-height: 1.5;">${extra}</div>`).join('')}</div>`
-      : '';
 
     let notesHtml = '';
     // Limpa a tag de frete da exibição visual das notas para não ficar repetitivo
@@ -291,7 +288,7 @@ const Production = () => {
     if (cleanNotes) {
       notesHtml = `
             <div style="margin-top: 12px; font-size: 13px;">
-                "${cleanNotes}"
+                <b>OBSERVAÇÃO:</b> ${cleanNotes}
             </div>`;
     }
 
@@ -373,7 +370,7 @@ const Production = () => {
           if (opts.client) content += `<p style="font-size: 18px; margin: 8px 0;"><b>👤 CLIENTE:</b> ${order.clientName}</p>`;
           if (opts.prod) content += `<div style="margin: 10px 0; padding-bottom: 10px; border-bottom: 1px solid #000;"><div style="font-size: 18px; font-weight: 900;">ITEM ${order.quantity || 1}x${order.massa ? ` (${order.massa})` : ''}</div><div style="font-size: 20px; margin-top: 5px;">${printParts.productName}</div>${order.variation ? `<div style="font-size: 16px;">Variação: ${order.variation}</div>` : ''}</div>`;
 
-          if (opts.massa) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${order.massa ? `<div><b>MASSA:</b> ${order.massa}</div>` : ''}${order.recheio ? `<div><b>RECHEIO:</b> ${order.recheio}</div>` : ''}${order.topo ? `<div><b>TOPO:</b> ${order.topo}</div>` : ''}${printParts.extras.length ? `<div style="margin-top: 6px;"><b>EXTRAS:</b> ${printParts.extras.join('<br>')}</div>` : ''}</div>`;
+          if (opts.massa) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${order.massa ? `<div><b>MASSA:</b> ${order.massa}</div>` : ''}${order.recheio ? `<div><b>RECHEIO:</b> ${order.recheio}</div>` : ''}${order.topo ? `<div><b>TOPO:</b> ${order.topo}</div>` : ''}</div>`;
           if (opts.notes && order.notes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>📝 OBS:</b> ${order.notes}</p>`;
           if (opts.addr && order.deliveryAddress) content += `<p style="font-size: 16px; margin: 10px 0;"><b>📍 ENTREGA:</b> ${order.deliveryAddress}</p>`;
           if (opts.value) content += `<div style="margin-top: 15px; border-top: 2px solid #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 24px;">TOTAL: R$ ${order.totalValue?.toFixed(2)}</h2></div>`;
@@ -503,7 +500,6 @@ const Production = () => {
                     <div style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">Item</div>
                     <div style="font-weight: 900; font-size: 18px; color: #0f172a; line-height: 1.25;">${displayParts.productName}</div>
                     ${displayParts.variation ? `<div style="font-size: 13px; color: #3b82f6; margin-top: 4px; font-weight: 700;">Variação: ${displayParts.variation}</div>` : ''}
-                    ${extrasHtml}
                     ${detailSummaryHtml}
                     ${notesHtml}
                   </td>
