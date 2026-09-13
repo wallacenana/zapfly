@@ -8,9 +8,13 @@ import Swal from 'sweetalert2';
 const getPrintableOrderParts = (order) => {
   const rawProduct = String(order.product || 'Produto');
   const extrasMatch = rawProduct.match(/\s*\[([^\]]+)\]\s*$/);
-  const productName = (extrasMatch ? rawProduct.slice(0, extrasMatch.index) : rawProduct).trim();
+  let productName = (extrasMatch ? rawProduct.slice(0, extrasMatch.index) : rawProduct).trim();
+  const variation = String(order.variation || '').trim();
+  if (variation && productName.endsWith(`(${variation})`)) {
+    productName = productName.slice(0, -(variation.length + 2)).trim();
+  }
   const extras = extrasMatch ? extrasMatch[1].split(/,\s*/).filter(Boolean) : [];
-  return { productName, extras };
+  return { productName, variation, extras };
 };
 
 const Production = () => {
@@ -267,13 +271,17 @@ const Production = () => {
     const totalValueStr = finalTotal.toFixed(2);
     const subtotalStr = itemsSubtotal.toFixed(2);
     const freightStr = freightValue.toFixed(2);
+    const displayParts = getPrintableOrderParts(order);
     const detailPairs = [
       order.massa ? `Massa: ${order.massa}` : null,
       order.recheio ? `Recheio: ${order.recheio}` : null,
       order.topo ? `Topo: ${order.topo}` : null,
     ].filter(Boolean);
     const detailSummaryHtml = detailPairs.length
-      ? `<div style="font-size: 12px; color: #6b7280; margin-top: 5px;">${detailPairs.join(' | ')}</div>`
+      ? `<div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0; font-size: 13px; line-height: 1.6;">${detailPairs.map(pair => `<div>${pair}</div>`).join('')}</div>`
+      : '';
+    const extrasHtml = displayParts.extras.length
+      ? `<div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0;"><div style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">Informações do pedido</div>${displayParts.extras.map(extra => `<div style="font-size: 13px; line-height: 1.5;">${extra}</div>`).join('')}</div>`
       : '';
 
     let notesHtml = '';
@@ -379,6 +387,7 @@ const Production = () => {
 
           const printWindow = window.open('', '_blank', 'width=600,height=800');
           if (printWindow) {
+            printWindow.document.open();
             printWindow.document.write(`
               <html>
                 <head>
@@ -391,16 +400,15 @@ const Production = () => {
                 </head>
                 <body>
                   ${content}
-                  <script>
-                    setTimeout(() => {
-                      window.print();
-                      window.close();
-                    }, 500);
-                  </script>
                 </body>
               </html>
             `);
             printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+              printWindow.print();
+              printWindow.close();
+            }, 700);
           } else {
             Swal.fire('Pop-up Bloqueado', 'Por favor, permita pop-ups para este site para poder imprimir.', 'warning');
           }
@@ -492,8 +500,10 @@ const Production = () => {
                     </div>
                   </td>
                   <td style="padding: 20px 10px; vertical-align: top;">
-                    <div style="font-weight: 800; font-size: 18px; color: #0f172a; line-height: 1.2;">${order.product}</div>
-                    <div style="font-size: 13px; color: #3b82f6; margin-top: 4px; font-weight: 700;">${order.variation || 'Opção Padrão'}</div>
+                    <div style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">Item</div>
+                    <div style="font-weight: 900; font-size: 18px; color: #0f172a; line-height: 1.25;">${displayParts.productName}</div>
+                    ${displayParts.variation ? `<div style="font-size: 13px; color: #3b82f6; margin-top: 4px; font-weight: 700;">Variação: ${displayParts.variation}</div>` : ''}
+                    ${extrasHtml}
                     ${detailSummaryHtml}
                     ${notesHtml}
                   </td>

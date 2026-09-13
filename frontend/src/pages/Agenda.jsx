@@ -6,9 +6,13 @@ import Swal from 'sweetalert2';
 const getPrintableOrderParts = (order) => {
   const rawProduct = String(order.product || 'Produto');
   const extrasMatch = rawProduct.match(/\s*\[([^\]]+)\]\s*$/);
-  const productName = (extrasMatch ? rawProduct.slice(0, extrasMatch.index) : rawProduct).trim();
+  let productName = (extrasMatch ? rawProduct.slice(0, extrasMatch.index) : rawProduct).trim();
+  const variation = String(order.variation || '').trim();
+  if (variation && productName.endsWith(`(${variation})`)) {
+    productName = productName.slice(0, -(variation.length + 2)).trim();
+  }
   const extras = extrasMatch ? extrasMatch[1].split(/,\s*/).filter(Boolean) : [];
-  return { productName, extras };
+  return { productName, variation, extras };
 };
 import ReactDOM from 'react-dom';
 
@@ -296,6 +300,7 @@ function OrderCard({ order, onUpdate }) {
       }
     }
     const itemsSubtotal = unitPrice * quantity;
+    const displayParts = getPrintableOrderParts(order);
 
     let notesHtml = '';
     // Limpa a tag de frete da exibição visual das notas para não ficar repetitivo
@@ -482,6 +487,7 @@ function OrderCard({ order, onUpdate }) {
 
           const printWindow = window.open('', '_blank', 'width=600,height=800');
           if (printWindow) {
+            printWindow.document.open();
             printWindow.document.write(`
               <html>
                 <head>
@@ -494,16 +500,15 @@ function OrderCard({ order, onUpdate }) {
                 </head>
                 <body>
                   ${content}
-                  <script>
-                    setTimeout(() => {
-                      window.print();
-                      window.close();
-                    }, 500);
-                  </script>
                 </body>
               </html>
             `);
             printWindow.document.close();
+            printWindow.focus();
+            setTimeout(() => {
+              printWindow.print();
+              printWindow.close();
+            }, 700);
           } else {
             Swal.fire('Pop-up Bloqueado', 'Por favor, permita pop-ups para este site para poder imprimir.', 'warning');
           }
@@ -561,7 +566,10 @@ function OrderCard({ order, onUpdate }) {
                  ${quantity}
                </div>
                 <div>
-                   <div style="font-weight: 800; font-size: 16px; color: #fff;">${order.product}</div>
+                   <div style="font-size: 10px; color: #9ca3af; font-weight: 800; text-transform: uppercase;">Item</div>
+                   <div style="font-weight: 900; font-size: 16px; color: #fff; line-height: 1.25;">${displayParts.productName}</div>
+                   ${displayParts.variation ? `<div style="font-size: 12px; color: #60a5fa; margin-top: 4px; font-weight: 700;">Variação: ${displayParts.variation}</div>` : ''}
+                   ${displayParts.extras.length ? `<div style="font-size: 12px; color: #d1d5db; margin-top: 8px; line-height: 1.5;">${displayParts.extras.join('<br>')}</div>` : ''}
                    <div style="font-size: 12px; color: var(--text-muted);">Preço un.: R$ ${unitPrice.toFixed(2)}</div>
                    ${(order.massa || order.recheio) ? `
                      <div style="font-size: 11px; color: #fbbf24; margin-top: 5px; font-weight: 700;">
