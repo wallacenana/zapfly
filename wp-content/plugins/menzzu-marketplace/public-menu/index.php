@@ -895,6 +895,7 @@ try {
                             <div id="delivery-fee-display"
                                 style="margin-bottom:15px; font-weight:600; text-align:center; padding:10px; border-radius:10px; background:#f9f9f9; display:none;">
                             </div>
+                            <button type="button" id="calculate-delivery-fee-btn" class="ifood-btn" disabled>Definir taxa de entrega</button>
                         </div>
 
                         <div id="pickup-info-panel" class="receiving-mode-panel">
@@ -1282,7 +1283,7 @@ try {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.35'); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.36'); ?>" defer></script>
 
     </html>
 <?php
