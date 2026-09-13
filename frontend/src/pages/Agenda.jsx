@@ -68,6 +68,16 @@ const getOrderSelectionSections = (order) => {
   return sections;
 };
 
+const getEditSelectionValue = (order, aliases, fallback = '') => {
+  const aliasList = aliases.map(alias => alias.toLowerCase());
+  const rows = getOrderSelectionRows(order);
+  const row = rows.find(([label]) => {
+    const normalizedLabel = String(label).toLowerCase();
+    return aliasList.some(alias => normalizedLabel.includes(alias));
+  });
+  return row ? rows.filter(([label]) => label === row[0]).map(([, value]) => value).join(', ') : fallback;
+};
+
 import ReactDOM from 'react-dom';
 
 import { api } from '../api';
@@ -382,6 +392,10 @@ function OrderCard({ order, onUpdate }) {
     }
 
     const handleEditOrder = () => {
+      const editProduct = getPrintableOrderParts(order).productName;
+      const editMassa = getEditSelectionValue(order, ['massa'], order.massa || '');
+      const editRecheio = getEditSelectionValue(order, ['recheio'], order.recheio || '');
+      const editTopo = getEditSelectionValue(order, ['topo'], order.topo || '');
       Swal.fire({
         title: 'Editar Pedido',
         background: '#111827',
@@ -394,7 +408,7 @@ function OrderCard({ order, onUpdate }) {
           <div style="text-align: left; font-family: 'Inter', sans-serif;">
             <div style="margin-bottom: 15px;">
               <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">PRODUTO</label>
-              <input id="edit-product" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.product || ''}">
+              <input id="edit-product" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${editProduct}">
             </div>
             
             <div style="margin-bottom: 15px;">
@@ -416,15 +430,15 @@ function OrderCard({ order, onUpdate }) {
             <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 15px;">
               <div>
                 <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">MASSA</label>
-                <input id="edit-massa" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.massa || ''}">
+                <input id="edit-massa" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${editMassa}">
               </div>
               <div>
                 <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">RECHEIO</label>
-                <input id="edit-recheio" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.recheio || ''}">
+                <input id="edit-recheio" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${editRecheio}">
               </div>
               <div>
                 <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #9ca3af; font-weight: 800;">TOPO</label>
-                <input id="edit-topo" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${order.topo || ''}">
+                <input id="edit-topo" style="width: 100%; padding: 10px; background: #1f2937; border: 1px solid #374151; border-radius: 8px; color: #fff;" value="${editTopo}">
               </div>
             </div>
   
