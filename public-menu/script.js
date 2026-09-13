@@ -858,6 +858,7 @@ function updateLocation(location, address = null) {
         state.deliveryFee = 0;
         state.deliveryFeeCalculated = false;
         updateDeliveryFeeButtonState();
+        calculateDeliveryFee(address);
     }
 }
 
@@ -2580,7 +2581,9 @@ function setDeliveryType(type) {
     if (addressSection) addressSection.classList.toggle('hidden', type !== 'delivery');
 
     if (type === 'delivery') {
-        if (!state.userInfo.address) {
+        if (state.userInfo.address && !state.deliveryFeeCalculated) {
+            calculateDeliveryFee(state.userInfo.address);
+        } else if (!state.userInfo.address) {
             state.deliveryFee = 0;
             state.deliveryFeeCalculated = false;
             updateDeliveryFeeButtonState();
