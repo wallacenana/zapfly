@@ -248,6 +248,7 @@ const Production = () => {
   };
 
   const openDetails = (order) => {
+    console.log('Abrindo detalhes do pedido:', order);
     const orderIdShort = (order.id || '').slice(-4).toUpperCase();
     const formattedDate = (order.scheduledDate || '').split('-').reverse().join('/');
     const quantity = parseFloat(order.quantity) || 1;
