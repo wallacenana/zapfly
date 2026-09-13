@@ -82,6 +82,7 @@ let state = {
     },
     currentStep: 1,
     deliveryFee: 0,
+    deliveryFeeRequestId: 0,
     googleMap: null,
     mapMarker: null,
     geocoder: null,
@@ -866,6 +867,10 @@ function reverseGeocode(latLng) {
 }
 
 async function calculateDeliveryFee(address) {
+    const requestId = ++state.deliveryFeeRequestId;
+    const cleanAddress = String(address || '').trim();
+    if (!cleanAddress) return { error: 'Informe seu endereço.' };
+
     try {
         const response = await fetch(`${API_BASE}/orders/calculate-fee`, {
             method: 'POST',
@@ -873,19 +878,30 @@ async function calculateDeliveryFee(address) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                address,
+                address: cleanAddress,
                 slug: STORE_SLUG
             })
         });
         const data = await response.json();
+        if (requestId !== state.deliveryFeeRequestId) return null;
         const display = document.getElementById('delivery-fee-display');
         const locationFeeDisplay = document.getElementById('restaurant-location-fee');
         if (data.fee !== undefined) {
-            state.deliveryFee = data.fee;
+            state.deliveryFee = Number(data.fee);
             state.allowCash = data.type === 'estimated' ? false : (data.allowCash !== false);
+            setHeaderDeliveryFee(state.deliveryFee);
+            try {
+                localStorage.setItem(getDeliveryFeeCacheKey(), JSON.stringify({
+                    address: cleanAddress,
+                    fee: state.deliveryFee,
+                    updatedAt: Date.now()
+                }));
+            } catch (error) {
+                // The checkout remains usable if localStorage is unavailable.
+            }
             if (display) {
                 display.style.display = 'block';
-                display.innerHTML = `Taxa de entrega: <strong style="color:var(--primary-color)">R$ ${data.fee.toFixed(2)}</strong>`;
+                display.innerHTML = `Taxa de entrega: <strong style="color:var(--primary-color)">R$ ${state.deliveryFee.toFixed(2).replace('.', ',')}</strong>`;
                 display.style.background = '#f0fdf4';
                 display.style.color = '#166534';
             }
@@ -898,6 +914,8 @@ async function calculateDeliveryFee(address) {
         } else if (data.error) {
             state.deliveryFee = 0;
             state.allowCash = false;
+            const headerFee = document.getElementById('store-delivery-fee');
+            if (headerFee && !headerFee.textContent) headerFee.hidden = true;
             if (display) {
                 display.style.display = 'block';
                 display.innerHTML = `⚠️ ${data.error}`;
@@ -923,6 +941,32 @@ async function calculateDeliveryFee(address) {
             locationFeeDisplay.innerText = 'Não foi possível calcular a taxa agora.';
         }
         return { error: 'Não foi possível calcular a taxa agora.' };
+    }
+}
+
+function getDeliveryFeeCacheKey() {
+    return `menzzu_delivery_fee_${STORE_SLUG}`;
+}
+
+const DELIVERY_FEE_ICON = '<svg class="store-delivery-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 6h11v10H3zM14 10h4l3 3v3h-7zM7 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM18 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" fill="currentColor"/><path d="M14 13h6" fill="none" stroke="currentColor" stroke-width="1.7"/></svg>';
+
+function setHeaderDeliveryFee(fee) {
+    const headerFee = document.getElementById('store-delivery-fee');
+    if (!headerFee || !Number.isFinite(Number(fee))) return;
+    headerFee.innerHTML = `<span class="store-meta-separator" aria-hidden="true">•</span>${DELIVERY_FEE_ICON}<span>Taxa R$ ${Number(fee).toFixed(2).replace('.', ',')}</span>`;
+    headerFee.hidden = false;
+}
+
+function restoreCachedDeliveryFee(address) {
+    try {
+        const cached = JSON.parse(localStorage.getItem(getDeliveryFeeCacheKey()) || 'null');
+        const isFresh = cached && Date.now() - Number(cached.updatedAt || 0) < 15 * 60 * 1000;
+        if (isFresh && cached.address === String(address || '').trim() && Number.isFinite(Number(cached.fee))) {
+            state.deliveryFee = Number(cached.fee);
+            setHeaderDeliveryFee(state.deliveryFee);
+        }
+    } catch (error) {
+        // Ignore invalid or unavailable local storage.
     }
 }
 
@@ -2193,6 +2237,10 @@ function initEventListeners() {
     document.getElementById('user-name').value = state.userInfo.name || '';
     document.getElementById('user-phone').value = state.userInfo.phone || '';
     document.getElementById('user-address').value = state.userInfo.address || '';
+    if (state.userInfo.address) {
+        restoreCachedDeliveryFee(state.userInfo.address);
+        calculateDeliveryFee(state.userInfo.address);
+    }
 
     const phoneInput = document.getElementById('user-phone');
     if (phoneInput) {
@@ -2209,6 +2257,10 @@ function initEventListeners() {
             el.addEventListener('input', (e) => {
                 state.userInfo[id.split('-')[1]] = e.target.value;
                 localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
+                if (id === 'user-address') {
+                    const headerFee = document.getElementById('store-delivery-fee');
+                    if (headerFee) headerFee.hidden = true;
+                }
             });
         }
     });
