@@ -2890,7 +2890,8 @@ body.theme-dark .delivery-fee-badge {
     }
 
     .store-info {
-        flex: 1 1 100%;
+        flex: 1 1 auto;
+        width: auto;
         min-width: 0;
         order: 1;
     }
@@ -2916,10 +2917,20 @@ body.theme-dark .delivery-fee-badge {
     }
 
     .store-header-actions {
-        width: 100%;
+        width: auto;
         order: 2;
-        justify-content: space-between;
+        flex: 0 0 auto;
+        justify-content: flex-end;
         margin-left: 0;
+        padding-top: 2px;
+    }
+
+    .more-link-btn {
+        padding: 5px 0;
+    }
+
+    .more-link-text {
+        display: none;
     }
 
     .category-tabs {
