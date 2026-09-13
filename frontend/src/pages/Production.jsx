@@ -5,6 +5,14 @@ import { api } from '../api';
 import { socket } from '../api';
 import Swal from 'sweetalert2';
 
+const getPrintableOrderParts = (order) => {
+  const rawProduct = String(order.product || 'Produto');
+  const extrasMatch = rawProduct.match(/\s*\[([^\]]+)\]\s*$/);
+  const productName = (extrasMatch ? rawProduct.slice(0, extrasMatch.index) : rawProduct).trim();
+  const extras = extrasMatch ? extrasMatch[1].split(/,\s*/).filter(Boolean) : [];
+  return { productName, extras };
+};
+
 const Production = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -344,6 +352,7 @@ const Production = () => {
         if (result.isConfirmed) {
           const opts = result.value;
           const idShort = order.id.slice(-4).toUpperCase();
+          const printParts = getPrintableOrderParts(order);
 
           let content = `
             <div style="font-family: 'Inter', Arial, sans-serif; width: 100%; max-width: 280px; margin: 0 auto; color: #000; line-height: 1.4;">
@@ -354,18 +363,9 @@ const Production = () => {
           `;
 
           if (opts.client) content += `<p style="font-size: 18px; margin: 8px 0;"><b>👤 CLIENTE:</b> ${order.clientName}</p>`;
-          if (opts.prod) content += `<p style="font-size: 20px; margin: 10px 0; border-bottom: 1px solid #eee; padding-bottom: 5px;"><b>📦 ITEM:</b> ${order.product} <br/><span style="font-size: 16px;">(${order.variation || 'Padrão'})</span></p>`;
+          if (opts.prod) content += `<div style="margin: 10px 0; padding-bottom: 10px; border-bottom: 1px solid #000;"><div style="font-size: 18px; font-weight: 900;">ITEM ${order.quantity || 1}x${order.massa ? ` (${order.massa})` : ''}</div><div style="font-size: 20px; margin-top: 5px;">${printParts.productName}</div>${order.variation ? `<div style="font-size: 16px;">Variação: ${order.variation}</div>` : ''}</div>`;
 
-          if (opts.massa) {
-            content += `
-              <div style="margin: 10px 0; padding: 10px; border: 1px solid #000; border-radius: 5px; font-size: 16px;">
-                <p style="margin: 4px 0;"><b>MASSA:</b> ${order.massa || '-'}</p>
-                <p style="margin: 4px 0;"><b>RECHEIO:</b> ${order.recheio || '-'}</p>
-                <p style="margin: 4px 0;"><b>TOPO:</b> ${order.topo || '-'}</p>
-              </div>
-            `;
-          }
-
+          if (opts.massa) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${order.massa ? `<div><b>MASSA:</b> ${order.massa}</div>` : ''}${order.recheio ? `<div><b>RECHEIO:</b> ${order.recheio}</div>` : ''}${order.topo ? `<div><b>TOPO:</b> ${order.topo}</div>` : ''}${printParts.extras.length ? `<div style="margin-top: 6px;"><b>EXTRAS:</b> ${printParts.extras.join('<br>')}</div>` : ''}</div>`;
           if (opts.notes && order.notes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>📝 OBS:</b> ${order.notes}</p>`;
           if (opts.addr && order.deliveryAddress) content += `<p style="font-size: 16px; margin: 10px 0;"><b>📍 ENTREGA:</b> ${order.deliveryAddress}</p>`;
           if (opts.value) content += `<div style="margin-top: 15px; border-top: 2px solid #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 24px;">TOTAL: R$ ${order.totalValue?.toFixed(2)}</h2></div>`;

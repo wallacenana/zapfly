@@ -392,6 +392,27 @@ async function syncCalendarEvents(userId) {
   }
 }
 
+function buildCalendarOrderDescription(order, links = []) {
+  const rawProduct = String(order.product || 'Produto');
+  const extrasMatch = rawProduct.match(/\s*\[([^\]]+)\]\s*$/);
+  const productName = (extrasMatch ? rawProduct.slice(0, extrasMatch.index) : rawProduct).trim();
+  const extras = extrasMatch ? extrasMatch[1].split(/,\s*/).filter(Boolean) : [];
+  return [
+    `ITEM ${order.quantity || '1'}x`,
+    productName,
+    order.variation ? `Variação: ${order.variation}` : '',
+    '------------------------------',
+    order.massa ? `MASSA: ${order.massa}` : '',
+    order.recheio ? `RECHEIO: ${order.recheio}` : '',
+    order.topo ? `TOPO: ${order.topo}` : '',
+    extras.length ? `INFORMAÇÕES: ${extras.join(' | ')}` : '',
+    order.notes ? `OBSERVAÇÃO: ${order.notes}` : '',
+    order.deliveryAddress ? `ENTREGA: ${order.deliveryAddress}` : 'RETIRADA NA LOJA',
+    '------------------------------',
+    ...links
+  ].filter(Boolean).join('\n');
+}
+
 // Cria evento no Google Calendar
 async function createCalendarEvent(order) {
   const today = new Date().toISOString().split('T')[0];
@@ -452,6 +473,13 @@ async function createCalendarEvent(order) {
       colorId: isDelivery ? '5' : '1', // 5: Amarelo (Banana), 1: Azul (Lavender)
       reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 30 }] },
     };
+    event.description = buildCalendarOrderDescription(order, [
+      `ID DO PEDIDO: #${idShort}`,
+      `CLIENTE: ${order.clientName || 'Não informado'}`,
+      `WhatsApp: ${waLink}`,
+      `Abrir no Sistema: ${systemLink}`,
+      `HORÁRIO AGENDADO: ${order.scheduledTime}`
+    ]);
 
     const response = await gcal.calendar.events.insert({ calendarId: gcal.calendarId, resource: event });
     const calId = response.data.id;
@@ -511,6 +539,13 @@ async function updateCalendarEvent(order) {
       start: { dateTime: startDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
       end: { dateTime: endDateTime.toISOString(), timeZone: 'America/Sao_Paulo' },
     };
+    event.description = buildCalendarOrderDescription(order, [
+      `ID DO PEDIDO: #${idShort}`,
+      `CLIENTE: ${order.clientName || 'Não informado'}`,
+      `WhatsApp: ${waLink}`,
+      `Abrir no Sistema: ${systemLink}`,
+      `HORÁRIO AGENDADO: ${order.scheduledTime}`
+    ]);
 
     await gcal.calendar.events.patch({
       calendarId: gcal.calendarId,
