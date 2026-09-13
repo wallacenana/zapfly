@@ -19,9 +19,31 @@ import {
   Menu,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { PUBLIC_SITE_URL } from '../api';
+import { PUBLIC_SITE_URL, socket } from '../api';
 import TrialBanner from '../components/TrialBanner';
 import GetStarted from '../pages/GetStarted';
+
+const playOrderNotificationSound = () => {
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    const context = new AudioContextClass();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.18, context.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.45);
+    oscillator.connect(gain);
+    gain.connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + 0.45);
+    oscillator.addEventListener('ended', () => context.close());
+  } catch (error) {
+    console.warn('[Menzzu] Som de novo pedido indisponivel:', error);
+  }
+};
 
 const MainLayout = ({ clientMode = false }) => {
   const location = useLocation();
@@ -31,6 +53,12 @@ const MainLayout = ({ clientMode = false }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [trialInfo, setTrialInfo] = useState(null);
   const trialVisible = Boolean(trialInfo?.active);
+
+  useEffect(() => {
+    const handleNewOrder = () => playOrderNotificationSound();
+    socket.on('new_order_pending', handleNewOrder);
+    return () => socket.off('new_order_pending', handleNewOrder);
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {

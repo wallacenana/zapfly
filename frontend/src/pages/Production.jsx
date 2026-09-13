@@ -5,28 +5,6 @@ import { api } from '../api';
 import { socket } from '../api';
 import Swal from 'sweetalert2';
 
-const playOrderNotificationSound = () => {
-  try {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return;
-    const context = new AudioContextClass();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.type = 'sine';
-    oscillator.frequency.value = 880;
-    gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.18, context.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.45);
-    oscillator.connect(gain);
-    gain.connect(context.destination);
-    oscillator.start();
-    oscillator.stop(context.currentTime + 0.45);
-    oscillator.addEventListener('ended', () => context.close());
-  } catch (error) {
-    console.warn('[Production] Som de novo pedido indisponivel:', error);
-  }
-};
-
 const Production = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -72,10 +50,10 @@ const Production = () => {
   useEffect(() => {
     fetchOrders();
 
-    socket.on('new_order_pending', (data) => {
+    const refreshOrders = () => fetchOrders();
+    const handleNewOrder = (data) => {
       console.log('[Socket] Novo pedido pago!', data);
-      fetchOrders();
-      playOrderNotificationSound();
+      refreshOrders();
       Swal.fire({
         title: '💰 PAGAMENTO CONFIRMADO!',
         text: 'Um novo pedido pago acaba de entrar na produção ou nos pendentes.',
@@ -85,15 +63,16 @@ const Production = () => {
         timer: 5000,
         showConfirmButton: false
       });
-    });
+    };
 
-    socket.on('order_confirmed', () => fetchOrders());
+    socket.on('new_order_pending', handleNewOrder);
+    socket.on('order_confirmed', refreshOrders);
 
     const interval = setInterval(fetchOrders, 30000);
     return () => {
       clearInterval(interval);
-      socket.off('new_order_pending');
-      socket.off('order_confirmed');
+      socket.off('new_order_pending', handleNewOrder);
+      socket.off('order_confirmed', refreshOrders);
     };
   }, [selectedDate, activeType]); // Dependências adicionadas para recarregar ao mudar de dia
 
