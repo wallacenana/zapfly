@@ -2275,6 +2275,9 @@ function initEventListeners() {
 }
 
 function goToStep(step) {
+    if (step === 2 && state.activeTab === 'delivery') {
+        step = 3;
+    }
     if (step === 2 && state.activeTab === 'order' && !hasCheckoutExtras()) {
         step = 3;
     }
@@ -2296,7 +2299,7 @@ function goToStep(step) {
     openModal('checkout-modal');
 
     let title = "Ver sacola";
-    if (step === 2) title = state.activeTab === 'delivery' ? "Entrega" : "Extras do Pedido";
+    if (step === 2) title = "Extras do Pedido";
     if (step === 3) title = "Forma de Pagamento";
     if (step === 4) title = "Confirmar Pedido";
 
@@ -2383,8 +2386,8 @@ function getResumeStep() {
     // Step 3 requires step 2 data: address + delivery fee for delivery; schedule + extras for order
     if (state.activeTab === 'delivery') {
         if (state.deliveryType === 'delivery') {
-            if (!state.userInfo.address) return 2;
-            if (!state.deliveryFee) return 2;
+            if (!state.userInfo.address) return 3;
+            if (!state.deliveryFee) return 3;
         }
     } else {
         if (!state.orderSchedule?.date || !state.orderSchedule?.time) return 1;
@@ -2400,7 +2403,7 @@ function getResumeStep() {
 
 document.getElementById('checkout-back-btn')?.addEventListener('click', () => {
     if (state.currentStep > 1) {
-        const previousStep = (state.activeTab === 'order' && !hasCheckoutExtras() && state.currentStep === 3) ? 1 : state.currentStep - 1;
+        const previousStep = ((state.activeTab === 'order' && !hasCheckoutExtras()) || (state.activeTab === 'delivery' && state.currentStep === 3)) ? 1 : state.currentStep - 1;
         goToStep(previousStep);
     } else closeWithAnimation('checkout-modal');
 });
@@ -2658,7 +2661,7 @@ async function handleNextStep() {
             goToStep(hasCheckoutExtras() ? 2 : 3);
             return;
         }
-        goToStep(2);
+        goToStep(3);
     } else if (state.currentStep === 2) {
         if (state.activeTab === 'delivery') {
             if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');

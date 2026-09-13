@@ -879,6 +879,7 @@ async function calculateDeliveryFee(address) {
         });
         const data = await response.json();
         const display = document.getElementById('delivery-fee-display');
+        const locationFeeDisplay = document.getElementById('restaurant-location-fee');
         if (data.fee !== undefined) {
             state.deliveryFee = data.fee;
             state.allowCash = data.type === 'estimated' ? false : (data.allowCash !== false);
@@ -887,6 +888,11 @@ async function calculateDeliveryFee(address) {
                 display.innerHTML = `Taxa de entrega: <strong style="color:var(--primary-color)">R$ ${data.fee.toFixed(2)}</strong>`;
                 display.style.background = '#f0fdf4';
                 display.style.color = '#166534';
+            }
+            if (locationFeeDisplay) {
+                locationFeeDisplay.hidden = false;
+                locationFeeDisplay.className = 'restaurant-location-fee is-success';
+                locationFeeDisplay.innerHTML = `Taxa calculada: <strong>R$ ${Number(data.fee).toFixed(2).replace('.', ',')}</strong>`;
             }
             updateStep4Summary();
         } else if (data.error) {
@@ -899,11 +905,24 @@ async function calculateDeliveryFee(address) {
                 display.style.color = '#991b1b';
                 display.style.border = '1px solid #fee2e2';
             }
+            if (locationFeeDisplay) {
+                locationFeeDisplay.hidden = false;
+                locationFeeDisplay.className = 'restaurant-location-fee is-error';
+                locationFeeDisplay.innerText = data.error;
+            }
         } else {
             if (display) display.style.display = 'none';
         }
+        return data;
     } catch (err) {
         console.error('Erro ao calcular frete:', err);
+        const locationFeeDisplay = document.getElementById('restaurant-location-fee');
+        if (locationFeeDisplay) {
+            locationFeeDisplay.hidden = false;
+            locationFeeDisplay.className = 'restaurant-location-fee is-error';
+            locationFeeDisplay.innerText = 'Não foi possível calcular a taxa agora.';
+        }
+        return { error: 'Não foi possível calcular a taxa agora.' };
     }
 }
 
@@ -2029,6 +2048,21 @@ function initEventListeners() {
     const mobileSearchToggle = document.getElementById('mobile-search-toggle');
     const searchContainer = document.getElementById('search-container');
 
+    window.addEventListener('menzzu-address-selected', async (event) => {
+        const address = event.detail?.address || '';
+        const result = await calculateDeliveryFee(address);
+        const modal = document.getElementById('restaurant-location-modal');
+        const submitButton = modal?.querySelector('button[type="submit"]');
+        if (result?.fee !== undefined && submitButton) {
+            submitButton.disabled = false;
+            submitButton.innerText = 'Confirmar endereço';
+        } else if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.innerText = 'Tentar novamente';
+            if (modal) modal.dataset.calculatedAddress = '';
+        }
+    });
+
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             state.searchQuery = e.target.value;
@@ -2181,6 +2215,9 @@ function initEventListeners() {
 }
 
 function goToStep(step) {
+    if (step === 2 && state.activeTab === 'delivery') {
+        step = 3;
+    }
     if (step === 2 && state.activeTab === 'order' && !hasCheckoutExtras()) {
         step = 3;
     }
@@ -2202,7 +2239,7 @@ function goToStep(step) {
     openModal('checkout-modal');
 
     let title = "Ver sacola";
-    if (step === 2) title = state.activeTab === 'delivery' ? "Entrega" : "Extras do Pedido";
+    if (step === 2) title = "Extras do Pedido";
     if (step === 3) title = "Forma de Pagamento";
     if (step === 4) title = "Confirmar Pedido";
 
@@ -2289,8 +2326,8 @@ function getResumeStep() {
     // Step 3 requires step 2 data: address + delivery fee for delivery; schedule + extras for order
     if (state.activeTab === 'delivery') {
         if (state.deliveryType === 'delivery') {
-            if (!state.userInfo.address) return 2;
-            if (!state.deliveryFee) return 2;
+            if (!state.userInfo.address) return 3;
+            if (!state.deliveryFee) return 3;
         }
     } else {
         if (!state.orderSchedule?.date || !state.orderSchedule?.time) return 1;
@@ -2306,7 +2343,7 @@ function getResumeStep() {
 
 document.getElementById('checkout-back-btn')?.addEventListener('click', () => {
     if (state.currentStep > 1) {
-        const previousStep = (state.activeTab === 'order' && !hasCheckoutExtras() && state.currentStep === 3) ? 1 : state.currentStep - 1;
+        const previousStep = ((state.activeTab === 'order' && !hasCheckoutExtras()) || (state.activeTab === 'delivery' && state.currentStep === 3)) ? 1 : state.currentStep - 1;
         goToStep(previousStep);
     } else closeWithAnimation('checkout-modal');
 });
@@ -2564,7 +2601,7 @@ async function handleNextStep() {
             goToStep(hasCheckoutExtras() ? 2 : 3);
             return;
         }
-        goToStep(2);
+        goToStep(3);
     } else if (state.currentStep === 2) {
         if (state.activeTab === 'delivery') {
             if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
