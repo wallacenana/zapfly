@@ -1551,7 +1551,7 @@ function openItemDetail(productId) {
                                                     ${parseFloat(gItem.price || 0) > 0 ? `<span class="var-price addon-option-price">+ R$ ${parseFloat(gItem.price).toFixed(2)}</span>` : ''}
                                                     <span class="addon-option-mark" aria-hidden="true"></span>
                                                 </div>
-                                                <input type="checkbox" id="${inputId}" name="${inputName}" class="addon-input" data-group-id="${g.id}" data-group-name="${g.name.replace(/"/g, '&quot;')}" data-max="${maxSelections}" data-item-name="${gItem.name.replace(/"/g, '&quot;')}" data-item-price="${parseFloat(gItem.price || 0)}">
+                                                <input type="checkbox" id="${inputId}" name="${inputName}" class="addon-input" data-group-id="${g.id}" data-max="${maxSelections}" data-item-name="${gItem.name.replace(/"/g, '&quot;')}" data-item-price="${parseFloat(gItem.price || 0)}">
                                             </label>`;
                         }).join('')}
                                         </div>
@@ -1714,7 +1714,6 @@ function getSelectedAddons() {
         const price = parseFloat(input.dataset.itemPrice || 0);
         addons.push({
             groupId: input.dataset.groupId,
-            groupName: input.dataset.groupName,
             name: input.dataset.itemName,
             price
         });
@@ -2854,7 +2853,6 @@ async function handlePlaceOrder() {
         deliveryFee: state.deliveryType === 'delivery' ? state.deliveryFee : 0,
         paymentMethod: state.paymentMethod,
         totalValue: totalValue,
-        addons: addonsJSON,
         carrinho_itens_extras: cart.slice(1).map(item => ({
             productId: item.productId,
             name: formatItemName(item),
