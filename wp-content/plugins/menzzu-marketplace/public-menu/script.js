@@ -955,6 +955,14 @@ function setHeaderDeliveryFee(fee) {
     if (!headerFee || !Number.isFinite(Number(fee))) return;
     headerFee.innerHTML = `<span class="store-meta-separator" aria-hidden="true">•</span>${DELIVERY_FEE_ICON}<span>Taxa R$ ${Number(fee).toFixed(2).replace('.', ',')}</span>`;
     headerFee.hidden = false;
+    const modal = document.getElementById('restaurant-location-modal');
+    const address = String(state.userInfo.address || '').trim();
+    const submitButton = modal?.querySelector('button[type="submit"]');
+    if (modal && address) modal.dataset.calculatedAddress = address;
+    if (submitButton && address) {
+        submitButton.disabled = false;
+        submitButton.innerText = 'Salvar localização';
+    }
 }
 
 function restoreCachedDeliveryFee(address) {
@@ -2099,7 +2107,7 @@ function initEventListeners() {
         const submitButton = modal?.querySelector('button[type="submit"]');
         if (result?.fee !== undefined && submitButton) {
             submitButton.disabled = false;
-            submitButton.innerText = 'Confirmar endereço';
+            submitButton.innerText = 'Salvar localização';
         } else if (submitButton) {
             submitButton.disabled = false;
             submitButton.innerText = 'Tentar novamente';
