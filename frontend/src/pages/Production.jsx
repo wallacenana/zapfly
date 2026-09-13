@@ -49,7 +49,6 @@ const getOrderSelectionSections = (order) => {
   const rows = getOrderSelectionRows(order);
   const sections = [];
   const variation = String(order.variation || '').trim();
-  if (variation) sections.push({ label: 'Escolha', values: [[variation, false]] });
 
   rows.forEach(([rowLabel, value, isAttachment, isCustomField]) => {
     if (value === variation) return;
@@ -63,6 +62,8 @@ const getOrderSelectionSections = (order) => {
   });
   return sections;
 };
+
+const renderOrderSelectionSections = (sections, dark = false) => sections.map((section, index) => `${index ? `<hr style="border: 0; border-top: 1px solid ${dark ? 'rgba(255,255,255,0.16)' : '#cbd5e1'}; margin: 12px 0;">` : ''}<div><b style="color: ${dark ? '#fff' : '#1e293b'};">${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Ver imagem</a>` : value}</div>`).join('')}</div>`).join('');
 
 const Production = () => {
   const navigate = useNavigate();
@@ -320,6 +321,7 @@ const Production = () => {
     const subtotalStr = itemsSubtotal.toFixed(2);
     const freightStr = freightValue.toFixed(2);
     const selectionSections = getOrderSelectionSections(order);
+    const groupedSelectionHtml = renderOrderSelectionSections(selectionSections);
     const detailRows = selectionSections.flatMap(section => section.values.map(([value, isAttachment]) => [section.label, value, isAttachment]));
     const detailSummaryHtml = detailRows.length
       ? `<div style="font-size: 13px; color: #475569; margin-top: 12px; padding-top: 10px; border-top: 1px solid #e2e8f0; line-height: 1.6;">${detailRows.map(([label, value, isAttachment]) => `<div><b>${label}:</b><br><span style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Ver imagem</a>` : value}</span></div>`).join('')}</div>`
@@ -548,10 +550,10 @@ const Production = () => {
                     <div style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">Item</div>
                     <div style="font-weight: 900; font-size: 18px; color: #0f172a; line-height: 1.25;">${displayParts.productName}</div>
                     <div style="font-size: 13px; color: #3b82f6; margin-top: 4px; font-weight: 700;">${order.variation || 'Opção Padrão'}</div>
-                    ${selectionSummaryHtml}
+                    ${groupedSelectionHtml}
                     ${notesHtml}
                   </td>
-                  <td style="font-size: 14px;">
+                  <td style="font-size: 14px; vertical-align: top; padding-top: 20px; text-align: right;">
                     R$ ${subtotalStr}
                   </td>
                 </tr>
