@@ -2115,6 +2115,15 @@ function initEventListeners() {
         }
     });
 
+    window.addEventListener('menzzu-address-saved', (event) => {
+        const address = String(event.detail?.address || '').trim();
+        if (!address) return;
+        state.userInfo.address = address;
+        localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
+        const addressDisplay = document.getElementById('delivery-address-display');
+        if (addressDisplay) addressDisplay.textContent = address;
+    });
+
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
             state.searchQuery = e.target.value;
@@ -2474,6 +2483,11 @@ function selectPaymentMethod(method) {
 function renderStep3() {
     const opts = document.getElementById('payment-options');
     if (!opts) return;
+
+    const addressDisplay = document.getElementById('delivery-address-display');
+    if (addressDisplay) {
+        addressDisplay.textContent = state.userInfo.address || 'Informe seu endereço';
+    }
 
     const isCashAllowed = ['pickup', 'local'].includes(state.deliveryType) || state.allowCash;
 
