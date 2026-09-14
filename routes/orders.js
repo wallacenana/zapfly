@@ -453,11 +453,23 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
   if (!messageData || typeof sockGetter !== 'function') return;
 
   let jid = getOrderRecipientJid(order);
-  if (!jid) return;
+  if (!jid) {
+    console.warn(`[WhatsApp] Pedido ${order.id} sem telefone/JID para aviso de status.`);
+    return;
+  }
   const instanceId = order.instanceId || 'global';
   const sock = sockGetter(instanceId);
-  if (!sock) return;
+  if (!sock) {
+    console.warn(`[WhatsApp] Nenhuma conexao disponivel para avisar o pedido ${order.id}.`);
+    return;
+  }
+  const originalJid = jid;
   if (typeof jidResolver === 'function') jid = await jidResolver(jid, instanceId);
+
+  // Em mensagens para o proprio numero, o LID da sessao e a referencia mais confiavel.
+  const ownPhoneJid = normalizePhoneJid(String(sock.user?.id || '').split(':')[0]);
+  const ownLid = String(sock.user?.lid || '').split(':')[0];
+  if (ownLid && originalJid === ownPhoneJid) jid = ownLid;
 
   // O WhatsApp pode exigir o LID mesmo quando o pedido veio com o telefone.
   if (jid.endsWith('@s.whatsapp.net') && typeof sock.onWhatsApp === 'function') {
@@ -479,6 +491,7 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
 Ola, *${order.clientName || 'cliente'}*! ${messageData[1]}
 Pedido de *${product}*.`;
   await sock.sendMessage(jid, { text: message });
+  console.log(`[WhatsApp] Aviso de status ${status} enviado para ${jid} (pedido ${order.id}).`);
 }
 
 // Cria evento no Google Calendar
