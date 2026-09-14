@@ -102,7 +102,13 @@ const Connections = () => {
   const handleRestart = async (e, id) => {
     e.stopPropagation();
     try {
+      setQrs(prev => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
       await api.post(`/instances/${id}/restart`);
+      fetchInstances();
       Toast.fire({ icon: 'info', title: 'Reiniciando instância...' });
     } catch (err) {
       Toast.fire({ icon: 'error', title: 'Erro ao reiniciar' });
@@ -272,7 +278,7 @@ const Connections = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: 'auto', borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
               <button className="btn btn-secondary" style={{ padding: '8px' }} onClick={(e) => handleRestart(e, inst.id)}>
-                <RefreshCw size={14} /> Reiniciar
+                <RefreshCw size={14} /> Novo QR Code
               </button>
               {inst.status === 'connected' ? (
                 <button className="btn btn-secondary" style={{ padding: '8px', color: 'var(--warning)', borderColor: 'rgba(245, 158, 11, 0.2)' }} onClick={(e) => handleLogout(e, inst.id)}>

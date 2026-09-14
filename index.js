@@ -1727,9 +1727,11 @@ async function initInstance(instanceId) {
                 const userId = instanceOwner?.userId;
                 const settings = await getSettings(userId);
                 const configuredManagerJid = await resolveConfiguredJid(settings?.managerJid, instanceId);
-                const ownJids = [sock.user?.id, sock.user?.lid]
-                    .filter(Boolean)
-                    .map(value => String(value).split(':')[0]);
+                const ownJids = [];
+                for (const value of [sock.user?.id, sock.user?.lid].filter(Boolean)) {
+                    const rawOwnJid = String(value).split(':')[0];
+                    ownJids.push(rawOwnJid, await getCanonicalJid(rawOwnJid, instanceId));
+                }
                 const normalizedIncomingJid = String(jid || '').split(':')[0];
                 const isConnectedAccountAdmin = msg.key.fromMe
                     && ownJids.includes(normalizedIncomingJid);
@@ -3013,13 +3015,19 @@ app.post('/instances/:id/restart', authenticate, async (req, res) => {
 
         const sock = sessions.get(id);
         if (sock) {
-            // Remove do mapa ANTES de fechar para evitar que o evento 'close' dispare auto-reconnect
+            // Remove do mapa antes de fechar para evitar reconexao automatica.
             sessions.delete(id);
-            try { sock.end(); } catch (e) { }
+            try { await sock.logout(); } catch (e) { try { sock.end(); } catch (endError) { } }
         }
+
+        // Reiniciar deve gerar um QR novo, mantendo apenas as configuracoes da instancia.
+        const sessionDir = path.join(__dirname, 'sessions', id);
+        if (fs.existsSync(sessionDir)) fs.rmSync(sessionDir, { recursive: true, force: true });
 
         // Reseta contador de tentativas
         delete reconnectAttempts[id];
+
+        await prisma.instance.update({ where: { id }, data: { status: 'disconnected' } });
 
         // Inicia em background para não travar a resposta HTTP
         initInstance(id).catch(err => console.error(`[Restart Error] Falha ao iniciar ${id}:`, err));
