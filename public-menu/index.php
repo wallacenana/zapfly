@@ -396,7 +396,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.75">
+        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.76">
         <style>
             :root {
                 --primary-color:
@@ -902,6 +902,7 @@ try {
                                 </div>
                                 <a class="store-navigation-btn" target="_blank" rel="noopener" href="<?php echo htmlspecialchars($storeMapUrl, ENT_QUOTES, 'UTF-8'); ?>">Iniciar navegação</a>
                             </div>
+                            <div id="order-schedule-notice" class="order-schedule-notice" hidden></div>
                             <?php echo renderReceivingHours($availableSlots); ?>
                         </div>
 
@@ -917,6 +918,7 @@ try {
                                 </div>
                                 <a class="store-navigation-btn" target="_blank" rel="noopener" href="<?php echo htmlspecialchars($storeMapUrl, ENT_QUOTES, 'UTF-8'); ?>">Iniciar navegação</a>
                             </div>
+                            <div id="order-schedule-notice-local" class="order-schedule-notice" hidden></div>
                             <?php echo renderReceivingHours($availableSlots); ?>
                         </div>
 
@@ -1145,7 +1147,7 @@ try {
         </svg>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-        <script type="text/javascript" src="/cardapio/script.js?v=2.10" defer></script>
+        <script type="text/javascript" src="/cardapio/script.js?v=2.11" defer></script>
 
     </html>
 <?php
