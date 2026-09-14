@@ -1949,14 +1949,12 @@ function renderCheckoutExtraField(item, field, idx, itemKeyBase, currentValue = 
 
 function renderCheckoutExtraStep() {
     const container = document.getElementById('order-extra-step-content');
-    const orderStepContent = document.getElementById('order-step-content');
-    if (!container || !orderStepContent) return false;
+    if (!container) return false;
 
     const cart = getActiveCart();
     const itemsWithExtras = cart.filter(item => getCustomFieldSchema(item).length > 0);
     if (state.activeTab !== 'order' || itemsWithExtras.length === 0) {
         container.innerHTML = '';
-        orderStepContent.classList.add('hidden');
         return false;
     }
 
@@ -1977,7 +1975,6 @@ function renderCheckoutExtraStep() {
                     `;
     }).join('');
 
-    orderStepContent.classList.remove('hidden');
     lucide.createIcons();
     return true;
 }
@@ -2594,26 +2591,7 @@ function renderStep2() {
     }
 
     const deliveryContent = document.getElementById('delivery-step-content');
-    const orderContent = document.getElementById('order-step-content');
     if (deliveryContent) deliveryContent.classList.toggle('hidden', !isDelivery);
-    if (orderContent) {
-        if (isDelivery) {
-            orderContent.classList.add('hidden');
-            orderContent.innerHTML = '';
-        } else {
-            const hasExtras = hasCheckoutExtras();
-            if (hasExtras) {
-                orderContent.classList.remove('hidden');
-                orderContent.innerHTML = `
-                                <div id="order-extra-step-content"></div>
-                            `;
-                renderCheckoutExtraStep();
-            } else {
-                orderContent.classList.add('hidden');
-                orderContent.innerHTML = '';
-            }
-        }
-    }
 
     const isScheduledOrder = state.activeTab === 'order';
     document.querySelectorAll('.receiving-store-hours').forEach((hours) => {
