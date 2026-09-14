@@ -1201,6 +1201,17 @@ router.post('/', async (req, res) => {
 
     let order = await prisma.order.create({ data: orderData });
 
+    // Pagamento em dinheiro nao passa pelo webhook do Mercado Pago.
+    // Emite o mesmo evento para atualizar o dashboard e tocar o ding global.
+    if (isCashPayment && !isManual) {
+      const io = req.app.get('io');
+      if (io) io.emit('new_order_pending', {
+        orderId: order.id,
+        status: order.status,
+        paymentMethod: order.paymentMethod
+      });
+    }
+
     // NOVO: Gerar link de pagamento se não for manual e nem pagamento em dinheiro
     let paymentError = null;
     if (!isManual && !isCashPayment && order.totalValue > 0) {
