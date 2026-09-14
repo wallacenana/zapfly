@@ -50,9 +50,8 @@ async function sendStatusMessage(sock, content) {
         return await sock.sendMessage('status@broadcast', content, getStatusSendOptions(sock));
     } catch (err) {
         const message = String(err?.message || err);
-        if (!/No sessions|not-acceptable/i.test(message)) throw err;
-        console.warn(`[WhatsApp] Status com audiência falhou (${message}); tentando broadcast sem lista.`);
-        return sock.sendMessage('status@broadcast', content, { broadcast: true });
+        console.error(`[WhatsApp] Status não publicado (${message}). A conexão precisa ter sessões dos destinatários.`);
+        throw err;
     }
 }
 
@@ -2769,8 +2768,12 @@ async function initInstance(instanceId) {
             const normalizedUser = user.split(':')[0];
             return normalizedUser ? `${normalizedUser}@${server}` : '';
         };
-        const contactJids = Object.keys(store.contacts || {}).map(normalizeStatusJid).filter(Boolean);
-        const ownJids = [sock.user?.id, sock.user?.lid].map(normalizeStatusJid).filter(Boolean);
+        const contactJids = Object.keys(store.contacts || {})
+            .map(normalizeStatusJid)
+            .filter(jid => jid.endsWith('@s.whatsapp.net'));
+        const ownJids = [sock.user?.id]
+            .map(normalizeStatusJid)
+            .filter(jid => jid.endsWith('@s.whatsapp.net'));
         return [...new Set([...contactJids, ...ownJids])];
     };
 
