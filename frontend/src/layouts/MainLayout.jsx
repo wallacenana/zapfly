@@ -38,6 +38,12 @@ const playOrderNotificationSound = () => {
   }
 };
 
+const stopOrderNotificationSound = () => {
+  if (!orderNotificationAudio) return;
+  orderNotificationAudio.pause();
+  orderNotificationAudio.currentTime = 0;
+};
+
 const MainLayout = ({ clientMode = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -50,7 +56,11 @@ const MainLayout = ({ clientMode = false }) => {
   useEffect(() => {
     const handleNewOrder = () => playOrderNotificationSound();
     socket.on('new_order_pending', handleNewOrder);
-    return () => socket.off('new_order_pending', handleNewOrder);
+    document.addEventListener('click', stopOrderNotificationSound, true);
+    return () => {
+      socket.off('new_order_pending', handleNewOrder);
+      document.removeEventListener('click', stopOrderNotificationSound, true);
+    };
   }, []);
 
   useEffect(() => {
