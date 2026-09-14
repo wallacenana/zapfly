@@ -1627,6 +1627,34 @@ body.theme-dark .var-option.selected {
     font-size: 0.84rem;
 }
 
+.checkout-content .order-schedule-notice {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 10px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--primary-color) 7%, var(--bg-color));
+    color: var(--text-main);
+}
+
+.checkout-content .order-schedule-notice[hidden] {
+    display: none !important;
+}
+
+.checkout-content .order-schedule-notice strong {
+    color: var(--primary-color);
+}
+
+.checkout-content .order-schedule-notice span {
+    font-weight: 700;
+}
+
+.checkout-content .order-schedule-notice small {
+    color: var(--text-gray);
+}
+
 .checkout-content .receiving-store-hours-list {
     display: grid;
     gap: 7px;

@@ -909,6 +909,7 @@ try {
                                 </div>
                                 <a class="store-navigation-btn" target="_blank" rel="noopener" href="<?php echo htmlspecialchars($storeMapUrl, ENT_QUOTES, 'UTF-8'); ?>">Iniciar navegação</a>
                             </div>
+                            <div id="order-schedule-notice" class="order-schedule-notice" hidden></div>
                             <?php echo renderReceivingHours($availableSlots); ?>
                         </div>
 
@@ -924,6 +925,7 @@ try {
                                 </div>
                                 <a class="store-navigation-btn" target="_blank" rel="noopener" href="<?php echo htmlspecialchars($storeMapUrl, ENT_QUOTES, 'UTF-8'); ?>">Iniciar navegação</a>
                             </div>
+                            <div id="order-schedule-notice-local" class="order-schedule-notice" hidden></div>
                             <?php echo renderReceivingHours($availableSlots); ?>
                         </div>
 
@@ -1295,7 +1297,7 @@ try {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.47'); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.48'); ?>" defer></script>
 
     </html>
 <?php

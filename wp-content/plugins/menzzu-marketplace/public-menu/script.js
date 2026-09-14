@@ -2615,6 +2615,21 @@ function renderStep2() {
         }
     }
 
+    const isScheduledOrder = state.activeTab === 'order';
+    document.querySelectorAll('.receiving-store-hours').forEach((hours) => {
+        hours.hidden = isScheduledOrder;
+    });
+    document.querySelectorAll('.order-schedule-notice').forEach((notice) => {
+        const hasSchedule = isScheduledOrder && state.orderSchedule?.date && state.orderSchedule?.time;
+        notice.hidden = !hasSchedule;
+        if (hasSchedule) {
+            const action = state.deliveryType === 'delivery' ? 'entrega' : 'retirada';
+            notice.innerHTML = `<strong>${action[0].toUpperCase() + action.slice(1)} agendada</strong><span>${formatOrderSchedule()}</span><small>Compareça neste horário para que possamos atender seu pedido.</small>`;
+        } else {
+            notice.innerHTML = '';
+        }
+    });
+
     // Sempre carrega o mapa se deliveryType = delivery
     if (state.deliveryType === 'delivery') {
         if (window.google && !state.googleMap) {
