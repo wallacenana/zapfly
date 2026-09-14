@@ -796,6 +796,7 @@ window.initMapsAutocomplete = () => {
     } catch (e) {
         console.error('Autocomplete init error:', e);
     }
+    if (document.getElementById('delivery-map')) initDeliveryMap();
 };
 
 function initDeliveryMap() {
@@ -2487,6 +2488,13 @@ function renderStep3() {
     const addressDisplay = document.getElementById('delivery-address-display');
     if (addressDisplay) {
         addressDisplay.textContent = state.userInfo.address || 'Informe seu endereço';
+    }
+    if (state.deliveryType === 'delivery' && window.google && !state.googleMap) {
+        initMapsAutocomplete();
+        initDeliveryMap();
+    }
+    if (state.googleMap) {
+        setTimeout(() => google.maps.event.trigger(state.googleMap, 'resize'), 0);
     }
 
     const isCashAllowed = ['pickup', 'local'].includes(state.deliveryType) || state.allowCash;
