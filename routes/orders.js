@@ -493,10 +493,13 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
   }
 
   const product = String(order.product || 'seu pedido').replace(/\s*\[[^\]]+\]\s*$/, '').trim();
-  const message = `*${messageData[0]}*
+  const orderId = String(order.id || '').slice(-4).toUpperCase();
+  const message = `✅ *${messageData[0]}* (#${orderId})
 
 Ola, *${order.clientName || 'cliente'}*! ${messageData[1]}
-Pedido de *${product}*.`;
+Pedido de *${product}*.
+
+Pode me perguntar aqui mais informacoes sobre o pedido.`;
   await sock.sendMessage(jid, { text: message });
   console.log(`[WhatsApp] Aviso de status ${status} enviado para ${jid} (pedido ${order.id}).`);
 }
