@@ -1721,7 +1721,17 @@ async function initInstance(instanceId) {
                 //  COMANDOS DE ADMINISTRADOR (MANAGER) 
                 const settings = await getSettings();
                 const configuredManagerJid = await resolveConfiguredJid(settings?.managerJid, instanceId);
-                if (!msg.key.fromMe && configuredManagerJid && jid === configuredManagerJid) {
+                const ownJids = [sock.user?.id, sock.user?.lid]
+                    .filter(Boolean)
+                    .map(value => String(value).split(':')[0]);
+                const normalizedIncomingJid = String(jid || '').split(':')[0];
+                const isConnectedAccountAdmin = msg.key.fromMe
+                    && ownJids.includes(normalizedIncomingJid);
+                const isConfiguredAdmin = !msg.key.fromMe
+                    && configuredManagerJid
+                    && jid === configuredManagerJid;
+
+                if (isConnectedAccountAdmin || isConfiguredAdmin) {
 
                     let adminImages = [];
                     const isImg = !!msg.message?.imageMessage ||
