@@ -224,6 +224,9 @@ function getMenuDeliveryOptions() {
     const fulfillmentMethods = parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.fulfillmentMethods && typeof parsed.fulfillmentMethods === 'object'
         ? parsed.fulfillmentMethods
         : {};
+    const orderFulfillmentMethods = parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.orderFulfillmentMethods && typeof parsed.orderFulfillmentMethods === 'object'
+        ? parsed.orderFulfillmentMethods
+        : fulfillmentMethods;
 
     return {
         orderTypes: {
@@ -234,13 +237,19 @@ function getMenuDeliveryOptions() {
             delivery: fulfillmentMethods.delivery !== false,
             pickup: fulfillmentMethods.pickup !== false,
             local: fulfillmentMethods.local !== false
+        },
+        orderFulfillmentMethods: {
+            delivery: orderFulfillmentMethods.delivery !== false,
+            pickup: orderFulfillmentMethods.pickup !== false,
+            local: orderFulfillmentMethods.local !== false
         }
     };
 }
 
 function isFulfillmentMethodEnabled(method) {
     const options = getMenuDeliveryOptions();
-    return options.fulfillmentMethods[method] !== false;
+    const methods = state.activeTab === 'order' ? options.orderFulfillmentMethods : options.fulfillmentMethods;
+    return methods[method] !== false;
 }
 
 function getEnabledFulfillmentMethods() {
@@ -2285,9 +2294,6 @@ function initEventListeners() {
 }
 
 function goToStep(step) {
-    if (step === 2 && state.activeTab === 'delivery') {
-        step = 3;
-    }
     if (step === 2 && state.activeTab === 'order' && !hasCheckoutExtras()) {
         step = 3;
     }
@@ -2302,6 +2308,7 @@ function goToStep(step) {
     document.getElementById('step-2')?.classList.add('hidden');
     document.getElementById('step-3')?.classList.add('hidden');
     document.getElementById('step-4')?.classList.add('hidden');
+    document.getElementById('step-5')?.classList.add('hidden');
 
     // Mostra apenas o atual
     document.getElementById(`step-${step}`)?.classList.remove('hidden');
@@ -2309,20 +2316,24 @@ function goToStep(step) {
     openModal('checkout-modal');
 
     let title = "Ver sacola";
-    if (step === 2) title = "Extras do Pedido";
-    if (step === 3) title = "Forma de Pagamento";
-    if (step === 4) title = "Confirmar Pedido";
+    if (step === 2) title = "Informações da encomenda";
+    if (step === 3) title = state.activeTab === 'delivery'
+        ? "Entrega"
+        : (state.deliveryType === 'delivery' ? "Entrega da encomenda" : "Retirada da encomenda");
+    if (step === 4) title = "Forma de Pagamento";
+    if (step === 5) title = "Confirmar Pedido";
 
     document.getElementById('checkout-step-title').innerText = title;
 
-    const isLast = step === 4;
+    const isLast = step === 5;
     document.getElementById('next-step-btn').classList.toggle('hidden', isLast);
     document.getElementById('place-order-btn').classList.toggle('hidden', !isLast);
 
     if (step === 1) renderStep1();
-    if (step === 2) renderStep2();
-    if (step === 3) renderStep3();
-    if (step === 4) {
+    if (step === 2) renderCheckoutExtraStep();
+    if (step === 3) renderStep2();
+    if (step === 4) renderStep3();
+    if (step === 5) {
         updateStep4Summary();
     }
 }
@@ -2400,20 +2411,21 @@ function getResumeStep() {
             if (!state.deliveryFee) return 3;
         }
     } else {
+        if (state.deliveryType === 'delivery' && (!state.userInfo.address || !state.deliveryFee)) return 3;
         if (!state.orderSchedule?.date || !state.orderSchedule?.time) return 1;
         if (hasCheckoutExtras() && savedStep < 3) return 2;
     }
 
     // Step 4 requires payment method (defaults to 'mercadopago', but guard anyway)
-    if (!state.paymentMethod) return 3;
+    if (!state.paymentMethod) return 4;
 
     // All data present: respect where the user actually was, capped between 1 and 4
-    return Math.max(1, Math.min(4, savedStep));
+    return Math.max(1, Math.min(5, savedStep));
 }
 
 document.getElementById('checkout-back-btn')?.addEventListener('click', () => {
     if (state.currentStep > 1) {
-        const previousStep = ((state.activeTab === 'order' && !hasCheckoutExtras()) || (state.activeTab === 'delivery' && state.currentStep === 3)) ? 1 : state.currentStep - 1;
+        const previousStep = (state.currentStep === 3 && !hasCheckoutExtras()) ? 1 : state.currentStep - 1;
         goToStep(previousStep);
     } else closeWithAnimation('checkout-modal');
 });
@@ -2690,12 +2702,7 @@ async function handleNextStep() {
         }
         goToStep(3);
     } else if (state.currentStep === 2) {
-        if (state.activeTab === 'delivery') {
-            if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
-            if (state.deliveryFee === 0 && state.deliveryType === 'delivery' && state.userInfo.address) {
-                return showAlert('Taxa Indisponível', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereço está no raio de entrega.');
-            }
-        } else if (state.activeTab === 'order') {
+        if (state.activeTab === 'order') {
             if (!isOrderEnabled()) return showAlert('Encomendas desativadas', 'No momento não estamos aceitando encomendas.');
             if (hasCheckoutExtras()) {
                 const extrasResult = collectCheckoutExtraStep();
@@ -2708,8 +2715,16 @@ async function handleNextStep() {
         }
         goToStep(3);
     } else if (state.currentStep === 3) {
-        if (!state.paymentMethod) return showAlert('Atenção', 'Selecione uma forma de pagamento.');
+        if (state.activeTab === 'delivery') {
+            if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
+            if (state.deliveryType === 'delivery' && !state.deliveryFee) return showAlert('Taxa Indisponível', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereço está no raio de entrega.');
+        } else if (state.activeTab === 'order' && state.deliveryType === 'delivery') {
+            if (!state.userInfo.address || !state.deliveryFee) return showAlert('Taxa Indisponível', 'Confirme o endereço e aguarde o cálculo da taxa de entrega.');
+        }
         goToStep(4);
+    } else if (state.currentStep === 4) {
+        if (!state.paymentMethod) return showAlert('Atenção', 'Selecione uma forma de pagamento.');
+        goToStep(5);
     }
 }
 
