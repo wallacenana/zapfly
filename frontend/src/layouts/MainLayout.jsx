@@ -23,26 +23,16 @@ import { PUBLIC_SITE_URL, socket } from '../api';
 import TrialBanner from '../components/TrialBanner';
 import GetStarted from '../pages/GetStarted';
 
-let orderAudioContext = null;
+let orderNotificationAudio = null;
 
 const playOrderNotificationSound = () => {
   try {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return;
-    if (!orderAudioContext) orderAudioContext = new AudioContextClass();
-    const context = orderAudioContext;
-    if (context.state === 'suspended') context.resume();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.type = 'sine';
-    oscillator.frequency.value = 880;
-    gain.gain.setValueAtTime(0.0001, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.18, context.currentTime + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.45);
-    oscillator.connect(gain);
-    gain.connect(context.destination);
-    oscillator.start();
-    oscillator.stop(context.currentTime + 0.45);
+    if (!orderNotificationAudio) {
+      orderNotificationAudio = new Audio('/alarme.wav');
+      orderNotificationAudio.volume = 0.8;
+    }
+    orderNotificationAudio.currentTime = 0;
+    orderNotificationAudio.play().catch(() => {});
   } catch (error) {
     console.warn('[Menzzu] Som de novo pedido indisponivel:', error);
   }
