@@ -2039,7 +2039,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "get_marketing_media",
-                                            description: "Busca na biblioteca de marketing imagens de produtos ou promoções para mostrar ao cliente.",
+                                            description: "OBRIGATORIO quando o cliente pedir exemplos, fotos ou imagens de um produto: busque na biblioteca de marketing pelo nome do produto.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
@@ -2052,7 +2052,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "send_marketing_media",
-                                            description: "Envia uma imagem especifica da biblioteca de marketing para o cliente.",
+                                            description: "OBRIGATORIO apos get_marketing_media: escolha a imagem mais compativel e envie-a ao cliente. Nunca diga que enviou sem chamar esta ferramenta.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
@@ -2365,15 +2365,18 @@ async function initInstance(instanceId) {
                                             else if (functionName === "get_marketing_media") {
                                                 const { search } = args;
                                                 const assets = await prisma.marketingAsset.findMany({
-                                                    where: search ? { name: { contains: search } } : {}
+                                                    where: {
+                                                        userId,
+                                                        ...(search ? { name: { contains: search } } : {})
+                                                    }
                                                 });
                                                 result = assets.map(a => ({ id: a.id, name: a.name }));
                                             }
                                             else if (functionName === "send_marketing_media") {
                                                 const { assetId, caption } = args;
-                                                const asset = await prisma.marketingAsset.findUnique({ where: { id: assetId } });
+                                                const asset = await prisma.marketingAsset.findFirst({ where: { id: assetId, userId } });
                                                 if (asset) {
-                                                    await sock.sendMessage(jid, { image: { url: asset.path }, caption: caption || "" });
+                                                    await sock.sendMessage(jid, { image: { url: asset.url }, caption: caption || "" });
                                                     result = { success: true, message: "Imagem enviada com sucesso." };
                                                 } else {
                                                     result = { success: false, error: "Imagem não encontrada." };
@@ -2382,9 +2385,9 @@ async function initInstance(instanceId) {
                                             else if (functionName === "post_status") {
                                                 const { text, assetId } = args;
                                                 if (assetId) {
-                                                    const asset = await prisma.marketingAsset.findUnique({ where: { id: assetId } });
+                                                    const asset = await prisma.marketingAsset.findFirst({ where: { id: assetId, userId } });
                                                     if (asset) {
-                                                        await sock.sendMessage('status@broadcast', { image: { url: asset.path }, caption: text }, { broadcast: true });
+                                                        await sock.sendMessage('status@broadcast', { image: { url: asset.url }, caption: text }, { broadcast: true });
                                                         result = { success: true, message: "Status com imagem postado com sucesso." };
                                                     } else {
                                                         result = { success: false, error: "Imagem não encontrada para o status." };
