@@ -471,7 +471,10 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
   if (typeof jidResolver === 'function') jid = await jidResolver(jid, instanceId);
 
   // Em mensagens para o proprio numero, o LID da sessao e a referencia mais confiavel.
-  const ownPhoneJid = normalizePhoneJid(String(sock.user?.id || '').split(':')[0]);
+  const ownPhoneDigits = String(sock.user?.id || '').split(':')[0].replace(/\D/g, '');
+  const ownPhoneJid = ownPhoneDigits
+    ? `${ownPhoneDigits.startsWith('55') ? ownPhoneDigits : `55${ownPhoneDigits}`}@s.whatsapp.net`
+    : '';
   const ownLid = String(sock.user?.lid || '').split(':')[0];
   if (ownLid && originalJid === ownPhoneJid) jid = ownLid;
 
