@@ -1389,7 +1389,8 @@ async function handleCustomFieldImageUpload(input, idx) {
 
 async function handleCheckoutFieldImageUpload(input, hiddenId, previewId) {
     if (!input.files || input.files.length === 0) return;
-    const file = input.files[0];
+    const files = Array.from(input.files);
+    const allowMultiple = input.dataset.multiple === 'true';
     const btn = input.closest('.checkout-extra-image')?.querySelector('button[data-upload-btn="true"]') || input.previousElementSibling;
     const originalBtnText = btn?.innerHTML || '';
 
@@ -1400,14 +1401,20 @@ async function handleCheckoutFieldImageUpload(input, hiddenId, previewId) {
     }
 
     try {
-        const url = await handleExternalUpload(file);
-        if (url) {
+        const urls = [];
+        for (const file of (allowMultiple ? files : files.slice(0, 1))) {
+            const url = await handleExternalUpload(file);
+            if (url) urls.push(url);
+        }
+        if (urls.length > 0) {
             const hidden = document.getElementById(hiddenId);
-            if (hidden) hidden.value = url;
+            if (hidden) hidden.value = allowMultiple ? JSON.stringify(urls) : urls[0];
             const preview = document.getElementById(previewId);
             if (preview) {
-                preview.querySelector('img').src = url;
+                preview.innerHTML = urls.map(url => `<img src="${url}" style="max-width: 80px; max-height: 80px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: cover;">`).join('');
                 preview.style.display = 'flex';
+                preview.style.gap = '8px';
+                preview.style.flexWrap = 'wrap';
             }
         } else {
             showAlert('Erro', 'Falha no upload da imagem.');
@@ -1935,6 +1942,8 @@ function renderCheckoutExtraField(item, field, idx, itemKeyBase, currentValue = 
 
     if (fieldType === 'image') {
         const previewId = `${fieldId}-preview`;
+        const imageValues = parseJsonValue(currentValue, currentValue ? [currentValue] : []);
+        const previewImages = Array.isArray(imageValues) ? imageValues.filter(Boolean) : [];
         return `
                         <div class="checkout-extra-image" style="margin-bottom: 14px;">
                             <label style="display:block; font-size:13px; font-weight:600; color:var(--text-secondary); margin-bottom:5px;">${fieldLabel}</label>
@@ -1942,9 +1951,9 @@ function renderCheckoutExtraField(item, field, idx, itemKeyBase, currentValue = 
                             <button type="button" data-upload-btn="true" onclick="document.getElementById('${fieldId}-file').click()" style="padding: 10px; border-radius: 8px; border: 1px dashed var(--primary-color); background: var(--bg-tertiary); color: var(--primary-color); font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;">
                                 <i data-lucide="image" style="width:16px; height:16px;"></i> Anexar Imagem
                             </button>
-                            <input type="file" id="${fieldId}-file" accept="image/*" style="display:none;" onchange="handleCheckoutFieldImageUpload(this, '${fieldId}', '${previewId}')">
-                            <div id="${previewId}" style="display:${currentValue ? 'flex' : 'none'}; margin-top: 10px; align-items: center;">
-                                <img src="${currentValue || ''}" style="max-width: 80px; max-height: 80px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: cover;">
+                            <input type="file" id="${fieldId}-file" accept="image/*" ${field.multiple !== false ? 'multiple' : ''} data-multiple="${field.multiple !== false}" style="display:none;" onchange="handleCheckoutFieldImageUpload(this, '${fieldId}', '${previewId}')">
+                            <div id="${previewId}" style="display:${previewImages.length ? 'flex' : 'none'}; margin-top: 10px; align-items: center; gap:8px; flex-wrap:wrap;">
+                                ${previewImages.map(url => `<img src="${url}" style="max-width: 80px; max-height: 80px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: cover;">`).join('')}
                                 <span style="font-size: 12px; color: #ef4444; margin-left: 10px; cursor:pointer; font-weight: 700;" onclick="document.getElementById('${fieldId}').value=''; document.getElementById('${previewId}').style.display='none';">Remover</span>
                             </div>
                         </div>
