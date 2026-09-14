@@ -45,6 +45,17 @@ function getStatusSendOptions(sock) {
     return { broadcast: true, ...(statusJidList.length ? { statusJidList } : {}) };
 }
 
+async function sendStatusMessage(sock, content) {
+    try {
+        return await sock.sendMessage('status@broadcast', content, getStatusSendOptions(sock));
+    } catch (err) {
+        const message = String(err?.message || err);
+        if (!/No sessions|not-acceptable/i.test(message)) throw err;
+        console.warn(`[WhatsApp] Status com audiência falhou (${message}); tentando broadcast sem lista.`);
+        return sock.sendMessage('status@broadcast', content, { broadcast: true });
+    }
+}
+
 function normalizePhoneJid(value) {
     const digits = String(value || '').replace(/\D/g, '');
     if (!digits) return '';
@@ -1860,7 +1871,7 @@ async function initInstance(instanceId) {
                             if (text.toLowerCase().includes('crie um story')) {
                                 const storyText = text.replace(/crie um story/i, '').trim();
                                 if (storyText) {
-                                    await sock.sendMessage('status@broadcast', { text: storyText }, getStatusSendOptions(sock));
+                                    await sendStatusMessage(sock, { text: storyText });
                                     await sendRichMessage(sock, jid, "Comando executado! Acabei de publicar seu Story.");
                                     return;
                                 }
@@ -2396,13 +2407,13 @@ async function initInstance(instanceId) {
                                                 if (assetId) {
                                                     const asset = await prisma.marketingAsset.findFirst({ where: { id: assetId, userId } });
                                                     if (asset) {
-                                                        await sock.sendMessage('status@broadcast', { image: { url: asset.url }, caption: text }, getStatusSendOptions(sock));
+                                                        await sendStatusMessage(sock, { image: { url: asset.url }, caption: text });
                                                         result = { success: true, message: "Status com imagem postado com sucesso." };
                                                     } else {
                                                         result = { success: false, error: "Imagem não encontrada para o status." };
                                                     }
                                                 } else {
-                                                    await sock.sendMessage('status@broadcast', { text }, getStatusSendOptions(sock));
+                                                    await sendStatusMessage(sock, { text });
                                                     result = { success: true, message: "Status de texto postado com sucesso." };
                                                 }
                                             }
