@@ -441,6 +441,32 @@ Olá, *${order.clientName || 'cliente'}*! Seu pedido de *${product}* foi aceito 
   await sock.sendMessage(jid, { text: message });
 }
 
+async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
+  const messages = {
+    accepted: ['Pedido aceito!', 'Seu pedido foi aceito e entrou na fila de producao.'],
+    production: ['Pedido em preparacao!', 'Seu pedido ja esta sendo preparado.'],
+    ready: ['Pedido pronto!', 'Seu pedido esta pronto para retirada ou entrega.'],
+    completed: ['Pedido finalizado!', 'Seu pedido foi finalizado. Obrigado pela preferencia!'],
+    cancelled: ['Pedido cancelado', 'Seu pedido foi cancelado. Entre em contato conosco se precisar de ajuda.']
+  };
+  const messageData = messages[String(status || '').toLowerCase()];
+  if (!messageData || typeof sockGetter !== 'function') return;
+
+  let jid = getOrderRecipientJid(order);
+  if (!jid) return;
+  const instanceId = order.instanceId || 'global';
+  const sock = sockGetter(instanceId);
+  if (!sock) return;
+  if (typeof jidResolver === 'function') jid = await jidResolver(jid, instanceId);
+
+  const product = String(order.product || 'seu pedido').replace(/\s*\[[^\]]+\]\s*$/, '').trim();
+  const message = `*${messageData[0]}*
+
+Ola, *${order.clientName || 'cliente'}*! ${messageData[1]}
+Pedido de *${product}*.`;
+  await sock.sendMessage(jid, { text: message });
+}
+
 // Cria evento no Google Calendar
 async function createCalendarEvent(order) {
   const today = new Date().toISOString().split('T')[0];
@@ -1887,13 +1913,22 @@ router.patch('/:id', authenticate, async (req, res) => {
     if (String(updateData.status || '').toLowerCase() === 'accepted'
       && String(existing.status || '').toLowerCase() !== 'accepted') {
       try {
-        await notifyOrderAccepted(order, req.app.get('getSock'), req.app.get('resolveChatJid'));
+        await notifyOrderStatus(order, updateData.status, req.app.get('getSock'), req.app.get('resolveChatJid'));
       } catch (notifyError) {
         console.error(`[WhatsApp] Falha ao avisar aceite do pedido ${id}:`, notifyError.message);
       }
     }
 
     // 2. Recalcular o valor total do pedido após o update (se necessário)
+    if (String(updateData.status || '').toLowerCase() !== 'accepted'
+      && String(existing.status || '').toLowerCase() !== String(updateData.status || '').toLowerCase()) {
+      try {
+        await notifyOrderStatus(order, updateData.status, req.app.get('getSock'), req.app.get('resolveChatJid'));
+      } catch (notifyError) {
+        console.error(`[WhatsApp] Falha ao avisar status do pedido ${id}:`, notifyError.message);
+      }
+    }
+
     const computedTotal = await calculateOrderTotal(order, userId);
 
     // Atualiza com o valor final recalculado

@@ -541,6 +541,26 @@ const Production = () => {
           const idShort = order.id.slice(-4).toUpperCase();
           const printParts = getPrintableOrderParts(order);
 
+          const printItems = getOrderItems(order);
+          const printItemsHtml = printItems.map((item) => {
+            const itemQuantity = Number(item.quantity) || 1;
+            const itemPrice = Number(item.price) || 0;
+            const rawName = String(item.name || 'Produto').trim();
+            const extrasMatch = rawName.match(/\s*\[([^\]]+)\]\s*$/);
+            let itemName = (extrasMatch ? rawName.slice(0, extrasMatch.index) : rawName).trim();
+            const itemVariation = String(item.variation || '').trim();
+            if (itemVariation && itemName.endsWith(`(${itemVariation})`)) {
+              itemName = itemName.slice(0, -(itemVariation.length + 2)).trim();
+            }
+            return `<div style="margin: 10px 0; padding-bottom: 10px; border-bottom: 1px solid #000;">
+              <div style="font-size: 18px; font-weight: 900;">ITEM ${itemQuantity}x</div>
+              <div style="font-size: 20px; margin-top: 5px;">${itemName}</div>
+              ${itemVariation ? `<div style="font-size: 16px;">Variacao: ${itemVariation}</div>` : ''}
+              ${extrasMatch ? `<div style="font-size: 15px;">Extras: ${extrasMatch[1]}</div>` : ''}
+              <div style="font-size: 16px; text-align: right;">Subtotal: R$ ${(itemPrice * itemQuantity).toFixed(2)}</div>
+            </div>`;
+          }).join('');
+
           let content = `
             <div style="font-family: 'Inter', Arial, sans-serif; width: 100%; max-width: 280px; margin: 0 auto; color: #000; line-height: 1.4;">
               <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px;">
@@ -550,7 +570,7 @@ const Production = () => {
           `;
 
           if (opts.client) content += `<p style="font-size: 18px; margin: 8px 0;"><b>👤 CLIENTE:</b> ${order.clientName}</p>`;
-          if (opts.prod) content += `<div style="margin: 10px 0; padding-bottom: 10px; border-bottom: 1px solid #000;"><div style="font-size: 18px; font-weight: 900;">ITEM ${order.quantity || 1}x</div><div style="font-size: 20px; margin-top: 5px;">${printParts.productName}</div>${order.variation ? `<div style="font-size: 16px;">Variação: ${order.variation}</div>` : ''}</div>`;
+          if (opts.prod) content += printItemsHtml;
 
           if (opts.massa && printSelectionHtml) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${printSelectionHtml}</div>`;
           if (opts.notes && order.notes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>📝 OBS:</b> ${order.notes}</p>`;
