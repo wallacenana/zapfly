@@ -442,10 +442,16 @@ Olá, *${order.clientName || 'cliente'}*! Seu pedido de *${product}* foi aceito 
 }
 
 async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
+  const isDelivery = String(order?.type || '').toLowerCase() === 'delivery';
+  const isLocalConsumption = String(order?.deliveryAddress || '').trim().toLowerCase() === 'consumo no local';
   const messages = {
     accepted: ['Pedido aceito!', 'Seu pedido foi aceito e entrou na fila de producao.'],
     production: ['Pedido em preparacao!', 'Seu pedido ja esta sendo preparado.'],
-    ready: ['Pedido pronto!', 'Seu pedido esta pronto para retirada ou entrega.'],
+    ready: isDelivery
+      ? ['Pedido saiu para entrega!', 'Seu pedido saiu para entrega.']
+      : (isLocalConsumption
+        ? ['Pedido pronto!', 'Seu pedido esta pronto para consumo no local.']
+        : ['Pedido pronto!', 'Seu pedido esta pronto para ser retirado.']),
     completed: ['Pedido finalizado!', 'Seu pedido foi finalizado. Obrigado pela preferencia!'],
     cancelled: ['Pedido cancelado', 'Seu pedido foi cancelado. Entre em contato conosco se precisar de ajuda.']
   };
@@ -494,7 +500,8 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
 
   const product = String(order.product || 'seu pedido').replace(/\s*\[[^\]]+\]\s*$/, '').trim();
   const orderId = String(order.id || '').slice(-4).toUpperCase();
-  const message = `✅ *${messageData[0]}* (#${orderId})
+  const statusIcon = isDelivery && String(status || '').toLowerCase() === 'ready' ? '🚚' : '✅';
+  const message = `${statusIcon} *${messageData[0]}* (#${orderId})
 
 Ola, *${order.clientName || 'cliente'}*! ${messageData[1]}
 Pedido de *${product}*.
