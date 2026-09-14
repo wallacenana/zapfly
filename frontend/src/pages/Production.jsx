@@ -31,8 +31,20 @@ const renderAttachmentGallery = (value, targetBlank = true) => {
   const urls = getAttachmentUrls(value);
   if (!urls.length) return value;
 
-  const targetAttrs = targetBlank ? ' target="_blank" rel="noopener noreferrer"' : '';
-  return `<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px;">${urls.map((url, index) => `<a href="${url}"${targetAttrs} title="Abrir anexo ${index + 1}" style="display: block; width: 76px; height: 76px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #fff;"><img src="${url}" alt="Anexo ${index + 1}" style="width: 100%; height: 100%; object-fit: cover; display: block;"></a>`).join('')}</div>`;
+  if (!targetBlank) {
+    return `<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px;">${urls.map((url, index) => `<img src="${url}" alt="Anexo ${index + 1}" style="width: 76px; height: 76px; object-fit: cover; display: block; border: 1px solid #cbd5e1; border-radius: 8px;">`).join('')}</div>`;
+  }
+
+  return `<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px;">${urls.map((url, index) => `<button type="button" class="order-attachment-thumb" data-attachment-url="${encodeURIComponent(url)}" title="Abrir anexo ${index + 1}" style="display: block; width: 76px; height: 76px; padding: 0; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #fff; cursor: zoom-in;"><img src="${url}" alt="Anexo ${index + 1}" style="width: 100%; height: 100%; object-fit: cover; display: block;"></button>`).join('')}</div>`;
+};
+
+const getOrderChatJid = (order) => {
+  const storedJid = String(order?.clientJid || '').trim();
+  if (storedJid.includes('@') && !storedJid.startsWith('manual_')) return storedJid;
+
+  const digits = String(order?.clientPhone || '').replace(/\D/g, '');
+  if (!digits) return '';
+  return `${digits.startsWith('55') ? digits : `55${digits}`}@s.whatsapp.net`;
 };
 
 const getLegacyGroupName = (order, value) => {
@@ -539,7 +551,29 @@ const Production = () => {
       },
       didOpen: () => {
         const chatBtn = document.getElementById('btn-go-to-chat');
-        if (chatBtn) chatBtn.onclick = () => { Swal.close(); navigate(`/chat/${encodeURIComponent(order.clientJid || order.clientPhone || '')}`); };
+        if (chatBtn) chatBtn.onclick = () => {
+          const chatJid = getOrderChatJid(order);
+          if (!chatJid) {
+            Swal.fire('Telefone não informado', 'Este pedido não possui um número de WhatsApp válido.', 'warning');
+            return;
+          }
+          Swal.close();
+          navigate(`/chat/${encodeURIComponent(chatJid)}`);
+        };
+
+        document.querySelectorAll('.order-attachment-thumb').forEach(button => {
+          button.onclick = () => {
+            const imageUrl = decodeURIComponent(button.dataset.attachmentUrl || '');
+            Swal.fire({
+              imageUrl,
+              imageAlt: 'Anexo do pedido',
+              showConfirmButton: false,
+              showCloseButton: true,
+              width: 'min(92vw, 760px)',
+              background: '#fff'
+            });
+          };
+        });
 
         const actionBtn = document.getElementById('btn-action-next');
         if (actionBtn) {
