@@ -449,6 +449,40 @@ const Production = () => {
     }
 
     // Botão de ação baseado no status
+    const orderItemsHtml = orderItems.map((item, index) => {
+      const itemQuantity = Number(item.quantity) || 1;
+      const itemPrice = Number(item.price) || 0;
+      const rawName = String(item.name || 'Produto').trim();
+      const extrasMatch = rawName.match(/\s*\[([^\]]+)\]\s*$/);
+      let itemName = (extrasMatch ? rawName.slice(0, extrasMatch.index) : rawName).trim();
+      const itemVariation = String(item.variation || '').trim();
+      if (itemVariation && itemName.endsWith(`(${itemVariation})`)) {
+        itemName = itemName.slice(0, -(itemVariation.length + 2)).trim();
+      }
+      const itemExtras = extrasMatch ? extrasMatch[1] : '';
+      const itemDetailsHtml = index === 0
+        ? `${selectionSummaryHtml}${notesHtml}`
+        : (itemExtras ? `<div style="font-size: 13px; color: #475569; margin-top: 10px;">Extras: ${itemExtras}</div>` : '');
+
+      return `
+                <tr${index > 0 ? ' style="border-top: 1px dashed rgba(15,23,42,0.08);"' : ''}>
+                  <td style="padding: 20px 0; vertical-align: top;">
+                    <div style="background: #3b82f6; color: #fff; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 20px; font-weight: 900;">
+                      ${itemQuantity}
+                    </div>
+                  </td>
+                  <td style="padding: 20px 10px; vertical-align: top;">
+                    <div style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">Item</div>
+                    <div style="font-weight: 900; font-size: 18px; color: #0f172a; line-height: 1.25;">${itemName}</div>
+                    ${itemVariation ? `<div style="font-size: 13px; color: #3b82f6; margin-top: 4px; font-weight: 700;">${itemVariation}</div>` : ''}
+                    ${itemDetailsHtml}
+                  </td>
+                  <td style="font-size: 14px; vertical-align: top; padding-top: 20px; text-align: right;">
+                    R$ ${(itemPrice * itemQuantity).toFixed(2)}
+                  </td>
+                </tr>`;
+    }).join('');
+
     let actionBtnHtml = '';
     if (order.status === 'pending') {
       const nextLabel = order.type === 'delivery' ? 'INICIAR PRODUÇÃO' : 'ACEITAR PEDIDO';
@@ -655,7 +689,8 @@ const Production = () => {
                 </tr>
               </thead>
               <tbody>
-                <tr>
+                ${orderItemsHtml}
+                <tr style="display: none;">
                   <td style="padding: 20px 0; vertical-align: top;">
                     <div style="background: #3b82f6; color: #fff; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 20px; font-weight: 900;">
                       ${quantity}
