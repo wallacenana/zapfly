@@ -709,7 +709,7 @@ const Production = () => {
 
     // Apenas pedidos Pendentes, Em Produção e Prontos furam o filtro de data.
     // Pedidos concluídos, cancelados ou agendados ('order' mas em accepted) obedecem à data selecionada.
-    const isGeneralOrderQueue = orderType === 'order' && ['waiting_payment', 'pending'].includes(o.status);
+    const isGeneralOrderQueue = ['order', 'delivery'].includes(orderType) && ['waiting_payment', 'pending'].includes(o.status);
     const matchDate = isGeneralOrderQueue || o.scheduledDate === selectedDate;
 
     return matchType && matchSearch && matchDate;
