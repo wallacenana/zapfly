@@ -278,8 +278,20 @@ function sanitizeDomId(value) {
 }
 
 function getCustomFieldSchema(item) {
-    const parsed = parseJsonValue(item?.customFieldSchema || item?.customFieldsSchema || item?.customFields, []);
-    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    const product = state.products.find((entry) => String(entry?.id) === String(item?.productId || item?.id));
+    const candidates = [
+        item?.customFieldSchema,
+        item?.customFieldsSchema,
+        item?.customFields,
+        product?.customFieldSchema,
+        product?.customFieldsSchema,
+        product?.customFields
+    ];
+    for (const candidate of candidates) {
+        const parsed = parseJsonValue(candidate, []);
+        if (Array.isArray(parsed) && parsed.filter(Boolean).length > 0) return parsed.filter(Boolean);
+    }
+    return [];
 }
 
 function getCustomFieldAnswers(item) {
