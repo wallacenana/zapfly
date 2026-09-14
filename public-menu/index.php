@@ -727,10 +727,6 @@ try {
         </div>
 
         <main class="container main-menu">
-            <div id="sound-test-control" style="display:flex;align-items:center;justify-content:flex-end;gap:10px;margin:0 0 12px;">
-                <span id="sound-test-status" style="font-size:12px;color:var(--text-muted);">Som desativado</span>
-                <button id="enable-sound-btn" type="button" style="border:1px solid var(--border-color);border-radius:999px;padding:8px 14px;background:var(--bg-card);color:var(--text-main);font-weight:700;cursor:pointer;">Ativar som</button>
-            </div>
             <div id="menu-sections">
                 <div id="skeleton-loader" class="hidden"></div>
                 <div id="actual-menu-content">
