@@ -400,6 +400,7 @@ const Production = () => {
     const orderItems = getOrderItems(order);
     const quantity = orderItems.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
     const freightValue = order.deliveryFee || 0;
+    const isCashPayment = ['dinheiro', 'cash'].includes(String(order.paymentMethod || '').trim().toLowerCase());
     const displayParts = getPrintableOrderParts(order);
     // Pega o preço real do produto ou calcula dinamicamente subtraindo a taxa de entrega, com fallback seguro
     let unitPrice = order.productRelation?.price || 0;
@@ -620,7 +621,7 @@ const Production = () => {
     };
 
     Swal.fire({
-      background: '#ffffff',
+      background: isCashPayment ? '#fff5f5' : '#ffffff',
       color: '#0f172a',
       width: '550px',
       showCloseButton: true,
