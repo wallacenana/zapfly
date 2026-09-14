@@ -1850,9 +1850,11 @@ router.patch('/:id', authenticate, async (req, res) => {
     delete updateData.userId;
 
     const isCancellation = ['cancelled', 'canceled', 'cancelado'].includes(String(updateData.status || '').toLowerCase());
+    const isCashPayment = String(existing.paymentMethod || '').trim().toLowerCase() === 'dinheiro';
     if (String(updateData.status || '').toLowerCase() === 'production'
       && String(existing.type || 'order').toLowerCase() === 'delivery'
-      && String(existing.paymentStatus || '').toLowerCase() !== 'confirmed') {
+      && String(existing.paymentStatus || '').toLowerCase() !== 'confirmed'
+      && !isCashPayment) {
       return res.status(400).json({ error: 'Delivery só pode entrar em produção após a confirmação do pagamento.' });
     }
 
