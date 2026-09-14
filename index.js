@@ -2158,6 +2158,7 @@ async function initInstance(instanceId) {
                                             const functionName = toolCall.function.name;
                                             const args = JSON.parse(toolCall.function.arguments);
                                             let result;
+                                            console.log(`[AI Tool] Iniciando ${functionName}:`, JSON.stringify(args));
 
 
                                             if (functionName === "chamar_gerente") {
@@ -2438,6 +2439,7 @@ async function initInstance(instanceId) {
                                                 name: functionName,
                                                 content: JSON.stringify(result),
                                             });
+                                            console.log(`[AI Tool] Sucesso ${functionName}:`, JSON.stringify(result));
                                         }
 
                                         if (currentToken.cancelled) return;
