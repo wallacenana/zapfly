@@ -1122,16 +1122,8 @@ router.post('/', async (req, res) => {
       if (cleanPhone.length >= 10) {
         if (!cleanPhone.startsWith("55")) cleanPhone = "55" + cleanPhone;
         clientJid = `${cleanPhone}@s.whatsapp.net`;
-        try {
-          const sockGetter = req.app.get('getSock');
-          if (sockGetter) {
-            const sock = sockGetter(instanceId || 'global');
-            if (sock && sock.onWhatsApp) {
-              const result = await sock.onWhatsApp(clientJid);
-              if (result && result.length > 0 && result[0].exists) clientJid = result[0].jid;
-            }
-          }
-        } catch (err) { }
+        // Nao consulte onWhatsApp aqui: a consulta ao Baileys pode expirar e
+        // bloquear a criacao do pedido. O JID por telefone ja e suficiente.
       }
     }
 
