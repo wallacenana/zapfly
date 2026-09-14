@@ -1718,8 +1718,14 @@ async function initInstance(instanceId) {
                     }
                 }
 
-                //  COMANDOS DE ADMINISTRADOR (MANAGER) 
-                const settings = await getSettings();
+                //  COMANDOS DE ADMINISTRADOR (MANAGER)
+                // A configuracao pertence ao usuario dono da conexao, nao ao jid recebido.
+                const instanceOwner = await prisma.instance.findUnique({
+                    where: { id: instanceId },
+                    select: { userId: true }
+                });
+                const userId = instanceOwner?.userId;
+                const settings = await getSettings(userId);
                 const configuredManagerJid = await resolveConfiguredJid(settings?.managerJid, instanceId);
                 const ownJids = [sock.user?.id, sock.user?.lid]
                     .filter(Boolean)
@@ -1750,7 +1756,7 @@ async function initInstance(instanceId) {
                     }
 
                     // Chama o agente especifico para o administrador passando imagens se houver
-                    await handleAdminAgent(sock, instanceId, jid, text, settings, adminImages);
+                    await handleAdminAgent(sock, instanceId, jid, text, settings, adminImages, userId);
                     return;
                 }
 
@@ -2965,10 +2971,10 @@ app.post('/instances', authenticate, async (req, res) => {
 
 app.patch('/instances/:id', authenticate, async (req, res) => {
     const { id } = req.params;
-    const { name, color, botPrompt, knowledge } = req.body;
+    const { name, color, assistantName, botPrompt, knowledge } = req.body;
     const instance = await prisma.instance.update({
         where: { id, userId: req.user.id },
-        data: { name, color, botPrompt, knowledge }
+        data: { name, color, assistantName: String(assistantName || 'Lily').trim() || 'Lily', botPrompt, knowledge }
     });
     res.json(instance);
 });

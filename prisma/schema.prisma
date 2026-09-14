@@ -125,6 +125,7 @@ model Instance {
   name       String
   status     String      @default("disconnected")
   color      String?     @default("#3b82f6")
+  assistantName String?  @default("Lily")
   botPrompt  String?     @db.Text
   knowledge  String?     @db.Text
   userId     String

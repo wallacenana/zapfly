@@ -25,6 +25,7 @@ const Prompts = () => {
   const [saving, setSaving] = useState(false);
 
   const [formPrompt, setFormPrompt] = useState('');
+  const [formAssistantName, setFormAssistantName] = useState('Lily');
   const [formKnowledge, setFormKnowledge] = useState([]);
   const [showCopySuccess, setShowCopySuccess] = useState(false);
 
@@ -49,6 +50,7 @@ const Prompts = () => {
 
   const selectInstance = (inst) => {
     setActiveInstance(inst);
+    setFormAssistantName(inst.assistantName || 'Lily');
     setFormPrompt(inst.botPrompt || '');
     setFormKnowledge(JSON.parse(inst.knowledge || '[]'));
   };
@@ -58,6 +60,7 @@ const Prompts = () => {
     setSaving(true);
     try {
       const res = await api.patch(`/instances/${activeInstance.id}`, {
+        assistantName: formAssistantName.trim() || 'Lily',
         botPrompt: formPrompt,
         knowledge: JSON.stringify(formKnowledge)
       });
@@ -75,6 +78,7 @@ const Prompts = () => {
     const other = instances.find(i => i.id === fromId);
     if (other) {
       setFormPrompt(other.botPrompt || '');
+      setFormAssistantName(other.assistantName || 'Lily');
       setFormKnowledge(JSON.parse(other.knowledge || '[]'));
       setShowCopySuccess(true);
       setTimeout(() => setShowCopySuccess(false), 2000);
@@ -185,6 +189,14 @@ const Prompts = () => {
                     <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Defina o nome, a personalidade e o tom de voz (ex: formal, amigável, usa emojis).</p>
                   </div>
                 </div>
+                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', fontWeight: 700, color: 'var(--text-secondary)' }}>Nome da IA</label>
+                <input
+                  value={formAssistantName}
+                  onChange={(e) => setFormAssistantName(e.target.value)}
+                  placeholder="Lily"
+                  maxLength={40}
+                  style={{ width: '100%', marginBottom: '15px', padding: '13px 15px', borderRadius: '12px', backgroundColor: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', fontSize: '14px', outline: 'none' }}
+                />
                 <textarea
                   style={{
                     width: '100%',
