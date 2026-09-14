@@ -45,7 +45,6 @@ const MainLayout = ({ clientMode = false }) => {
   const sidebarCollapsed = false;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [trialInfo, setTrialInfo] = useState(null);
-  const [soundEnabled, setSoundEnabled] = useState(() => window.localStorage.getItem('menzzu_dashboard_sound') === '1');
   const trialVisible = Boolean(trialInfo?.active);
 
   useEffect(() => {
@@ -53,12 +52,6 @@ const MainLayout = ({ clientMode = false }) => {
     socket.on('new_order_pending', handleNewOrder);
     return () => socket.off('new_order_pending', handleNewOrder);
   }, []);
-
-  const enableDashboardSound = () => {
-    playOrderNotificationSound();
-    window.localStorage.setItem('menzzu_dashboard_sound', '1');
-    setSoundEnabled(true);
-  };
 
   useEffect(() => {
     const handleResize = () => {
@@ -251,14 +244,6 @@ const MainLayout = ({ clientMode = false }) => {
         <button aria-label="Abrir menu" onClick={() => setMobileMenuOpen(true)}><Menu size={21} /></button>
       </div>
       <div className={`dashboard-content${trialVisible ? ' has-trial' : ''}`} style={{ minHeight: '100vh', marginLeft: '260px', paddingTop: trialVisible ? '38px' : 0, minWidth: 0, overflowY: 'auto', position: 'relative', backgroundColor: '#f6f8f3', transition: 'margin-left 0.2s ease, padding-top 0.2s ease' }}>
-        <div style={{ position: 'fixed', top: trialVisible ? '50px' : '12px', right: '20px', zIndex: 100, display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: '#ffffff', padding: '6px 8px', borderRadius: '8px', boxShadow: '0 3px 12px rgba(15,23,42,0.08)' }}>
-            {soundEnabled ? 'Som ativo' : 'Ative o som'}
-          </span>
-          <button type="button" onClick={enableDashboardSound} aria-label="Ativar e testar som de notificações" style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '8px 12px', background: soundEnabled ? '#eaf9df' : '#ffffff', color: '#3e9b00', fontWeight: 800, fontSize: '11px', cursor: 'pointer', boxShadow: '0 3px 12px rgba(15,23,42,0.08)' }}>
-            {soundEnabled ? 'Testar ding' : 'Ativar som'}
-          </button>
-        </div>
         <Outlet />
         {location.pathname === '/dashboard' && !window.localStorage.getItem('menzzu_onboarding_completed') ? <GetStarted /> : null}
       </div>
