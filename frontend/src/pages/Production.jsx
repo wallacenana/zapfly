@@ -114,6 +114,21 @@ const getEditSelectionValue = (order, aliases, fallback = '') => {
   return row ? rows.filter(([label]) => label === row[0]).map(([, value]) => value).join(', ') : fallback;
 };
 
+const getOrderItems = (order) => {
+  try {
+    const items = typeof order.cartItems === 'string' ? JSON.parse(order.cartItems) : order.cartItems;
+    if (Array.isArray(items) && items.length > 0) return items;
+  } catch (e) { }
+
+  return [{
+    productId: order.productId,
+    name: order.product || 'Produto',
+    variation: order.variation || null,
+    price: Number(order.productRelation?.price || 0),
+    quantity: Number(order.quantity) || 1
+  }];
+};
+
 const Production = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -374,19 +389,22 @@ const Production = () => {
   const openDetails = (order) => {
     const orderIdShort = (order.id || '').slice(-4).toUpperCase();
     const formattedDate = (order.scheduledDate || '').split('-').reverse().join('/');
-    const quantity = parseFloat(order.quantity) || 1;
+    const orderItems = getOrderItems(order);
+    const quantity = orderItems.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
     const freightValue = order.deliveryFee || 0;
     const displayParts = getPrintableOrderParts(order);
     // Pega o preço real do produto ou calcula dinamicamente subtraindo a taxa de entrega, com fallback seguro
     let unitPrice = order.productRelation?.price || 0;
-    if (order.totalValue > 0) {
+    if (orderItems.length === 1 && order.totalValue > 0) {
       const computedUnit = (order.totalValue - freightValue) / quantity;
       if (computedUnit > 0) {
         unitPrice = computedUnit;
       }
     }
 
-    const itemsSubtotal = unitPrice * quantity;
+    const itemsSubtotal = orderItems.length > 1
+      ? orderItems.reduce((sum, item) => sum + ((Number(item.price) || 0) * (Number(item.quantity) || 1)), 0)
+      : unitPrice * quantity;
     const finalTotal = order.totalValue || (itemsSubtotal + freightValue);
 
     const totalValueStr = finalTotal.toFixed(2);
@@ -637,7 +655,7 @@ const Production = () => {
                   </td>
                   <td style="padding: 20px 10px; vertical-align: top;">
                     <div style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 4px;">Item</div>
-                    <div style="font-weight: 900; font-size: 18px; color: #0f172a; line-height: 1.25;">${displayParts.productName}</div>
+                    <div style="font-weight: 900; font-size: 18px; color: #0f172a; line-height: 1.25;">${orderItems.length > 1 ? orderItems.map(item => `${Number(item.quantity) || 1}x ${String(item.name || 'Produto').replace(/\s*\[[^\]]*\]\s*$/, '').trim()}${item.variation ? ` (${item.variation})` : ''}`).join('<br>') : displayParts.productName}</div>
                     <div style="font-size: 13px; color: #3b82f6; margin-top: 4px; font-weight: 700;">${order.variation || 'Opção Padrão'}</div>
                     ${selectionSummaryHtml}
                     ${notesHtml}

@@ -285,6 +285,7 @@ model Order {
   recheio         String?
   topo            String?
   addons          String?      @db.Text
+  cartItems       String?      @db.Text
   calendarEventId String?
   instanceId      String?      @default("global")
   reminderSent    Boolean      @default(false)

@@ -2970,6 +2970,13 @@ async function handlePlaceOrder() {
         paymentMethod: String(state.paymentMethod || '').trim().toLowerCase() === 'dinheiro' ? 'dinheiro' : state.paymentMethod,
         totalValue: totalValue,
         addons: getOrderAddonsJSON(cart[0]),
+        cartItems: cart.map(item => ({
+            productId: item.productId,
+            name: formatItemName(item),
+            variation: item.variation || null,
+            price: Number(item.price) || 0,
+            quantity: Number(item.quantity) || 1
+        })),
         carrinho_itens_extras: cart.slice(1).map(item => ({
             productId: item.productId,
             name: formatItemName(item),

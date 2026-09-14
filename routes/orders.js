@@ -1097,7 +1097,7 @@ router.get('/', authenticate, async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    let { instanceId, slug, productId, product, variation, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, clientPhone, type, deliveryAddress, paymentMethod, deliveryFee, totalValue, massa, recheio, topo, addons, carrinho_itens_extras } = req.body;
+    let { instanceId, slug, productId, product, variation, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, clientPhone, type, deliveryAddress, paymentMethod, deliveryFee, totalValue, massa, recheio, topo, addons, carrinho_itens_extras, cartItems } = req.body;
 
     let userId = req.user?.id;
     if (!userId && instanceId) {
@@ -1193,6 +1193,7 @@ router.post('/', async (req, res) => {
       deliveryFee: parseFloat(deliveryFee) || 0,
       totalValue: computedTotal,
       addons: addons || null,
+      cartItems: Array.isArray(cartItems) ? JSON.stringify(cartItems) : null,
       // Pedido público só entra na operação depois da confirmação do pagamento.
       status: isManual ? 'accepted' : (isCashPayment ? 'pending' : 'waiting_payment'),
       paymentStatus: isManual ? 'confirmed' : 'pending',
