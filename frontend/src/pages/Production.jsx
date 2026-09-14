@@ -554,7 +554,7 @@ const Production = () => {
             }
             return `<div style="margin: 10px 0; padding-bottom: 10px; border-bottom: 1px solid #000;">
               <div style="font-size: 18px; font-weight: 900;">ITEM ${itemQuantity}x</div>
-              <div style="font-size: 20px; margin-top: 5px;">${itemName}</div>
+              <div style="font-size: 20px; margin-top: 5px; font-weight: 900;">${itemName}</div>
               ${itemVariation ? `<div style="font-size: 16px;">Variacao: ${itemVariation}</div>` : ''}
               ${extrasMatch ? `<div style="font-size: 15px;">Extras: ${extrasMatch[1]}</div>` : ''}
               <div style="font-size: 16px; text-align: right;">Subtotal: R$ ${(itemPrice * itemQuantity).toFixed(2)}</div>
