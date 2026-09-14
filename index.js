@@ -109,6 +109,23 @@ async function resolveConfiguredJid(value, instanceId) {
     return getCanonicalJid(jid, instanceId);
 }
 
+async function resolveJidWithSocket(jid, sock, instanceId) {
+    let resolvedJid = await getCanonicalJid(jid, instanceId);
+    if (!resolvedJid?.endsWith('@s.whatsapp.net') || typeof sock?.onWhatsApp !== 'function') return resolvedJid;
+
+    try {
+        const lookup = await Promise.race([
+            sock.onWhatsApp(resolvedJid),
+            new Promise(resolve => setTimeout(() => resolve([]), 5000))
+        ]);
+        const whatsappJid = Array.isArray(lookup) && lookup.find(item => item?.exists && item?.jid)?.jid;
+        if (whatsappJid) resolvedJid = whatsappJid;
+    } catch (error) {
+        console.warn(`[WhatsApp] Falha ao resolver JID ${resolvedJid}:`, error.message);
+    }
+    return resolvedJid;
+}
+
 // Configuracao do Multer para Marketing Assets
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'assets/marketing'),
@@ -1124,7 +1141,11 @@ app.post('/mercadopago/webhook', async (req, res) => {
                                     aviso = `✅ *PAGAMENTO APROVADO!* (#${orderIdShort}) ✅\n\n👤 *Cliente:* ${updatedOrder.clientName}\n📦 *Pedido:* ${updatedOrder.product}\n\nO pedido ja esta na aba *PENDENTES* do seu painel. Aceite-o para iniciar a producao! ✨`;
                                 }
 
-                                const managerJid = await resolveConfiguredJid(settings.managerJid, updatedOrder.instanceId || 'global');
+                                const managerJid = await resolveJidWithSocket(
+                                    await resolveConfiguredJid(settings.managerJid, updatedOrder.instanceId || 'global'),
+                                    sock,
+                                    updatedOrder.instanceId || 'global'
+                                );
                                 await sock.sendMessage(managerJid, { text: aviso }).catch(() => { });
                             }
                         }
@@ -1726,11 +1747,15 @@ async function initInstance(instanceId) {
                 });
                 const userId = instanceOwner?.userId;
                 const settings = await getSettings(userId);
-                const configuredManagerJid = await resolveConfiguredJid(settings?.managerJid, instanceId);
+                const configuredManagerJid = await resolveJidWithSocket(
+                    await resolveConfiguredJid(settings?.managerJid, instanceId),
+                    sock,
+                    instanceId
+                );
                 const ownJids = [];
                 for (const value of [sock.user?.id, sock.user?.lid].filter(Boolean)) {
                     const rawOwnJid = String(value).split(':')[0];
-                    ownJids.push(rawOwnJid, await getCanonicalJid(rawOwnJid, instanceId));
+                    ownJids.push(rawOwnJid, await resolveJidWithSocket(rawOwnJid, sock, instanceId));
                 }
                 const normalizedIncomingJid = String(jid || '').split(':')[0];
                 const isConnectedAccountAdmin = msg.key.fromMe
@@ -2325,7 +2350,11 @@ async function initInstance(instanceId) {
                                                 const clientName = currentChat?.name || jid.split('@')[0];
                                                 const alertMsg = `🚩 *SOLICITACAO DE CANCELAMENTO* 🚩\n\n👤 *Cliente:* ${clientName}\n📞 *WhatsApp:* ${jid.split('@')[0]}\n🧾 *Motivo:* ${reason}\n\nLily ja avisou o cliente que o gerente foi notificado. Por favor, verifique o pedido no painel.`;
 
-                                                const managerJid = await resolveConfiguredJid(settings.managerJid, instanceId);
+                                                const managerJid = await resolveJidWithSocket(
+                                                    await resolveConfiguredJid(settings.managerJid, instanceId),
+                                                    sock,
+                                                    instanceId
+                                                );
                                                 await sock.sendMessage(managerJid, { text: alertMsg });
                                                 result = { success: true, message: "O gerente foi notificado sobre o seu pedido de cancelamento e entrará em contato em breve." };
                                             }
