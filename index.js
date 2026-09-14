@@ -1852,7 +1852,7 @@ async function initInstance(instanceId) {
                             if (text.toLowerCase().includes('crie um story')) {
                                 const storyText = text.replace(/crie um story/i, '').trim();
                                 if (storyText) {
-                                    await sock.sendMessage('status@broadcast', { text: storyText });
+                                    await sock.sendMessage('status@broadcast', { text: storyText }, { broadcast: true });
                                     await sendRichMessage(sock, jid, "Comando executado! Acabei de publicar seu Story.");
                                     return;
                                 }
@@ -2384,13 +2384,13 @@ async function initInstance(instanceId) {
                                                 if (assetId) {
                                                     const asset = await prisma.marketingAsset.findUnique({ where: { id: assetId } });
                                                     if (asset) {
-                                                        await sock.sendMessage('status@broadcast', { image: { url: asset.path }, caption: text });
+                                                        await sock.sendMessage('status@broadcast', { image: { url: asset.path }, caption: text }, { broadcast: true });
                                                         result = { success: true, message: "Status com imagem postado com sucesso." };
                                                     } else {
                                                         result = { success: false, error: "Imagem não encontrada para o status." };
                                                     }
                                                 } else {
-                                                    await sock.sendMessage('status@broadcast', { text });
+                                                    await sock.sendMessage('status@broadcast', { text }, { broadcast: true });
                                                     result = { success: true, message: "Status de texto postado com sucesso." };
                                                 }
                                             }
