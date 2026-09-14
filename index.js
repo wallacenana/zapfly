@@ -38,7 +38,11 @@ const {
 const phoneToLid = new Map();
 
 function getStatusSendOptions(sock) {
-    return { broadcast: true };
+    const statusJidList = typeof sock.__getStatusJidList === 'function'
+        ? sock.__getStatusJidList()
+        : [];
+    console.log(`[WhatsApp] Status audience: ${statusJidList.length} destinatarios.`);
+    return { broadcast: true, ...(statusJidList.length ? { statusJidList } : {}) };
 }
 
 function normalizePhoneJid(value) {
@@ -2745,6 +2749,19 @@ async function initInstance(instanceId) {
     });
 
     sock.ev.on('creds.update', saveCreds);
+
+    sock.__getStatusJidList = () => {
+        const normalizeStatusJid = (value) => {
+            const raw = String(value || '').trim();
+            if (!raw || raw === 'status@broadcast' || raw.endsWith('@g.us')) return '';
+            const [user, server = 's.whatsapp.net'] = raw.split('@');
+            const normalizedUser = user.split(':')[0];
+            return normalizedUser ? `${normalizedUser}@${server}` : '';
+        };
+        const contactJids = Object.keys(store.contacts || {}).map(normalizeStatusJid).filter(Boolean);
+        const ownJids = [sock.user?.id, sock.user?.lid].map(normalizeStatusJid).filter(Boolean);
+        return [...new Set([...contactJids, ...ownJids])];
+    };
 
     sessions.set(instanceId, sock);
     stores.set(instanceId, store);
