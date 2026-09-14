@@ -35,9 +35,51 @@ const {
 } = require('./lib/cloudflare');
 
 
-// Dynamic JID canonicalization helper for Brazilian phone numbers
+const phoneToLid = new Map();
+
+function normalizePhoneJid(value) {
+    const digits = String(value || '').replace(/\D/g, '');
+    if (!digits) return '';
+    return `${digits.startsWith('55') ? digits : `55${digits}`}@s.whatsapp.net`;
+}
+
+function registerPhoneLid(instanceId, phoneJid, lidJid) {
+    const phone = normalizePhoneJid(phoneJid);
+    const lidDigits = String(lidJid || '').split('@')[0].replace(/\D/g, '');
+    if (phone && lidDigits) phoneToLid.set(`${instanceId}:${phone}`, `${lidDigits}@lid`);
+}
+
+async function mergeJidRecords(instanceId, phoneJid, lidJid) {
+    const phone = normalizePhoneJid(phoneJid);
+    const lid = `${String(lidJid || '').split('@')[0].replace(/\D/g, '')}@lid`;
+    if (!phone || lid === '@lid') return;
+
+    try {
+        const [phoneChat, lidChat] = await Promise.all([
+            prisma.chat.findUnique({ where: { jid_instanceId: { jid: phone, instanceId } } }),
+            prisma.chat.findUnique({ where: { jid_instanceId: { jid: lid, instanceId } } })
+        ]);
+
+        await prisma.message.updateMany({ where: { jid: phone, instanceId }, data: { jid: lid } });
+        await prisma.order.updateMany({ where: { instanceId, clientJid: phone }, data: { clientJid: lid } });
+
+        if (phoneChat && !lidChat) {
+            await prisma.chat.update({ where: { id: phoneChat.id }, data: { jid: lid } });
+        } else if (phoneChat && lidChat) {
+            await prisma.chat.delete({ where: { id: phoneChat.id } });
+        }
+    } catch (error) {
+        console.warn(`[WhatsApp] Falha ao unificar telefone/LID: ${error.message}`);
+    }
+}
+
+// Dynamic JID canonicalization helper for Brazilian phone numbers and LID aliases
 async function getCanonicalJid(jid, instanceId) {
     if (!jid || typeof jid !== 'string') return jid;
+    if (jid.endsWith('@s.whatsapp.net')) {
+        const mappedLid = phoneToLid.get(`${instanceId}:${normalizePhoneJid(jid)}`);
+        if (mappedLid) return mappedLid;
+    }
     if (!jid.endsWith('@s.whatsapp.net')) return jid;
 
     const phone = jid.split('@')[0];
@@ -115,6 +157,7 @@ const io = new Server(server, {
     cors: { origin: "*", methods: ["GET", "POST"] }
 });
 app.set('io', io); // Disponibiliza o IO para as rotas
+app.set('resolveChatJid', getCanonicalJid);
 initFlows(io);
 const sessions = new Map();
 const stores = new Map();
@@ -1475,9 +1518,18 @@ async function initInstance(instanceId) {
     store.bind(sock.ev);
 
     // PERSISTENCE LOGIC
+    sock.ev.on('chats.phoneNumberShare', async ({ lid, jid }) => {
+        registerPhoneLid(instanceId, jid, lid);
+        await mergeJidRecords(instanceId, jid, lid);
+    });
+
     sock.ev.on('contacts.upsert', async (contacts) => {
         for (const contact of contacts) {
             try {
+                if (contact.lid) {
+                    registerPhoneLid(instanceId, contact.id, contact.lid);
+                    await mergeJidRecords(instanceId, contact.id, contact.lid);
+                }
                 let jid = contact.id;
                 jid = await getCanonicalJid(jid, instanceId);
                 const isGroup = jid.endsWith('@g.us');
@@ -3015,6 +3067,18 @@ app.get('/instances/:id/chats', authenticate, async (req, res) => {
     }));
 
     res.json({ chats: chatsWithFlow, total, hasMore: skip + take < total });
+});
+
+app.get('/instances/:id/resolve-chat/:jid', authenticate, async (req, res) => {
+    const instance = await prisma.instance.findUnique({ where: { id: req.params.id, userId: req.user.id } });
+    if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });
+
+    const requestedJid = decodeURIComponent(req.params.jid);
+    const jid = await getCanonicalJid(requestedJid, req.params.id);
+    if (jid !== requestedJid && jid.endsWith('@lid')) {
+        await mergeJidRecords(req.params.id, requestedJid, jid);
+    }
+    res.json({ jid });
 });
 
 app.patch('/instances/:id/chats/:jid', authenticate, async (req, res) => {

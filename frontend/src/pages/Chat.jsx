@@ -101,7 +101,8 @@ const Chat = () => {
 
   // Auto-selecionar contato se vier via URL (Kanban link)
   useEffect(() => {
-    if (urlJid && !loadingChats) {
+    const resolveAndSelectContact = async () => {
+      if (urlJid && !loadingChats) {
       const decodedJid = decodeURIComponent(urlJid);
       let targetJid;
       if (decodedJid.endsWith('@g.us')) {
@@ -114,7 +115,16 @@ const Chat = () => {
         targetJid = `${phonePart}@s.whatsapp.net`;
       }
 
-      const canonicalTargetJid = getFrontendCanonicalJid(targetJid);
+      let canonicalTargetJid = getFrontendCanonicalJid(targetJid);
+
+      // O WhatsApp pode representar o mesmo contato por telefone ou por LID.
+      // Deixa o backend resolver o alias antes de criar um contato virtual.
+      if (activeInstance?.id && canonicalTargetJid.endsWith('@s.whatsapp.net')) {
+        try {
+          const resolved = await api.get(`/instances/${activeInstance.id}/resolve-chat/${encodeURIComponent(canonicalTargetJid)}`);
+          canonicalTargetJid = resolved.data?.jid || canonicalTargetJid;
+        } catch (e) { }
+      }
 
       // If we already selected this canonical JID and the active contact is NOT virtual (or we already tried promoting it), return early
       const isCurrentlyActiveReal = activeContact && !activeContact.id?.startsWith('virtual-');
@@ -139,8 +149,11 @@ const Chat = () => {
         lastAutoSelectedJid.current = canonicalTargetJid;
         setActiveContact(virtualContact);
       }
-    }
-  }, [urlJid, contacts, loadingChats, activeContact]);
+      }
+    };
+
+    resolveAndSelectContact();
+  }, [urlJid, contacts, loadingChats, activeContact, activeInstance]);
 
   // Audio Recording State
   const [isRecording, setIsRecording] = useState(false);

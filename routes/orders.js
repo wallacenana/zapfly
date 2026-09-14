@@ -423,12 +423,16 @@ function getOrderRecipientJid(order) {
   return `${phone}@s.whatsapp.net`;
 }
 
-async function notifyOrderAccepted(order, sockGetter) {
-  const jid = getOrderRecipientJid(order);
+async function notifyOrderAccepted(order, sockGetter, jidResolver) {
+  let jid = getOrderRecipientJid(order);
   if (!jid || typeof sockGetter !== 'function') return;
 
   const sock = sockGetter(order.instanceId || 'global');
   if (!sock) return;
+
+  if (typeof jidResolver === 'function') {
+    jid = await jidResolver(jid, order.instanceId || 'global');
+  }
 
   const product = String(order.product || 'seu pedido').replace(/\s*\[[^\]]+\]\s*$/, '').trim();
   const message = `✅ *Pedido aceito!*
@@ -1856,7 +1860,7 @@ router.patch('/:id', authenticate, async (req, res) => {
     if (String(updateData.status || '').toLowerCase() === 'accepted'
       && String(existing.status || '').toLowerCase() !== 'accepted') {
       try {
-        await notifyOrderAccepted(order, req.app.get('getSock'));
+        await notifyOrderAccepted(order, req.app.get('getSock'), req.app.get('resolveChatJid'));
       } catch (notifyError) {
         console.error(`[WhatsApp] Falha ao avisar aceite do pedido ${id}:`, notifyError.message);
       }
