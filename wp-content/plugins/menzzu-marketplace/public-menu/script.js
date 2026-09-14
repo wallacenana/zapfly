@@ -41,6 +41,25 @@ const pathSegments = window.location.pathname.split('/').filter(p => p);
 const querySlug = new URLSearchParams(window.location.search).get('loja') || '';
 const STORE_SLUG = window.__STORE_SLUG__ || (isHome ? '' : (querySlug || pathSegments[0] || ''));
 
+let testAudioContext = null;
+
+function playSoundTest() {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) throw new Error('Audio não suportado neste navegador.');
+    if (!testAudioContext) testAudioContext = new AudioContextClass();
+    if (testAudioContext.state === 'suspended') testAudioContext.resume();
+    const oscillator = testAudioContext.createOscillator();
+    const gain = testAudioContext.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, testAudioContext.currentTime);
+    gain.gain.setValueAtTime(0.0001, testAudioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.18, testAudioContext.currentTime + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, testAudioContext.currentTime + 0.22);
+    oscillator.connect(gain).connect(testAudioContext.destination);
+    oscillator.start();
+    oscillator.stop(testAudioContext.currentTime + 0.24);
+}
+
 // Função auxiliar para alertas bonitos
 const showAlert = (title, text, icon = 'warning') => {
     Swal.fire({
@@ -569,6 +588,24 @@ function loadCart() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    const soundButton = document.getElementById('enable-sound-btn');
+    const soundStatus = document.getElementById('sound-test-status');
+    if (soundButton) {
+        soundButton.addEventListener('click', () => {
+            try {
+                playSoundTest();
+                localStorage.setItem('menzzu_sound_enabled', '1');
+                soundButton.textContent = 'Testar som novamente';
+                if (soundStatus) soundStatus.textContent = 'Som ativado';
+            } catch (error) {
+                if (soundStatus) soundStatus.textContent = error.message;
+            }
+        });
+        if (localStorage.getItem('menzzu_sound_enabled') === '1') {
+            soundButton.textContent = 'Testar som';
+            if (soundStatus) soundStatus.textContent = 'Som ativado';
+        }
+    }
     const marketplaceBackButton = document.getElementById('marketplace-back-btn');
     let enteredFromMarketplace = false;
     try {
