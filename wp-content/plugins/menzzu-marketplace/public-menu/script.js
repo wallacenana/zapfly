@@ -2485,6 +2485,11 @@ function renderStep3() {
     const opts = document.getElementById('payment-options');
     if (!opts) return;
 
+    const activeTypeButton = document.querySelector(`#checkout-type-tabs .type-tab[data-method="${state.deliveryType}"]`);
+    if (activeTypeButton && !activeTypeButton.querySelector('svg')) {
+        setDeliveryType(state.deliveryType);
+    }
+
     const addressDisplay = document.getElementById('delivery-address-display');
     if (addressDisplay) {
         addressDisplay.textContent = state.userInfo.address || 'Informe seu endereço';
