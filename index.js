@@ -102,6 +102,13 @@ async function getCanonicalJid(jid, instanceId) {
     return jid;
 }
 
+async function resolveConfiguredJid(value, instanceId) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const jid = raw.includes('@') ? raw : normalizePhoneJid(raw);
+    return getCanonicalJid(jid, instanceId);
+}
+
 // Configuracao do Multer para Marketing Assets
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'assets/marketing'),
@@ -1117,7 +1124,8 @@ app.post('/mercadopago/webhook', async (req, res) => {
                                     aviso = `✅ *PAGAMENTO APROVADO!* (#${orderIdShort}) ✅\n\n👤 *Cliente:* ${updatedOrder.clientName}\n📦 *Pedido:* ${updatedOrder.product}\n\nO pedido ja esta na aba *PENDENTES* do seu painel. Aceite-o para iniciar a producao! ✨`;
                                 }
 
-                                await sock.sendMessage(settings.managerJid, { text: aviso }).catch(() => { });
+                                const managerJid = await resolveConfiguredJid(settings.managerJid, updatedOrder.instanceId || 'global');
+                                await sock.sendMessage(managerJid, { text: aviso }).catch(() => { });
                             }
                         }
 
@@ -1712,7 +1720,8 @@ async function initInstance(instanceId) {
 
                 //  COMANDOS DE ADMINISTRADOR (MANAGER) 
                 const settings = await getSettings();
-                if (!msg.key.fromMe && settings?.managerJid && jid === settings.managerJid) {
+                const configuredManagerJid = await resolveConfiguredJid(settings?.managerJid, instanceId);
+                if (!msg.key.fromMe && configuredManagerJid && jid === configuredManagerJid) {
 
                     let adminImages = [];
                     const isImg = !!msg.message?.imageMessage ||
@@ -2298,7 +2307,8 @@ async function initInstance(instanceId) {
                                                 const clientName = currentChat?.name || jid.split('@')[0];
                                                 const alertMsg = `🚩 *SOLICITACAO DE CANCELAMENTO* 🚩\n\n👤 *Cliente:* ${clientName}\n📞 *WhatsApp:* ${jid.split('@')[0]}\n🧾 *Motivo:* ${reason}\n\nLily ja avisou o cliente que o gerente foi notificado. Por favor, verifique o pedido no painel.`;
 
-                                                await sock.sendMessage(settings.managerJid, { text: alertMsg });
+                                                const managerJid = await resolveConfiguredJid(settings.managerJid, instanceId);
+                                                await sock.sendMessage(managerJid, { text: alertMsg });
                                                 result = { success: true, message: "O gerente foi notificado sobre o seu pedido de cancelamento e entrará em contato em breve." };
                                             }
                                             else if (functionName === "get_marketing_media") {
