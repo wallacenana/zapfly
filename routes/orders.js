@@ -459,6 +459,20 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
   if (!sock) return;
   if (typeof jidResolver === 'function') jid = await jidResolver(jid, instanceId);
 
+  // O WhatsApp pode exigir o LID mesmo quando o pedido veio com o telefone.
+  if (jid.endsWith('@s.whatsapp.net') && typeof sock.onWhatsApp === 'function') {
+    try {
+      const lookup = await Promise.race([
+        sock.onWhatsApp(jid),
+        new Promise(resolve => setTimeout(() => resolve([]), 5000))
+      ]);
+      const resolvedJid = Array.isArray(lookup) && lookup.find(item => item?.exists && item?.jid)?.jid;
+      if (resolvedJid) jid = resolvedJid;
+    } catch (lookupError) {
+      console.warn(`[WhatsApp] Nao foi possivel resolver o destinatario do pedido ${order.id}:`, lookupError.message);
+    }
+  }
+
   const product = String(order.product || 'seu pedido').replace(/\s*\[[^\]]+\]\s*$/, '').trim();
   const message = `*${messageData[0]}*
 
