@@ -268,8 +268,20 @@ function sanitizeDomId(value) {
 }
 
 function getCustomFieldSchema(item) {
-    const parsed = parseJsonValue(item?.customFieldSchema || item?.customFieldsSchema || item?.customFields, []);
-    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+    const product = state.products.find((entry) => String(entry?.id) === String(item?.productId || item?.id));
+    const candidates = [
+        item?.customFieldSchema,
+        item?.customFieldsSchema,
+        item?.customFields,
+        product?.customFieldSchema,
+        product?.customFieldsSchema,
+        product?.customFields
+    ];
+    for (const candidate of candidates) {
+        const parsed = parseJsonValue(candidate, []);
+        if (Array.isArray(parsed) && parsed.filter(Boolean).length > 0) return parsed.filter(Boolean);
+    }
+    return [];
 }
 
 function getCustomFieldAnswers(item) {
@@ -1886,9 +1898,13 @@ function renderCheckoutExtraField(item, field, idx, itemKeyBase, currentValue = 
 }
 
 function renderCheckoutExtraStep() {
-    const container = document.getElementById('order-extra-step-content');
     const orderStepContent = document.getElementById('order-step-content');
-    if (!container || !orderStepContent) return false;
+    if (!orderStepContent) return false;
+    let container = document.getElementById('order-extra-step-content');
+    if (!container) {
+        orderStepContent.innerHTML = '<div id="order-extra-step-content"></div>';
+        container = document.getElementById('order-extra-step-content');
+    }
 
     const cart = getActiveCart();
     const itemsWithExtras = cart.filter(item => getCustomFieldSchema(item).length > 0);
