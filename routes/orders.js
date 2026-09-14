@@ -1111,7 +1111,10 @@ router.post('/', async (req, res) => {
 
     if (!userId) return res.status(400).json({ error: 'User ID não identificado.' });
 
-    const settings = await getSettings(userId);
+    const orderType = type || 'order';
+    const isCashPayment = String(paymentMethod || '').trim().toLowerCase() === 'dinheiro';
+    // Dinheiro no delivery nao depende de configuracao do gateway para criar o pedido.
+    const settings = (orderType === 'order' || !isCashPayment) ? await getSettings(userId) : null;
 
     if (!clientJid && clientPhone) {
       let cleanPhone = clientPhone.replace(/\D/g, "");
@@ -1143,7 +1146,6 @@ router.post('/', async (req, res) => {
     }
 
     const qtyNum = parseFloat(quantity) || 1;
-    const orderType = type || 'order';
     const finalClientJid = (clientJid && clientJid.trim() !== "") ? clientJid.trim() : 'manual_LOJA';
     const isManual = finalClientJid === 'manual_LOJA';
 
@@ -1180,7 +1182,6 @@ router.post('/', async (req, res) => {
       fallbackTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     }
 
-    const isCashPayment = String(paymentMethod || '').trim().toLowerCase() === 'dinheiro';
     const orderData = {
       userId,
       productId: productId || null,

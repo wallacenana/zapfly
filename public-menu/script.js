@@ -2900,7 +2900,7 @@ async function handlePlaceOrder() {
     let cart = getActiveCart();
     const btn = document.getElementById('place-order-btn');
     btn.disabled = true;
-    btn.innerHTML = 'Processando Pagamento...';
+    btn.innerHTML = state.paymentMethod === 'dinheiro' ? 'Enviando Pedido...' : 'Processando Pagamento...';
 
     // Revalida o horário no último passo para impedir delivery com a loja fechada.
     checkStoreStatus();
@@ -2989,6 +2989,7 @@ async function handlePlaceOrder() {
             })
         });
         const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Não foi possível registrar o pedido.');
         if (data.paymentLink) {
             // Tracking: InitiateCheckout (Meta) & begin_checkout (GA4)
             const totalValue = cart.reduce((acc, i) => acc + (i.price * i.quantity), 0) + (state.activeTab === 'delivery' ? state.deliveryFee : 0);
