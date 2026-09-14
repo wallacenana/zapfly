@@ -1212,6 +1212,12 @@ router.post('/', async (req, res) => {
       console.warn('[Orders] Coluna cartItems ausente; criando pedido sem carrinho completo. Aplique prisma migrate deploy.');
       const legacyOrderData = { ...orderData };
       delete legacyOrderData.cartItems;
+      // Usa um campo legado existente para nao perder os demais itens durante
+      // o periodo em que a migracao ainda nao foi aplicada.
+      legacyOrderData.addons = JSON.stringify({
+        cartItems: Array.isArray(cartItems) ? cartItems : [],
+        addons: addons || null
+      });
       order = await prisma.order.create({ data: legacyOrderData });
     }
 

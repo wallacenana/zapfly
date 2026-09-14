@@ -67,7 +67,8 @@ const getOrderSelectionRows = (order) => {
     }
   };
   try {
-    const addons = typeof order.addons === 'string' ? JSON.parse(order.addons) : order.addons;
+    const parsedAddons = typeof order.addons === 'string' ? JSON.parse(order.addons) : order.addons;
+    const addons = Array.isArray(parsedAddons) ? parsedAddons : parsedAddons?.addons;
     (Array.isArray(addons) ? addons : []).forEach(addon => addRow(addon.groupName || 'Opção', addon.name, addon.isAttachment, addon.isCustomField));
   } catch (e) { }
 
@@ -116,8 +117,15 @@ const getEditSelectionValue = (order, aliases, fallback = '') => {
 
 const getOrderItems = (order) => {
   try {
-    const items = typeof order.cartItems === 'string' ? JSON.parse(order.cartItems) : order.cartItems;
+    const rawItems = order.cartItems ?? order.cartitems ?? order.cart_items;
+    const parsedItems = typeof rawItems === 'string' ? JSON.parse(rawItems) : rawItems;
+    const items = Array.isArray(parsedItems) ? parsedItems : parsedItems?.cartItems;
     if (Array.isArray(items) && items.length > 0) return items;
+  } catch (e) { }
+
+  try {
+    const legacyAddons = typeof order.addons === 'string' ? JSON.parse(order.addons) : order.addons;
+    if (Array.isArray(legacyAddons?.cartItems) && legacyAddons.cartItems.length > 0) return legacyAddons.cartItems;
   } catch (e) { }
 
   return [{
