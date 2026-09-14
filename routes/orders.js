@@ -452,7 +452,7 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
       : (isLocalConsumption
         ? ['Pedido pronto!', 'Seu pedido esta pronto para consumo no local.']
         : ['Pedido pronto!', 'Seu pedido esta pronto para ser retirado.']),
-    completed: ['Pedido finalizado!', 'Seu pedido foi finalizado. Obrigado pela preferencia!'],
+    completed: ['Pedido finalizado!', 'Seu pedido foi finalizado e agradecemos muito pela preferência. Espero de coração que tenha ficado do jeitinho que você gostaria. Te espero na próxima! Amanhã teremos mais delícias para você.'],
     cancelled: ['Pedido cancelado', 'Seu pedido foi cancelado. Entre em contato conosco se precisar de ajuda.']
   };
   const messageData = messages[String(status || '').toLowerCase()];
