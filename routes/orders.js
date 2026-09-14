@@ -463,6 +463,10 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
     console.warn(`[WhatsApp] Nenhuma conexao disponivel para avisar o pedido ${order.id}.`);
     return;
   }
+  if (!sock.user?.id) {
+    console.warn(`[WhatsApp] Conexao ainda nao autenticada para avisar o pedido ${order.id}.`);
+    return;
+  }
   const originalJid = jid;
   if (typeof jidResolver === 'function') jid = await jidResolver(jid, instanceId);
 
