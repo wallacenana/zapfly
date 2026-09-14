@@ -1200,7 +1200,20 @@ router.post('/', async (req, res) => {
       instanceId: instanceId || 'global'
     };
 
-    let order = await prisma.order.create({ data: orderData });
+    let order;
+    try {
+      order = await prisma.order.create({ data: orderData });
+    } catch (createError) {
+      // Compatibilidade durante o deploy: permite criar pedidos enquanto a
+      // coluna cartItems ainda nao foi aplicada no banco de producao.
+      const cartItemsUnavailable = createError?.code === 'P2022'
+        || /Unknown argument `cartItems`|column `cartItems` does not exist/i.test(String(createError?.message || ''));
+      if (!cartItemsUnavailable) throw createError;
+      console.warn('[Orders] Coluna cartItems ausente; criando pedido sem carrinho completo. Aplique prisma migrate deploy.');
+      const legacyOrderData = { ...orderData };
+      delete legacyOrderData.cartItems;
+      order = await prisma.order.create({ data: legacyOrderData });
+    }
 
     // Pagamento em dinheiro nao passa pelo webhook do Mercado Pago.
     // Emite o mesmo evento para atualizar o dashboard e tocar o ding global.
