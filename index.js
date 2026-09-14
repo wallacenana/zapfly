@@ -185,7 +185,11 @@ app.set('resolveChatJid', getCanonicalJid);
 initFlows(io);
 const sessions = new Map();
 const stores = new Map();
-app.set('getSock', (instanceId) => sessions.get(instanceId) || Array.from(sessions.values())[0] || null);
+app.set('getSock', (instanceId) => {
+    const exact = sessions.get(instanceId);
+    if (exact?.user?.id) return exact;
+    return Array.from(sessions.values()).find(sock => sock?.user?.id) || null;
+});
 startFlowMonitor(sessions);
 
 const aiDebounceTimers = {};
@@ -2691,9 +2695,10 @@ async function initInstance(instanceId) {
             const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
             clearInterval(saveInterval);
 
-            // Se o socket que esta fechando NAO FOR o socket atual no mapa, 
+            // Se o socket que esta fechando NAO FOR o socket atual no mapa,
             // significa que e uma conexao antiga de um Restart.
             const manualRemoval = (sessions.get(instanceId) !== sock);
+            if (!manualRemoval) sessions.delete(instanceId);
 
             await prisma.instance.update({ where: { id: instanceId }, data: { status: 'disconnected' } }).catch(() => { });
             io.emit('connection_update', { instanceId, status: 'disconnected' });
