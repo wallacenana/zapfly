@@ -38,18 +38,7 @@ const {
 const phoneToLid = new Map();
 
 function getStatusSendOptions(sock) {
-    return {
-        broadcast: true,
-        statusJidList: [sock.user?.id, sock.user?.lid]
-            .filter(Boolean)
-            .map(value => {
-                const raw = String(value);
-                const server = raw.includes('@lid') ? '@lid' : '@s.whatsapp.net';
-                const user = raw.split(':')[0].split('@')[0].replace(/\D/g, '');
-                return user ? `${user}${server}` : '';
-            })
-            .filter(jid => jid.includes('@'))
-    };
+    return { broadcast: true };
 }
 
 function normalizePhoneJid(value) {
