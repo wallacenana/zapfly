@@ -1112,7 +1112,8 @@ router.post('/', async (req, res) => {
     if (!userId) return res.status(400).json({ error: 'User ID não identificado.' });
 
     const orderType = type || 'order';
-    const isCashPayment = String(paymentMethod || '').trim().toLowerCase() === 'dinheiro';
+    const normalizedPaymentMethod = String(paymentMethod || '').trim().toLowerCase();
+    const isCashPayment = ['dinheiro', 'cash'].includes(normalizedPaymentMethod);
     // Dinheiro no delivery nao depende de configuracao do gateway para criar o pedido.
     const settings = (orderType === 'order' || !isCashPayment) ? await getSettings(userId) : null;
 
@@ -1196,7 +1197,7 @@ router.post('/', async (req, res) => {
       clientPhone: clientPhone || (finalClientJid && finalClientJid.includes('@') ? finalClientJid.split('@')[0] : null),
       type: orderType,
       deliveryAddress: deliveryAddress || null,
-      paymentMethod: paymentMethod || 'A definir',
+      paymentMethod: isCashPayment ? 'dinheiro' : (paymentMethod || 'A definir'),
       deliveryFee: parseFloat(deliveryFee) || 0,
       totalValue: computedTotal,
       addons: addons || null,

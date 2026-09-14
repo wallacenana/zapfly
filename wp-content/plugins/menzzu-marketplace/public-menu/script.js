@@ -3063,7 +3063,7 @@ async function handlePlaceOrder() {
         scheduledDate: state.activeTab === 'order' ? state.orderSchedule?.date || null : null,
         scheduledTime: state.activeTab === 'order' ? state.orderSchedule?.time || null : null,
         deliveryFee: state.deliveryType === 'delivery' ? state.deliveryFee : 0,
-        paymentMethod: state.paymentMethod,
+        paymentMethod: String(state.paymentMethod || '').trim().toLowerCase() === 'dinheiro' ? 'dinheiro' : state.paymentMethod,
         totalValue: totalValue,
         addons: getOrderAddonsJSON(cart[0]),
         carrinho_itens_extras: cart.slice(1).map(item => ({
