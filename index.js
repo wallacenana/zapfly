@@ -118,6 +118,7 @@ app.set('io', io); // Disponibiliza o IO para as rotas
 initFlows(io);
 const sessions = new Map();
 const stores = new Map();
+app.set('getSock', (instanceId) => sessions.get(instanceId) || Array.from(sessions.values())[0] || null);
 startFlowMonitor(sessions);
 
 const aiDebounceTimers = {};

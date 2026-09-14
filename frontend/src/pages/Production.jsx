@@ -15,6 +15,26 @@ const getPrintableOrderParts = (order) => {
   return { productName, extras };
 };
 
+const getAttachmentUrls = (value) => {
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.map(item => String(item || '').trim()).filter(Boolean);
+  } catch (e) { }
+
+  return /^https?:\/\//i.test(raw) ? [raw] : [];
+};
+
+const renderAttachmentGallery = (value, targetBlank = true) => {
+  const urls = getAttachmentUrls(value);
+  if (!urls.length) return value;
+
+  const targetAttrs = targetBlank ? ' target="_blank" rel="noopener noreferrer"' : '';
+  return `<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 5px;">${urls.map((url, index) => `<a href="${url}"${targetAttrs} title="Abrir anexo ${index + 1}" style="display: block; width: 76px; height: 76px; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; background: #fff;"><img src="${url}" alt="Anexo ${index + 1}" style="width: 100%; height: 100%; object-fit: cover; display: block;"></a>`).join('')}</div>`;
+};
+
 const getLegacyGroupName = (order, value) => {
   const groups = Array.isArray(order.productRelation?.addonGroupDefinitions) ? order.productRelation.addonGroupDefinitions : [];
   return groups.find(group => {
@@ -362,13 +382,13 @@ const Production = () => {
     const freightStr = freightValue.toFixed(2);
     const selectionSections = getOrderSelectionSections(order);
     const detailRows = selectionSections.flatMap(section => section.values.map(([value, isAttachment]) => [section.label, value, isAttachment]));
-    const printSelectionHtml = selectionSections.map(section => `<div style="margin-bottom: 8px;"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 10px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}">Clique para ver anexo</a>` : value}</div>`).join('')}</div>`).join('');
+    const printSelectionHtml = selectionSections.map(section => `<div style="margin-bottom: 8px;"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 10px;">${isAttachment || getAttachmentUrls(value).length ? renderAttachmentGallery(value, false) : value}</div>`).join('')}</div>`).join('');
     const detailSummaryHtml = detailRows.length
-? `<div style="font-size: 13px; color: #475569; margin-top: 12px; padding-top: 0; line-height: 1.6;">${detailRows.map(([label, value, isAttachment]) => `<div><b>${label}:</b><br><span style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Clique para ver anexo</a>` : value}</span></div>`).join('')}</div>`
+? `<div style="font-size: 13px; color: #475569; margin-top: 12px; padding-top: 0; line-height: 1.6;">${detailRows.map(([label, value, isAttachment]) => `<div><b>${label}:</b><br><span style="padding-left: 8px;">${isAttachment || getAttachmentUrls(value).length ? renderAttachmentGallery(value) : value}</span></div>`).join('')}</div>`
       : '';
 
     const selectionSummaryHtml = selectionSections.length
-? `<div style="font-size: 13px; color: #475569; margin-top: 12px; padding-top: 0; line-height: 1.6;">${selectionSections.map((section, index) => `<div style="margin-top: 10px; padding-top: ${index ? '10px' : '0'}; ${index ? 'border-top: 1px dashed #cbd5e1;' : ''}"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 8px;">${isAttachment || /^https?:\/\//i.test(value) ? `<a href="${value}" target="_blank" rel="noopener noreferrer">Clique para ver anexo</a>` : value}</div>`).join('')}</div>`).join('')}</div>`
+? `<div style="font-size: 13px; color: #475569; margin-top: 12px; padding-top: 0; line-height: 1.6;">${selectionSections.map((section, index) => `<div style="margin-top: 10px; padding-top: ${index ? '10px' : '0'}; ${index ? 'border-top: 1px dashed #cbd5e1;' : ''}"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 8px;">${isAttachment || getAttachmentUrls(value).length ? renderAttachmentGallery(value) : value}</div>`).join('')}</div>`).join('')}</div>`
       : '';
 
     let notesHtml = '';

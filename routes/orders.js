@@ -413,6 +413,30 @@ function buildCalendarOrderDescription(order, links = []) {
   ].filter(Boolean).join('\n');
 }
 
+function getOrderRecipientJid(order) {
+  const storedJid = String(order?.clientJid || '').trim();
+  if (storedJid.includes('@') && !storedJid.startsWith('manual_')) return storedJid;
+
+  const digits = String(order?.clientPhone || '').replace(/\D/g, '');
+  if (digits.length < 10) return '';
+  const phone = digits.startsWith('55') ? digits : `55${digits}`;
+  return `${phone}@s.whatsapp.net`;
+}
+
+async function notifyOrderAccepted(order, sockGetter) {
+  const jid = getOrderRecipientJid(order);
+  if (!jid || typeof sockGetter !== 'function') return;
+
+  const sock = sockGetter(order.instanceId || 'global');
+  if (!sock) return;
+
+  const product = String(order.product || 'seu pedido').replace(/\s*\[[^\]]+\]\s*$/, '').trim();
+  const message = `✅ *Pedido aceito!*
+
+Olá, *${order.clientName || 'cliente'}*! Seu pedido de *${product}* foi aceito e já entrou na nossa fila de produção. Avisaremos você assim que estiver pronto. 🎂`;
+  await sock.sendMessage(jid, { text: message });
+}
+
 // Cria evento no Google Calendar
 async function createCalendarEvent(order) {
   const today = new Date().toISOString().split('T')[0];
@@ -1828,6 +1852,15 @@ router.patch('/:id', authenticate, async (req, res) => {
       where: { id },
       data: updateData
     });
+
+    if (String(updateData.status || '').toLowerCase() === 'accepted'
+      && String(existing.status || '').toLowerCase() !== 'accepted') {
+      try {
+        await notifyOrderAccepted(order, req.app.get('getSock'));
+      } catch (notifyError) {
+        console.error(`[WhatsApp] Falha ao avisar aceite do pedido ${id}:`, notifyError.message);
+      }
+    }
 
     // 2. Recalcular o valor total do pedido após o update (se necessário)
     const computedTotal = await calculateOrderTotal(order, userId);
