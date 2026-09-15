@@ -413,6 +413,17 @@ function buildCalendarOrderDescription(order, links = []) {
   ].filter(Boolean).join('\n');
 }
 
+function hasRequestedProductStock(product, variationName) {
+  if (!product?.trackStock) return true;
+  const variations = safeJsonParse(product.variations, []);
+  if (!Array.isArray(variations) || variations.length === 0) return Number(product.stock) > 0;
+  const visibleVariations = variations.filter((variation) => !variation?.hidden);
+  const selected = visibleVariations.find((variation) => String(variation.name || '') === String(variationName || ''));
+  const candidates = selected ? [selected] : visibleVariations;
+  return candidates.some((variation) => Number(variation.stock) > 0
+    || (Array.isArray(variation.subItems) && variation.subItems.some((item) => Number(item?.stock) > 0)));
+}
+
 function getOrderRecipientJid(order) {
   const storedJid = String(order?.clientJid || '').trim();
   if (storedJid.includes('@') && !storedJid.startsWith('manual_')) return storedJid;
@@ -1228,6 +1239,24 @@ router.post('/', async (req, res) => {
       const availability = await checkAvailability(userId, scheduledDate, scheduledTime, orderType);
       if (!availability.available) {
         return res.status(400).json({ error: availability.reason || 'Horário indisponível.' });
+      }
+    }
+
+    if (orderType === 'delivery') {
+      const requestedItems = Array.isArray(cartItems) && cartItems.length > 0
+        ? cartItems
+        : [{ productId, variation }];
+      const productIds = [...new Set(requestedItems.map((item) => item?.productId).filter(Boolean))];
+      const productsForStock = productIds.length > 0
+        ? await prisma.product.findMany({ where: { userId, id: { in: productIds } } })
+        : [];
+      const productsById = new Map(productsForStock.map((item) => [item.id, item]));
+      const unavailable = requestedItems.find((item) => {
+        const productRecord = productsById.get(item?.productId);
+        return productRecord && !hasRequestedProductStock(productRecord, item?.variation);
+      });
+      if (unavailable) {
+        return res.status(409).json({ error: 'Este produto está esgotado no momento.' });
       }
     }
 

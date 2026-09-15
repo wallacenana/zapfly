@@ -295,6 +295,21 @@ function getCustomFieldSchema(item) {
     return [];
 }
 
+function isStockTrackingEnabled(product) {
+    return product?.trackStock === true || product?.trackStock === 1 || product?.trackStock === '1' || product?.trackStock === 'true';
+}
+
+function isProductAvailableForSale(product) {
+    if (!isStockTrackingEnabled(product)) return true;
+    let variations = [];
+    try { variations = JSON.parse(product?.variations || '[]'); } catch (e) { variations = []; }
+    const visibleVariations = variations.filter(v => !v.hidden);
+    if (visibleVariations.length > 0) {
+        return visibleVariations.some(v => Number(v.stock) > 0 || (Array.isArray(v.subItems) && v.subItems.some(item => Number(item?.stock) > 0)));
+    }
+    return Number(product?.stock) > 0;
+}
+
 function getCustomFieldAnswers(item) {
     const parsed = parseJsonValue(item?.customFieldValues || item?.customFields, {});
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
@@ -1279,6 +1294,7 @@ function renderMenu() {
 
 function renderFeaturedCard(product, isPriority = false) {
     const priceText = getDisplayPriceText(product);
+    const available = isProductAvailableForSale(product);
     const images = parseImages(product.image);
     const imgAttr = isPriority ? 'fetchpriority="high" loading="eager" decoding="async"' : 'loading="lazy" decoding="async"';
 
@@ -1292,13 +1308,13 @@ function renderFeaturedCard(product, isPriority = false) {
     }
 
     return `
-        <div class="featured-card" onclick="openItemDetail('${product.id}')">
+        <div class="featured-card${available ? '' : ' is-sold-out'}" ${available ? `onclick="openItemDetail('${product.id}')"` : ''}>
             <div class="featured-img-wrapper">
                 ${images.length > 0 ? `<img src="${getImg(images[0], 'medium')}" alt="${product.name}" ${imgAttr}>` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
             </div>
             <div class="featured-info">
                 <h3>${product.name}</h3>
-                <div class="product-price">${priceText}</div>
+                <div class="product-price">${available ? priceText : 'Esgotado'}</div>
             </div>
         </div>
     `;
@@ -1338,17 +1354,18 @@ function scrollToCategory(id) {
 
 function renderProductCard(product, isPriority = false) {
     const priceText = getDisplayPriceText(product);
+    const available = isProductAvailableForSale(product);
     const imgAttr = isPriority ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"';
     return `
-        <div class="product-card" onclick="openItemDetail('${product.id}')">
+        <div class="product-card${available ? '' : ' is-sold-out'}" ${available ? `onclick="openItemDetail('${product.id}')"` : ''}>
                     ${parseImages(product.image).length > 0 ? `<img src="${getImg(parseImages(product.image)[0], 'thumb')}" alt="${product.name}" class="product-img" ${imgAttr}>` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
             <div class="product-info">
                 <h3>${product.name}</h3>
                 <p>${product.description || ''}</p>
                 <div class="product-footer">
-                    <div class="product-price">${priceText}</div>
-                    <button class="product-add-btn" type="button" aria-label="Adicionar item" onclick="event.stopPropagation(); openItemDetail('${product.id}')">
-                        <i data-lucide="plus"></i>
+                    <div class="product-price">${available ? priceText : 'Esgotado'}</div>
+                    <button class="product-add-btn" type="button" aria-label="${available ? 'Adicionar item' : 'Produto esgotado'}" ${available ? `onclick="event.stopPropagation(); openItemDetail('${product.id}')"` : 'disabled'}>
+                        <i data-lucide="${available ? 'plus' : 'x'}"></i>
                     </button>
                 </div>
             </div>
@@ -1452,6 +1469,10 @@ function ensureDetailFooter() {
 function openItemDetail(productId) {
     ensureDetailFooter();
     const item = state.products.find(p => p.id === productId);
+    if (!isProductAvailableForSale(item)) {
+        showAlert('Produto esgotado', 'Este produto está esgotado no momento.');
+        return;
+    }
     state.currentItem = item;
     state.currentQty = 1;
     state.currentVariation = null;
