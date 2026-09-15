@@ -5,8 +5,8 @@
   --bg-primary: #031614;
   --bg-secondary: #06231e;
   --bg-tertiary: #092b24;
-  --accent-primary: #a2e403;
-  --accent-glow: rgba(162, 228, 3, 0.16);
+  --accent-primary: #8BF32F;
+  --accent-glow: rgba(139, 243, 47, 0.16);
   --text-primary: #fdfdff;
   --text-secondary: #a1a1aa;
   --text-muted: #71717a;
@@ -21,8 +21,8 @@
   --bg-gray: #f4f4f5;
   --text-black: #111111;
   --text-gray: #666666;
-  --btn-bg: #a2e403;
-  --btn-text: #031614;
+  --btn-bg: #8BF32F;
+  --btn-text: #021b17;
   --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   --primary-hover: #ff758f;
   --category-nav-top: -1px;
@@ -171,9 +171,16 @@ h4 {
   transition: all 0.2s;
 }
 
+.btn,
+button,
+.ui-button,
+.ui-tab {
+  font-weight: 600 !important;
+}
+
 .btn-primary {
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--btn-text);
 }
 
 .btn-primary:hover {
@@ -181,9 +188,9 @@ h4 {
 }
 
 .btn-secondary {
-  background-color: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  color: var(--text-primary);
+  background-color: #fff;
+  border: 1px solid #b7c8c0;
+  color: var(--btn-text);
 }
 
 .btn-secondary:hover {
@@ -205,8 +212,8 @@ h4 {
 }
 
 .btn-icon:hover {
-  background-color: var(--bg-tertiary);
-  color: var(--text-primary);
+  background-color: rgba(139, 243, 47, 0.16);
+  color: var(--btn-text);
 }
 
 .settings-main-card select option {
