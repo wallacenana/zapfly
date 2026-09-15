@@ -68,7 +68,10 @@ function getStatusSendOptions(sock) {
     const statusJidList = typeof sock.__getStatusJidList === 'function'
         ? sock.__getStatusJidList()
         : [];
-    return { broadcast: true, ...(statusJidList.length ? { statusJidList } : {}) };
+    if (!Array.isArray(statusJidList) || statusJidList.length === 0) {
+        throw new Error('STATUS_AUDIENCE_EMPTY: nenhuma audiência válida para o Status.');
+    }
+    return { broadcast: true, statusJidList };
 }
 
 async function sendStatusMessage(sock, content) {
