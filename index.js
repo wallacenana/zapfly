@@ -1203,6 +1203,9 @@ app.post('/mercadopago/webhook', async (req, res) => {
 
 app.get('/public/menu/:slug', async (req, res) => {
     try {
+        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
         const slug = req.params.slug.toLowerCase();
         console.log(`[Public Menu] Buscando loja: ${slug}`);
 
@@ -3755,7 +3758,9 @@ app.get(['/', '/:slug'], async (req, res) => {
             });
 
             html = html.replace('<div id="menu-sections">', `<div id="menu-sections">${menuHtml}`);
-            res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=120, stale-while-revalidate=60');
+            res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+            res.setHeader('Pragma', 'no-cache');
+            res.setHeader('Expires', '0');
 
             const title = settings.businessName ? `${settings.businessName} - Cardápio Digital` : 'Cardápio Digital';
             const description = settings.seoDescription || `Confira o cardapio digital de ${settings.businessName || 'nossa loja'} e faca seu pedido online.`;

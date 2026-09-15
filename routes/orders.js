@@ -1253,10 +1253,45 @@ router.post('/', async (req, res) => {
       const productsById = new Map(productsForStock.map((item) => [item.id, item]));
       const unavailable = requestedItems.find((item) => {
         const productRecord = productsById.get(item?.productId);
-        return productRecord && !hasRequestedProductStock(productRecord, item?.variation);
+        return productRecord && (productRecord.active === false || !hasRequestedProductStock(productRecord, item?.variation));
       });
       if (unavailable) {
         return res.status(409).json({ error: 'Este produto está esgotado no momento.' });
+      }
+
+      // Reserva estoque simples de forma condicional para evitar venda acima do limite
+      // quando dois clientes finalizam pedidos ao mesmo tempo.
+      const reservedStock = [];
+      try {
+        for (const item of requestedItems) {
+          const productRecord = productsById.get(item?.productId);
+          const variations = safeJsonParse(productRecord?.variations, []);
+          const hasVariations = Array.isArray(variations) && variations.length > 0;
+          const itemQuantity = Math.max(1, parseInt(item?.quantity, 10) || 1);
+          if (!productRecord?.trackStock || hasVariations) continue;
+
+          const updated = await prisma.product.updateMany({
+            where: {
+              id: productRecord.id,
+              userId,
+              active: true,
+              stock: { gte: itemQuantity }
+            },
+            data: { stock: { decrement: itemQuantity } }
+          });
+          if (updated.count !== 1) {
+            throw Object.assign(new Error('Este produto nao esta disponivel no momento.'), { statusCode: 409 });
+          }
+          reservedStock.push({ id: productRecord.id, quantity: itemQuantity });
+        }
+      } catch (reservationError) {
+        for (const item of reservedStock) {
+          await prisma.product.update({
+            where: { id: item.id },
+            data: { stock: { increment: item.quantity } }
+          }).catch(() => {});
+        }
+        return res.status(reservationError.statusCode || 409).json({ error: reservationError.message });
       }
     }
 

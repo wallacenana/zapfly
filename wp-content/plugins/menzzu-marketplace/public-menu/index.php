@@ -15,7 +15,10 @@ require_once __DIR__ . '/config.php';
 
 if (!headers_sent()) {
     header('Content-Type: text/html; charset=UTF-8');
-    header('Cache-Control: public, max-age=60, s-maxage=60');
+    // O estoque e a disponibilidade mudam em tempo real; nunca sirva uma copia do cardapio.
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
 }
 
 try {
