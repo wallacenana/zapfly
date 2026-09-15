@@ -589,6 +589,8 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
     try {
         const userId = req.user.id;
         const now = new Date();
+        const requestedRange = String(req.query.range || '7');
+        const rangeDays = requestedRange === '15' ? 15 : requestedRange === '30' ? 30 : 7;
         const brazilDateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' });
         const getBrazilDateString = (date = new Date()) => brazilDateFormatter.format(date);
 
@@ -596,12 +598,18 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
         const todayStart = new Date(`${today}T00:00:00-03:00`);
         const todayEnd = new Date(`${today}T23:59:59.999-03:00`);
 
-        const sevenDays = [];
-        for (let i = 6; i >= 0; i -= 1) {
-            const day = new Date(now);
-            day.setDate(day.getDate() - i);
+        const customStart = /^\d{4}-\d{2}-\d{2}$/.test(req.query.start || '') ? req.query.start : null;
+        const customEnd = /^\d{4}-\d{2}-\d{2}$/.test(req.query.end || '') ? req.query.end : null;
+        const chartStartKey = customStart || getBrazilDateString(new Date(now.getTime() - (rangeDays - 1) * 24 * 60 * 60 * 1000));
+        const chartEndKey = customEnd || today;
+        const chartStart = new Date(`${chartStartKey}T00:00:00-03:00`);
+        const chartEnd = new Date(`${chartEndKey}T23:59:59.999-03:00`);
+        const chartDays = [];
+        const chartDayCount = Math.max(1, Math.ceil((chartEnd.getTime() - chartStart.getTime()) / (24 * 60 * 60 * 1000)) + 1);
+        for (let i = 0; i < chartDayCount; i += 1) {
+            const day = new Date(chartStart.getTime() + i * 24 * 60 * 60 * 1000);
             const key = getBrazilDateString(day);
-            sevenDays.push({ key, label: new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit' }).format(day) });
+            chartDays.push({ key, label: new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit' }).format(day) });
         }
 
         const [user, settings, storeProfile, products, categories, reviewsSummary, stockItems, instances, flows, customers, ordersToday, recentOrders, last7DaysOrders, topOrderGroups, orderStatusGroups, paymentStatusGroups, availableSlots, recentReviews, upcomingOrders] = await Promise.all([
@@ -690,7 +698,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             prisma.order.findMany({
                 where: {
                     userId,
-                    createdAt: { gte: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000) },
+                    createdAt: { gte: chartStart, lte: chartEnd },
                     NOT: { status: { in: ['cancelled', 'canceled'] } }
                 },
                 select: { createdAt: true, totalValue: true, status: true }
@@ -873,7 +881,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             order: await prisma.order.count({ where: { userId, type: 'order', NOT: { status: { in: ['cancelled', 'canceled'] } } } }),
         };
 
-        const ordersByDay = sevenDays.map((day) => {
+        const ordersByDay = chartDays.map((day) => {
             const dayOrders = last7DaysOrders.filter((order) => getBrazilDateString(order.createdAt) === day.key);
             const total = dayOrders.reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
             return {
@@ -1028,7 +1036,8 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                 recentSlots,
                 configIssues,
                 categoryProductStats,
-                slotsByDay: Object.values(slotsByDay)
+                slotsByDay: Object.values(slotsByDay),
+                chartRange: { start: chartStartKey, end: chartEndKey }
             }
         });
     } catch (err) {

@@ -45,6 +45,8 @@
 .ui-button--primary:hover:not(:disabled) { background: var(--ui-accent-strong); color: #fff; }
 .ui-button--secondary { background: var(--ui-surface); color: var(--ui-text); border-color: var(--ui-border); }
 .ui-button--secondary:hover:not(:disabled) { background: var(--ui-accent-soft); border-color: var(--ui-accent); }
+.ui-button--status { min-height: 34px; padding: 0 12px; border-color: #9ee8cd; border-radius: 999px; background: #f1fcf7; color: #087a52; }
+.ui-button--status:hover:not(:disabled) { background: #e4f8ee; border-color: var(--ui-accent); }
 .ui-button--ghost { background: transparent; color: var(--ui-muted); border-color: transparent; }
 .ui-button--ghost:hover:not(:disabled) { color: var(--ui-text); background: var(--ui-surface-soft); }
 .ui-button--danger { background: #fff5f5; color: var(--ui-danger); border-color: #f0caca; }
@@ -108,6 +110,9 @@
 .dashboard-panel-head .ui-text--description { margin-top: 4px; font-size: 12px; }
 .dashboard-panel-actions { flex: 0 0 auto; }
 .dashboard-range-pill { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border: 1px solid #9ee8cd; border-radius: 9px; background: #effbf6; color: #087a52; font-size: 12px; font-weight: 800; }
+.dashboard-period-controls { display: grid; justify-items: end; gap: 8px; }
+.dashboard-custom-period { display: flex; align-items: center; gap: 7px; color: var(--ui-muted); font-size: 12px; }
+.dashboard-custom-period input { min-height: 32px; padding: 0 8px; border: 1px solid var(--ui-border); border-radius: 8px; color: var(--ui-text); background: var(--ui-surface); font: inherit; }
 .dashboard-chart-canvas { height: 300px; }
 .dashboard-empty-chart, .dashboard-empty { display: grid; min-height: 180px; place-items: center; color: var(--ui-muted); font-size: 13px; }
 .dashboard-lower-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 20px; }

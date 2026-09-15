@@ -1,20 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   BarChart3,
+  Calendar,
   CheckCircle2,
   ExternalLink,
   Package,
+  Pause,
+  Play,
   RefreshCw,
   ShoppingBag,
-  Store,
   TrendingUp,
   XCircle,
   Zap,
 } from 'lucide-react';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, LineController, Filler, Tooltip, Legend } from 'chart.js';
 import { useNavigate } from 'react-router-dom';
-import { api, PUBLIC_SITE_URL } from '../api';
-import { Button, Heading, Text } from '../components/ui';
+import { api } from '../api';
+import { Button, Heading, Tabs, Text } from '../components/ui';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, Filler, Tooltip, Legend);
 
@@ -122,12 +124,18 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
+  const [period, setPeriod] = useState('7');
+  const [customDates, setCustomDates] = useState({ start: toInputDate(Date.now() - 6 * 24 * 60 * 60 * 1000), end: toInputDate(Date.now()) });
+  const [savingStoreStatus, setSavingStoreStatus] = useState(false);
 
-  const loadSummary = async ({ silent = false } = {}) => {
+  const loadSummary = async ({ silent = false, nextPeriod = period, dates = customDates } = {}) => {
     silent ? setRefreshing(true) : setLoading(true);
     setError('');
     try {
-      const { data } = await api.get('/dashboard/summary');
+      const params = nextPeriod === 'custom'
+        ? { range: 'custom', start: dates.start, end: dates.end }
+        : { range: nextPeriod };
+      const { data } = await api.get('/dashboard/summary', { params });
       setSummary(data || {});
     } catch (err) {
       setError(err?.response?.data?.error || 'Não foi possível carregar o resumo do painel.');
@@ -138,6 +146,32 @@ export default function Dashboard() {
   };
 
   useEffect(() => { loadSummary(); }, []);
+
+  const handleStoreStatus = async () => {
+    if (savingStoreStatus) return;
+    const nextValue = !summary?.store?.acceptOrders;
+    setSavingStoreStatus(true);
+    setSummary(current => ({ ...current, store: { ...current?.store, acceptOrders: nextValue } }));
+    try {
+      await api.post('/settings', { acceptOrders: nextValue });
+    } catch (err) {
+      setSummary(current => ({ ...current, store: { ...current?.store, acceptOrders: !nextValue } }));
+      setError(err?.response?.data?.error || 'NÃ£o foi possÃ­vel alterar o status da loja.');
+    } finally {
+      setSavingStoreStatus(false);
+    }
+  };
+
+  const handlePeriodChange = nextPeriod => {
+    setPeriod(nextPeriod);
+    if (nextPeriod !== 'custom') loadSummary({ silent: true, nextPeriod });
+  };
+
+  const applyCustomPeriod = () => {
+    if (customDates.start && customDates.end && customDates.start <= customDates.end) {
+      loadSummary({ silent: true, nextPeriod: 'custom', dates: customDates });
+    }
+  };
   if (loading) return <DashboardSkeleton />;
 
   const store = summary?.store || {};
@@ -148,8 +182,13 @@ export default function Dashboard() {
   const recentOrders = Array.isArray(lists.recentOrders) ? lists.recentOrders : [];
   const connected = safeNumber(metrics.connectedInstancesCount);
   const instances = safeNumber(metrics.instancesCount);
-  const openStoreUrl = store.slug ? `${PUBLIC_SITE_URL}/${store.slug}` : '';
   const modeLabel = String(store.deliveryMode || '').toLowerCase() === 'delivery' ? 'Delivery ativo' : String(store.deliveryMode || '').toLowerCase() === 'pickup' ? 'Retirada na loja' : 'Entrega + retirada';
+  const periodItems = [
+    { value: '7', label: '7 dias' },
+    { value: '15', label: '15 dias' },
+    { value: '30', label: '1 mÃªs' },
+    { value: 'custom', label: 'Personalizado', icon: Calendar },
+  ];
 
   return (
     <div className="dashboard-page-shell">
@@ -161,14 +200,13 @@ export default function Dashboard() {
           <span>{safeText(store.address?.split(',').slice(-2).join(',').trim(), 'Sua loja')}</span>
         </div>
         <div className="dashboard-topbar-actions">
-          <span className={`dashboard-status-pill ${store.acceptOrders ? 'is-active' : 'is-paused'}`}>
-            {store.acceptOrders ? <CheckCircle2 size={15} /> : <XCircle size={15} />}
-            {store.acceptOrders ? 'Aberto para pedidos' : 'Pedidos pausados'}
-          </span>
+          <Button variant="status" size="sm" className={`dashboard-status-pill ${store.acceptOrders ? 'is-active' : 'is-paused'}`} onClick={handleStoreStatus} disabled={savingStoreStatus} title={store.acceptOrders ? 'Pausar pedidos' : 'Retomar pedidos'}>
+            {store.acceptOrders ? <Pause size={15} /> : <Play size={15} />}
+            {savingStoreStatus ? 'Salvando...' : store.acceptOrders ? 'Aberto para pedidos' : 'Pedidos pausados'}
+          </Button>
           <Button variant="secondary" size="sm" onClick={() => loadSummary({ silent: true })} disabled={refreshing}>
             <RefreshCw size={15} className={refreshing ? 'animate-spin' : ''} /> Atualizar
           </Button>
-          {openStoreUrl ? <Button as="a" variant="primary" size="sm" href={openStoreUrl} target="_blank" rel="noreferrer"><Store size={15} /> Cardápio</Button> : null}
         </div>
       </header>
 
@@ -181,7 +219,7 @@ export default function Dashboard() {
           <MetricCard label="Cancelados / período" value={integer.format(safeNumber(metrics.cancelledOrdersCount))} caption="Pedidos cancelados" icon={XCircle} tone="red" />
         </div>
 
-        <Panel eyebrow="Performance operacional" title="Volume de pedidos e faturamento" description="Acompanhe a movimentação da loja nos últimos 7 dias." actions={<span className="dashboard-range-pill">Últimos 7 dias</span>}>
+        <Panel eyebrow="Performance operacional" title="Volume de pedidos e faturamento" description="Acompanhe a movimentação da loja no período selecionado." actions={<div className="dashboard-period-controls"><Tabs items={periodItems} value={period} onChange={handlePeriodChange} />{period === 'custom' ? <div className="dashboard-custom-period"><input type="date" value={customDates.start} onChange={event => setCustomDates(current => ({ ...current, start: event.target.value }))} /><span>até</span><input type="date" value={customDates.end} onChange={event => setCustomDates(current => ({ ...current, end: event.target.value }))} /><Button variant="secondary" size="sm" onClick={applyCustomPeriod}>Aplicar</Button></div> : null}</div>}>
           <PerformanceChart days={days} />
         </Panel>
 
