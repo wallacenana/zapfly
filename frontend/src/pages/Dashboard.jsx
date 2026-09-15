@@ -187,7 +187,7 @@ export default function Dashboard() {
   const periodItems = [
     { value: '7', label: '7 dias' },
     { value: '15', label: '15 dias' },
-    { value: '30', label: '1 mÃªs' },
+    { value: '30', label: '1 mês' },
     { value: 'custom', label: 'Personalizado', icon: Calendar },
   ];
 
