@@ -2170,6 +2170,7 @@ async function initInstance(instanceId) {
                                     if (responseMessage.tool_calls) {
                                         messages.push(responseMessage);
                                         let lastDeliveryFee = 0; // Fallback se a IA esquecer de passar no create_order
+                                        let pendingMarketingMedia = null;
 
                                         for (const toolCall of responseMessage.tool_calls) {
                                             const functionName = toolCall.function.name;
@@ -2389,14 +2390,17 @@ async function initInstance(instanceId) {
                                                     where: {
                                                         userId,
                                                         ...(search ? { name: { contains: search } } : {})
-                                                    }
+                                                    },
+                                                    orderBy: { createdAt: 'desc' }
                                                 });
+                                                pendingMarketingMedia = assets[0] || null;
                                                 result = assets.map(a => ({ id: a.id, name: a.name }));
                                             }
                                             else if (functionName === "send_marketing_media") {
                                                 const { assetId, caption } = args;
                                                 const asset = await prisma.marketingAsset.findFirst({ where: { id: assetId, userId } });
                                                 if (asset) {
+                                                    pendingMarketingMedia = null;
                                                     await sock.sendMessage(jid, { image: await getStatusImage(asset.url), caption: caption || "" });
                                                     result = { success: true, message: "Imagem enviada com sucesso." };
                                                 } else {
@@ -2458,6 +2462,17 @@ async function initInstance(instanceId) {
                                         }
 
                                         if (currentToken.cancelled) return;
+
+                                        if (pendingMarketingMedia) {
+                                            await sock.sendPresenceUpdate('composing', jid);
+                                            await new Promise(resolve => setTimeout(resolve, 700));
+                                            await sock.sendPresenceUpdate('paused', jid);
+                                            await sock.sendMessage(jid, {
+                                                image: await getStatusImage(pendingMarketingMedia.url),
+                                                caption: `Aqui está uma foto de ${pendingMarketingMedia.name}.`
+                                            });
+                                            return;
+                                        }
 
                                         //  SEQUESTRAR O FLUXO: SE GEROU LINK OU CATALOGO, A IA SE CALA E O SISTEMA ASSUME
                                         if (pendingPaymentLink) {
