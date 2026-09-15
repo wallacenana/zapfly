@@ -10,7 +10,7 @@
     "@google/generative-ai": "^0.24.1",
     "@googlemaps/google-maps-services-js": "^3.4.2",
     "@prisma/client": "^6.19.3",
-    "@whiskeysockets/baileys": "^6.7.3",
+    "@whiskeysockets/baileys": "7.0.0-rc14",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",

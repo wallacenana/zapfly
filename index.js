@@ -12,7 +12,7 @@ for (const method of ['warn', 'info']) {
 const { google } = require('googleapis');
 const Baileys = require('@whiskeysockets/baileys');
 const makeWASocket = Baileys.default || Baileys.makeWASocket;
-const { useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason, makeInMemoryStore } = Baileys;
+const { useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason } = Baileys;
 const pino = require('pino');
 const express = require('express');
 const http = require('http');
@@ -22,6 +22,22 @@ const cors = require('cors');
 const OpenAI = require('openai');
 const fs = require('fs');
 const crypto = require('crypto');
+
+// Baileys v7 removed makeInMemoryStore; keep the small store surface used by this app.
+const makeInMemoryStore = Baileys.makeInMemoryStore || (() => {
+    const contacts = {};
+    return {
+        contacts,
+        bind: (events) => {
+            events.on('contacts.upsert', (items = []) => items.forEach(item => { if (item?.id) contacts[item.id] = item; }));
+            events.on('contacts.update', (items = []) => items.forEach(item => { if (item?.id) contacts[item.id] = { ...contacts[item.id], ...item }; }));
+        },
+        readFromFile: (file) => {
+            if (fs.existsSync(file)) Object.assign(contacts, JSON.parse(fs.readFileSync(file, 'utf8')));
+        },
+        writeToFile: (file) => fs.writeFileSync(file, JSON.stringify(contacts))
+    };
+});
 const prisma = require('./lib/prisma');
 const { calculateFee } = require('./lib/maps');
 const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock } = require('./lib/utils');
