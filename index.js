@@ -2840,7 +2840,8 @@ async function initInstance(instanceId) {
             if (!raw || raw === 'status@broadcast' || raw.endsWith('@g.us')) return '';
             const [user, server = 's.whatsapp.net'] = raw.split('@');
             const normalizedUser = user.split(':')[0];
-            return normalizedUser ? `${normalizedUser}@${server}` : '';
+            if (!normalizedUser || !/^\d+$/.test(normalizedUser)) return '';
+            return `${normalizedUser}@${server}`;
         };
         const contactJids = Object.keys(store.contacts || {})
             .map(normalizeStatusJid)
