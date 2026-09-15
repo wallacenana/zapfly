@@ -227,8 +227,9 @@ model Product {
   trackStock      Boolean   @default(false)
   stock           Int       @default(0)
   capacityCost    Int       @default(1)
-  featured        Boolean   @default(false)
-  promotion       Boolean   @default(false)
+    featured        Boolean   @default(false)
+    active          Boolean   @default(true)
+    promotion       Boolean   @default(false)
   displayOrder    Int       @default(0)
   bannerUrl       String?   @db.Text
   addonGroups     String?   @db.Text
