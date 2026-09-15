@@ -445,7 +445,9 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
   const isDelivery = String(order?.type || '').toLowerCase() === 'delivery';
   const isLocalConsumption = String(order?.deliveryAddress || '').trim().toLowerCase() === 'consumo no local';
   const messages = {
-    accepted: ['Pedido aceito!', 'Seu pedido foi aceito e entrou na fila de produção.'],
+    accepted: isDelivery
+      ? ['Pedido aceito!', 'Seu pedido foi aceito e entrou na fila de produção.']
+      : ['Pedido de encomenda aceito!', 'Seu pedido de encomenda foi aceito. Quando chegar o horário agendado, vamos prepará-lo com todo carinho.'],
     production: ['Pedido em preparação!', 'Seu pedido já está sendo preparado.'],
     ready: isDelivery
       ? ['Pedido saiu para entrega!', 'Seu pedido saiu para entrega.']
