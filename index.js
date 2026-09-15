@@ -68,7 +68,8 @@ function getStatusSendOptions(sock) {
     const statusJidList = typeof sock.__getStatusJidList === 'function'
         ? sock.__getStatusJidList()
         : [];
-    console.log(`[Status] Audiência calculada: ${Array.isArray(statusJidList) ? statusJidList.length : 0} destinatários.`);
+    console.log(`[Status] Conta conectada: ${sock.user?.id || 'desconhecida'}.`);
+    console.log(`[Status] Audiência calculada: ${Array.isArray(statusJidList) ? statusJidList.length : 0} destinatários. Amostra: ${Array.isArray(statusJidList) ? statusJidList.slice(0, 3).join(', ') : 'nenhuma'}`);
     if (!Array.isArray(statusJidList) || statusJidList.length === 0) {
         console.error('[Status] Bloqueado: audiência vazia ou inválida.');
         throw new Error('STATUS_AUDIENCE_EMPTY: nenhuma audiência válida para o Status.');
@@ -2735,6 +2736,10 @@ async function initInstance(instanceId) {
     sock.ev.on('messages.update', async (updates) => {
         for (const update of updates) {
             if (!update.update?.status) continue;
+
+            if (update.key?.remoteJid === 'status@broadcast') {
+                console.log(`[Status] Evento de retorno ${update.key.id}: status ${update.update.status}.`);
+            }
 
             const statusMap = { 1: 'pending', 2: 'sent', 3: 'delivered', 4: 'read' };
             const newStatus = statusMap[update.update.status] || 'sent';
