@@ -690,16 +690,16 @@ const Estoque = () => {
         </div>
 
         <div className="d-flex gap-10 tab-actions radius-8">
-          <button onClick={() => setTab('delivery')} style={{ ...tabBtn, backgroundColor: tab === 'delivery' ? 'rgba(93, 183, 44, 0.06)' : 'transparent', border: tab === 'delivery' ? '1px solid rgba(93, 183, 44, 0.12)' : '1px solid transparent', fontWeight: 600, color: tab === 'delivery' ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: 'none' }}>
+          <button className={`estoque-tab ${tab === 'delivery' ? 'is-active' : ''}`} onClick={() => setTab('delivery')} style={tabBtn}>
             <ShoppingBag size={18} /> Pronta Entrega
           </button>
-          <button onClick={() => setTab('encomenda')} style={{ ...tabBtn, backgroundColor: tab === 'encomenda' ? 'rgba(93, 183, 44, 0.06)' : 'transparent', border: tab === 'encomenda' ? '1px solid rgba(93, 183, 44, 0.12)' : '1px solid transparent', fontWeight: 600, color: tab === 'encomenda' ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: 'none' }}>
+          <button className={`estoque-tab ${tab === 'encomenda' ? 'is-active' : ''}`} onClick={() => setTab('encomenda')} style={tabBtn}>
             <Calendar size={18} /> Agendamentos
           </button>
-          <button onClick={() => setTab('addon')} style={{ ...tabBtn, backgroundColor: tab === 'addon' ? 'rgba(93, 183, 44, 0.06)' : 'transparent', border: tab === 'addon' ? '1px solid rgba(93, 183, 44, 0.12)' : '1px solid transparent', fontWeight: 600, color: tab === 'addon' ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: 'none' }}>
+          <button className={`estoque-tab ${tab === 'addon' ? 'is-active' : ''}`} onClick={() => setTab('addon')} style={tabBtn}>
             <Plus size={18} /> Adicionais
           </button>
-          <button onClick={() => setTab('seasonal')} style={{ ...tabBtn, backgroundColor: tab === 'seasonal' ? 'rgba(93, 183, 44, 0.06)' : 'transparent', border: tab === 'seasonal' ? '1px solid rgba(93, 183, 44, 0.12)' : '1px solid transparent', fontWeight: 600, color: tab === 'seasonal' ? 'var(--text-primary)' : 'var(--text-secondary)', boxShadow: 'none' }}>
+          <button className={`estoque-tab ${tab === 'seasonal' ? 'is-active' : ''}`} onClick={() => setTab('seasonal')} style={tabBtn}>
             <Gift size={18} /> Datas Comemorativas
           </button>
         </div></div>
