@@ -508,7 +508,7 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
 Olá, *${order.clientName || 'cliente'}*! ${messageData[1]}
 Pedido de *${product}*.
 
-Pode me perguntar aqui mais informações sobre o pedido.`;
+Se precisar, pode me perguntar aqui mais informações sobre o pedido.`;
   await sock.sendMessage(jid, { text: message });
   console.log(`[WhatsApp] Aviso de status ${status} enviado para ${jid} (pedido ${order.id}).`);
 }
