@@ -11,12 +11,12 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend } from 'chart.js';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, LineController, Filler, Tooltip, Legend } from 'chart.js';
 import { useNavigate } from 'react-router-dom';
 import { api, PUBLIC_SITE_URL } from '../api';
 import { Button, Heading, Text } from '../components/ui';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineController, Filler, Tooltip, Legend);
 
 const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const integer = new Intl.NumberFormat('pt-BR');
