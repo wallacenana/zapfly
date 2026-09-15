@@ -1,7 +1,7 @@
 ﻿import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
-import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box, Copy, Pencil, Gift, Clock, AlertTriangle, Upload, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Trash2, ShoppingBag, Calendar, X, Layers, ChevronRight, Hash, Box, Copy, Pencil, Gift, Clock, AlertTriangle, Upload, ArrowUp, ArrowDown, Pause, Play } from 'lucide-react';
 
 import Swal from 'sweetalert2';
 
@@ -427,6 +427,17 @@ const Estoque = () => {
     }
   };
 
+  const toggleProductActive = async (product) => {
+    const nextActive = product.active === false || product.active === 0 || product.active === '0';
+    setProducts(current => current.map(item => item.id === product.id ? { ...item, active: nextActive } : item));
+    try {
+      await api.patch(`/orders/products/${product.id}`, { active: nextActive });
+    } catch (err) {
+      setProducts(current => current.map(item => item.id === product.id ? { ...item, active: !nextActive } : item));
+      Swal.fire('Erro', 'Não foi possível alterar a disponibilidade do item.', 'error');
+    }
+  };
+
   const handleBannerUpload = async (file) => {
     if (!file) return;
     const url = await handleExternalUpload(file);
@@ -833,6 +844,7 @@ const Estoque = () => {
                           </button>
                         </div>
                         <button className="btn-icon" style={{ color: '#22c55e', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); duplicateProduct(p); }} title="Duplicar item"><Copy size={16} /></button>
+                        <button className="btn-icon" style={{ color: p.active === false || p.active === 0 || p.active === '0' ? '#22c55e' : '#f59e0b', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); toggleProductActive(p); }} title={p.active === false || p.active === 0 || p.active === '0' ? 'Retomar item' : 'Pausar item'}>{p.active === false || p.active === 0 || p.active === '0' ? <Play size={16} /> : <Pause size={16} />}</button>
                         <button className="btn-icon" style={{ color: '#3b82f6', borderRadius: '8px' }} onClick={(e) => { e.stopPropagation(); openEdit(p); }}><Pencil size={16} /></button>
                         <button className="btn-icon" style={{ color: '#ef4444', borderRadius: '8px' }} onClick={(e) => {
                           e.stopPropagation();

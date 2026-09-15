@@ -309,7 +309,7 @@ try {
     $stmt->execute([$store['id']]);
     $availableSlots = $stmt->fetchAll(PDO::FETCH_ASSOC);
     $hasVisibleProduct = count(array_filter($products, static function ($product) {
-        return ($product['active'] ?? 1) && strtolower((string) ($product['type'] ?? '')) !== 'addon';
+        return (int) ($product['active'] ?? 1) === 1 && strtolower((string) ($product['type'] ?? '')) !== 'addon';
     })) > 0;
     $marketplaceReady = !empty($store['logoUrl'])
         && (float) ($store['maxDeliveryKm'] ?? 0) > 0
@@ -740,6 +740,7 @@ try {
                     $orderedSectionKeys = [];
 
                     foreach ($products as $p) {
+                        if ((int) ($p['active'] ?? 1) !== 1) continue;
                         $catName = 'Geral';
                         if (!empty($p['categoryId'])) {
                             foreach ($categories as $cat) {

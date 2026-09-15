@@ -299,6 +299,10 @@ function isStockTrackingEnabled(product) {
     return product?.trackStock === true || product?.trackStock === 1 || product?.trackStock === '1' || product?.trackStock === 'true';
 }
 
+function isProductActive(product) {
+    return product?.active !== false && product?.active !== 0 && product?.active !== '0';
+}
+
 function isProductAvailableForSale(product) {
     if (!isStockTrackingEnabled(product)) return true;
     let variations = [];
@@ -1208,7 +1212,7 @@ function renderMenu() {
     const query = state.searchQuery.toLowerCase();
 
     const filtered = state.products.filter(p => {
-        if (p.active === false) return false;
+        if (!isProductActive(p)) return false;
         if (p.category === 'Adicionais' || p.type === 'addon') return false;
 
         // Verificar se tem variações e se todas estão escondidas
