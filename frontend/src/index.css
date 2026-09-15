@@ -414,6 +414,14 @@ estoque-label {
 }
 
 .estoque-modal {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8faf7;
+  --bg-tertiary: #f1f5f2;
+  --text-primary: #021b17;
+  --text-secondary: #52665e;
+  --text-muted: #71837b;
+  --border-color: #d8e5dc;
+  --active-color: #6bc51d;
   color: #1f2937;
   background: #f8faf7 !important;
   border: 1px solid #d8e5dc !important;
