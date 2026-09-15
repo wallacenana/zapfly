@@ -404,6 +404,45 @@ estoque-label {
   box-shadow: 0 4px 12px rgba(139, 243, 47, 0.18) !important;
 }
 
+/* Shared action treatment for legacy pages while they migrate to UI components. */
+.agenda-page .btn-primary,
+.flows-page .btn-primary,
+.connections-page .btn-primary,
+.prompts-page .btn-primary,
+.site-settings-page .btn-primary,
+.settings-page .btn-primary {
+  background: #8BF32F !important;
+  border-color: #8BF32F !important;
+  color: #021b17 !important;
+  font-weight: 600 !important;
+}
+
+.agenda-page .btn-secondary,
+.flows-page .btn-secondary,
+.connections-page .btn-secondary,
+.prompts-page .btn-secondary,
+.site-settings-page .btn-secondary,
+.settings-page .btn-secondary {
+  background: #ffffff !important;
+  border-color: #b7c8c0 !important;
+  color: #021b17 !important;
+  font-weight: 600 !important;
+}
+
+.flows-page .flows-tabs button,
+.settings-page .settings-tab {
+  border-radius: 10px !important;
+  color: #52665e !important;
+  font-weight: 600 !important;
+}
+
+.flows-page .flows-tabs button[style*="rgba(16, 185, 129"],
+.settings-page .settings-tab-active {
+  background: #8BF32F !important;
+  border-color: #8BF32F !important;
+  color: #021b17 !important;
+}
+
 .tab-actions {
   background: rgba(255, 255, 255, 0.92);
   padding: 6px;
