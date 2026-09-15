@@ -1623,6 +1623,10 @@ body.theme-dark .var-option.selected {
     background: color-mix(in srgb, var(--text-main) 3%, var(--bg-color));
 }
 
+.checkout-content .receiving-store-hours[hidden] {
+    display: none !important;
+}
+
 .checkout-content .receiving-store-hours>strong {
     color: var(--text-main);
     font-size: 0.84rem;

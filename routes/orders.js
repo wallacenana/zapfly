@@ -445,13 +445,13 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
   const isDelivery = String(order?.type || '').toLowerCase() === 'delivery';
   const isLocalConsumption = String(order?.deliveryAddress || '').trim().toLowerCase() === 'consumo no local';
   const messages = {
-    accepted: ['Pedido aceito!', 'Seu pedido foi aceito e entrou na fila de producao.'],
-    production: ['Pedido em preparacao!', 'Seu pedido ja esta sendo preparado.'],
+    accepted: ['Pedido aceito!', 'Seu pedido foi aceito e entrou na fila de produção.'],
+    production: ['Pedido em preparação!', 'Seu pedido já está sendo preparado.'],
     ready: isDelivery
       ? ['Pedido saiu para entrega!', 'Seu pedido saiu para entrega.']
       : (isLocalConsumption
-        ? ['Pedido pronto!', 'Seu pedido esta pronto para consumo no local.']
-        : ['Pedido pronto!', 'Seu pedido esta pronto para ser retirado.']),
+          ? ['Pedido pronto!', 'Seu pedido está pronto para consumo no local.']
+        : ['Pedido pronto!', 'Seu pedido está pronto para ser retirado.']),
     completed: ['Pedido finalizado!', 'Seu pedido foi finalizado e agradecemos muito pela preferência. Espero de coração que tenha ficado do jeitinho que você gostaria. Te espero na próxima! Amanhã teremos mais delícias para você.'],
     cancelled: ['Pedido cancelado', 'Seu pedido foi cancelado. Entre em contato conosco se precisar de ajuda.']
   };
@@ -503,10 +503,10 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
   const statusIcon = isDelivery && String(status || '').toLowerCase() === 'ready' ? '🚚' : '✅';
   const message = `${statusIcon} *${messageData[0]}* (#${orderId})
 
-Ola, *${order.clientName || 'cliente'}*! ${messageData[1]}
+Olá, *${order.clientName || 'cliente'}*! ${messageData[1]}
 Pedido de *${product}*.
 
-Pode me perguntar aqui mais informacoes sobre o pedido.`;
+Pode me perguntar aqui mais informações sobre o pedido.`;
   await sock.sendMessage(jid, { text: message });
   console.log(`[WhatsApp] Aviso de status ${status} enviado para ${jid} (pedido ${order.id}).`);
 }
