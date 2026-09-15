@@ -1,4 +1,14 @@
 ﻿require('dotenv').config();
+// O libsignal escreve estes diagnósticos diretamente no console, ignorando o logger do Baileys.
+const noisySignalLogs = /^(Decrypted message with closed session\.|Closing stale open session for new outgoing prekey bundle|Closing session:)/;
+for (const method of ['warn', 'info']) {
+    const original = console[method];
+    console[method] = (...args) => {
+        if (noisySignalLogs.test(String(args[0] || ''))) return;
+        original(...args);
+    };
+}
+
 const { google } = require('googleapis');
 const Baileys = require('@whiskeysockets/baileys');
 const makeWASocket = Baileys.default || Baileys.makeWASocket;
