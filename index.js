@@ -68,16 +68,25 @@ function getStatusSendOptions(sock) {
     const statusJidList = typeof sock.__getStatusJidList === 'function'
         ? sock.__getStatusJidList()
         : [];
+    console.log(`[Status] Audiência calculada: ${Array.isArray(statusJidList) ? statusJidList.length : 0} destinatários.`);
     if (!Array.isArray(statusJidList) || statusJidList.length === 0) {
+        console.error('[Status] Bloqueado: audiência vazia ou inválida.');
         throw new Error('STATUS_AUDIENCE_EMPTY: nenhuma audiência válida para o Status.');
     }
     return { broadcast: true, statusJidList };
 }
 
 async function sendStatusMessage(sock, content) {
+    const contentType = content?.image ? 'imagem' : content?.video ? 'vídeo' : 'texto';
+    console.log(`[Status] Iniciando envio de ${contentType}.`);
+    const options = getStatusSendOptions(sock);
+    console.log('[Status] Chamando Baileys para status@broadcast.');
     try {
-        return await sock.sendMessage('status@broadcast', content, getStatusSendOptions(sock));
+        const result = await sock.sendMessage('status@broadcast', content, options);
+        console.log(`[Status] Baileys aceitou o envio: ${result?.key?.id || 'sem id retornado'}.`);
+        return result;
     } catch (err) {
+        console.error('[Status] Falha no sendMessage:', err);
         throw err;
     }
 }
@@ -2450,17 +2459,20 @@ async function initInstance(instanceId) {
                                             }
                                             else if (functionName === "post_status") {
                                                 const { text, assetId } = args;
+                                                console.log(`[Status] Ferramenta post_status iniciada (imagem: ${assetId ? 'sim' : 'não'}).`);
                                                 if (assetId) {
                                                     const asset = await prisma.marketingAsset.findFirst({ where: { id: assetId, userId } });
                                                     if (asset) {
                                                         await sendStatusMessage(sock, { image: await getStatusImage(asset.url), caption: text });
                                                         result = { success: true, message: "Status com imagem postado com sucesso." };
+                                                        console.log('[Status] Ferramenta post_status concluída com sucesso.');
                                                     } else {
                                                         result = { success: false, error: "Imagem não encontrada para o status." };
                                                     }
                                                 } else {
                                                     await sendStatusMessage(sock, { text });
                                                     result = { success: true, message: "Status de texto postado com sucesso." };
+                                                    console.log('[Status] Ferramenta post_status concluída com sucesso.');
                                                 }
                                             }
 
