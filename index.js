@@ -64,9 +64,9 @@ const {
 
 const phoneToLid = new Map();
 
-function getStatusSendOptions(sock) {
+async function getStatusSendOptions(sock) {
     const statusJidList = typeof sock.__getStatusJidList === 'function'
-        ? sock.__getStatusJidList()
+        ? await sock.__getStatusJidList()
         : [];
     console.log(`[Status] Conta conectada: ${sock.user?.id || 'desconhecida'}.`);
     console.log(`[Status] Audiência calculada: ${Array.isArray(statusJidList) ? statusJidList.length : 0} destinatários. Amostra: ${Array.isArray(statusJidList) ? statusJidList.slice(0, 3).join(', ') : 'nenhuma'}`);
@@ -80,7 +80,7 @@ function getStatusSendOptions(sock) {
 async function sendStatusMessage(sock, content) {
     const contentType = content?.image ? 'imagem' : content?.video ? 'vídeo' : 'texto';
     console.log(`[Status] Iniciando envio de ${contentType}.`);
-    const options = getStatusSendOptions(sock);
+    const options = await getStatusSendOptions(sock);
     console.log('[Status] Chamando Baileys para status@broadcast.');
     try {
         const result = await sock.sendMessage('status@broadcast', content, options);
@@ -2834,22 +2834,35 @@ async function initInstance(instanceId) {
 
     sock.ev.on('creds.update', saveCreds);
 
-    sock.__getStatusJidList = () => {
+    sock.__getStatusJidList = async () => {
         const normalizeStatusJid = (value) => {
             const raw = String(value || '').trim();
             if (!raw || raw === 'status@broadcast' || raw.endsWith('@g.us')) return '';
             const [user, server = 's.whatsapp.net'] = raw.split('@');
             const normalizedUser = user.split(':')[0];
             if (!normalizedUser || !/^\d+$/.test(normalizedUser)) return '';
+            if (server !== 's.whatsapp.net' && server !== 'lid') return '';
             return `${normalizedUser}@${server}`;
         };
-        const contactJids = Object.keys(store.contacts || {})
-            .map(normalizeStatusJid)
-            .filter(jid => jid.endsWith('@s.whatsapp.net'));
-        const ownJids = [sock.user?.id]
-            .map(normalizeStatusJid)
-            .filter(jid => jid.endsWith('@s.whatsapp.net'));
-        return [...new Set([...contactJids, ...ownJids])];
+        const candidates = new Set(Object.keys(store.contacts || {}));
+        Object.values(store.contacts || {}).forEach(contact => {
+            [contact?.id, contact?.lid, contact?.pn, contact?.phone].forEach(value => {
+                if (value) candidates.add(value);
+            });
+        });
+        const chats = await prisma.chat.findMany({
+            where: { instanceId },
+            select: { jid: true }
+        }).catch(() => []);
+        chats.forEach(chat => candidates.add(chat.jid));
+        candidates.add(sock.user?.id);
+
+        const resolvedJids = await Promise.all([...candidates].map(async value => {
+            const normalized = normalizeStatusJid(value);
+            if (!normalized) return '';
+            return normalizeStatusJid(await getCanonicalJid(normalized, instanceId));
+        }));
+        return [...new Set(resolvedJids.filter(Boolean))];
     };
 
     sessions.set(instanceId, sock);
