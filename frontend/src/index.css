@@ -416,6 +416,8 @@ estoque-label {
 .estoque-modal {
   color: #1f2937;
   background: #f8faf7 !important;
+  border: 1px solid #d8e5dc !important;
+  box-shadow: 0 24px 70px rgba(2, 27, 23, 0.18) !important;
 }
 
 .estoque-modal :is(h1, h2, h3, h4, h5, h6) {
@@ -442,8 +444,44 @@ estoque-label {
 .estoque-modal select,
 .estoque-modal textarea {
   color: #111827 !important;
-  background-color: #f8fafc !important;
-  border-color: #d8e0d7 !important;
+  background-color: #ffffff !important;
+  border: 1px solid #cbd9d1 !important;
+  border-radius: 10px !important;
+  min-height: 42px;
+  padding: 10px 14px !important;
+  box-shadow: none !important;
+}
+
+.estoque-modal textarea {
+  min-height: 86px;
+  line-height: 1.5;
+}
+
+.estoque-modal input:focus,
+.estoque-modal select:focus,
+.estoque-modal textarea:focus {
+  border-color: #8BF32F !important;
+  outline: 3px solid rgba(139, 243, 47, 0.22) !important;
+}
+
+.estoque-modal .btn {
+  min-height: 42px;
+  background: #8BF32F !important;
+  border: 1px solid #8BF32F !important;
+  color: #021b17 !important;
+  font-weight: 600 !important;
+}
+
+.estoque-modal .btn-secondary {
+  background: #ffffff !important;
+  border-color: #b7c8c0 !important;
+  color: #021b17 !important;
+}
+
+.estoque-modal .estoque-label + input,
+.estoque-modal .estoque-label + select,
+.estoque-modal .estoque-label + textarea {
+  margin-top: 3px;
 }
 
 .estoque-modal input[type="checkbox"] {
