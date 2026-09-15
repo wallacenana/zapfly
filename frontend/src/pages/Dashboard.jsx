@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { api, PUBLIC_SITE_URL } from '../api';
 import { useNavigate } from 'react-router-dom';
+import { Button, Heading, Text } from '../components/ui';
 
 const money = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -397,46 +398,25 @@ const Dashboard = () => {
         <Badge tone="danger" icon={AlertTriangle}>Fechado para pedidos</Badge>
       )}
       {store.prepTime ? <Badge tone="info" icon={Clock3}>Entrega {store.prepTime}min</Badge> : null}
-      <button
+      <Button
         type="button"
+        variant="secondary"
         onClick={() => loadSummary({ silent: true })}
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '8px',
-          padding: '12px 16px',
-          borderRadius: '14px',
-          border: '1px solid var(--border-color)',
-          backgroundColor: 'var(--bg-secondary)',
-          color: 'var(--text-primary)',
-          fontWeight: 800,
-          cursor: 'pointer',
-        }}
       >
         <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
         Atualizar
-      </button>
+      </Button>
       {openStoreUrl ? (
-        <a
+        <Button
+          as="a"
+          variant="primary"
           href={openStoreUrl}
           target="_blank"
           rel="noreferrer"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '12px 16px',
-            borderRadius: '14px',
-            border: '1px solid rgba(102, 215, 17, 0.18)',
-            backgroundColor: 'rgba(102, 215, 17, 0.08)',
-            color: 'var(--accent-primary)',
-            textDecoration: 'none',
-            fontWeight: 800,
-          }}
         >
           Abrir cardápio
           <ExternalLink size={16} />
-        </a>
+        </Button>
       ) : null}
     </>
   );
@@ -528,12 +508,12 @@ const Dashboard = () => {
                 {storeStatus === 'opened' ? 'Operação estável' : 'Operação com restrições'}
               </Badge>
               <div style={{ height: '14px' }} />
-              <h1 style={{ fontFamily: 'Outfit, sans-serif', fontSize: '34px', lineHeight: 1.05, letterSpacing: '-0.04em', marginBottom: '8px', color: 'var(--text-primary)' }}>
+              <Heading as="h1" level={1} style={{ marginBottom: '8px' }}>
                 Resumo Diário
-              </h1>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '15px', lineHeight: 1.7, maxWidth: '760px' }}>
+              </Heading>
+              <Text variant="description" style={{ maxWidth: '760px' }}>
                 Métricas reais da operação, catálogo e atendimento em um painel mais limpo, leve e objetivo.
-              </p>
+              </Text>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '18px' }}>
                 <Badge tone={store.acceptOrders ? 'success' : 'danger'} icon={store.acceptOrders ? CheckCircle2 : AlertTriangle}>
                   {store.acceptOrders ? 'Aceitando pedidos' : 'Pedidos pausados'}
