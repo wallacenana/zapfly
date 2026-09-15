@@ -1071,9 +1071,20 @@ async function setupCronJobs(sockGetter) {
           const diffHours = (pickupTime.getTime() - nowBR.getTime()) / (1000 * 60 * 60);
 
           if (diffHours > -0.25 && diffHours <= leadHours) {
+            // Claims the reminder before sending so overlapping cron runs cannot duplicate it.
+            const claimed = await prisma.order.updateMany({
+              where: { id: order.id, reminderSent: false },
+              data: { reminderSent: true }
+            });
+            if (claimed.count !== 1) continue;
+
             const msg = `Olá *${order.clientName || 'cliente'}*! 🎂\n\nSua encomenda está agendada para retirada hoje às *${order.scheduledTime}*.\n\nJá estamos nos preparativos finais! 🚀`;
-            await sock.sendMessage(order.clientJid, { text: msg });
-            await prisma.order.update({ where: { id: order.id }, data: { reminderSent: true } });
+            try {
+              await sock.sendMessage(order.clientJid, { text: msg });
+            } catch (sendError) {
+              await prisma.order.update({ where: { id: order.id }, data: { reminderSent: false } }).catch(() => { });
+              throw sendError;
+            }
           }
         } catch (err) {
           console.error(`[Reminder] Falha ao enviar pedido ${order.id}:`, err.message);
