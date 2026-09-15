@@ -414,7 +414,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?v=4.14'); ?>">
+        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?ver=' . MENZZU_MARKETPLACE_VERSION); ?>">
         <style>
             :root {
                 --primary-color:
@@ -1304,7 +1304,7 @@ try {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?v=2.52'); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?ver=' . MENZZU_MARKETPLACE_VERSION); ?>" defer></script>
 
     </html>
 <?php
