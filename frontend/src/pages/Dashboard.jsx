@@ -23,6 +23,7 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineCont
 const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const integer = new Intl.NumberFormat('pt-BR');
 const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+const toInputDate = date => new Date(date).toISOString().slice(0, 10);
 const safeText = (value, fallback = 'Não informado') => String(value || '').trim() || fallback;
 
 function MetricCard({ label, value, caption, icon: Icon, tone = 'blue' }) {
