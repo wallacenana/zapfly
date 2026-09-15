@@ -96,8 +96,6 @@ const Estoque = () => {
   const [showSeasonalModal, setShowSeasonalModal] = useState(false);
   const [seasonalForm, setSeasonalForm] = useState({ name: '', eventDate: '', preStartDays: 15, postEndDays: 2, description: '', items: [], maxOrders: 0, onlySeasonalOnEventDay: false, active: true });
   const [editingSeasonal, setEditingSeasonal] = useState(null);
-  const [showHidden] = useState(false);
-
   const [categories, setCategories] = useState([]);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -558,11 +556,6 @@ const Estoque = () => {
     .filter(p => {
       const matchesTab = p.type === tab || p.type === `combo_${tab}`;
       if (!matchesTab) return false;
-
-      if (!showHidden && p.variations.length > 0) {
-        const hasVisible = p.variations.some(v => !v.hidden);
-        if (!hasVisible) return false;
-      }
 
       return true;
     });
