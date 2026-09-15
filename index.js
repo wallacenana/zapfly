@@ -42,7 +42,6 @@ function getStatusSendOptions(sock) {
     const statusJidList = typeof sock.__getStatusJidList === 'function'
         ? sock.__getStatusJidList()
         : [];
-    console.log(`[WhatsApp] Status audience: ${statusJidList.length} destinatarios.`);
     return { broadcast: true, ...(statusJidList.length ? { statusJidList } : {}) };
 }
 
@@ -50,8 +49,6 @@ async function sendStatusMessage(sock, content) {
     try {
         return await sock.sendMessage('status@broadcast', content, getStatusSendOptions(sock));
     } catch (err) {
-        const message = String(err?.message || err);
-        console.error(`[WhatsApp] Status não publicado (${message}). A conexão precisa ter sessões dos destinatários.`);
         throw err;
     }
 }
@@ -2113,6 +2110,7 @@ async function initInstance(instanceId) {
 
                                     const isDeliveryRequest = /card[aá]pio|o que tem|pronta entrega|o que voc[eê] tem|tem hoje|tem pra hoje|disponivel|preco|o que vende|possibilidades|opções|opcoes/i.test(lastUserMsg);
                                     const isOrderRequest = /encomenda|bolo de festa|personalizado|encomendar|quero encomendar/i.test(lastUserMsg);
+                                    const isMediaRequest = /foto|fotos|imagem|imagens|exemplo|exemplos|mostra|mostrar/i.test(lastUserMsg);
 
                                     let forcedToolChoice = "auto";
 
@@ -2133,6 +2131,10 @@ async function initInstance(instanceId) {
                                         } else if (isOrderRequest) {
                                             forcedToolChoice = { type: "function", function: { name: "get_order_catalog" } };
                                         }
+                                    }
+
+                                    if (isMediaRequest && forcedToolChoice === "auto") {
+                                        forcedToolChoice = { type: "function", function: { name: "get_marketing_media" } };
                                     }
 
                                     const modelToUse = (settings && settings.activeModel) ? (MODEL_MAP[settings.activeModel] || 'gpt-4o') : 'gpt-4o';
@@ -2173,7 +2175,6 @@ async function initInstance(instanceId) {
                                             const functionName = toolCall.function.name;
                                             const args = JSON.parse(toolCall.function.arguments);
                                             let result;
-                                            console.log(`[AI Tool] Iniciando ${functionName}:`, JSON.stringify(args));
 
 
                                             if (functionName === "chamar_gerente") {
@@ -2396,7 +2397,7 @@ async function initInstance(instanceId) {
                                                 const { assetId, caption } = args;
                                                 const asset = await prisma.marketingAsset.findFirst({ where: { id: assetId, userId } });
                                                 if (asset) {
-                                                    await sock.sendMessage(jid, { image: { url: asset.url }, caption: caption || "" });
+                                                    await sock.sendMessage(jid, { image: await getStatusImage(asset.url), caption: caption || "" });
                                                     result = { success: true, message: "Imagem enviada com sucesso." };
                                                 } else {
                                                     result = { success: false, error: "Imagem não encontrada." };
@@ -2454,7 +2455,6 @@ async function initInstance(instanceId) {
                                                 name: functionName,
                                                 content: JSON.stringify(result),
                                             });
-                                            console.log(`[AI Tool] Sucesso ${functionName}:`, JSON.stringify(result));
                                         }
 
                                         if (currentToken.cancelled) return;
