@@ -2836,6 +2836,7 @@ async function initInstance(instanceId) {
     sock.ev.on('creds.update', saveCreds);
 
     sock.__getStatusJidList = async () => {
+        const accountLid = sock.user?.lid || state.creds?.me?.lid || '';
         const normalizeStatusJid = (value) => {
             const raw = String(value || '').trim();
             if (!raw || raw === 'status@broadcast' || raw.endsWith('@g.us')) return '';
@@ -2862,7 +2863,7 @@ async function initInstance(instanceId) {
             const normalized = normalizeStatusJid(value);
             if (!normalized) return '';
             const canonical = normalizeStatusJid(await getCanonicalJid(normalized, instanceId));
-            if (!sock.user?.lid) return canonical;
+            if (!accountLid) return canonical;
             if (canonical.endsWith('@lid')) return canonical;
             if (!canonical.endsWith('@s.whatsapp.net') || typeof sock.signalRepository?.lidMapping?.getLIDForPN !== 'function') return '';
             try {
@@ -2872,7 +2873,11 @@ async function initInstance(instanceId) {
                 return '';
             }
         }));
-        return [...new Set(resolvedJids.filter(Boolean))];
+        const statusJids = [...new Set(resolvedJids.filter(Boolean))];
+        if (accountLid) {
+            console.log(`[Status] Conta LID detectada: ${accountLid}. Audiência homogênea: ${statusJids.length} LIDs.`);
+        }
+        return statusJids;
     };
 
     sessions.set(instanceId, sock);
