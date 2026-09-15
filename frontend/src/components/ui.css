@@ -107,6 +107,7 @@
 .dashboard-panel-head .ui-heading--2 { font-size: 17px; letter-spacing: -.01em; }
 .dashboard-panel-head .ui-text--description { margin-top: 4px; font-size: 12px; }
 .dashboard-panel-actions { flex: 0 0 auto; }
+.dashboard-range-pill { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border: 1px solid #9ee8cd; border-radius: 9px; background: #effbf6; color: #087a52; font-size: 12px; font-weight: 800; }
 .dashboard-chart-canvas { height: 300px; }
 .dashboard-empty-chart, .dashboard-empty { display: grid; min-height: 180px; place-items: center; color: var(--ui-muted); font-size: 13px; }
 .dashboard-lower-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 20px; }

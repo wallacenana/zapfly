@@ -14,7 +14,7 @@ import {
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend } from 'chart.js';
 import { useNavigate } from 'react-router-dom';
 import { api, PUBLIC_SITE_URL } from '../api';
-import { Button, Heading, Tabs, Text } from '../components/ui';
+import { Button, Heading, Text } from '../components/ui';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
 
@@ -122,7 +122,6 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
-  const [range, setRange] = useState('7');
 
   const loadSummary = async ({ silent = false } = {}) => {
     silent ? setRefreshing(true) : setLoading(true);
@@ -182,7 +181,7 @@ export default function Dashboard() {
           <MetricCard label="Cancelados / período" value={integer.format(safeNumber(metrics.cancelledOrdersCount))} caption="Pedidos cancelados" icon={XCircle} tone="red" />
         </div>
 
-        <Panel eyebrow="Performance operacional" title="Volume de pedidos e faturamento" description="Acompanhe a movimentação da loja no período selecionado." actions={<Tabs value={range} onChange={setRange} items={[{ value: '7', label: 'Últimos 7 dias' }, { value: '15', label: '15 dias' }, { value: '30', label: '1 mês' }]} />}>
+        <Panel eyebrow="Performance operacional" title="Volume de pedidos e faturamento" description="Acompanhe a movimentação da loja nos últimos 7 dias." actions={<span className="dashboard-range-pill">Últimos 7 dias</span>}>
           <PerformanceChart days={days} />
         </Panel>
 
