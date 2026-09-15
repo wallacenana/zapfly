@@ -1986,7 +1986,8 @@ router.patch('/:id', authenticate, async (req, res) => {
 
     // 4. Regenerar link de pagamento se não for em dinheiro e o valor for maior que 0
     const isCashPayment = String(order.paymentMethod || '').trim().toLowerCase() === 'dinheiro';
-    if (!isCancellation && !isCashPayment && order.totalValue > 0) {
+    const changesPayment = Object.keys(updateData).some((key) => !['status', 'reminderSent'].includes(key));
+    if (!isCancellation && !isCashPayment && order.totalValue > 0 && changesPayment) {
       const paymentLink = await createPaymentLink(order, settings);
       if (paymentLink) {
         order = await prisma.order.update({
