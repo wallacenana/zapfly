@@ -1606,7 +1606,8 @@ async function initInstance(instanceId) {
         auth: state,
         printQRInTerminal: false,
                 browser: ['Menzzu', 'Chrome', '1.0.0'],
-        logger: pino({ level: 'silent' }),
+        // Keep Baileys warnings visible, especially rejected Status ACKs (479).
+        logger: pino({ level: 'warn' }),
         syncFullHistory: false,            // true consome muita memoria e pode causar desconexoes
         keepAliveIntervalMs: 30000,        // envia ping a cada 30s para manter a conexão viva
         connectTimeoutMs: 60000,           // timeout de 60s para estabelecer conexão
@@ -2860,7 +2861,16 @@ async function initInstance(instanceId) {
         const resolvedJids = await Promise.all([...candidates].map(async value => {
             const normalized = normalizeStatusJid(value);
             if (!normalized) return '';
-            return normalizeStatusJid(await getCanonicalJid(normalized, instanceId));
+            const canonical = normalizeStatusJid(await getCanonicalJid(normalized, instanceId));
+            if (!sock.user?.lid) return canonical;
+            if (canonical.endsWith('@lid')) return canonical;
+            if (!canonical.endsWith('@s.whatsapp.net') || typeof sock.signalRepository?.lidMapping?.getLIDForPN !== 'function') return '';
+            try {
+                const lid = await sock.signalRepository.lidMapping.getLIDForPN(canonical);
+                return normalizeStatusJid(lid ? `${lid}@lid` : '');
+            } catch (error) {
+                return '';
+            }
         }));
         return [...new Set(resolvedJids.filter(Boolean))];
     };
