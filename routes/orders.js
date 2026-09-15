@@ -1041,23 +1041,30 @@ async function setupCronJobs(sockGetter) {
     const todayBR = nowBR.toISOString().split('T')[0];
 
     for (const settings of allSettings) {
-      const leadHours = settings.reminderHours || 2;
+      const leadHours = Number.isFinite(Number(settings.reminderHours)) ? Number(settings.reminderHours) : 2;
+      const connectedInstances = await prisma.instance.findMany({
+        where: { userId: settings.userId, status: 'connected' },
+        select: { id: true },
+        orderBy: { updatedAt: 'desc' }
+      });
+      const sock = connectedInstances.length > 0 ? sockGetter(connectedInstances[0].id) : null;
+      if (!sock) continue;
       const upcomingOrders = await prisma.order.findMany({
         where: {
           userId: settings.userId,
           scheduledDate: todayBR,
-          status: { in: ['pending', 'production', 'ready'] },
+          status: { in: ['accepted', 'pending', 'production', 'ready'] },
           type: 'order',
-          reminderSent: false
+          reminderSent: false,
+          clientJid: { not: null }
         }
       });
 
-      const sock = sockGetter(); // Idealmente, buscar o sock da instância conectada deste user
-      if (!sock) continue;
-
       for (const order of upcomingOrders) {
         try {
+          if (!order.scheduledTime || !order.clientJid) continue;
           const [hour, minute] = order.scheduledTime.split(':').map(Number);
+          if (!Number.isFinite(hour) || !Number.isFinite(minute)) continue;
           const pickupTime = new Date(nowBR);
           pickupTime.setHours(hour, minute, 0, 0);
 
@@ -1068,7 +1075,9 @@ async function setupCronJobs(sockGetter) {
             await sock.sendMessage(order.clientJid, { text: msg });
             await prisma.order.update({ where: { id: order.id }, data: { reminderSent: true } });
           }
-        } catch (err) { }
+        } catch (err) {
+          console.error(`[Reminder] Falha ao enviar pedido ${order.id}:`, err.message);
+        }
       }
     }
   });
