@@ -779,8 +779,8 @@ try {
                                             <h3><?php echo $p['name']; ?></h3>
                                             <p><?php echo $p['description']; ?></p>
                                             <?php
-                                            $basePrice = isset($p['price']) ? (float) $p['price'] : 0;
-                                            $promoPrice = isset($p['promoPrice']) ? (float) $p['promoPrice'] : 0;
+                                            $basePrice = max(0, isset($p['price']) ? (float) $p['price'] : 0);
+                                            $promoPrice = max(0, isset($p['promoPrice']) ? (float) $p['promoPrice'] : 0);
                                             $hasPromo = $promoPrice > 0 && $promoPrice < $basePrice;
                                             ?>
                                             <div class="product-price">

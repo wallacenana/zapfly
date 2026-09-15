@@ -125,8 +125,8 @@ function parseImages(imgField) {
 }
 
 function formatProductPriceText(product) {
-    const basePrice = parseFloat(product?.price || 0) || 0;
-    const promoPrice = parseFloat(product?.promoPrice || 0) || 0;
+    const basePrice = Math.max(0, parseFloat(product?.price || 0) || 0);
+    const promoPrice = Math.max(0, parseFloat(product?.promoPrice || 0) || 0);
     if (promoPrice > 0 && promoPrice < basePrice) {
         return `de R$ ${basePrice.toFixed(2)} por R$ ${promoPrice.toFixed(2)}`;
     }
@@ -134,8 +134,8 @@ function formatProductPriceText(product) {
 }
 
 function getEffectiveProductPrice(product) {
-    const basePrice = parseFloat(product?.price || 0) || 0;
-    const promoPrice = parseFloat(product?.promoPrice || 0) || 0;
+    const basePrice = Math.max(0, parseFloat(product?.price || 0) || 0);
+    const promoPrice = Math.max(0, parseFloat(product?.promoPrice || 0) || 0);
     const price = promoPrice > 0 && promoPrice < basePrice ? promoPrice : basePrice;
     return Math.max(0, price);
 }

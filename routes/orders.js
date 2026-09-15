@@ -692,7 +692,7 @@ async function deleteCalendarEvent(userId, calendarEventId) {
 // Helper para calcular o total do pedido com inteligência (storefront + IA)
 async function calculateOrderTotal(data, userId) {
   let computedTotalValue = parseFloat(data.totalValue);
-  if (!isNaN(computedTotalValue)) return computedTotalValue;
+  if (!isNaN(computedTotalValue)) return Math.max(0, computedTotalValue);
 
   computedTotalValue = 0;
   let mainProductPrice = 0;
@@ -1525,9 +1525,9 @@ router.post('/products', authenticate, async (req, res) => {
     data: {
       name,
       description,
-      price: parseFloat(price) || 0,
+      price: Math.max(0, parseFloat(price) || 0),
       promoPrice: promoPrice !== undefined && promoPrice !== null && promoPrice !== ''
-        ? (parseFloat(promoPrice) || 0)
+        ? Math.max(0, parseFloat(promoPrice) || 0)
         : 0,
       image,
       category: resolvedCategory,
@@ -1794,11 +1794,11 @@ router.patch('/products/:id', authenticate, async (req, res) => {
     delete updateData.userId;
 
     if (Object.prototype.hasOwnProperty.call(updateData, 'price')) {
-      updateData.price = parseFloat(updateData.price) || 0;
+      updateData.price = Math.max(0, parseFloat(updateData.price) || 0);
     }
     if (Object.prototype.hasOwnProperty.call(updateData, 'promoPrice')) {
       updateData.promoPrice = updateData.promoPrice !== undefined && updateData.promoPrice !== null && updateData.promoPrice !== ''
-        ? (parseFloat(updateData.promoPrice) || 0)
+        ? Math.max(0, parseFloat(updateData.promoPrice) || 0)
         : 0;
     }
     if (Object.prototype.hasOwnProperty.call(updateData, 'stock')) {
