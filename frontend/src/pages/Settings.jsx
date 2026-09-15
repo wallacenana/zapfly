@@ -383,7 +383,17 @@ const Settings = () => {
   const loadSlots = async () => {
     try {
       const res = await api.get('/config/slots');
-      setSlots(res.data);
+      const nextSlots = Array.isArray(res.data)
+        ? res.data
+          .filter(slot => slot && slot.startTime && slot.endTime)
+          .map(slot => ({
+            ...slot,
+            dayOfWeek: Number(slot.dayOfWeek),
+            startTime: String(slot.startTime).slice(0, 5),
+            endTime: String(slot.endTime).slice(0, 5)
+          }))
+        : [];
+      setSlots(nextSlots);
     } catch (err) {
       console.error(err);
     } finally {
@@ -444,7 +454,14 @@ const Settings = () => {
 
   const handleSaveSlots = async () => {
     try {
-      await api.post('/config/slots', { slots });
+      const validSlots = (Array.isArray(slots) ? slots : [])
+        .filter(slot => slot && slot.startTime && slot.endTime)
+        .map(slot => ({
+          dayOfWeek: Number(slot.dayOfWeek),
+          startTime: String(slot.startTime).slice(0, 5),
+          endTime: String(slot.endTime).slice(0, 5)
+        }));
+      await api.post('/config/slots', { slots: validSlots });
       Swal.fire({ title: 'Horários Atualizados!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
     } catch (err) {
       Swal.fire('Erro', 'Não foi possível salvar os horários.', 'error');
@@ -1550,4 +1567,3 @@ const smallLink = { border: 'none', background: 'none', color: '#3b82f6', fontWe
 const delBtn = { background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: 'auto', padding: '5px' };
 
 export default Settings;
-
