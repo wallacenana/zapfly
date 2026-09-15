@@ -339,6 +339,9 @@ try {
     $showDeliveryTab = !empty($deliveryMenuOptions['orderTypes']['delivery']);
     $showOrderTab = $acceptOrders && !empty($deliveryMenuOptions['orderTypes']['order']);
     $showOrderTabsNav = $showDeliveryTab && $showOrderTab;
+    $orderOnlyMode = !$showDeliveryTab && $showOrderTab;
+    $initialStatusLabel = $orderOnlyMode ? 'Apenas encomendas' : ($marketplaceReady ? 'Aberto' : 'Inativo');
+    $initialStatusClass = $orderOnlyMode ? 'order-only' : ($marketplaceReady ? 'open' : 'closed');
 
     $stmt = $pdo->prepare("SELECT sr.id, sr.orderId, sr.clientName, sr.rating, sr.comment, sr.createdAt, o.product, o.variation FROM store_review sr LEFT JOIN `order` o ON o.id = sr.orderId WHERE sr.userId = ? ORDER BY sr.createdAt DESC LIMIT 6");
     $stmt->execute([$store['id']]);
@@ -682,7 +685,7 @@ try {
                                         <div class="store-category"><?php echo htmlspecialchars($businessCategory, ENT_QUOTES, 'UTF-8'); ?></div>
                                     <?php endif; ?>
                                     <div class="menzzu-baixo">
-                                        <span id="store-status-badge" class="status-badge <?php echo $marketplaceReady ? 'open' : 'closed'; ?>"><?php echo $marketplaceReady ? 'Aberto' : 'Inativo'; ?></span>
+                                        <span id="store-status-badge" class="status-badge <?php echo $initialStatusClass; ?>"><?php echo htmlspecialchars($initialStatusLabel, ENT_QUOTES, 'UTF-8'); ?></span>
                                     <?php if ($prepTimeLabel !== ''): ?>
                                         <span class="store-meta-separator" aria-hidden="true">•</span>
                                         <span id="store-prep-time" class="store-prep-time"><svg class="store-meta-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg><?php echo htmlspecialchars(str_replace('Entrega ', '', $prepTimeLabel), ENT_QUOTES, 'UTF-8'); ?></span>
@@ -1012,7 +1015,7 @@ try {
                                 </div>
                             <?php endif; ?>
                             <div class="store-meta-line">
-                                <div id="drawer-store-status" class="status-badge open">Aberto</div>
+                                <div id="drawer-store-status" class="status-badge <?php echo $initialStatusClass; ?>"><?php echo htmlspecialchars($initialStatusLabel, ENT_QUOTES, 'UTF-8'); ?></div>
                                 <?php if ($prepTimeLabel !== ''): ?>
                                     <span class="store-meta-separator" aria-hidden="true">•</span>
                                     <span id="drawer-store-prep-time" class="store-prep-time"><?php echo htmlspecialchars($prepTimeLabel, ENT_QUOTES, 'UTF-8'); ?></span>

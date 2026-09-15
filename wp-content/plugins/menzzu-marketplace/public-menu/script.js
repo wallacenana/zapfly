@@ -654,6 +654,7 @@ function hydrateFromSSR() {
         state.storeRecentReviews = data.recentReviews || state.storeRecentReviews || [];
         state.loading = false;
 
+        syncOrderTabsWithSettings();
         const deliveryEnabled = isDeliveryTabEnabled();
         const orderEnabled = isOrderEnabled();
         if (state.activeTab === 'order' && !orderEnabled && deliveryEnabled) {
@@ -748,6 +749,7 @@ function hydrateFromSSR() {
 }
 
 function checkStoreStatus() {
+    const orderOnly = !isDeliveryTabEnabled() && isOrderEnabled();
     const hasMinimumSetup = state.publicSettings.marketplaceReady === true
         && state.publicSettings.hasLogo === true
         && Number(state.publicSettings.maxDeliveryKm || 0) > 0
@@ -757,7 +759,7 @@ function checkStoreStatus() {
     const day = now.getDay();
     const time = now.getHours() * 60 + now.getMinutes();
 
-    const todaySlots = state.availableSlots.filter(s => s.dayOfWeek === day);
+    const todaySlots = state.availableSlots.filter(s => s && s.dayOfWeek === day && s.startTime && s.endTime);
     state.isOpen = todaySlots.some(s => {
         const [sh, sm] = s.startTime.split(':').map(Number);
         const [eh, em] = s.endTime.split(':').map(Number);
@@ -766,8 +768,8 @@ function checkStoreStatus() {
         return time >= start && time <= end;
     });
 
-    const statusLabel = !hasMinimumSetup ? 'Inativo' : state.isOpen ? 'Aberto' : (isOrderEnabled() ? 'Apenas encomendas' : 'Fechado');
-    const statusClass = !hasMinimumSetup || !state.isOpen ? 'status-badge closed' : 'status-badge open';
+    const statusLabel = orderOnly ? 'Apenas encomendas' : (!hasMinimumSetup ? 'Inativo' : state.isOpen ? 'Aberto' : (isOrderEnabled() ? 'Apenas encomendas' : 'Fechado'));
+    const statusClass = orderOnly ? 'status-badge order-only' : (!hasMinimumSetup || !state.isOpen ? 'status-badge closed' : 'status-badge open');
 
     const statusEl = document.getElementById('store-status-badge');
     if (statusEl) {
@@ -1328,7 +1330,7 @@ function renderCategoryNav(categories) {
     const navContainer = document.getElementById('category-nav-scroll');
     if (!navContainer) return;
 
-    if (categories.length <= 1) {
+    if (categories.length === 0) {
         navContainer.parentElement.classList.add('hidden');
         return;
     }
@@ -1338,6 +1340,23 @@ function renderCategoryNav(categories) {
         <button class="nav-cat-btn" onclick="scrollToCategory('cat-${cat.replace(/\s+/g, '-')}')">${cat}</button>
     `).join('');
     syncStickyOffsets();
+}
+
+function syncOrderTabsWithSettings() {
+    const nav = document.getElementById('order-tabs-nav');
+    if (!nav) return;
+
+    const deliveryEnabled = isDeliveryTabEnabled();
+    const orderEnabled = isOrderEnabled();
+    nav.classList.toggle('hidden', !(deliveryEnabled && orderEnabled));
+
+    if (!deliveryEnabled && orderEnabled) {
+        state.activeTab = 'order';
+        document.body.classList.add('theme-order');
+    } else if (deliveryEnabled && !orderEnabled) {
+        state.activeTab = 'delivery';
+        document.body.classList.remove('theme-order');
+    }
 }
 
 function scrollToCategory(id) {
