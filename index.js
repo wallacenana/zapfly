@@ -20,6 +20,7 @@ const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODE
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
 const multer = require('multer');
 const axios = require('axios');
+const { getStatusImage } = require('./lib/status-media');
 const { MercadoPagoConfig, Payment: MercadoPagoPayment } = require('mercadopago');
 const { authenticate, requireAdmin } = require('./middleware/auth');
 const { PLAN_DEFINITIONS, BILLING_CYCLES, getPlan, getCycle, getCyclePriceCents, hasPlanFeature, checkEntitlement } = require('./lib/plans');
@@ -2406,7 +2407,7 @@ async function initInstance(instanceId) {
                                                 if (assetId) {
                                                     const asset = await prisma.marketingAsset.findFirst({ where: { id: assetId, userId } });
                                                     if (asset) {
-                                                        await sendStatusMessage(sock, { image: { url: asset.url }, caption: text });
+                                                        await sendStatusMessage(sock, { image: await getStatusImage(asset.url), caption: text });
                                                         result = { success: true, message: "Status com imagem postado com sucesso." };
                                                     } else {
                                                         result = { success: false, error: "Imagem não encontrada para o status." };
