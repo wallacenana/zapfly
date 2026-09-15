@@ -1028,7 +1028,7 @@ h3 {
     gap: 16px;
     border-left: 1px solid var(--border);
     background: var(--bg-color);
-    min-height: 0;
+    min-height: 240px;
 }
 
 .item-detail-panel>.modal-footer-sticky {
@@ -1289,6 +1289,7 @@ body.theme-dark .var-option.selected {
     font-weight: 700;
     min-width: 20px;
     text-align: center;
+    font-size: 0.95rem;
 }
 
 /* Primary Button */
@@ -1299,8 +1300,8 @@ body.theme-dark .var-option.selected {
     border: none;
     padding: 14px;
     border-radius: 8px;
-    font-weight: 700;
-    font-size: 1rem;
+    font-weight: 600;
+    font-size: 15px;
     cursor: pointer;
     display: flex;
     align-items: center;
