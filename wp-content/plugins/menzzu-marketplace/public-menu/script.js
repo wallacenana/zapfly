@@ -2502,6 +2502,15 @@ function renderStep1() {
         return;
     }
     document.getElementById('next-step-btn').disabled = false;
+    const scheduleHtml = state.activeTab === 'order' ? `
+        <div class="checkout-schedule-step">
+            <div>
+                <strong>Data e horário da encomenda</strong>
+                <span>${state.orderSchedule?.date && state.orderSchedule?.time ? formatOrderSchedule() : 'Escolha quando deseja receber ou retirar.'}</span>
+            </div>
+            <button type="button" class="change-schedule-btn" onclick="openScheduleModal('resume')">${state.orderSchedule?.date && state.orderSchedule?.time ? 'Alterar' : 'Escolher'}</button>
+        </div>
+    ` : '';
     list.innerHTML = cart.map(item => `
                     <div class="checkout-item">
                         <div class="item-name-qty">
@@ -2525,7 +2534,7 @@ function renderStep1() {
                             <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
                         </div>
                     </div>
-                `).join('');
+                `).join('') + scheduleHtml;
     lucide.createIcons();
 }
 

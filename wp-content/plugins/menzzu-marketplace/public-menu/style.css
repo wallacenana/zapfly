@@ -1374,6 +1374,47 @@ body.theme-dark .var-option.selected {
     border-bottom: 1px dotted var(--border);
 }
 
+.checkout-schedule-step {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-top: 16px;
+    padding: 14px 16px;
+    border: 1px solid color-mix(in srgb, var(--primary-color) 24%, var(--border));
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--primary-color) 6%, #fff);
+}
+
+.checkout-schedule-step > div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.checkout-schedule-step strong {
+    color: var(--text-main);
+    font-size: 0.9rem;
+}
+
+.checkout-schedule-step span {
+    color: var(--text-gray);
+    font-size: 0.82rem;
+}
+
+.change-schedule-btn {
+    flex: 0 0 auto;
+    border: 1px solid var(--primary-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: transparent;
+    color: var(--primary-color);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
 .item-name-qty {
     display: flex;
     gap: 8px;
