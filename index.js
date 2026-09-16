@@ -2126,6 +2126,7 @@ async function initInstance(instanceId) {
                                 let responseMessage;
                                 let pendingPaymentLink = null;
                                 let pendingCatalogMessage = null;
+                                let pendingCatalogType = null;
                                 let pendingCatalogCTA = null; // 3a mensagem: CTA da Lily apos o catalogo
                                 try {
                                     // Detecta se o usuario esta pedindo o cardapio e forca a ferramenta correta
@@ -2135,7 +2136,7 @@ async function initInstance(instanceId) {
                                         : (lastUserMsgObj?.content || '');
                                     const lastUserMsg = lastUserMsgContent.toLowerCase();
 
-                                    const isDeliveryRequest = /delivery|card[aá]pio|o que tem|pronta entrega|o que voc[eê] tem|tem hoje|tem pra hoje|dispon[ií]vel|pre[cç]o|o que vende|possibilidades|opções|opcoes|opção|opcao/i.test(lastUserMsg);
+                                    const isDeliveryRequest = /delivery|card[aá]pio|o que tem|o que temos|o que voc[eê] tem|pronta entrega|temos hoje|tem hoje|tem pra hoje|para hoje|dispon[ií]vel|pre[cç]o|o que vende|possibilidades|opções|opcoes|opção|opcao/i.test(lastUserMsg);
                                     const isOrderRequest = /encomenda|bolo de festa|personalizado|encomendar|quero encomendar/i.test(lastUserMsg);
                                     const isMediaRequest = /foto|fotos|imagem|imagens|exemplo|exemplos|mostra|mostrar/i.test(lastUserMsg);
 
@@ -2225,6 +2226,7 @@ async function initInstance(instanceId) {
 
                                                 const catalogText = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
                                                 pendingCatalogMessage = catalogText;
+                                                pendingCatalogType = 'delivery';
                                                 result = "CATALOGO ENVIADO PARA MEMORIA. Responda ao cliente usando o formato: [Intro] --- [CTA].";
                                             }
                                             else if (functionName === "get_order_catalog") {
@@ -2252,6 +2254,7 @@ async function initInstance(instanceId) {
                                                     catalogText += '\n\nâœ¨ *ADICIONAIS & EXTRAS:*\n' + addonStr.trim();
                                                 }
                                                 pendingCatalogMessage = catalogText;
+                                                pendingCatalogType = 'order';
                                                 result = "CATALOGO DE ENCOMENDAS ENVIADO PARA MEMORIA. Responda ao cliente usando o formato: [Intro] --- [CTA].";
                                             }
                                             else if (functionName === "check_availability") {
@@ -2448,6 +2451,7 @@ async function initInstance(instanceId) {
                                                     deliveryStr += formatProduct(p, vars, false) + '\n\n';
                                                 });
                                                 pendingCatalogMessage = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
+                                                pendingCatalogType = 'delivery';
                                                 result = { success: true, message: "Catalogo de pronta entrega preparado. O sistema enviara o catalogo agora. SILENCIO ABSOLUTO." };
                                             }
                                             else if (functionName === "get_order_catalog") {
@@ -2459,6 +2463,7 @@ async function initInstance(instanceId) {
                                                     catalogStr += formatProduct(p, vars) + "\n\n";
                                                 });
                                                 pendingCatalogMessage = catalogStr.trim() || "Poxa, não encontrei itens no momento.";
+                                                pendingCatalogType = 'order';
                                                 result = { success: true, message: "Catalogo de encomendas preparado. O sistema enviara o catalogo agora. SILENCIO ABSOLUTO." };
                                             }
                                             else if (functionName === "check_availability") {
@@ -2511,13 +2516,13 @@ async function initInstance(instanceId) {
                                         }
 
                                         if (pendingCatalogMessage) {
-                                            const isDelivery = pendingCatalogMessage.includes('pronta entrega') || !pendingCatalogMessage.includes('Bolo');
+                                            const isDelivery = pendingCatalogType === 'delivery';
 
                                             // Balão 1: Intro
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 1000));
                                             await sock.sendPresenceUpdate('paused', jid);
-                                            await sock.sendMessage(jid, { text: isDelivery ? 'Hoje teremos os seguintes produtos de pronta entrega:' : 'Vou te mostrar nossas opcoes maravilhosas de bolos de encomenda:' });
+                                            await sock.sendMessage(jid, { text: isDelivery ? 'Hoje teremos essas delícias:' : 'Vou te mostrar nossas opções maravilhosas de bolos de encomenda:' });
 
                                             // Balão 2: Catálogo
                                             await sock.sendPresenceUpdate('composing', jid);
@@ -2529,7 +2534,7 @@ async function initInstance(instanceId) {
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 1200));
                                             await sock.sendPresenceUpdate('paused', jid);
-                                            await sock.sendMessage(jid, { text: isDelivery ? 'Qual desses posso separar para voce?' : 'Qual destes mais te encantou? Posso te ajudar a escolher o tamanho ideal para sua festa?' });
+                                            await sock.sendMessage(jid, { text: isDelivery ? 'Qual dessas delícias posso separar para você?' : 'Qual destes mais te encantou? Posso te ajudar a escolher o tamanho ideal para sua festa?' });
 
                                             return; // FIM IMEDIATO
                                         }
