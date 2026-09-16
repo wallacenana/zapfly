@@ -414,7 +414,13 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?ver=' . MENZZU_MARKETPLACE_VERSION); ?>">
+        <?php
+        $publicMenuStylePath = MENZZU_MARKETPLACE_DIR . 'public-menu/style.css';
+        $publicMenuScriptPath = MENZZU_MARKETPLACE_DIR . 'public-menu/script.js';
+        $publicMenuStyleVersion = file_exists($publicMenuStylePath) ? filemtime($publicMenuStylePath) : MENZZU_MARKETPLACE_VERSION;
+        $publicMenuScriptVersion = file_exists($publicMenuScriptPath) ? filemtime($publicMenuScriptPath) : MENZZU_MARKETPLACE_VERSION;
+        ?>
+        <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?ver=' . $publicMenuStyleVersion); ?>">
         <style>
             :root {
                 --primary-color:
@@ -1304,7 +1310,7 @@ try {
         </script>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?ver=' . MENZZU_MARKETPLACE_VERSION); ?>" defer></script>
+                <script type="text/javascript" src="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/script.js?ver=' . $publicMenuScriptVersion); ?>" defer></script>
 
     </html>
 <?php
