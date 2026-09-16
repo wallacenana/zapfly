@@ -1916,16 +1916,6 @@ async function initInstance(instanceId) {
                         if (flowHandled) return;
 
                         if (!msg.key.fromMe && currentChat?.aiEnabled) {
-                            // COMMAND AGENT (Experimental)
-                            if (text.toLowerCase().includes('crie um story')) {
-                                const storyText = text.replace(/crie um story/i, '').trim();
-                                if (storyText) {
-                                    await sendStatusMessage(sock, { text: storyText });
-                                    await sendRichMessage(sock, jid, "Comando executado! Acabei de publicar seu Story.");
-                                    return;
-                                }
-                            }
-
                             const ai = await getOpenAI(userId);
                             if (ai) {
                                 const settings = await getSettings(userId);
@@ -2131,21 +2121,6 @@ async function initInstance(instanceId) {
                                             }
                                         }
                                     },
-                                    {
-                                        type: "function",
-                                        function: {
-                                            name: "post_status",
-                                            description: "Posta um novo Story (Status) no WhatsApp da loja.",
-                                            parameters: {
-                                                type: "object",
-                                                properties: {
-                                                    text: { type: "string", description: "Texto do status." },
-                                                    assetId: { type: "string", description: "O ID de uma imagem da biblioteca de marketing para postar como status (opcional)." }
-                                                },
-                                                required: ["text"]
-                                            }
-                                        }
-                                    }
                                 ];
 
                                 let responseMessage;
@@ -2459,25 +2434,6 @@ async function initInstance(instanceId) {
                                                     result = { success: false, error: "Imagem não encontrada." };
                                                 }
                                             }
-                                            else if (functionName === "post_status") {
-                                                const { text, assetId } = args;
-                                                console.log(`[Status] Ferramenta post_status iniciada (imagem: ${assetId ? 'sim' : 'não'}).`);
-                                                if (assetId) {
-                                                    const asset = await prisma.marketingAsset.findFirst({ where: { id: assetId, userId } });
-                                                    if (asset) {
-                                                        await sendStatusMessage(sock, { image: await getStatusImage(asset.url), caption: text });
-                                                        result = { success: true, message: "Status com imagem postado com sucesso." };
-                                                        console.log('[Status] Ferramenta post_status concluída com sucesso.');
-                                                    } else {
-                                                        result = { success: false, error: "Imagem não encontrada para o status." };
-                                                    }
-                                                } else {
-                                                    await sendStatusMessage(sock, { text });
-                                                    result = { success: true, message: "Status de texto postado com sucesso." };
-                                                    console.log('[Status] Ferramenta post_status concluída com sucesso.');
-                                                }
-                                            }
-
                                             else if (functionName === "get_delivery_catalog") {
                                                 const allProducts = await prisma.product.findMany();
                                                 const prods = allProducts.filter(p => {
