@@ -91,7 +91,8 @@ async function normalizeSuggestedItemId(value, userId, currentId = null) {
 }
 
 const SCHEDULING_TIME_ZONE = 'America/Sao_Paulo';
-const ORDER_TIME_OPTIONS = Array.from({ length: 12 }, (_, index) => `${String(index + 9).padStart(2, '0')}:00`);
+const ORDER_TIME_STEP_MINUTES = 15;
+const ORDER_MINIMUM_LEAD_MINUTES = 30;
 
 function getBrazilDateParts(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -175,8 +176,26 @@ function timeFitsSlot(time, slot) {
   return target >= start && target <= end;
 }
 
-function buildDisabledTimes(reason) {
-  return ORDER_TIME_OPTIONS.map(time => ({
+function formatMinutesAsTime(minutes) {
+  const normalized = Math.max(0, Math.min(1439, minutes));
+  return `${String(Math.floor(normalized / 60)).padStart(2, '0')}:${String(normalized % 60).padStart(2, '0')}`;
+}
+
+function buildOrderTimeOptions(availableSlots) {
+  const times = new Set();
+  for (const slot of availableSlots || []) {
+    const start = parseTimeToMinutes(slot?.startTime);
+    const end = parseTimeToMinutes(slot?.endTime);
+    if (start === null || end === null || end < start) continue;
+    for (let minutes = start; minutes <= end; minutes += ORDER_TIME_STEP_MINUTES) {
+      times.add(formatMinutesAsTime(minutes));
+    }
+  }
+  return [...times].sort((a, b) => parseTimeToMinutes(a) - parseTimeToMinutes(b));
+}
+
+function buildDisabledTimes(reason, availableSlots = []) {
+  return buildOrderTimeOptions(availableSlots).map(time => ({
     time,
     available: false,
     reason
@@ -848,20 +867,20 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
     if ((type || 'order') === 'order' && settings?.acceptOrders === false) {
       const reason = 'As encomendas estão desativadas no momento.';
       if (!time) {
-        return { available: false, reason, date, times: buildDisabledTimes(reason) };
+        return { available: false, reason, date, times: [] };
       }
       return { available: false, reason };
     }
 
     if (!date) {
       const reason = 'Data inválida.';
-      if (!time) return { available: false, reason, date, used: totalUsed, limit: dailyLimit, remaining: 0, times: buildDisabledTimes(reason) };
-      return { available: false, reason, used: totalUsed, limit: dailyLimit, remaining: 0 };
+      if (!time) return { available: false, reason, date, used: 0, limit: dailyLimit, remaining: 0, times: [] };
+      return { available: false, reason, used: 0, limit: dailyLimit, remaining: 0 };
     }
 
     if (isDateBeforeToday(date)) {
       const reason = 'Data anterior a hoje.';
-      if (!time) return { available: false, reason, date, times: buildDisabledTimes(reason) };
+      if (!time) return { available: false, reason, date, times: [] };
       return { available: false, reason };
     }
 
@@ -880,7 +899,7 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
 
     if (totalUsed >= dailyLimit) {
       const reason = `Desculpe, já atingimos nosso limite de produção para o dia ${date}.`;
-      if (!time) return { available: false, reason, date, times: buildDisabledTimes(reason) };
+      if (!time) return { available: false, reason, date, times: [] };
       return { available: false, reason };
     }
 
@@ -910,7 +929,7 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
     if (!time) {
       if (!availableSlots.length) {
         const reason = 'A loja está fechada neste dia.';
-        return { available: false, reason, date, times: buildDisabledTimes(reason) };
+        return { available: false, reason, date, times: [] };
       }
 
       const dayStart = new Date(`${date}T00:00:00-03:00`);
@@ -929,15 +948,28 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
       const today = getBrazilDateString();
       const nowMinutes = parseTimeToMinutes(getBrazilTimeString());
 
-      const times = ORDER_TIME_OPTIONS.map(slotTime => {
+      const times = buildOrderTimeOptions(availableSlots).map(slotTime => {
         const matchingSlots = availableSlots.filter(slot => timeFitsSlot(slotTime, slot));
         if (matchingSlots.length === 0) {
           return { time: slotTime, available: false, reason: 'Fora do horário de atendimento.' };
         }
 
         const timeMinutes = parseTimeToMinutes(slotTime);
-        if (date === today && nowMinutes !== null && timeMinutes !== null && timeMinutes <= nowMinutes) {
+        if (date === today && nowMinutes !== null && timeMinutes !== null && timeMinutes < nowMinutes + ORDER_MINIMUM_LEAD_MINUTES) {
           return { time: slotTime, available: false, reason: 'Horário já passou.' };
+        }
+
+        const slotWithCapacity = matchingSlots.find(slot => {
+          const slotStart = parseTimeToMinutes(slot.startTime);
+          const slotEnd = parseTimeToMinutes(slot.endTime);
+          const ordersInSlot = ordersToday.filter(order => {
+            const orderTime = parseTimeToMinutes(order.scheduledTime);
+            return orderTime !== null && orderTime >= slotStart && orderTime <= slotEnd;
+          }).length;
+          return ordersInSlot < Math.max(1, Number(slot.maxOrders || 10));
+        });
+        if (!slotWithCapacity) {
+          return { time: slotTime, available: false, reason: 'Limite de encomendas atingido neste horário.' };
         }
 
         const conflict = calendarEvents.find(event => {
@@ -978,8 +1010,21 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
     const today = getBrazilDateString();
     const nowMinutes = parseTimeToMinutes(getBrazilTimeString());
     const timeMinutes = parseTimeToMinutes(time);
-    if (date === today && nowMinutes !== null && timeMinutes !== null && timeMinutes <= nowMinutes) {
+    if (date === today && nowMinutes !== null && timeMinutes !== null && timeMinutes < nowMinutes + ORDER_MINIMUM_LEAD_MINUTES) {
       return { available: false, reason: 'Horário já passou.' };
+    }
+
+    const slotWithCapacity = matchingSlots.find(slot => {
+      const slotStart = parseTimeToMinutes(slot.startTime);
+      const slotEnd = parseTimeToMinutes(slot.endTime);
+      const ordersInSlot = ordersToday.filter(order => {
+        const orderTime = parseTimeToMinutes(order.scheduledTime);
+        return orderTime !== null && orderTime >= slotStart && orderTime <= slotEnd;
+      }).length;
+      return ordersInSlot < Math.max(1, Number(slot.maxOrders || 10));
+    });
+    if (!slotWithCapacity) {
+      return { available: false, reason: 'Limite de encomendas atingido neste horário.' };
     }
 
     const window = getTimeWindowForOrder(date, time);
