@@ -2560,7 +2560,7 @@ async function initInstance(instanceId) {
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 1200));
                                             await sock.sendPresenceUpdate('paused', jid);
-                                            await sock.sendMessage(jid, { text: isDelivery ? 'Qual dessas delícias posso separar para você?' : 'Qual destes mais te encantou? Posso te ajudar a escolher o tamanho ideal para sua festa?' });
+                                            await sock.sendMessage(jid, { text: isDelivery ? 'Quais itens você gostaria de pedir?' : 'Qual destes mais te encantou? Posso te ajudar a escolher o tamanho ideal para sua festa?' });
 
                                             return; // FIM IMEDIATO
                                         }
