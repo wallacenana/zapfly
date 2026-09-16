@@ -898,7 +898,8 @@ const Settings = () => {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                 {['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((day, idx) => {
-                  const slot = slots.find(s => s.dayOfWeek === idx);
+                  const daySlots = slots.filter(s => Number(s.dayOfWeek) === idx);
+                  const slot = daySlots[0];
                   return (
                     <div key={idx} style={{ ...ruleRow, gridTemplateColumns: '120px 1fr 1fr auto' }}>
                       <span style={{ fontWeight: 700 }}>{day}</span>
@@ -928,7 +929,17 @@ const Settings = () => {
                           }}
                         />
                       </div>
+                      {daySlots.slice(1).map((extraSlot, extraIndex) => (
+                        <div key={extraSlot.id || `${idx}-extra-${extraIndex}`} style={{ gridColumn: '2 / 4', display: 'flex', alignItems: 'center', gap: '10px', marginTop: '-8px' }}>
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Intervalo:</span>
+                          <input {...inp} style={smallInp} type="time" value={extraSlot.startTime || ''} onChange={e => setSlots(current => current.map(item => item === extraSlot ? { ...item, startTime: e.target.value } : item))} />
+                          <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>até</span>
+                          <input {...inp} style={smallInp} type="time" value={extraSlot.endTime || ''} onChange={e => setSlots(current => current.map(item => item === extraSlot ? { ...item, endTime: e.target.value } : item))} />
+                          <button type="button" onClick={() => setSlots(current => current.filter(item => item !== extraSlot))} aria-label="Remover intervalo" style={{ border: 0, background: 'transparent', color: '#ef4444', cursor: 'pointer', padding: '6px' }}><Trash2 size={16} /></button>
+                        </div>
+                      ))}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        {slot && <button type="button" onClick={() => setSlots(current => [...current, { dayOfWeek: idx, startTime: '14:00', endTime: '18:00' }])} style={{ border: 0, background: 'transparent', color: 'var(--accent-color)', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>+ Adicionar horário</button>}
                         <span style={{ fontSize: '12px', fontWeight: 700, color: slot ? '#3b82f6' : 'var(--text-muted)' }}>
                           {slot ? 'ABERTO' : 'FECHADO'}
                         </span>
