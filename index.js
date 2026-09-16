@@ -1932,6 +1932,7 @@ async function initInstance(instanceId) {
 
                                 const storeInfo = await getStoreStatus(userId);
                                 const { statusLoja } = storeInfo;
+                                console.log(`[AI][STORE] instance=${instanceId} user=${userId} jid=${jid} status=${statusLoja} time=${storeInfo.horaAtual} day=${storeInfo.nomeDia}`);
 
                                 const history = await prisma.message.findMany({
                                     where: { instanceId, jid },
@@ -2139,10 +2140,11 @@ async function initInstance(instanceId) {
                                     const isDeliveryRequest = /delivery|card[aá]pio|o que tem|o que temos|o que voc[eê] tem|pronta entrega|temos hoje|tem hoje|tem pra hoje|para hoje|dispon[ií]vel|pre[cç]o|o que vende|possibilidades|opções|opcoes|opção|opcao|\btem\b|\bprodutos?\b|\bitens?\b/i.test(lastUserMsg);
                                     const isOrderRequest = /encomenda|bolo de festa|personalizado|encomendar|quero encomendar/i.test(lastUserMsg);
                                     const isMediaRequest = /foto|fotos|imagem|imagens|exemplo|exemplos|mostra|mostrar/i.test(lastUserMsg);
+                                    console.log(`[AI][INTENT] instance=${instanceId} user=${userId} status=${statusLoja} delivery=${isDeliveryRequest} order=${isOrderRequest} media=${isMediaRequest} textLength=${lastUserMsg.length}`);
 
                                     // Pronta-entrega nunca deve ser respondida com estoque antigo quando a loja fechou.
                                     if (statusLoja === "FECHADA" && isDeliveryRequest && !isOrderRequest) {
-                                        console.log(`[AI] Catálogo de delivery bloqueado: loja fechada (${storeInfo.horaAtual}).`);
+                                        console.log(`[AI][BLOCKED] delivery catalog blocked because store is closed: time=${storeInfo.horaAtual}`);
                                         await sendRichMessage(sock, jid, `A loja está fechada no momento. A pronta-entrega funciona dentro do horário de atendimento.`);
                                         return;
                                     }
@@ -2171,6 +2173,7 @@ async function initInstance(instanceId) {
                                     }
 
                                     const modelToUse = (settings && settings.activeModel) ? (MODEL_MAP[settings.activeModel] || 'gpt-4o') : 'gpt-4o';
+                                    console.log(`[AI][ROUTE] forcedTool=${typeof forcedToolChoice === 'string' ? forcedToolChoice : forcedToolChoice.function.name} model=${modelToUse}`);
 
                                     const completion = await ai.chat.completions.create({
                                         model: modelToUse,
@@ -2180,6 +2183,7 @@ async function initInstance(instanceId) {
                                     });
 
                                     responseMessage = completion.choices[0].message;
+                                    console.log(`[AI][RESPONSE] instance=${instanceId} jid=${jid} toolCalls=${responseMessage.tool_calls?.length || 0} contentLength=${responseMessage.content?.length || 0}`);
                                     let initialAIText = responseMessage.content;
 
                                     // Interceptador de Memoria de Imagem
@@ -2209,6 +2213,7 @@ async function initInstance(instanceId) {
                                             const functionName = toolCall.function.name;
                                             const args = JSON.parse(toolCall.function.arguments);
                                             let result;
+                                            console.log(`[AI][TOOL_START] instance=${instanceId} jid=${jid} tool=${functionName}`);
 
 
                                             if (functionName === "chamar_gerente") {
@@ -2234,6 +2239,7 @@ async function initInstance(instanceId) {
                                                 const catalogText = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
                                                 pendingCatalogMessage = catalogText;
                                                 pendingCatalogType = 'delivery';
+                                                console.log(`[AI][CATALOG] type=delivery user=${userId} products=${prods.length} chars=${catalogText.length}`);
                                                 result = "CATALOGO ENVIADO PARA MEMORIA. Responda ao cliente usando o formato: [Intro] --- [CTA].";
                                             }
                                             else if (functionName === "get_order_catalog") {
@@ -2478,6 +2484,7 @@ async function initInstance(instanceId) {
                                                 result = await checkAvailability(args.date, args.time);
                                             }
 
+                                            console.log(`[AI][TOOL_DONE] instance=${instanceId} jid=${jid} tool=${functionName} pendingCatalog=${Boolean(pendingCatalogMessage)} resultType=${typeof result}`);
                                             messages.push({
                                                 tool_call_id: toolCall.id,
                                                 role: "tool",
@@ -2524,6 +2531,7 @@ async function initInstance(instanceId) {
 
                                         if (pendingCatalogMessage) {
                                             const isDelivery = pendingCatalogType === 'delivery';
+                                            console.log(`[AI][CATALOG_SEND] instance=${instanceId} jid=${jid} type=${pendingCatalogType} chars=${pendingCatalogMessage.length}`);
 
                                             // Balão 1: Intro
                                             await sock.sendPresenceUpdate('composing', jid);
