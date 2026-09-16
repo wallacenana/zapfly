@@ -1321,7 +1321,7 @@ styleTag.innerHTML = `
     cursor: pointer;
     border-radius: 8px;
     transition: all 0.2s ease;
-    color: var(--text-primary);
+    color: #f8fafc !important;
     font-weight: 500;
   }
   .ctx-menu-item:hover {
