@@ -1665,6 +1665,8 @@ async function initInstance(instanceId) {
         let jid = msg.key.remoteJid;
         const pushName = msg.pushName || 'Desconhecido';
 
+        console.log(`[MessageRoute][UPSERT] instance=${instanceId} fromMe=${Boolean(msg.key.fromMe)} remoteJid=${jid} type=${Object.keys(msg.message).join(',')}`);
+
         if (!msg.key.fromMe) {
             console.log(`[Mensagem] ${pushName} (${jid.split('@')[0]})`);
         }
@@ -1884,6 +1886,7 @@ async function initInstance(instanceId) {
                         const currentChat = await prisma.chat.findUnique({
                             where: { jid_instanceId: { jid, instanceId } }
                         });
+                         console.log(`[MessageRoute][CHAT] instance=${instanceId} jid=${jid} found=${Boolean(currentChat)} aiEnabled=${Boolean(currentChat?.aiEnabled)}`);
 
                         // Agrupa todos os textos e imagens do buffer logo no inicio
                         let combinedText = "";
@@ -1908,14 +1911,18 @@ async function initInstance(instanceId) {
                         const textForFlow = combinedText;
                         const instanceData = await getCachedInstance(instanceId);
                         const userId = instanceData?.userId;
+                         console.log(`[MessageRoute][BUFFER] instance=${instanceId} user=${userId} jid=${jid} messages=${messagesToProcess.length} textLength=${textForFlow.length} images=${combinedImages.length}`);
 
                         let flowHandled = false;
                         if (!msg.key.fromMe && currentChat?.aiEnabled) {
+                            console.log(`[MessageRoute][FLOW_CALL] instance=${instanceId} jid=${jid}`);
                             flowHandled = await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages, userId);
+                            console.log(`[MessageRoute][FLOW_RESULT] instance=${instanceId} jid=${jid} handled=${flowHandled}`);
                         }
                         if (flowHandled) return;
 
                         if (!msg.key.fromMe && currentChat?.aiEnabled) {
+                            console.log(`[MessageRoute][AI_CALL] instance=${instanceId} jid=${jid}`);
                             const ai = await getOpenAI(userId);
                             if (ai) {
                                 const settings = await getSettings(userId);
