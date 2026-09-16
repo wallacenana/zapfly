@@ -911,8 +911,7 @@ const Settings = () => {
                           type="time"
                           value={slot?.startTime || '09:00'}
                           onChange={e => {
-                            const newSlots = [...slots.filter(s => s.dayOfWeek !== idx), { dayOfWeek: idx, startTime: e.target.value, endTime: slot?.endTime || '20:00' }];
-                            setSlots(newSlots.sort((a, b) => a.dayOfWeek - b.dayOfWeek));
+                            if (slot) setSlots(current => current.map(item => item === slot ? { ...item, startTime: e.target.value } : item));
                           }}
                         />
                       </div>
@@ -924,8 +923,7 @@ const Settings = () => {
                           type="time"
                           value={slot?.endTime || '20:00'}
                           onChange={e => {
-                            const newSlots = [...slots.filter(s => s.dayOfWeek !== idx), { dayOfWeek: idx, startTime: slot?.startTime || '09:00', endTime: e.target.value }];
-                            setSlots(newSlots.sort((a, b) => a.dayOfWeek - b.dayOfWeek));
+                            if (slot) setSlots(current => current.map(item => item === slot ? { ...item, endTime: e.target.value } : item));
                           }}
                         />
                       </div>
