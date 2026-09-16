@@ -1930,7 +1930,7 @@ async function initInstance(instanceId) {
                                     });
                                 }
 
-                                const storeInfo = await getStoreStatus();
+                                const storeInfo = await getStoreStatus(userId);
                                 const { statusLoja } = storeInfo;
 
                                 const history = await prisma.message.findMany({
@@ -2136,9 +2136,16 @@ async function initInstance(instanceId) {
                                         : (lastUserMsgObj?.content || '');
                                     const lastUserMsg = lastUserMsgContent.toLowerCase();
 
-                                    const isDeliveryRequest = /delivery|card[aá]pio|o que tem|o que temos|o que voc[eê] tem|pronta entrega|temos hoje|tem hoje|tem pra hoje|para hoje|dispon[ií]vel|pre[cç]o|o que vende|possibilidades|opções|opcoes|opção|opcao/i.test(lastUserMsg);
+                                    const isDeliveryRequest = /delivery|card[aá]pio|o que tem|o que temos|o que voc[eê] tem|pronta entrega|temos hoje|tem hoje|tem pra hoje|para hoje|dispon[ií]vel|pre[cç]o|o que vende|possibilidades|opções|opcoes|opção|opcao|\btem\b|\bprodutos?\b|\bitens?\b/i.test(lastUserMsg);
                                     const isOrderRequest = /encomenda|bolo de festa|personalizado|encomendar|quero encomendar/i.test(lastUserMsg);
                                     const isMediaRequest = /foto|fotos|imagem|imagens|exemplo|exemplos|mostra|mostrar/i.test(lastUserMsg);
+
+                                    // Pronta-entrega nunca deve ser respondida com estoque antigo quando a loja fechou.
+                                    if (statusLoja === "FECHADA" && isDeliveryRequest && !isOrderRequest) {
+                                        console.log(`[AI] Catálogo de delivery bloqueado: loja fechada (${storeInfo.horaAtual}).`);
+                                        await sendRichMessage(sock, jid, `A loja está fechada no momento. A pronta-entrega funciona dentro do horário de atendimento.`);
+                                        return;
+                                    }
 
                                     let forcedToolChoice = "auto";
 
