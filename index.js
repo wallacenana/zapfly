@@ -2135,13 +2135,17 @@ async function initInstance(instanceId) {
                                         : (lastUserMsgObj?.content || '');
                                     const lastUserMsg = lastUserMsgContent.toLowerCase();
 
-                                    const isDeliveryRequest = /card[aá]pio|o que tem|pronta entrega|o que voc[eê] tem|tem hoje|tem pra hoje|disponivel|preco|o que vende|possibilidades|opções|opcoes/i.test(lastUserMsg);
+                                    const isDeliveryRequest = /delivery|card[aá]pio|o que tem|pronta entrega|o que voc[eê] tem|tem hoje|tem pra hoje|dispon[ií]vel|pre[cç]o|o que vende|possibilidades|opções|opcoes|opção|opcao/i.test(lastUserMsg);
                                     const isOrderRequest = /encomenda|bolo de festa|personalizado|encomendar|quero encomendar/i.test(lastUserMsg);
                                     const isMediaRequest = /foto|fotos|imagem|imagens|exemplo|exemplos|mostra|mostrar/i.test(lastUserMsg);
 
                                     let forcedToolChoice = "auto";
 
-                                    if (statusLoja.includes("FECHADA")) {
+                                    if (isOrderRequest) {
+                                        forcedToolChoice = { type: "function", function: { name: "get_order_catalog" } };
+                                    } else if (isDeliveryRequest) {
+                                        forcedToolChoice = { type: "function", function: { name: "get_delivery_catalog" } };
+                                    } else if (statusLoja.includes("FECHADA")) {
                                         // Detecta se e um "SIM" generico ou se ja e o nome de um produto
                                         const isGenericAcceptance = /^(sim|quero|pode|manda|veja|ve|ok|agendar|amanha|pode ser|com certeza|claro|uhum)$/i.test(lastUserMsg.trim());
                                         const isAskingOptions = /o que tem|opções|cardapio|catalogo|ve ai/i.test(combinedText);
@@ -2151,12 +2155,6 @@ async function initInstance(instanceId) {
                                         } else {
                                             // Se ele já falou o nome de um produto (ex: "quero um vulcão"), deixa o fluxo seguir normal
                                             forcedToolChoice = "auto";
-                                        }
-                                    } else if (statusLoja.includes("ABERTA")) {
-                                        if (isDeliveryRequest && !isOrderRequest) {
-                                            forcedToolChoice = { type: "function", function: { name: "get_delivery_catalog" } };
-                                        } else if (isOrderRequest) {
-                                            forcedToolChoice = { type: "function", function: { name: "get_order_catalog" } };
                                         }
                                     }
 
@@ -2210,12 +2208,16 @@ async function initInstance(instanceId) {
                                                 result = await executeChamarGerente(reason, jid, currentChat, settings, null, sock, prisma, instanceId);
                                             }
                                             else if (functionName === "get_delivery_catalog") {
-                                                const prods = await prisma.product.findMany();
+                                                const prods = await prisma.product.findMany({
+                                                    where: { userId }
+                                                });
 
                                                 let deliveryStr = '';
                                                 prods.filter(p => {
                                                     const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
-                                                    return (p.type === 'delivery' || p.type === 'combo_delivery') && hasAvailableProductStock(p, vars);
+                                                    return p.active !== false
+                                                        && (p.type === 'delivery' || p.type === 'combo_delivery')
+                                                        && hasAvailableProductStock(p, vars);
                                                 }).forEach(p => {
                                                     const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
                                                     deliveryStr += formatProduct(p, vars, false) + '\n\n';
