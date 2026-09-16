@@ -40,7 +40,7 @@ const makeInMemoryStore = Baileys.makeInMemoryStore || (() => {
 });
 const prisma = require('./lib/prisma');
 const { calculateFee } = require('./lib/maps');
-const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock } = require('./lib/utils');
+const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock, getDeliveryCatalog } = require('./lib/utils');
 const { initFlows, handleFlows, runFlowNode, startFlowMonitor } = require('./lib/flows');
 const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODEL_MAP } = require('./lib/ai');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -2153,6 +2153,10 @@ async function initInstance(instanceId) {
                                     if (statusLoja === "FECHADA" && isDeliveryRequest && !isOrderRequest) {
                                         console.log(`[AI][BLOCKED] delivery catalog blocked because store is closed: time=${storeInfo.horaAtual}`);
                                         await sendRichMessage(sock, jid, `A loja esta fechada no momento. A pronta-entrega funciona dentro do horario de atendimento.`);
+                                        const tomorrowCatalog = await getDeliveryCatalog(userId);
+                                        await sock.sendMessage(jid, { text: 'Mas o nosso catalogo de amanha sera:' });
+                                        await sock.sendMessage(jid, { text: tomorrowCatalog.text });
+                                        console.log(`[AI][CATALOG_TOMORROW] user=${userId} products=${tomorrowCatalog.count} chars=${tomorrowCatalog.text.length}`);
                                         return;
                                     }
 
