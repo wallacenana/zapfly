@@ -2152,7 +2152,7 @@ async function initInstance(instanceId) {
                                     // Pronta-entrega nunca deve ser respondida com estoque antigo quando a loja fechou.
                                     if (statusLoja === "FECHADA" && isDeliveryRequest && !isOrderRequest) {
                                         console.log(`[AI][BLOCKED] delivery catalog blocked because store is closed: time=${storeInfo.horaAtual}`);
-                                        await sendRichMessage(sock, jid, `A loja está fechada no momento. A pronta-entrega funciona dentro do horário de atendimento.`);
+                                        await sendRichMessage(sock, jid, `A loja esta fechada no momento. A pronta-entrega funciona dentro do horario de atendimento.`);
                                         return;
                                     }
 
