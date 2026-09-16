@@ -327,8 +327,26 @@ function getCustomFieldSummaryParts(item) {
     return Object.entries(getCustomFieldAnswers(item)).map(([key, value]) => ({
         key,
         value,
-        isUrl: typeof value === 'string' && value.startsWith('http')
+        isUrl: getAttachmentUrls(value).length > 0
     }));
+}
+
+function getAttachmentUrls(value) {
+    if (Array.isArray(value)) return value.filter(url => typeof url === 'string' && url.startsWith('http'));
+    if (typeof value !== 'string') return [];
+    if (value.startsWith('http')) return [value];
+    const parsed = parseJsonValue(value, []);
+    return Array.isArray(parsed) ? parsed.filter(url => typeof url === 'string' && url.startsWith('http')) : [];
+}
+
+function renderCheckoutAttachments(value) {
+    const urls = getAttachmentUrls(value);
+    if (urls.length === 0) return 'Anexo';
+    return `<span class="checkout-attachment-list">${urls.map((url, index) => `
+        <a href="${url}" target="_blank" rel="noopener" class="checkout-attachment" aria-label="Abrir imagem ${index + 1}">
+            <img src="${getImg(url, 'medium')}" alt="Imagem enviada ${index + 1}" loading="lazy">
+        </a>
+    `).join('')}</span>`;
 }
 
 function formatOrderSchedule() {
@@ -2839,7 +2857,7 @@ function updateStep4Summary() {
         listEl.innerHTML = cart.map(item => `
                         <div style="margin-bottom: 8px;">
                             <p style="font-size: 0.9rem; margin-bottom: 0;">${item.quantity}x ${item.name} ${item.variation ? `(${item.variation})` : ''}</p>
-                            ${getCustomFieldSummaryParts(item).map(({ key, value, isUrl }) => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">- ' + key + ': ' + (isUrl ? 'Anexo' : String(value)) + '</p>').join('')}
+                            ${getCustomFieldSummaryParts(item).map(({ key, value, isUrl }) => '<div class="checkout-summary-field"><span>- ' + key + ': </span>' + (isUrl ? renderCheckoutAttachments(value) : String(value)) + '</div>').join('')}
                             ${item.addons ? (() => { try { const ads = JSON.parse(item.addons); return ads.map(a => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">- ' + a.name + '</p>').join(''); } catch (e) { return ''; } })() : ''}
                         </div>
                     `).join('');

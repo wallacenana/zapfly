@@ -1386,6 +1386,35 @@ body.theme-dark .var-option.selected {
     background: color-mix(in srgb, var(--primary-color) 6%, #fff);
 }
 
+.checkout-summary-field {
+    margin: 4px 0 0 15px;
+    color: var(--text-gray);
+    font-size: 0.75rem;
+}
+
+.checkout-attachment-list {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    vertical-align: middle;
+}
+
+.checkout-attachment {
+    display: inline-flex;
+    width: 52px;
+    height: 52px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-color);
+}
+
+.checkout-attachment img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 .checkout-schedule-step > div {
     display: flex;
     flex-direction: column;
