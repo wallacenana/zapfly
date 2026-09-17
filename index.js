@@ -2520,9 +2520,6 @@ async function initInstance(instanceId) {
                                             await new Promise(r => setTimeout(r, 1200));
                                             await sock.sendPresenceUpdate('paused', jid);
                                             await sock.sendMessage(jid, { text: isDelivery ? 'Quais itens você gostaria de pedir?' : 'Qual destes mais te encantou? Posso te ajudar a escolher o tamanho ideal para sua festa?' });
-                                            if (isDelivery) {
-                                                await sock.sendMessage(jid, { text: 'Mas você também pode deixar encomendado algum desses itens.' });
-                                            }
 
                                             return; // FIM IMEDIATO
                                         }
@@ -2563,9 +2560,6 @@ async function initInstance(instanceId) {
                                             // Envia CTA (IA)
                                             await new Promise(resolve => setTimeout(resolve, 2000));
                                             await sendRichMessage(sock, jid, ctaText);
-                                            if (isDelivery) {
-                                                await sendRichMessage(sock, jid, 'Mas você também pode deixar encomendado algum desses itens.');
-                                            }
                                         } else {
                                             // Se não for catálogo, envia a resposta normal
                                             await sendRichMessage(sock, jid, aiFinalText);
