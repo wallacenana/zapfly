@@ -40,7 +40,7 @@ const makeInMemoryStore = Baileys.makeInMemoryStore || (() => {
 });
 const prisma = require('./lib/prisma');
 const { calculateFee } = require('./lib/maps');
-const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock, getDeliveryCatalog } = require('./lib/utils');
+const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock, getDeliveryCatalog, getRestaurantGreeting } = require('./lib/utils');
 const { initFlows, handleFlows, runFlowNode, startFlowMonitor } = require('./lib/flows');
 const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODEL_MAP } = require('./lib/ai');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -2152,10 +2152,12 @@ async function initInstance(instanceId) {
                                     // Pronta-entrega nunca deve ser respondida com estoque antigo quando a loja fechou.
                                     if (statusLoja === "FECHADA" && isDeliveryRequest && !isOrderRequest) {
                                         console.log(`[AI][BLOCKED] delivery catalog blocked because store is closed: time=${storeInfo.horaAtual}`);
+                                        await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
                                         await sendRichMessage(sock, jid, `A loja esta fechada no momento. A pronta-entrega funciona dentro do horario de atendimento.`);
                                         const tomorrowCatalog = await getDeliveryCatalog(userId);
                                         await sock.sendMessage(jid, { text: 'Mas o nosso catalogo de amanha sera:' });
                                         await sock.sendMessage(jid, { text: tomorrowCatalog.text });
+                                        await sock.sendMessage(jid, { text: 'Mas voce tambem pode deixar encomendado algum desses itens.' });
                                         console.log(`[AI][CATALOG_TOMORROW] user=${userId} products=${tomorrowCatalog.count} chars=${tomorrowCatalog.text.length}`);
                                         return;
                                     }
@@ -2232,25 +2234,11 @@ async function initInstance(instanceId) {
                                                 result = await executeChamarGerente(reason, jid, currentChat, settings, null, sock, prisma, instanceId);
                                             }
                                             else if (functionName === "get_delivery_catalog") {
-                                                const prods = await prisma.product.findMany({
-                                                    where: { userId }
-                                                });
-
-                                                let deliveryStr = '';
-                                                prods.filter(p => {
-                                                    const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
-                                                    return p.active !== false
-                                                        && (p.type === 'delivery' || p.type === 'combo_delivery')
-                                                        && hasAvailableProductStock(p, vars);
-                                                }).forEach(p => {
-                                                    const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
-                                                    deliveryStr += formatProduct(p, vars, false) + '\n\n';
-                                                });
-
-                                                const catalogText = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
+                                                const catalog = await getDeliveryCatalog(userId);
+                                                const catalogText = catalog.text;
                                                 pendingCatalogMessage = catalogText;
                                                 pendingCatalogType = 'delivery';
-                                                console.log(`[AI][CATALOG] type=delivery user=${userId} products=${prods.length} chars=${catalogText.length}`);
+                                                console.log(`[AI][CATALOG] type=delivery user=${userId} products=${catalog.count} chars=${catalogText.length}`);
                                                 result = "CATALOGO ENVIADO PARA MEMORIA. Responda ao cliente usando o formato: [Intro] --- [CTA].";
                                             }
                                             else if (functionName === "get_order_catalog") {
@@ -2544,6 +2532,8 @@ async function initInstance(instanceId) {
                                             const isDelivery = pendingCatalogType === 'delivery';
                                             console.log(`[AI][CATALOG_SEND] instance=${instanceId} jid=${jid} type=${pendingCatalogType} chars=${pendingCatalogMessage.length}`);
 
+                                            await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
+
                                             // Balão 1: Intro
                                             await sock.sendPresenceUpdate('composing', jid);
                                             await new Promise(r => setTimeout(r, 1000));
@@ -2561,6 +2551,9 @@ async function initInstance(instanceId) {
                                             await new Promise(r => setTimeout(r, 1200));
                                             await sock.sendPresenceUpdate('paused', jid);
                                             await sock.sendMessage(jid, { text: isDelivery ? 'Quais itens você gostaria de pedir?' : 'Qual destes mais te encantou? Posso te ajudar a escolher o tamanho ideal para sua festa?' });
+                                            if (isDelivery) {
+                                                await sock.sendMessage(jid, { text: 'Mas voce tambem pode deixar encomendado algum desses itens.' });
+                                            }
 
                                             return; // FIM IMEDIATO
                                         }
@@ -2601,6 +2594,9 @@ async function initInstance(instanceId) {
                                             // Envia CTA (IA)
                                             await new Promise(resolve => setTimeout(resolve, 2000));
                                             await sendRichMessage(sock, jid, ctaText);
+                                            if (isDelivery) {
+                                                await sendRichMessage(sock, jid, 'Mas voce tambem pode deixar encomendado algum desses itens.');
+                                            }
                                         } else {
                                             // Se não for catálogo, envia a resposta normal
                                             await sendRichMessage(sock, jid, aiFinalText);
