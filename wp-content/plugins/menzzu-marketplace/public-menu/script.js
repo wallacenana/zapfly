@@ -1718,10 +1718,15 @@ function renderVariationAccordion() {
                 const option = document.createElement('div');
                 option.className = 'var-option subitem-option';
                 option.style.margin = '6px 0 0';
+                option.style.gap = '12px';
+                option.style.minHeight = '50px';
+                option.style.boxSizing = 'border-box';
                 option.innerHTML = '<div class="var-label"></div><div class="var-price"></div>';
                 option.querySelector('.var-label').textContent = subItem.name || 'Opção';
                 const price = getEffectiveProductPrice(subItem);
                 option.querySelector('.var-price').textContent = price > 0 ? `R$ ${price.toFixed(2)}` : '';
+                option.querySelector('.var-label').style.cssText = 'min-width: 0; flex: 1 1 auto;';
+                option.querySelector('.var-price').style.cssText = 'margin-left: auto; flex: 0 0 auto; white-space: nowrap;';
                 option.addEventListener('click', event => {
                     event.stopPropagation();
                     selectSubItem(subItem.name, subItem.price);
@@ -1733,10 +1738,15 @@ function renderVariationAccordion() {
         const indicator = document.createElement('span');
         indicator.className = 'variation-accordion-indicator';
         indicator.textContent = '+';
-        indicator.style.cssText = 'margin-left: auto; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 12%, transparent); font-size: 20px; line-height: 1; transition: transform 220ms ease, background 220ms ease;';
+        indicator.style.cssText = 'margin-left: 0; flex: 0 0 24px; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 12%, transparent); font-size: 20px; line-height: 1; transition: transform 220ms ease, background 220ms ease;';
         row.appendChild(indicator);
         row.style.cursor = 'pointer';
+        row.style.gap = '12px';
+        row.style.minHeight = '56px';
+        row.style.boxSizing = 'border-box';
         row.style.transition = 'background 220ms ease, border-color 220ms ease, transform 220ms ease';
+        row.querySelector('.var-label').style.cssText = 'min-width: 0; flex: 1 1 auto;';
+        row.querySelector('.var-price').style.cssText = 'margin-left: auto; flex: 0 0 auto; white-space: nowrap;';
         row.removeAttribute('onclick');
         row.setAttribute('role', 'button');
         row.setAttribute('aria-expanded', 'false');
