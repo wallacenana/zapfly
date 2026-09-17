@@ -1456,6 +1456,7 @@ router.post('/', async (req, res) => {
 
     res.json(paymentError ? { ...order, paymentError } : order);
   } catch (err) {
+    console.error(`[Orders][CREATE_ERROR] user=${req.user?.id || 'instance'} status=${err.status || err.statusCode || 500} message=${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });

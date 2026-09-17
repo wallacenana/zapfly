@@ -1665,7 +1665,6 @@ async function initInstance(instanceId) {
         let jid = msg.key.remoteJid;
         const pushName = msg.pushName || 'Desconhecido';
 
-        console.log(`[MessageRoute][UPSERT] instance=${instanceId} fromMe=${Boolean(msg.key.fromMe)} remoteJid=${jid} type=${Object.keys(msg.message).join(',')}`);
 
         if (!msg.key.fromMe) {
             console.log(`[Mensagem] ${pushName} (${jid.split('@')[0]})`);
@@ -1886,7 +1885,6 @@ async function initInstance(instanceId) {
                         const currentChat = await prisma.chat.findUnique({
                             where: { jid_instanceId: { jid, instanceId } }
                         });
-                         console.log(`[MessageRoute][CHAT] instance=${instanceId} jid=${jid} found=${Boolean(currentChat)} aiEnabled=${Boolean(currentChat?.aiEnabled)}`);
 
                         // Agrupa todos os textos e imagens do buffer logo no inicio
                         let combinedText = "";
@@ -1911,18 +1909,14 @@ async function initInstance(instanceId) {
                         const textForFlow = combinedText;
                         const instanceData = await getCachedInstance(instanceId);
                         const userId = instanceData?.userId;
-                         console.log(`[MessageRoute][BUFFER] instance=${instanceId} user=${userId} jid=${jid} messages=${messagesToProcess.length} textLength=${textForFlow.length} images=${combinedImages.length}`);
 
                         let flowHandled = false;
                         if (!msg.key.fromMe && currentChat?.aiEnabled) {
-                            console.log(`[MessageRoute][FLOW_CALL] instance=${instanceId} jid=${jid}`);
                             flowHandled = await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages, userId);
-                            console.log(`[MessageRoute][FLOW_RESULT] instance=${instanceId} jid=${jid} handled=${flowHandled}`);
                         }
                         if (flowHandled) return;
 
                         if (!msg.key.fromMe && currentChat?.aiEnabled) {
-                            console.log(`[MessageRoute][AI_CALL] instance=${instanceId} jid=${jid}`);
                             const ai = await getOpenAI(userId);
                             if (ai) {
                                 const settings = await getSettings(userId);
@@ -1939,7 +1933,6 @@ async function initInstance(instanceId) {
 
                                 const storeInfo = await getStoreStatus(userId);
                                 const { statusLoja } = storeInfo;
-                                console.log(`[AI][STORE] instance=${instanceId} user=${userId} jid=${jid} status=${statusLoja} time=${storeInfo.horaAtual} day=${storeInfo.nomeDia}`);
 
                                 const history = await prisma.message.findMany({
                                     where: { instanceId, jid },
@@ -2147,11 +2140,9 @@ async function initInstance(instanceId) {
                                     const isDeliveryRequest = /delivery|card[aá]pio|o que tem|o que temos|o que voc[eê] tem|pronta entrega|temos hoje|tem hoje|tem pra hoje|para hoje|dispon[ií]vel|pre[cç]o|o que vende|possibilidades|opções|opcoes|opção|opcao|\btem\b|\bprodutos?\b|\bitens?\b/i.test(lastUserMsg);
                                     const isOrderRequest = /encomenda|bolo de festa|personalizado|encomendar|quero encomendar/i.test(lastUserMsg);
                                     const isMediaRequest = /foto|fotos|imagem|imagens|exemplo|exemplos|mostra|mostrar/i.test(lastUserMsg);
-                                    console.log(`[AI][INTENT] instance=${instanceId} user=${userId} status=${statusLoja} delivery=${isDeliveryRequest} order=${isOrderRequest} media=${isMediaRequest} textLength=${lastUserMsg.length}`);
 
                                     // Pronta-entrega nunca deve ser respondida com estoque antigo quando a loja fechou.
                                     if (statusLoja === "FECHADA" && isDeliveryRequest && !isOrderRequest) {
-                                        console.log(`[AI][BLOCKED] delivery catalog blocked because store is closed: time=${storeInfo.horaAtual}`);
                                         if (await shouldSendRestaurantGreeting(instanceId, jid)) {
                                             await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
                                         }
@@ -2160,7 +2151,6 @@ async function initInstance(instanceId) {
                                         await sock.sendMessage(jid, { text: 'Mas o nosso catálogo de amanhã será:' });
                                         await sock.sendMessage(jid, { text: tomorrowCatalog.text });
                                         await sock.sendMessage(jid, { text: 'Mas você também pode deixar encomendado algum desses itens.' });
-                                        console.log(`[AI][CATALOG_TOMORROW] user=${userId} products=${tomorrowCatalog.count} chars=${tomorrowCatalog.text.length}`);
                                         return;
                                     }
 
@@ -2188,7 +2178,6 @@ async function initInstance(instanceId) {
                                     }
 
                                     const modelToUse = (settings && settings.activeModel) ? (MODEL_MAP[settings.activeModel] || 'gpt-4o') : 'gpt-4o';
-                                    console.log(`[AI][ROUTE] forcedTool=${typeof forcedToolChoice === 'string' ? forcedToolChoice : forcedToolChoice.function.name} model=${modelToUse}`);
 
                                     const completion = await ai.chat.completions.create({
                                         model: modelToUse,
@@ -2198,7 +2187,6 @@ async function initInstance(instanceId) {
                                     });
 
                                     responseMessage = completion.choices[0].message;
-                                    console.log(`[AI][RESPONSE] instance=${instanceId} jid=${jid} toolCalls=${responseMessage.tool_calls?.length || 0} contentLength=${responseMessage.content?.length || 0}`);
                                     let initialAIText = responseMessage.content;
 
                                     // Interceptador de Memoria de Imagem
@@ -2228,7 +2216,6 @@ async function initInstance(instanceId) {
                                             const functionName = toolCall.function.name;
                                             const args = JSON.parse(toolCall.function.arguments);
                                             let result;
-                                            console.log(`[AI][TOOL_START] instance=${instanceId} jid=${jid} tool=${functionName}`);
 
 
                                             if (functionName === "chamar_gerente") {
@@ -2240,7 +2227,6 @@ async function initInstance(instanceId) {
                                                 const catalogText = catalog.text;
                                                 pendingCatalogMessage = catalogText;
                                                 pendingCatalogType = 'delivery';
-                                                console.log(`[AI][CATALOG] type=delivery user=${userId} products=${catalog.count} chars=${catalogText.length}`);
                                                 result = "CATALOGO ENVIADO PARA MEMORIA. Responda ao cliente usando o formato: [Intro] --- [CTA].";
                                             }
                                             else if (functionName === "get_order_catalog") {
@@ -2248,7 +2234,6 @@ async function initInstance(instanceId) {
                                                 const catalogText = catalog.text;
                                                 pendingCatalogMessage = catalogText;
                                                 pendingCatalogType = 'order';
-                                                console.log(`[AI][ORDER_CATALOG] user=${userId} products=${catalog.count} chars=${catalogText.length}`);
                                                 result = "CATALOGO DE ENCOMENDAS ENVIADO PARA MEMORIA. Responda ao cliente usando o formato: [Intro] --- [CTA].";
                                             }
                                             else if (functionName === "check_availability") {
@@ -2465,7 +2450,6 @@ async function initInstance(instanceId) {
                                                 result = await checkAvailability(userId, args.date, args.time);
                                             }
 
-                                            console.log(`[AI][TOOL_DONE] instance=${instanceId} jid=${jid} tool=${functionName} pendingCatalog=${Boolean(pendingCatalogMessage)} resultType=${typeof result}`);
                                             messages.push({
                                                 tool_call_id: toolCall.id,
                                                 role: "tool",
@@ -2512,7 +2496,6 @@ async function initInstance(instanceId) {
 
                                         if (pendingCatalogMessage) {
                                             const isDelivery = pendingCatalogType === 'delivery';
-                                            console.log(`[AI][CATALOG_SEND] instance=${instanceId} jid=${jid} type=${pendingCatalogType} chars=${pendingCatalogMessage.length}`);
 
                                             if (await shouldSendRestaurantGreeting(instanceId, jid)) {
                                                 await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
@@ -2665,7 +2648,6 @@ async function initInstance(instanceId) {
                                                 await sock.sendPresenceUpdate('paused', jid);
 
                                                 await sock.sendMessage(jid, { text: ctaText });
-                                                console.log(`[AI] CTA enviado para ${jid}: ${ctaText}`);
                                             }
                                         } catch (e) {
                                             console.error('[AI CTA Error]', e.message);
