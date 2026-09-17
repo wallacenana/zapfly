@@ -64,6 +64,7 @@ let state = {
     currentItem: null,
     currentQty: 1,
     currentVariation: null,
+    currentSubItem: null,
     orderBumpSelected: false,
     userInfo: JSON.parse(localStorage.getItem('menzzu_user') || '{"name":"","phone":"","address":""}'),
     publicSettings: {
@@ -1393,6 +1394,7 @@ function openItemDetail(productId) {
     state.currentItem = item;
     state.currentQty = 1;
     state.currentVariation = null;
+    state.currentSubItem = null;
     state.orderBumpSelected = false;
 
     const body = document.getElementById('item-detail-body');
@@ -1674,11 +1676,58 @@ function unlockBodyScroll() {
 }
 
 function selectVariation(name, price) {
+    const variations = JSON.parse(state.currentItem?.variations || '[]');
+    const selected = variations.find(variation => String(variation.name) === String(name));
     state.currentVariation = {
         name,
-        price
+        price,
+        subItems: Array.isArray(selected?.subItems) ? selected.subItems : []
     };
+    state.currentSubItem = null;
     document.querySelectorAll('.var-option').forEach(el => el.classList.toggle('selected', el.querySelector('.var-label').innerText === name));
+    renderSubItemSelection();
+    updateDetailFooter();
+}
+
+function renderSubItemSelection() {
+    let container = document.getElementById('subitem-selection');
+    if (!container) {
+        const section = document.querySelector('#item-detail-modal .variation-section');
+        if (!section) return;
+        container = document.createElement('div');
+        container.id = 'subitem-selection';
+        section.appendChild(container);
+    }
+
+    const subItems = (state.currentVariation?.subItems || []).filter(item => !item.hidden);
+    if (subItems.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    const availableSubItems = subItems.filter(item => !state.currentItem?.trackStock || Number(item.stock) > 0);
+    const options = availableSubItems.map(item => {
+        const price = getEffectiveProductPrice(item);
+        const safeName = String(item.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return '<div class="var-option subitem-option" onclick="selectSubItem('
+            + "'" + safeName + "'"
+            + ', ' + Number(item.price || 0) + ')"><div class="var-label">'
+            + String(item.name || 'Opção')
+            + '</div><div class="var-price">'
+            + (price > 0 ? 'R$ ' + price.toFixed(2) : '')
+            + '</div></div>';
+    }).join('');
+
+    container.innerHTML = '<div class="variation-section" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color);">'
+        + '<div class="addon-group-header"><h4>Escolha o sabor</h4></div>'
+        + (options || '<p style="color:var(--text-secondary); font-size:13px; margin:8px 0;">Nenhuma opção disponível no momento.</p>')
+        + '</div>';
+}
+
+function selectSubItem(name, price) {
+    const selected = (state.currentVariation?.subItems || []).find(item => String(item?.name || '') === String(name || ''));
+    state.currentSubItem = selected || { name, price };
+    document.querySelectorAll('.subitem-option').forEach(el => el.classList.toggle('selected', el.querySelector('.var-label').innerText === name));
     updateDetailFooter();
 }
 
@@ -1787,8 +1836,9 @@ function getOrderAddonsJSON(item) {
 }
 
 function updateDetailFooter() {
+    const subItemPrice = state.currentSubItem ? getEffectiveProductPrice(state.currentSubItem) : 0;
     const basePrice = state.currentVariation
-        ? getEffectiveProductPrice(state.currentVariation)
+        ? (subItemPrice > 0 ? subItemPrice : getEffectiveProductPrice(state.currentVariation))
         : getEffectiveProductPrice(state.currentItem);
     const {
         addonTotal
@@ -1828,6 +1878,13 @@ function validateCurrentItemSelections() {
     const variation = state.currentVariation;
     const variations = JSON.parse(item.variations || '[]').filter(v => !v.hidden);
     if (variations.length > 0 && !variation) {
+        return {
+            ok: false,
+            message: 'Por favor, selecione uma opção para continuar.'
+        };
+    }
+    const subItems = (variation?.subItems || []).filter(item => !item.hidden);
+    if (subItems.length > 0 && !state.currentSubItem) {
         return {
             ok: false,
             message: 'Por favor, selecione uma opção para continuar.'
@@ -2725,7 +2782,7 @@ function updateStep4Summary() {
     if (listEl) {
         listEl.innerHTML = cart.map(item => `
                         <div style="margin-bottom: 8px;">
-                            <p style="font-size: 0.9rem; margin-bottom: 0;">${item.quantity}x ${item.name} ${item.variation ? `(${item.variation})` : ''}</p>
+                            <p style="font-size: 0.9rem; margin-bottom: 0;">${item.quantity}x ${item.name} ${item.variation ? `(${item.variation}${item.subItem ? ' - ' + item.subItem : ''})` : ''}</p>
                             ${getCustomFieldSummaryParts(item).map(({ key, value, isUrl }) => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">- ' + key + ': ' + (isUrl ? 'Anexo' : String(value)) + '</p>').join('')}
                             ${item.addons ? (() => { try { const ads = JSON.parse(item.addons); return ads.map(a => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">- ' + a.name + '</p>').join(''); } catch (e) { return ''; } })() : ''}
                         </div>
@@ -2796,8 +2853,9 @@ function commitAddToCart() {
         addons,
         addonTotal
     } = getSelectedAddons();
+    const subItemPrice = state.currentSubItem ? getEffectiveProductPrice(state.currentSubItem) : 0;
     const basePrice = variation
-        ? getEffectiveProductPrice(variation)
+        ? (subItemPrice > 0 ? subItemPrice : getEffectiveProductPrice(variation))
         : getEffectiveProductPrice(item);
     const finalUnitPrice = basePrice + addonTotal;
 
@@ -2808,7 +2866,9 @@ function commitAddToCart() {
     const orderSelections = [...addons, ...getSelectedCustomFields(customFieldItem)];
     const addonsJSON = orderSelections.length > 0 ? JSON.stringify(orderSelections) : null;
     const sigKey = (customAnswersJSON || '') + (addonsJSON || '');
-    const itemKeyBase = variation ? `${item.id}-${variation.name}` : item.id;
+    const itemKeyBase = variation
+        ? `${item.id}-${variation.name}${state.currentSubItem ? '-' + state.currentSubItem.name : ''}`
+        : item.id;
     const itemKey = sigKey ? `${itemKeyBase}-${btoa(encodeURIComponent(sigKey)).substring(0, 12)}` : itemKeyBase;
 
     let cart = getActiveCart();
@@ -2819,6 +2879,7 @@ function commitAddToCart() {
         itemKey,
         name: item.name,
         variation: variation ? variation.name : null,
+        subItem: state.currentSubItem ? state.currentSubItem.name : null,
         price: finalUnitPrice,
         quantity: state.currentQty,
         customFieldSchema: customFieldSchemaJSON,
@@ -2935,6 +2996,7 @@ async function handlePlaceOrder() {
 
     const formatItemName = (item) => {
         let base = item.name + (item.variation ? ` (${item.variation})` : '');
+        if (item.subItem) base += ` - ${item.subItem}`;
         const extras = [];
         if (item.addons) {
             try {
@@ -2959,6 +3021,7 @@ async function handlePlaceOrder() {
         productId: cart[0].productId,
         product: formatItemName(cart[0]),
         variation: cart[0].variation,
+        subItem: cart[0].subItem || null,
         quantity: cart[0].quantity,
         type: state.activeTab,
         deliveryAddress: state.deliveryType === 'delivery'
@@ -2974,6 +3037,7 @@ async function handlePlaceOrder() {
             productId: item.productId,
             name: formatItemName(item),
             variation: item.variation || null,
+            subItem: item.subItem || null,
             price: Number(item.price) || 0,
             quantity: Number(item.quantity) || 1
         })),

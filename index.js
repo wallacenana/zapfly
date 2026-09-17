@@ -2009,6 +2009,7 @@ async function initInstance(instanceId) {
                                                     productId: { type: "string", description: "ID do produto (ex: cmo...) encontrado entre [ID:...] no catálogo." },
                                                     product: { type: "string", description: "Nome do produto" },
                                                     variation: { type: "string", description: "Nome da variacao EXACTA (ex: 'P', 'M', 'Mini'). Nao coloque sabores aqui." },
+                                                    subItem: { type: "string", description: "Subvariacao/opcao escolhida dentro da variacao, como Baunilha ou Chocolate. Use exatamente o nome cadastrado." },
                                                     quantity: { type: "string", description: "Peso do bolo (ex: 2kg) ou Quantidade" },
                                                     scheduledDate: { type: "string", description: "Data do agendamento YYYY-MM-DD" },
                                                     scheduledTime: { type: "string", description: "Horário do agendamento HH:MM" },

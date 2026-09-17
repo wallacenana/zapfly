@@ -432,13 +432,17 @@ function buildCalendarOrderDescription(order, links = []) {
   ].filter(Boolean).join('\n');
 }
 
-function hasRequestedProductStock(product, variationName) {
+function hasRequestedProductStock(product, variationName, subItemName) {
   if (!product?.trackStock) return true;
   const variations = safeJsonParse(product.variations, []);
   if (!Array.isArray(variations) || variations.length === 0) return Number(product.stock) > 0;
   const visibleVariations = variations.filter((variation) => !variation?.hidden);
   const selected = visibleVariations.find((variation) => String(variation.name || '') === String(variationName || ''));
   const candidates = selected ? [selected] : visibleVariations;
+  if (selected && subItemName && Array.isArray(selected.subItems) && selected.subItems.length > 0) {
+    const subItem = selected.subItems.find(item => String(item?.name || '') === String(subItemName || ''));
+    return !!subItem && (!product.trackStock || Number(subItem.stock) > 0);
+  }
   return candidates.some((variation) => Number(variation.stock) > 0
     || (Array.isArray(variation.subItems) && variation.subItems.some((item) => Number(item?.stock) > 0)));
 }
@@ -719,6 +723,7 @@ async function calculateOrderTotal(data, userId) {
   const productId = data.productId;
   const product = data.product;
   const variation = data.variation;
+  const subItem = data.subItem;
   const quantity = data.quantity;
   const deliveryFee = data.deliveryFee;
   const carrinho_itens_extras = data.carrinho_itens_extras;
@@ -731,7 +736,12 @@ async function calculateOrderTotal(data, userId) {
         try {
           const vars = typeof p.variations === 'string' ? JSON.parse(p.variations) : p.variations;
           const vObj = vars.find(v => v.name === variation);
-          if (vObj && vObj.price !== undefined) mainProductPrice = vObj.price;
+          if (vObj && vObj.price !== undefined) {
+            const selectedSubItem = Array.isArray(vObj.subItems)
+              ? vObj.subItems.find(item => String(item?.name || '') === String(subItem || ''))
+              : null;
+            mainProductPrice = selectedSubItem?.price !== undefined ? selectedSubItem.price : vObj.price;
+          }
         } catch (e) { }
       }
     }
@@ -743,7 +753,12 @@ async function calculateOrderTotal(data, userId) {
         try {
           const vars = typeof p.variations === 'string' ? JSON.parse(p.variations) : p.variations;
           const vObj = vars.find(v => v.name === variation);
-          if (vObj && vObj.price !== undefined) mainProductPrice = vObj.price;
+          if (vObj && vObj.price !== undefined) {
+            const selectedSubItem = Array.isArray(vObj.subItems)
+              ? vObj.subItems.find(item => String(item?.name || '') === String(subItem || ''))
+              : null;
+            mainProductPrice = selectedSubItem?.price !== undefined ? selectedSubItem.price : vObj.price;
+          }
         } catch (e) { }
       }
     }
@@ -1255,7 +1270,7 @@ router.get('/', authenticate, async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    let { instanceId, slug, productId, product, variation, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, clientPhone, type, deliveryAddress, paymentMethod, deliveryFee, totalValue, massa, recheio, topo, addons, carrinho_itens_extras, cartItems } = req.body;
+    let { instanceId, slug, productId, product, variation, subItem, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, clientPhone, type, deliveryAddress, paymentMethod, deliveryFee, totalValue, massa, recheio, topo, addons, carrinho_itens_extras, cartItems } = req.body;
 
     let userId = req.user?.id;
     if (!userId && instanceId) {
@@ -1320,7 +1335,7 @@ router.post('/', async (req, res) => {
     if (orderType === 'delivery') {
       const requestedItems = Array.isArray(cartItems) && cartItems.length > 0
         ? cartItems
-        : [{ productId, variation }];
+        : [{ productId, variation, subItem }];
       const productIds = [...new Set(requestedItems.map((item) => item?.productId).filter(Boolean))];
       const productsForStock = productIds.length > 0
         ? await prisma.product.findMany({ where: { userId, id: { in: productIds } } })
@@ -1328,7 +1343,7 @@ router.post('/', async (req, res) => {
       const productsById = new Map(productsForStock.map((item) => [item.id, item]));
       const unavailable = requestedItems.find((item) => {
         const productRecord = productsById.get(item?.productId);
-        return productRecord && (productRecord.active === false || !hasRequestedProductStock(productRecord, item?.variation));
+        return productRecord && (productRecord.active === false || !hasRequestedProductStock(productRecord, item?.variation, item?.subItem));
       });
       if (unavailable) {
         return res.status(409).json({ error: 'Este produto está esgotado no momento.' });
@@ -1343,7 +1358,37 @@ router.post('/', async (req, res) => {
           const variations = safeJsonParse(productRecord?.variations, []);
           const hasVariations = Array.isArray(variations) && variations.length > 0;
           const itemQuantity = Math.max(1, parseInt(item?.quantity, 10) || 1);
-          if (!productRecord?.trackStock || hasVariations) continue;
+          if (!productRecord?.trackStock) continue;
+
+          if (hasVariations) {
+            const nextVariations = JSON.parse(JSON.stringify(variations));
+            const selectedVariation = nextVariations.find(v => String(v?.name || '') === String(item?.variation || ''));
+            if (!selectedVariation) {
+              throw Object.assign(new Error('A variação selecionada não existe.'), { statusCode: 409 });
+            }
+
+            const subItems = Array.isArray(selectedVariation.subItems) ? selectedVariation.subItems : [];
+            if (subItems.length > 0) {
+              const selectedSubItem = subItems.find(sub => String(sub?.name || '') === String(item?.subItem || ''));
+              if (!selectedSubItem || Number(selectedSubItem.stock) < itemQuantity) {
+                throw Object.assign(new Error('Esta combinação não está disponível no momento.'), { statusCode: 409 });
+              }
+              selectedSubItem.stock = Number(selectedSubItem.stock) - itemQuantity;
+            } else {
+              if (Number(selectedVariation.stock) < itemQuantity) {
+                throw Object.assign(new Error('Esta variação não está disponível no momento.'), { statusCode: 409 });
+              }
+              selectedVariation.stock = Number(selectedVariation.stock) - itemQuantity;
+            }
+
+            await prisma.product.update({
+              where: { id: productRecord.id },
+              data: { variations: JSON.stringify(nextVariations) }
+            });
+            reservedStock.push({ id: productRecord.id, previousVariations: productRecord.variations });
+            productRecord.variations = JSON.stringify(nextVariations);
+            continue;
+          }
 
           const updated = await prisma.product.updateMany({
             where: {
@@ -1358,13 +1403,21 @@ router.post('/', async (req, res) => {
             throw Object.assign(new Error('Este produto nao esta disponivel no momento.'), { statusCode: 409 });
           }
           reservedStock.push({ id: productRecord.id, quantity: itemQuantity });
+          productRecord.stock = Number(productRecord.stock) - itemQuantity;
         }
       } catch (reservationError) {
-        for (const item of reservedStock) {
-          await prisma.product.update({
-            where: { id: item.id },
-            data: { stock: { increment: item.quantity } }
-          }).catch(() => {});
+        for (const item of reservedStock.reverse()) {
+          if (item.previousVariations !== undefined) {
+            await prisma.product.update({
+              where: { id: item.id },
+              data: { variations: item.previousVariations }
+            }).catch(() => {});
+          } else {
+            await prisma.product.update({
+              where: { id: item.id },
+              data: { stock: { increment: item.quantity } }
+            }).catch(() => {});
+          }
         }
         return res.status(reservationError.statusCode || 409).json({ error: reservationError.message });
       }
@@ -1392,7 +1445,7 @@ router.post('/', async (req, res) => {
       product: product || 'Produto',
       variation: variation || null,
       quantity: qtyNum.toString(),
-      notes: notes || '',
+      notes: [notes, subItem ? ('Subvariação: ' + subItem) : ''].filter(Boolean).join(' | '),
       scheduledDate: scheduledDate || getBrazilDateString(),
       scheduledTime: scheduledTime || fallbackTime,
       clientName: clientName || 'Cliente',
