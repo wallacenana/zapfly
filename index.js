@@ -2139,6 +2139,8 @@ async function initInstance(instanceId) {
 
                                     const isDeliveryRequest = /delivery|card[aá]pio|o que tem|o que temos|o que voc[eê] tem|pronta entrega|temos hoje|tem hoje|tem pra hoje|para hoje|dispon[ií]vel|pre[cç]o|o que vende|possibilidades|opções|opcoes|opção|opcao|\btem\b|\bprodutos?\b|\bitens?\b/i.test(lastUserMsg);
                                     const isOrderRequest = /encomenda|bolo de festa|personalizado|encomendar|quero encomendar/i.test(lastUserMsg);
+                                    const isOrderCatalogRequest = isOrderRequest
+                                        && /card[aá]pio|cat[aá]logo|lista|op[cç][õo]es|opcoes|o que tem|o que temos|quais/i.test(lastUserMsg);
                                     const isMediaRequest = /foto|fotos|imagem|imagens|exemplo|exemplos|mostra|mostrar/i.test(lastUserMsg);
 
                                     // Pronta-entrega nunca deve ser respondida com estoque antigo quando a loja fechou.
@@ -2156,9 +2158,9 @@ async function initInstance(instanceId) {
 
                                     let forcedToolChoice = "auto";
 
-                                    if (isOrderRequest) {
+                                    if (isOrderCatalogRequest) {
                                         forcedToolChoice = { type: "function", function: { name: "get_order_catalog" } };
-                                    } else if (isDeliveryRequest) {
+                                    } else if (isDeliveryRequest && !isOrderRequest) {
                                         forcedToolChoice = { type: "function", function: { name: "get_delivery_catalog" } };
                                     } else if (statusLoja.includes("FECHADA")) {
                                         // Detecta se e um "SIM" generico ou se ja e o nome de um produto
