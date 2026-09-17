@@ -1692,12 +1692,15 @@ function renderVariationAccordion() {
         const variation = variations[index];
         if (!variation) return;
 
+        const variationSubItems = Array.isArray(variation.subItems) ? variation.subItems : [];
+        if (variationSubItems.length === 0) return;
+
         const details = document.createElement('div');
         details.className = 'variation-subitems';
         details.dataset.open = 'false';
         details.style.cssText = 'margin: -2px 0 10px; max-height: 0; overflow: hidden; opacity: 0; pointer-events: none; padding: 0 12px 0 24px; border-left: 2px solid var(--primary-color); background: var(--bg-gray); border-radius: 0 0 10px 10px; transition: max-height 280ms ease, opacity 180ms ease, padding 280ms ease;';
 
-        const subItems = (Array.isArray(variation.subItems) ? variation.subItems : [])
+        const subItems = variationSubItems
             .filter(item => !item.hidden && (!state.currentItem?.trackStock || Number(item.stock) > 0));
 
         if (subItems.length === 0) {
