@@ -2002,7 +2002,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "create_order",
-                                            description: "Cria um novo pedido. REGRAS CRITICAS: 1. NUNCA crie pedidos duplicados se o cliente estiver apenas corrigindo algo ou tentando de novo apos um erro; use 'update_order' nesses casos. 2. Se o cliente mudar de ideia no meio do atendimento, atualize o pedido existente.",
+                                            description: "Cria um novo pedido. REGRAS CRITICAS: 1. NUNCA crie pedidos duplicados se o cliente estiver apenas corrigindo algo ou tentando de novo apos um erro; use 'update_order' nesses casos. 2. Se o cliente mudar de ideia no meio do atendimento, atualize o pedido existente. 3. Colete cada variacao em uma pergunta separada: uma pergunta, uma resposta, depois a proxima. Nunca junte tamanho e massa, massa e recheio ou duas variacoes na mesma mensagem.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
