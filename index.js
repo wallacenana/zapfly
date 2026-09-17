@@ -40,7 +40,7 @@ const makeInMemoryStore = Baileys.makeInMemoryStore || (() => {
 });
 const prisma = require('./lib/prisma');
 const { calculateFee } = require('./lib/maps');
-const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock, getDeliveryCatalog, getRestaurantGreeting, shouldSendRestaurantGreeting } = require('./lib/utils');
+const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock, getDeliveryCatalog, getOrderCatalog, getRestaurantGreeting, shouldSendRestaurantGreeting } = require('./lib/utils');
 const { initFlows, handleFlows, runFlowNode, startFlowMonitor } = require('./lib/flows');
 const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODEL_MAP } = require('./lib/ai');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -2244,35 +2244,15 @@ async function initInstance(instanceId) {
                                                 result = "CATALOGO ENVIADO PARA MEMORIA. Responda ao cliente usando o formato: [Intro] --- [CTA].";
                                             }
                                             else if (functionName === "get_order_catalog") {
-                                                const prods = await prisma.product.findMany({
-                                                    where: {
-                                                        OR: [
-                                                            { type: { in: ['encomenda', 'addon'] } },
-                                                            { type: { contains: 'combo_' } }
-                                                        ]
-                                                    }
-                                                });
-                                                let orderStr = '';
-                                                let addonStr = '';
-
-                                                prods.forEach(p => {
-                                                    const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
-                                                    const line = formatProduct(p, vars, false);
-
-                                                    if (p.type === 'addon') addonStr += line + '\n';
-                                                    else orderStr += line + '\n\n';
-                                                });
-
-                                                let catalogText = orderStr.trim() || 'Nenhum item para encomenda no momento.';
-                                                if (addonStr) {
-                                                    catalogText += '\n\nâœ¨ *ADICIONAIS & EXTRAS:*\n' + addonStr.trim();
-                                                }
+                                                const catalog = await getOrderCatalog(userId);
+                                                const catalogText = catalog.text;
                                                 pendingCatalogMessage = catalogText;
                                                 pendingCatalogType = 'order';
+                                                console.log(`[AI][ORDER_CATALOG] user=${userId} products=${catalog.count} chars=${catalogText.length}`);
                                                 result = "CATALOGO DE ENCOMENDAS ENVIADO PARA MEMORIA. Responda ao cliente usando o formato: [Intro] --- [CTA].";
                                             }
                                             else if (functionName === "check_availability") {
-                                                result = await checkAvailability(args.date, args.time, args.type || 'order');
+                                                result = await checkAvailability(userId, args.date, args.time, args.type || 'order');
                                             }
                                             else if (functionName === "get_delivery_fee") {
                                                 const feeRes = await calculateFee(args.address);
@@ -2482,7 +2462,7 @@ async function initInstance(instanceId) {
                                             }
                                             else if (functionName === "check_availability") {
                                                 const { checkAvailability } = require('./routes/orders');
-                                                result = await checkAvailability(args.date, args.time);
+                                                result = await checkAvailability(userId, args.date, args.time);
                                             }
 
                                             console.log(`[AI][TOOL_DONE] instance=${instanceId} jid=${jid} tool=${functionName} pendingCatalog=${Boolean(pendingCatalogMessage)} resultType=${typeof result}`);
