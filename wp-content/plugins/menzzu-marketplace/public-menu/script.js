@@ -1784,7 +1784,13 @@ function renderVariationAccordion() {
                 indicator.style.transform = 'rotate(45deg)';
                 indicator.style.background = 'color-mix(in srgb, var(--primary-color) 20%, transparent)';
                 requestAnimationFrame(() => {
-                    details.style.maxHeight = `${details.scrollHeight}px`;
+                    // Measure the full content before animating; measuring while collapsed can return a truncated height.
+                    details.style.maxHeight = 'none';
+                    const expandedHeight = details.scrollHeight;
+                    details.style.maxHeight = '0px';
+                    requestAnimationFrame(() => {
+                        details.style.maxHeight = `${expandedHeight}px`;
+                    });
                 });
             }
         });
