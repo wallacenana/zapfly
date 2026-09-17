@@ -1059,7 +1059,7 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
 
 // ─── CRON JOBS ───────────────────────────────────────────────────────────────
 
-async function setupCronJobs(sockGetter) {
+async function setupCronJobs(sockGetter, jidResolver) {
   // Sincronização GCal (A cada 5 min para todos os usuários com GCal)
   cron.schedule('*/5 * * * *', async () => {
     const usersWithGCal = await prisma.setting.findMany({
@@ -1076,14 +1076,13 @@ async function setupCronJobs(sockGetter) {
     }
   });
 
-  // Lembrete de Retirada (Rodando a cada 15 min)
-  cron.schedule('*/15 * * * *', async () => {
+  // Lembrete de retirada. Executa a cada minuto para respeitar o horário configurado.
+  cron.schedule('* * * * *', async () => {
     const allSettings = await prisma.setting.findMany();
     if (!sockGetter) return;
 
     const now = new Date();
-    const nowBR = new Date(now.getTime() - (3 * 60 * 60 * 1000));
-    const todayBR = nowBR.toISOString().split('T')[0];
+    const todayBR = getBrazilDateString(now);
 
     for (const settings of allSettings) {
       const leadHours = Number.isFinite(Number(settings.reminderHours)) ? Number(settings.reminderHours) : 2;
@@ -1092,8 +1091,6 @@ async function setupCronJobs(sockGetter) {
         select: { id: true },
         orderBy: { updatedAt: 'desc' }
       });
-      const sock = connectedInstances.length > 0 ? sockGetter(connectedInstances[0].id) : null;
-      if (!sock) continue;
       const upcomingOrders = await prisma.order.findMany({
         where: {
           userId: settings.userId,
@@ -1108,14 +1105,26 @@ async function setupCronJobs(sockGetter) {
       for (const order of upcomingOrders) {
         try {
           if (!order.scheduledTime || !order.clientJid) continue;
-          const [hour, minute] = order.scheduledTime.split(':').map(Number);
-          if (!Number.isFinite(hour) || !Number.isFinite(minute)) continue;
-          const pickupTime = new Date(nowBR);
-          pickupTime.setHours(hour, minute, 0, 0);
+          const pickupTime = getTimeWindowForOrder(order.scheduledDate, order.scheduledTime)?.start;
+          if (!pickupTime) continue;
+          const diffMinutes = (pickupTime.getTime() - now.getTime()) / 60000;
 
-          const diffHours = (pickupTime.getTime() - nowBR.getTime()) / (1000 * 60 * 60);
+          if (diffMinutes > leadHours * 60 || diffMinutes <= -15) continue;
+          {
+            const preferredInstanceId = order.instanceId && order.instanceId !== 'global' ? order.instanceId : null;
+            const activeInstance = preferredInstanceId && sockGetter(preferredInstanceId)?.user?.id
+              ? preferredInstanceId
+              : connectedInstances.find(instance => sockGetter(instance.id)?.user?.id)?.id;
+            const instanceId = activeInstance || preferredInstanceId || order.instanceId || 'global';
+            const sock = sockGetter(instanceId);
+            if (!sock?.user?.id) {
+              console.warn(`[Reminder] Sem conexão autenticada para o pedido ${order.id} (instância ${instanceId}).`);
+              continue;
+            }
+            let recipientJid = getOrderRecipientJid(order);
+            if (typeof jidResolver === 'function') recipientJid = await jidResolver(recipientJid, instanceId);
+            if (!recipientJid) continue;
 
-          if (diffHours > -0.25 && diffHours <= leadHours) {
             // Claims the reminder before sending so overlapping cron runs cannot duplicate it.
             const claimed = await prisma.order.updateMany({
               where: { id: order.id, reminderSent: false },
@@ -1123,9 +1132,10 @@ async function setupCronJobs(sockGetter) {
             });
             if (claimed.count !== 1) continue;
 
-            const msg = `Olá *${order.clientName || 'cliente'}*! 🎂\n\nSua encomenda está agendada para retirada hoje às *${order.scheduledTime}*.\n\nJá estamos nos preparativos finais! 🚀`;
             try {
-              await sock.sendMessage(order.clientJid, { text: msg });
+              const reminderMessage = `Ol\u00e1 *${order.clientName || 'cliente'}*! \ud83c\udf82\n\nSua encomenda est\u00e1 agendada para retirada hoje \u00e0s *${order.scheduledTime}*.\n\nJ\u00e1 estamos nos preparativos finais! \ud83d\ude80`;
+              const result = await sock.sendMessage(recipientJid, { text: reminderMessage });
+              console.log(`[Reminder] Enviado: pedido=${order.id} destinatário=${recipientJid} horário=${order.scheduledDate} ${order.scheduledTime} msgId=${result?.key?.id || 'não informado'}`);
             } catch (sendError) {
               await prisma.order.update({ where: { id: order.id }, data: { reminderSent: false } }).catch(() => { });
               throw sendError;
@@ -2078,6 +2088,10 @@ router.patch('/:id', authenticate, async (req, res) => {
     }
     if (Object.prototype.hasOwnProperty.call(updateData, 'reminderSent')) {
       updateData.reminderSent = !!updateData.reminderSent;
+    }
+    if (Object.prototype.hasOwnProperty.call(updateData, 'scheduledDate')
+      || Object.prototype.hasOwnProperty.call(updateData, 'scheduledTime')) {
+      updateData.reminderSent = false;
     }
 
     // 1. Atualizar o pedido principal com o payload recebido

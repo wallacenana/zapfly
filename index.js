@@ -1554,7 +1554,7 @@ server.listen(PORT, async () => {
         initInstance(inst.id);
     }
     // Inicia os cron jobs (GCal sync + relatorio)
-    await setupCronJobs((instanceId) => sessions.get(instanceId));
+    await setupCronJobs((instanceId) => sessions.get(instanceId), resolveJidWithSocket);
 });
 
 module.exports = { getSocket: (id) => sessions.get(id) };
