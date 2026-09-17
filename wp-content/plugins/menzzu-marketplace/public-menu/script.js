@@ -1694,8 +1694,8 @@ function renderVariationAccordion() {
 
         const details = document.createElement('div');
         details.className = 'variation-subitems';
-        details.hidden = true;
-        details.style.cssText = 'margin: -2px 0 10px; padding: 8px 12px 10px 24px; border-left: 2px solid var(--primary-color); background: var(--bg-gray); border-radius: 0 0 10px 10px;';
+        details.dataset.open = 'false';
+        details.style.cssText = 'margin: -2px 0 10px; max-height: 0; overflow: hidden; opacity: 0; pointer-events: none; padding: 0 12px 0 24px; border-left: 2px solid var(--primary-color); background: var(--bg-gray); border-radius: 0 0 10px 10px; transition: max-height 280ms ease, opacity 180ms ease, padding 280ms ease;';
 
         const subItems = (Array.isArray(variation.subItems) ? variation.subItems : [])
             .filter(item => !item.hidden && (!state.currentItem?.trackStock || Number(item.stock) > 0));
@@ -1727,26 +1727,52 @@ function renderVariationAccordion() {
             });
         }
 
+        const indicator = document.createElement('span');
+        indicator.className = 'variation-accordion-indicator';
+        indicator.textContent = '+';
+        indicator.style.cssText = 'margin-left: auto; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; color: var(--primary-color); background: color-mix(in srgb, var(--primary-color) 12%, transparent); font-size: 20px; line-height: 1; transition: transform 220ms ease, background 220ms ease;';
+        row.appendChild(indicator);
+        row.style.cursor = 'pointer';
+        row.style.transition = 'background 220ms ease, border-color 220ms ease, transform 220ms ease';
         row.removeAttribute('onclick');
         row.setAttribute('role', 'button');
         row.setAttribute('aria-expanded', 'false');
         row.addEventListener('click', event => {
             event.preventDefault();
             event.stopPropagation();
-            const shouldOpen = details.hidden;
+            const shouldOpen = details.dataset.open !== 'true';
             section.querySelectorAll('.variation-subitems').forEach(item => {
-                item.hidden = true;
+                item.dataset.open = 'false';
+                item.style.maxHeight = '0px';
+                item.style.opacity = '0';
+                item.style.pointerEvents = 'none';
+                item.style.paddingTop = '0';
+                item.style.paddingBottom = '0';
             });
             section.querySelectorAll(':scope > .var-option').forEach(item => {
                 item.classList.remove('selected');
                 item.setAttribute('aria-expanded', 'false');
+                const itemIndicator = item.querySelector('.variation-accordion-indicator');
+                if (itemIndicator) {
+                    itemIndicator.style.transform = 'rotate(0deg)';
+                    itemIndicator.style.background = 'color-mix(in srgb, var(--primary-color) 12%, transparent)';
+                }
             });
 
             selectVariation(variation.name, variation.price, false);
             if (shouldOpen) {
-                details.hidden = false;
+                details.dataset.open = 'true';
+                details.style.pointerEvents = 'auto';
+                details.style.opacity = '1';
+                details.style.paddingTop = '8px';
+                details.style.paddingBottom = '10px';
                 row.classList.add('selected');
                 row.setAttribute('aria-expanded', 'true');
+                indicator.style.transform = 'rotate(45deg)';
+                indicator.style.background = 'color-mix(in srgb, var(--primary-color) 20%, transparent)';
+                requestAnimationFrame(() => {
+                    details.style.maxHeight = `${details.scrollHeight}px`;
+                });
             }
         });
         row.insertAdjacentElement('afterend', details);
