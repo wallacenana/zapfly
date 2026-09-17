@@ -2155,11 +2155,11 @@ async function initInstance(instanceId) {
                                         if (await shouldSendRestaurantGreeting(instanceId, jid)) {
                                             await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
                                         }
-                                        await sendRichMessage(sock, jid, `A loja esta fechada no momento. A pronta-entrega funciona dentro do horario de atendimento.`);
+                                        await sendRichMessage(sock, jid, `A loja está fechada no momento. A pronta-entrega funciona dentro do horário de atendimento.`);
                                         const tomorrowCatalog = await getDeliveryCatalog(userId);
-                                        await sock.sendMessage(jid, { text: 'Mas o nosso catalogo de amanha sera:' });
+                                        await sock.sendMessage(jid, { text: 'Mas o nosso catálogo de amanhã será:' });
                                         await sock.sendMessage(jid, { text: tomorrowCatalog.text });
-                                        await sock.sendMessage(jid, { text: 'Mas voce tambem pode deixar encomendado algum desses itens.' });
+                                        await sock.sendMessage(jid, { text: 'Mas você também pode deixar encomendado algum desses itens.' });
                                         console.log(`[AI][CATALOG_TOMORROW] user=${userId} products=${tomorrowCatalog.count} chars=${tomorrowCatalog.text.length}`);
                                         return;
                                     }
@@ -2556,7 +2556,7 @@ async function initInstance(instanceId) {
                                             await sock.sendPresenceUpdate('paused', jid);
                                             await sock.sendMessage(jid, { text: isDelivery ? 'Quais itens você gostaria de pedir?' : 'Qual destes mais te encantou? Posso te ajudar a escolher o tamanho ideal para sua festa?' });
                                             if (isDelivery) {
-                                                await sock.sendMessage(jid, { text: 'Mas voce tambem pode deixar encomendado algum desses itens.' });
+                                                await sock.sendMessage(jid, { text: 'Mas você também pode deixar encomendado algum desses itens.' });
                                             }
 
                                             return; // FIM IMEDIATO
@@ -2599,7 +2599,7 @@ async function initInstance(instanceId) {
                                             await new Promise(resolve => setTimeout(resolve, 2000));
                                             await sendRichMessage(sock, jid, ctaText);
                                             if (isDelivery) {
-                                                await sendRichMessage(sock, jid, 'Mas voce tambem pode deixar encomendado algum desses itens.');
+                                                await sendRichMessage(sock, jid, 'Mas você também pode deixar encomendado algum desses itens.');
                                             }
                                         } else {
                                             // Se não for catálogo, envia a resposta normal
