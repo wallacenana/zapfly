@@ -417,8 +417,8 @@ try {
         <?php
         $publicMenuStylePath = MENZZU_MARKETPLACE_DIR . 'public-menu/style.css';
         $publicMenuScriptPath = MENZZU_MARKETPLACE_DIR . 'public-menu/script.js';
-        $publicMenuStyleVersion = file_exists($publicMenuStylePath) ? filemtime($publicMenuStylePath) : MENZZU_MARKETPLACE_VERSION;
-        $publicMenuScriptVersion = file_exists($publicMenuScriptPath) ? filemtime($publicMenuScriptPath) : MENZZU_MARKETPLACE_VERSION;
+        $publicMenuStyleVersion = file_exists($publicMenuStylePath) ? MENZZU_MARKETPLACE_VERSION . '.' . filemtime($publicMenuStylePath) : MENZZU_MARKETPLACE_VERSION;
+        $publicMenuScriptVersion = file_exists($publicMenuScriptPath) ? MENZZU_MARKETPLACE_VERSION . '.' . filemtime($publicMenuScriptPath) : MENZZU_MARKETPLACE_VERSION;
         ?>
         <link rel="stylesheet" href="<?php echo esc_url(MENZZU_MARKETPLACE_URL . 'public-menu/style.css?ver=' . $publicMenuStyleVersion); ?>">
         <style>
