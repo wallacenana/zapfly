@@ -1105,6 +1105,17 @@ body.theme-dark .var-option.selected {
     font-weight: 700;
 }
 
+.variation-subitems {
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.variation-subitems .subitem-option {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
 /* Addons / Complements inside detail */
 .addon-group-section {
     margin-top: 16px;
@@ -2097,9 +2108,24 @@ body.theme-dark .delivery-fee-badge {
 
     #item-detail-modal .item-detail-content {
         width: 100vw;
+        height: 100dvh;
         max-width: none;
         max-height: 100dvh;
         border-radius: 0;
+    }
+
+    #item-detail-modal #item-detail-body {
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    #item-detail-modal .item-detail-layout {
+        height: auto;
+        min-height: 100%;
+    }
+
+    #item-detail-modal .item-detail-panel {
+        overflow: visible;
     }
 }
 
