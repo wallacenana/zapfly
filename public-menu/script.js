@@ -1618,6 +1618,7 @@ function openItemDetail(productId) {
                         </div>
                     `;
         ensureDetailFooter();
+        renderVariationAccordion();
         updateDetailFooter();
         lucide.createIcons();
     }, 50);
@@ -1675,7 +1676,84 @@ function unlockBodyScroll() {
     window.scrollTo(0, state.bodyScrollY || 0);
 }
 
-function selectVariation(name, price) {
+function renderVariationAccordion() {
+    const section = document.querySelector('#item-detail-modal .variation-section');
+    if (!section) return;
+
+    let variations = [];
+    try {
+        variations = JSON.parse(state.currentItem?.variations || '[]').filter(variation => !variation.hidden);
+    } catch (e) {
+        variations = [];
+    }
+
+    const rows = Array.from(section.querySelectorAll(':scope > .var-option'));
+    rows.forEach((row, index) => {
+        const variation = variations[index];
+        if (!variation) return;
+
+        const details = document.createElement('div');
+        details.className = 'variation-subitems';
+        details.hidden = true;
+        details.style.cssText = 'margin: -2px 0 10px; padding: 8px 12px 10px 24px; border-left: 2px solid var(--primary-color); background: var(--bg-gray); border-radius: 0 0 10px 10px;';
+
+        const subItems = (Array.isArray(variation.subItems) ? variation.subItems : [])
+            .filter(item => !item.hidden && (!state.currentItem?.trackStock || Number(item.stock) > 0));
+
+        if (subItems.length === 0) {
+            const empty = document.createElement('div');
+            empty.textContent = 'Nenhuma opção adicional';
+            empty.style.cssText = 'padding: 4px 0; color: var(--text-secondary); font-size: 13px;';
+            details.appendChild(empty);
+        } else {
+            const title = document.createElement('div');
+            title.textContent = 'Escolha uma opção';
+            title.style.cssText = 'margin-bottom: 6px; color: var(--text-secondary); font-size: 12px; font-weight: 700;';
+            details.appendChild(title);
+
+            subItems.forEach(subItem => {
+                const option = document.createElement('div');
+                option.className = 'var-option subitem-option';
+                option.style.margin = '6px 0 0';
+                option.innerHTML = '<div class="var-label"></div><div class="var-price"></div>';
+                option.querySelector('.var-label').textContent = subItem.name || 'Opção';
+                const price = getEffectiveProductPrice(subItem);
+                option.querySelector('.var-price').textContent = price > 0 ? `R$ ${price.toFixed(2)}` : '';
+                option.addEventListener('click', event => {
+                    event.stopPropagation();
+                    selectSubItem(subItem.name, subItem.price);
+                });
+                details.appendChild(option);
+            });
+        }
+
+        row.removeAttribute('onclick');
+        row.setAttribute('role', 'button');
+        row.setAttribute('aria-expanded', 'false');
+        row.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            const shouldOpen = details.hidden;
+            section.querySelectorAll('.variation-subitems').forEach(item => {
+                item.hidden = true;
+            });
+            section.querySelectorAll(':scope > .var-option').forEach(item => {
+                item.classList.remove('selected');
+                item.setAttribute('aria-expanded', 'false');
+            });
+
+            selectVariation(variation.name, variation.price, false);
+            if (shouldOpen) {
+                details.hidden = false;
+                row.classList.add('selected');
+                row.setAttribute('aria-expanded', 'true');
+            }
+        });
+        row.insertAdjacentElement('afterend', details);
+    });
+}
+
+function selectVariation(name, price, renderOptions = true) {
     const variations = JSON.parse(state.currentItem?.variations || '[]');
     const selected = variations.find(variation => String(variation.name) === String(name));
     state.currentVariation = {
@@ -1685,43 +1763,12 @@ function selectVariation(name, price) {
     };
     state.currentSubItem = null;
     document.querySelectorAll('.var-option').forEach(el => el.classList.toggle('selected', el.querySelector('.var-label').innerText === name));
-    renderSubItemSelection();
+    if (renderOptions) renderVariationAccordion();
     updateDetailFooter();
 }
 
 function renderSubItemSelection() {
-    let container = document.getElementById('subitem-selection');
-    if (!container) {
-        const section = document.querySelector('#item-detail-modal .variation-section');
-        if (!section) return;
-        container = document.createElement('div');
-        container.id = 'subitem-selection';
-        section.appendChild(container);
-    }
-
-    const subItems = (state.currentVariation?.subItems || []).filter(item => !item.hidden);
-    if (subItems.length === 0) {
-        container.innerHTML = '';
-        return;
-    }
-
-    const availableSubItems = subItems.filter(item => !state.currentItem?.trackStock || Number(item.stock) > 0);
-    const options = availableSubItems.map(item => {
-        const price = getEffectiveProductPrice(item);
-        const safeName = String(item.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        return '<div class="var-option subitem-option" onclick="selectSubItem('
-            + "'" + safeName + "'"
-            + ', ' + Number(item.price || 0) + ')"><div class="var-label">'
-            + String(item.name || 'Opção')
-            + '</div><div class="var-price">'
-            + (price > 0 ? 'R$ ' + price.toFixed(2) : '')
-            + '</div></div>';
-    }).join('');
-
-    container.innerHTML = '<div class="variation-section" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color);">'
-        + '<div class="addon-group-header"><h4>Escolha o sabor</h4></div>'
-        + (options || '<p style="color:var(--text-secondary); font-size:13px; margin:8px 0;">Nenhuma opção disponível no momento.</p>')
-        + '</div>';
+    renderVariationAccordion();
 }
 
 function selectSubItem(name, price) {

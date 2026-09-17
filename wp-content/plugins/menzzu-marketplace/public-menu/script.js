@@ -84,7 +84,6 @@ let state = {
     },
     currentStep: 1,
     deliveryFee: 0,
-    deliveryFeeRequestId: 0,
     googleMap: null,
     mapMarker: null,
     geocoder: null,
@@ -126,8 +125,8 @@ function parseImages(imgField) {
 }
 
 function formatProductPriceText(product) {
-    const basePrice = Math.max(0, parseFloat(product?.price || 0) || 0);
-    const promoPrice = Math.max(0, parseFloat(product?.promoPrice || 0) || 0);
+    const basePrice = parseFloat(product?.price || 0) || 0;
+    const promoPrice = parseFloat(product?.promoPrice || 0) || 0;
     if (promoPrice > 0 && promoPrice < basePrice) {
         return `de R$ ${basePrice.toFixed(2)} por R$ ${promoPrice.toFixed(2)}`;
     }
@@ -135,8 +134,8 @@ function formatProductPriceText(product) {
 }
 
 function getEffectiveProductPrice(product) {
-    const basePrice = Math.max(0, parseFloat(product?.price || 0) || 0);
-    const promoPrice = Math.max(0, parseFloat(product?.promoPrice || 0) || 0);
+    const basePrice = parseFloat(product?.price || 0) || 0;
+    const promoPrice = parseFloat(product?.promoPrice || 0) || 0;
     const price = promoPrice > 0 && promoPrice < basePrice ? promoPrice : basePrice;
     return Math.max(0, price);
 }
@@ -226,9 +225,6 @@ function getMenuDeliveryOptions() {
     const fulfillmentMethods = parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.fulfillmentMethods && typeof parsed.fulfillmentMethods === 'object'
         ? parsed.fulfillmentMethods
         : {};
-    const orderFulfillmentMethods = parsed && typeof parsed === 'object' && !Array.isArray(parsed) && parsed.orderFulfillmentMethods && typeof parsed.orderFulfillmentMethods === 'object'
-        ? parsed.orderFulfillmentMethods
-        : fulfillmentMethods;
 
     return {
         orderTypes: {
@@ -239,19 +235,13 @@ function getMenuDeliveryOptions() {
             delivery: fulfillmentMethods.delivery !== false,
             pickup: fulfillmentMethods.pickup !== false,
             local: fulfillmentMethods.local !== false
-        },
-        orderFulfillmentMethods: {
-            delivery: orderFulfillmentMethods.delivery !== false,
-            pickup: orderFulfillmentMethods.pickup !== false,
-            local: orderFulfillmentMethods.local !== false
         }
     };
 }
 
 function isFulfillmentMethodEnabled(method) {
     const options = getMenuDeliveryOptions();
-    const methods = state.activeTab === 'order' ? options.orderFulfillmentMethods : options.fulfillmentMethods;
-    return methods[method] !== false;
+    return options.fulfillmentMethods[method] !== false;
 }
 
 function getEnabledFulfillmentMethods() {
@@ -296,25 +286,6 @@ function getCustomFieldSchema(item) {
     return [];
 }
 
-function isStockTrackingEnabled(product) {
-    return product?.trackStock === true || product?.trackStock === 1 || product?.trackStock === '1' || product?.trackStock === 'true';
-}
-
-function isProductActive(product) {
-    return product?.active !== false && product?.active !== 0 && product?.active !== '0';
-}
-
-function isProductAvailableForSale(product) {
-    if (!isStockTrackingEnabled(product)) return true;
-    let variations = [];
-    try { variations = JSON.parse(product?.variations || '[]'); } catch (e) { variations = []; }
-    const visibleVariations = variations.filter(v => !v.hidden);
-    if (visibleVariations.length > 0) {
-        return visibleVariations.some(v => Number(v.stock) > 0 || (Array.isArray(v.subItems) && v.subItems.some(item => Number(item?.stock) > 0)));
-    }
-    return Number(product?.stock) > 0;
-}
-
 function getCustomFieldAnswers(item) {
     const parsed = parseJsonValue(item?.customFieldValues || item?.customFields, {});
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
@@ -328,26 +299,8 @@ function getCustomFieldSummaryParts(item) {
     return Object.entries(getCustomFieldAnswers(item)).map(([key, value]) => ({
         key,
         value,
-        isUrl: getAttachmentUrls(value).length > 0
+        isUrl: typeof value === 'string' && value.startsWith('http')
     }));
-}
-
-function getAttachmentUrls(value) {
-    if (Array.isArray(value)) return value.filter(url => typeof url === 'string' && url.startsWith('http'));
-    if (typeof value !== 'string') return [];
-    if (value.startsWith('http')) return [value];
-    const parsed = parseJsonValue(value, []);
-    return Array.isArray(parsed) ? parsed.filter(url => typeof url === 'string' && url.startsWith('http')) : [];
-}
-
-function renderCheckoutAttachments(value) {
-    const urls = getAttachmentUrls(value);
-    if (urls.length === 0) return 'Anexo';
-    return `<span class="checkout-attachment-list">${urls.map((url, index) => `
-        <a href="${url}" target="_blank" rel="noopener" class="checkout-attachment" aria-label="Abrir imagem ${index + 1}">
-            <img src="${getImg(url, 'medium')}" alt="Imagem enviada ${index + 1}" loading="lazy">
-        </a>
-    `).join('')}</span>`;
 }
 
 function formatOrderSchedule() {
@@ -673,7 +626,6 @@ function hydrateFromSSR() {
         state.storeRecentReviews = data.recentReviews || state.storeRecentReviews || [];
         state.loading = false;
 
-        syncOrderTabsWithSettings();
         const deliveryEnabled = isDeliveryTabEnabled();
         const orderEnabled = isOrderEnabled();
         if (state.activeTab === 'order' && !orderEnabled && deliveryEnabled) {
@@ -768,7 +720,6 @@ function hydrateFromSSR() {
 }
 
 function checkStoreStatus() {
-    const orderOnly = !isDeliveryTabEnabled() && isOrderEnabled();
     const hasMinimumSetup = state.publicSettings.marketplaceReady === true
         && state.publicSettings.hasLogo === true
         && Number(state.publicSettings.maxDeliveryKm || 0) > 0
@@ -778,7 +729,7 @@ function checkStoreStatus() {
     const day = now.getDay();
     const time = now.getHours() * 60 + now.getMinutes();
 
-    const todaySlots = state.availableSlots.filter(s => s && s.dayOfWeek === day && s.startTime && s.endTime);
+    const todaySlots = state.availableSlots.filter(s => s.dayOfWeek === day);
     state.isOpen = todaySlots.some(s => {
         const [sh, sm] = s.startTime.split(':').map(Number);
         const [eh, em] = s.endTime.split(':').map(Number);
@@ -787,8 +738,8 @@ function checkStoreStatus() {
         return time >= start && time <= end;
     });
 
-    const statusLabel = orderOnly ? 'Apenas encomendas' : (!hasMinimumSetup ? 'Inativo' : state.isOpen ? 'Aberto' : (isOrderEnabled() ? 'Apenas encomendas' : 'Fechado'));
-    const statusClass = orderOnly ? 'status-badge order-only' : (!hasMinimumSetup || !state.isOpen ? 'status-badge closed' : 'status-badge open');
+    const statusLabel = !hasMinimumSetup ? 'Inativo' : state.isOpen ? 'Aberto' : (isOrderEnabled() ? 'Apenas encomendas' : 'Fechado');
+    const statusClass = !hasMinimumSetup || !state.isOpen ? 'status-badge closed' : 'status-badge open';
 
     const statusEl = document.getElementById('store-status-badge');
     if (statusEl) {
@@ -858,7 +809,6 @@ window.initMapsAutocomplete = () => {
     } catch (e) {
         console.error('Autocomplete init error:', e);
     }
-    if (document.getElementById('delivery-map')) initDeliveryMap();
 };
 
 function initDeliveryMap() {
@@ -930,10 +880,6 @@ function reverseGeocode(latLng) {
 }
 
 async function calculateDeliveryFee(address) {
-    const requestId = ++state.deliveryFeeRequestId;
-    const cleanAddress = String(address || '').trim();
-    if (!cleanAddress) return { error: 'Informe seu endereço.' };
-
     try {
         const response = await fetch(`${API_BASE}/orders/calculate-fee`, {
             method: 'POST',
@@ -941,30 +887,19 @@ async function calculateDeliveryFee(address) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                address: cleanAddress,
+                address,
                 slug: STORE_SLUG
             })
         });
         const data = await response.json();
-        if (requestId !== state.deliveryFeeRequestId) return null;
         const display = document.getElementById('delivery-fee-display');
         const locationFeeDisplay = document.getElementById('restaurant-location-fee');
         if (data.fee !== undefined) {
-            state.deliveryFee = Number(data.fee);
+            state.deliveryFee = data.fee;
             state.allowCash = data.type === 'estimated' ? false : (data.allowCash !== false);
-            setHeaderDeliveryFee(state.deliveryFee);
-            try {
-                localStorage.setItem(getDeliveryFeeCacheKey(), JSON.stringify({
-                    address: cleanAddress,
-                    fee: state.deliveryFee,
-                    updatedAt: Date.now()
-                }));
-            } catch (error) {
-                // The checkout remains usable if localStorage is unavailable.
-            }
             if (display) {
                 display.style.display = 'block';
-                display.innerHTML = `Taxa de entrega: <strong style="color:var(--primary-color)">R$ ${state.deliveryFee.toFixed(2).replace('.', ',')}</strong>`;
+                display.innerHTML = `Taxa de entrega: <strong style="color:var(--primary-color)">R$ ${data.fee.toFixed(2)}</strong>`;
                 display.style.background = '#f0fdf4';
                 display.style.color = '#166534';
             }
@@ -977,8 +912,6 @@ async function calculateDeliveryFee(address) {
         } else if (data.error) {
             state.deliveryFee = 0;
             state.allowCash = false;
-            const headerFee = document.getElementById('store-delivery-fee');
-            if (headerFee && !headerFee.textContent) headerFee.hidden = true;
             if (display) {
                 display.style.display = 'block';
                 display.innerHTML = `⚠️ ${data.error}`;
@@ -1004,40 +937,6 @@ async function calculateDeliveryFee(address) {
             locationFeeDisplay.innerText = 'Não foi possível calcular a taxa agora.';
         }
         return { error: 'Não foi possível calcular a taxa agora.' };
-    }
-}
-
-function getDeliveryFeeCacheKey() {
-    return `menzzu_delivery_fee_${STORE_SLUG}`;
-}
-
-const DELIVERY_FEE_ICON = '<svg class="store-delivery-icon" viewBox="0 0 50 50" aria-hidden="true" focusable="false"><path d="M37.164062 9C35.776026 9 34.510655 9.3013275 33.511719 9.859375C32.988328 10.151763 32.515961 10.541523 32.181641 11.013672 A 1.0001 1.0001 0 0 0 32 11L27 11 A 1.0001 1.0001 0 1 0 27 13L31.744141 13C31.8002 13.266576 31.898056 13.517555 32.03125 13.75 A 1.0001 1.0001 0 0 0 32.015625 14.179688C32.988434 19.530138 32.72952 25.149528 31.335938 29.306641C30.639146 31.385197 29.661456 33.087325 28.478516 34.234375C27.295576 35.381425 25.942196 36 24.267578 36C23.14423 36 22.237532 35.240694 21.890625 33.435547C21.543718 31.6304 21.955647 28.844708 23.869141 25.496094 A 1.0001 1.0001 0 0 0 23.931641 25.361328C24.316967 25.240604 24.678959 25.104473 24.994141 24.916016C25.478772 24.626238 26.005859 24.113335 26.005859 23.367188C26.005859 22.669659 25.835925 21.975755 25.525391 21.353516C25.370124 21.042396 25.180417 20.748361 24.902344 20.490234C24.62427 20.232108 24.213494 19.994141 23.716797 19.994141L14.28125 19.994141C14.182933 19.994141 14.091091 20.010399 14 20.027344L14 14 A 1.0001 1.0001 0 0 0 13 13L2 13 A 1.0001 1.0001 0 0 0 1 14L1 24 A 1.0001 1.0001 0 1 0 1 26L9.6640625 26C5.5053486 28.756038 4.0507813 32.683594 4.0507812 32.683594 A 1.0001 1.0001 0 0 0 4.7246094 33.960938L6.9023438 34.583984C6.3345384 35.595724 6 36.761065 6 38C6 41.854334 9.1456661 45 13 45C16.854334 45 20 41.854334 20 38L24.267578 38L32.060547 38C32.179715 38.986751 32.484448 39.717662 32.982422 40.226562C33.636252 40.89474 34.488004 41 35 41C35.218658 41 35.425951 40.949517 35.623047 40.876953C36.723498 43.307626 39.169773 45 42 45C45.853698 45 49 41.853698 49 38C49 37.195185 48.849318 36.425861 48.597656 35.703125C48.954075 35.603867 49.335495 35.406193 49.599609 35.060547C49.900433 34.666813 50 34.186166 50 33.720703C50 33.240869 49.875943 32.847389 49.623047 32.275391C49.370151 31.703392 48.970149 31.038348 48.363281 30.400391C47.229681 29.208715 45.34262 28.162063 42.585938 28.027344C42.525187 22.544809 39.819751 18.179454 38.097656 15.943359C38.396238 15.902164 38.671967 15.836607 38.927734 15.740234C39.428973 15.551366 39.862484 15.206717 40.117188 14.791016C40.626593 13.959613 40.509766 13.158415 40.509766 12.498047C40.509766 11.839768 40.626373 11.04221 40.117188 10.210938C39.862595 9.7953008 39.429108 9.4488016 38.927734 9.2597656C38.426361 9.0707297 37.857706 8.9997194 37.164062 9 z M 37.164062 11 A 1.0001 1.0001 0 0 0 37.166016 11C37.708372 10.999781 38.050639 11.068691 38.220703 11.132812C38.390767 11.196933 38.389452 11.216922 38.412109 11.253906C38.457419 11.327886 38.509766 11.778326 38.509766 12.498047C38.509766 13.219679 38.457209 13.672497 38.412109 13.746094C38.389559 13.782894 38.390899 13.803054 38.220703 13.867188C38.050459 13.931319 37.706618 14 37.164062 14C36.621082 14 36.10646 13.936107 35.650391 13.828125C35.642762 13.826319 35.636502 13.824096 35.628906 13.822266L34.865234 13.566406C34.732587 13.510803 34.597787 13.456831 34.486328 13.394531C33.865379 13.047451 33.6875 12.70423 33.6875 12.498047C33.6875 12.293566 33.865264 11.952421 34.486328 11.605469C35.107392 11.258516 36.0781 11 37.164062 11 z M 3 15L12 15L12 23.269531C11.999257 23.302165 11.994141 23.334532 11.994141 23.367188C11.994141 23.383055 11.999522 23.398228 12 23.414062L12 24L3 24L3 15 z M 34.095703 15.419922L34.164062 15.443359C34.419392 15.547893 34.687824 15.635542 34.966797 15.710938L35.400391 15.855469C35.603266 16.064068 40.416852 21.211285 40.486328 28.125C36.33626 28.755066 32.596901 31.894476 32.066406 36L29.382812 36C29.534032 35.871631 29.727656 35.810961 29.871094 35.671875C31.36306 34.225175 32.462588 32.239803 33.232422 29.943359C34.626475 25.784844 34.808484 20.562233 34.095703 15.419922 z M 14.439453 22.005859L23.560547 22.005859C23.598267 22.047929 23.658837 22.120163 23.724609 22.251953C23.854125 22.511473 23.92226 22.886315 23.951172 23.193359C23.762075 23.304956 23.361888 23.460906 22.830078 23.585938C21.757049 23.83821 20.167583 23.994141 18.435547 23.994141C16.704636 23.994141 15.413577 23.831872 14.671875 23.603516C14.308545 23.491653 14.096642 23.361921 14.021484 23.298828C14.034504 22.980653 14.131328 22.540778 14.275391 22.251953C14.341151 22.120114 14.401762 22.047935 14.439453 22.005859 z M 14.193359 26L18.15625 26C18.252521 26.000837 18.336896 26.005859 18.435547 26.005859C18.534824 26.005859 18.628203 26.000868 18.726562 26L21.527344 26C20.112855 29.001093 19.524751 31.727674 19.925781 33.814453C20.087601 34.656491 20.441432 35.36725 20.867188 36L19.140625 36L6.484375 32.384766C7.0140076 31.131905 8.7498356 27.597205 14.193359 26 z M 42 30C44.618246 30 46.053799 30.874962 46.914062 31.779297C47.344195 32.231464 47.624615 32.703202 47.792969 33.083984C47.961323 33.464767 48 33.840037 48 33.720703C48 33.812653 48.007306 33.76497 48.003906 33.78125C47.812448 33.81052 47.200239 33.77275 46.392578 33.65625C44.730245 33.416369 42.244663 33.027822 39.628906 34.070312 A 1.0001 1.0001 0 0 0 39.628906 34.072266C37.384303 34.968985 36.320563 36.506059 35.734375 37.640625C35.441281 38.207908 35.232494 38.674093 35.091797 38.880859C34.951106 39.087577 35.072978 39 35 39C34.701996 39 34.553826 38.974948 34.410156 38.828125C34.267292 38.682125 34.00296 38.227374 34 37.017578C34.042301 35.545163 34.61662 34.207109 35.513672 33.095703C37.040517 31.251351 39.519935 30 42 30 z M 8.8339844 35.134766L11.113281 35.787109C10.461821 36.339358 10 37.088037 10 38C10 39.64497 11.35503 41 13 41C14.64497 41 16 39.64497 16 38C16 37.639611 15.73216 37.393621 15.613281 37.072266L17.980469 37.748047C17.984719 37.832637 18 37.914271 18 38C18 40.773666 15.773666 43 13 43C10.226334 43 8 40.773666 8 38C8 37.054661 8.2605192 36.177234 8.7128906 35.425781 A 1.0001 1.0001 0 0 0 8.8339844 35.134766 z M 43.441406 35.390625C44.388158 35.394776 45.289306 35.518661 46.107422 35.636719C46.216447 35.652451 46.312533 35.661776 46.417969 35.677734C46.78446 36.372266 47 37.156089 47 38C47 40.772302 44.772302 43 42 43C39.661758 43 37.727993 41.399855 37.173828 39.246094C37.28571 39.017046 37.391354 38.787779 37.509766 38.558594C37.914189 37.775833 38.400152 36.996821 39.5 36.355469C39.185732 36.829379 39 37.394292 39 38C39 39.64497 40.35503 41 42 41C43.64497 41 45 39.64497 45 38C45 36.878997 44.362894 35.905249 43.441406 35.390625 z M 13 37C13.56503 37 14 37.43497 14 38C14 38.56503 13.56503 39 13 39C12.43497 39 12 38.56503 12 38C12 37.43497 12.43497 37 13 37 z M 42 37C42.56503 37 43 37.43497 43 38C43 38.56503 42.56503 39 42 39C41.43497 39 41 38.56503 41 38C41 37.43497 41.43497 37 42 37 z"/></svg>';
-
-function setHeaderDeliveryFee(fee) {
-    const headerFee = document.getElementById('store-delivery-fee');
-    if (!headerFee || !Number.isFinite(Number(fee))) return;
-    headerFee.innerHTML = `<span class="store-meta-separator" aria-hidden="true">•</span>${DELIVERY_FEE_ICON}<span>Taxa R$ ${Number(fee).toFixed(2).replace('.', ',')}</span>`;
-    headerFee.hidden = false;
-    const modal = document.getElementById('restaurant-location-modal');
-    const address = String(state.userInfo.address || '').trim();
-    const submitButton = modal?.querySelector('button[type="submit"]');
-    if (modal && address) modal.dataset.calculatedAddress = address;
-    if (submitButton && address) {
-        submitButton.disabled = false;
-        submitButton.innerText = 'Salvar localização';
-    }
-}
-
-function restoreCachedDeliveryFee(address) {
-    try {
-        const cached = JSON.parse(localStorage.getItem(getDeliveryFeeCacheKey()) || 'null');
-        const isFresh = cached && Date.now() - Number(cached.updatedAt || 0) < 15 * 60 * 1000;
-        if (isFresh && cached.address === String(address || '').trim() && Number.isFinite(Number(cached.fee))) {
-            state.deliveryFee = Number(cached.fee);
-            setHeaderDeliveryFee(state.deliveryFee);
-        }
-    } catch (error) {
-        // Ignore invalid or unavailable local storage.
     }
 }
 
@@ -1233,7 +1132,7 @@ function renderMenu() {
     const query = state.searchQuery.toLowerCase();
 
     const filtered = state.products.filter(p => {
-        if (!isProductActive(p)) return false;
+        if (p.active === false) return false;
         if (p.category === 'Adicionais' || p.type === 'addon') return false;
 
         // Verificar se tem variações e se todas estão escondidas
@@ -1319,7 +1218,6 @@ function renderMenu() {
 
 function renderFeaturedCard(product, isPriority = false) {
     const priceText = getDisplayPriceText(product);
-    const available = isProductAvailableForSale(product);
     const images = parseImages(product.image);
     const imgAttr = isPriority ? 'fetchpriority="high" loading="eager" decoding="async"' : 'loading="lazy" decoding="async"';
 
@@ -1333,13 +1231,13 @@ function renderFeaturedCard(product, isPriority = false) {
     }
 
     return `
-        <div class="featured-card${available ? '' : ' is-sold-out'}" ${available ? `onclick="openItemDetail('${product.id}')"` : ''}>
+        <div class="featured-card" onclick="openItemDetail('${product.id}')">
             <div class="featured-img-wrapper">
                 ${images.length > 0 ? `<img src="${getImg(images[0], 'medium')}" alt="${product.name}" ${imgAttr}>` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
             </div>
             <div class="featured-info">
                 <h3>${product.name}</h3>
-                <div class="product-price">${available ? priceText : 'Esgotado'}</div>
+                <div class="product-price">${priceText}</div>
             </div>
         </div>
     `;
@@ -1349,7 +1247,7 @@ function renderCategoryNav(categories) {
     const navContainer = document.getElementById('category-nav-scroll');
     if (!navContainer) return;
 
-    if (categories.length === 0) {
+    if (categories.length <= 1) {
         navContainer.parentElement.classList.add('hidden');
         return;
     }
@@ -1359,23 +1257,6 @@ function renderCategoryNav(categories) {
         <button class="nav-cat-btn" onclick="scrollToCategory('cat-${cat.replace(/\s+/g, '-')}')">${cat}</button>
     `).join('');
     syncStickyOffsets();
-}
-
-function syncOrderTabsWithSettings() {
-    const nav = document.getElementById('order-tabs-nav');
-    if (!nav) return;
-
-    const deliveryEnabled = isDeliveryTabEnabled();
-    const orderEnabled = isOrderEnabled();
-    nav.classList.toggle('hidden', !(deliveryEnabled && orderEnabled));
-
-    if (!deliveryEnabled && orderEnabled) {
-        state.activeTab = 'order';
-        document.body.classList.add('theme-order');
-    } else if (deliveryEnabled && !orderEnabled) {
-        state.activeTab = 'delivery';
-        document.body.classList.remove('theme-order');
-    }
 }
 
 function scrollToCategory(id) {
@@ -1396,18 +1277,17 @@ function scrollToCategory(id) {
 
 function renderProductCard(product, isPriority = false) {
     const priceText = getDisplayPriceText(product);
-    const available = isProductAvailableForSale(product);
     const imgAttr = isPriority ? 'fetchpriority="high"' : 'loading="lazy" decoding="async"';
     return `
-        <div class="product-card${available ? '' : ' is-sold-out'}" ${available ? `onclick="openItemDetail('${product.id}')"` : ''}>
+        <div class="product-card" onclick="openItemDetail('${product.id}')">
                     ${parseImages(product.image).length > 0 ? `<img src="${getImg(parseImages(product.image)[0], 'thumb')}" alt="${product.name}" class="product-img" ${imgAttr}>` : `<div class="img-placeholder"><i data-lucide="image"></i></div>`}
             <div class="product-info">
                 <h3>${product.name}</h3>
                 <p>${product.description || ''}</p>
                 <div class="product-footer">
-                    <div class="product-price">${available ? priceText : 'Esgotado'}</div>
-                    <button class="product-add-btn" type="button" aria-label="${available ? 'Adicionar item' : 'Produto esgotado'}" ${available ? `onclick="event.stopPropagation(); openItemDetail('${product.id}')"` : 'disabled'}>
-                        <i data-lucide="${available ? 'plus' : 'x'}"></i>
+                    <div class="product-price">${priceText}</div>
+                    <button class="product-add-btn" type="button" aria-label="Adicionar item" onclick="event.stopPropagation(); openItemDetail('${product.id}')">
+                        <i data-lucide="plus"></i>
                     </button>
                 </div>
             </div>
@@ -1511,10 +1391,6 @@ function ensureDetailFooter() {
 function openItemDetail(productId) {
     ensureDetailFooter();
     const item = state.products.find(p => p.id === productId);
-    if (!isProductAvailableForSale(item)) {
-        showAlert('Produto esgotado', 'Este produto está esgotado no momento.');
-        return;
-    }
     state.currentItem = item;
     state.currentQty = 1;
     state.currentVariation = null;
@@ -1742,6 +1618,7 @@ function openItemDetail(productId) {
                         </div>
                     `;
         ensureDetailFooter();
+        renderVariationAccordion();
         updateDetailFooter();
         lucide.createIcons();
     }, 50);
@@ -1799,7 +1676,84 @@ function unlockBodyScroll() {
     window.scrollTo(0, state.bodyScrollY || 0);
 }
 
-function selectVariation(name, price) {
+function renderVariationAccordion() {
+    const section = document.querySelector('#item-detail-modal .variation-section');
+    if (!section) return;
+
+    let variations = [];
+    try {
+        variations = JSON.parse(state.currentItem?.variations || '[]').filter(variation => !variation.hidden);
+    } catch (e) {
+        variations = [];
+    }
+
+    const rows = Array.from(section.querySelectorAll(':scope > .var-option'));
+    rows.forEach((row, index) => {
+        const variation = variations[index];
+        if (!variation) return;
+
+        const details = document.createElement('div');
+        details.className = 'variation-subitems';
+        details.hidden = true;
+        details.style.cssText = 'margin: -2px 0 10px; padding: 8px 12px 10px 24px; border-left: 2px solid var(--primary-color); background: var(--bg-gray); border-radius: 0 0 10px 10px;';
+
+        const subItems = (Array.isArray(variation.subItems) ? variation.subItems : [])
+            .filter(item => !item.hidden && (!state.currentItem?.trackStock || Number(item.stock) > 0));
+
+        if (subItems.length === 0) {
+            const empty = document.createElement('div');
+            empty.textContent = 'Nenhuma opção adicional';
+            empty.style.cssText = 'padding: 4px 0; color: var(--text-secondary); font-size: 13px;';
+            details.appendChild(empty);
+        } else {
+            const title = document.createElement('div');
+            title.textContent = 'Escolha uma opção';
+            title.style.cssText = 'margin-bottom: 6px; color: var(--text-secondary); font-size: 12px; font-weight: 700;';
+            details.appendChild(title);
+
+            subItems.forEach(subItem => {
+                const option = document.createElement('div');
+                option.className = 'var-option subitem-option';
+                option.style.margin = '6px 0 0';
+                option.innerHTML = '<div class="var-label"></div><div class="var-price"></div>';
+                option.querySelector('.var-label').textContent = subItem.name || 'Opção';
+                const price = getEffectiveProductPrice(subItem);
+                option.querySelector('.var-price').textContent = price > 0 ? `R$ ${price.toFixed(2)}` : '';
+                option.addEventListener('click', event => {
+                    event.stopPropagation();
+                    selectSubItem(subItem.name, subItem.price);
+                });
+                details.appendChild(option);
+            });
+        }
+
+        row.removeAttribute('onclick');
+        row.setAttribute('role', 'button');
+        row.setAttribute('aria-expanded', 'false');
+        row.addEventListener('click', event => {
+            event.preventDefault();
+            event.stopPropagation();
+            const shouldOpen = details.hidden;
+            section.querySelectorAll('.variation-subitems').forEach(item => {
+                item.hidden = true;
+            });
+            section.querySelectorAll(':scope > .var-option').forEach(item => {
+                item.classList.remove('selected');
+                item.setAttribute('aria-expanded', 'false');
+            });
+
+            selectVariation(variation.name, variation.price, false);
+            if (shouldOpen) {
+                details.hidden = false;
+                row.classList.add('selected');
+                row.setAttribute('aria-expanded', 'true');
+            }
+        });
+        row.insertAdjacentElement('afterend', details);
+    });
+}
+
+function selectVariation(name, price, renderOptions = true) {
     const variations = JSON.parse(state.currentItem?.variations || '[]');
     const selected = variations.find(variation => String(variation.name) === String(name));
     state.currentVariation = {
@@ -1809,43 +1763,12 @@ function selectVariation(name, price) {
     };
     state.currentSubItem = null;
     document.querySelectorAll('.var-option').forEach(el => el.classList.toggle('selected', el.querySelector('.var-label').innerText === name));
-    renderSubItemSelection();
+    if (renderOptions) renderVariationAccordion();
     updateDetailFooter();
 }
 
 function renderSubItemSelection() {
-    let container = document.getElementById('subitem-selection');
-    if (!container) {
-        const section = document.querySelector('#item-detail-modal .variation-section');
-        if (!section) return;
-        container = document.createElement('div');
-        container.id = 'subitem-selection';
-        section.appendChild(container);
-    }
-
-    const subItems = (state.currentVariation?.subItems || []).filter(item => !item.hidden);
-    if (subItems.length === 0) {
-        container.innerHTML = '';
-        return;
-    }
-
-    const availableSubItems = subItems.filter(item => !state.currentItem?.trackStock || Number(item.stock) > 0);
-    const options = availableSubItems.map(item => {
-        const price = getEffectiveProductPrice(item);
-        const safeName = String(item.name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        return '<div class="var-option subitem-option" onclick="selectSubItem('
-            + "'" + safeName + "'"
-            + ', ' + Number(item.price || 0) + ')"><div class="var-label">'
-            + String(item.name || 'Opção')
-            + '</div><div class="var-price">'
-            + (price > 0 ? 'R$ ' + price.toFixed(2) : '')
-            + '</div></div>';
-    }).join('');
-
-    container.innerHTML = '<div class="variation-section" style="margin-top:12px; padding-top:12px; border-top:1px solid var(--border-color);">'
-        + '<div class="addon-group-header"><h4>Escolha o sabor</h4></div>'
-        + (options || '<p style="color:var(--text-secondary); font-size:13px; margin:8px 0;">Nenhuma opção disponível no momento.</p>')
-        + '</div>';
+    renderVariationAccordion();
 }
 
 function selectSubItem(name, price) {
@@ -2089,13 +2012,19 @@ function renderCheckoutExtraField(item, field, idx, itemKeyBase, currentValue = 
 }
 
 function renderCheckoutExtraStep() {
-    const container = document.getElementById('order-extra-step-content');
-    if (!container) return false;
+    const orderStepContent = document.getElementById('order-step-content');
+    if (!orderStepContent) return false;
+    let container = document.getElementById('order-extra-step-content');
+    if (!container) {
+        orderStepContent.innerHTML = '<div id="order-extra-step-content"></div>';
+        container = document.getElementById('order-extra-step-content');
+    }
 
     const cart = getActiveCart();
     const itemsWithExtras = cart.filter(item => getCustomFieldSchema(item).length > 0);
     if (state.activeTab !== 'order' || itemsWithExtras.length === 0) {
         container.innerHTML = '';
+        orderStepContent.classList.add('hidden');
         return false;
     }
 
@@ -2116,6 +2045,7 @@ function renderCheckoutExtraStep() {
                     `;
     }).join('');
 
+    orderStepContent.classList.remove('hidden');
     lucide.createIcons();
     return true;
 }
@@ -2255,7 +2185,7 @@ function initEventListeners() {
         const submitButton = modal?.querySelector('button[type="submit"]');
         if (result?.fee !== undefined && submitButton) {
             submitButton.disabled = false;
-            submitButton.innerText = 'Salvar localização';
+            submitButton.innerText = 'Confirmar endereço';
         } else if (submitButton) {
             submitButton.disabled = false;
             submitButton.innerText = 'Tentar novamente';
@@ -2402,10 +2332,6 @@ function initEventListeners() {
     document.getElementById('user-name').value = state.userInfo.name || '';
     document.getElementById('user-phone').value = state.userInfo.phone || '';
     document.getElementById('user-address').value = state.userInfo.address || '';
-    if (state.userInfo.address) {
-        restoreCachedDeliveryFee(state.userInfo.address);
-        calculateDeliveryFee(state.userInfo.address);
-    }
 
     const phoneInput = document.getElementById('user-phone');
     if (phoneInput) {
@@ -2422,16 +2348,15 @@ function initEventListeners() {
             el.addEventListener('input', (e) => {
                 state.userInfo[id.split('-')[1]] = e.target.value;
                 localStorage.setItem('menzzu_user', JSON.stringify(state.userInfo));
-                if (id === 'user-address') {
-                    const headerFee = document.getElementById('store-delivery-fee');
-                    if (headerFee) headerFee.hidden = true;
-                }
             });
         }
     });
 }
 
 function goToStep(step) {
+    if (step === 2 && state.activeTab === 'delivery') {
+        step = 3;
+    }
     if (step === 2 && state.activeTab === 'order' && !hasCheckoutExtras()) {
         step = 3;
     }
@@ -2446,7 +2371,6 @@ function goToStep(step) {
     document.getElementById('step-2')?.classList.add('hidden');
     document.getElementById('step-3')?.classList.add('hidden');
     document.getElementById('step-4')?.classList.add('hidden');
-    document.getElementById('step-5')?.classList.add('hidden');
 
     // Mostra apenas o atual
     document.getElementById(`step-${step}`)?.classList.remove('hidden');
@@ -2454,24 +2378,20 @@ function goToStep(step) {
     openModal('checkout-modal');
 
     let title = "Ver sacola";
-    if (step === 2) title = "Informações da encomenda";
-    if (step === 3) title = state.activeTab === 'delivery'
-        ? "Entrega"
-        : (state.deliveryType === 'delivery' ? "Entrega da encomenda" : "Retirada da encomenda");
-    if (step === 4) title = "Forma de Pagamento";
-    if (step === 5) title = "Confirmar Pedido";
+    if (step === 2) title = "Extras do Pedido";
+    if (step === 3) title = "Forma de Pagamento";
+    if (step === 4) title = "Confirmar Pedido";
 
     document.getElementById('checkout-step-title').innerText = title;
 
-    const isLast = step === 5;
+    const isLast = step === 4;
     document.getElementById('next-step-btn').classList.toggle('hidden', isLast);
     document.getElementById('place-order-btn').classList.toggle('hidden', !isLast);
 
     if (step === 1) renderStep1();
-    if (step === 2) renderCheckoutExtraStep();
-    if (step === 3) renderStep2();
-    if (step === 4) renderStep3();
-    if (step === 5) {
+    if (step === 2) renderStep2();
+    if (step === 3) renderStep3();
+    if (step === 4) {
         updateStep4Summary();
     }
 }
@@ -2549,21 +2469,20 @@ function getResumeStep() {
             if (!state.deliveryFee) return 3;
         }
     } else {
-        if (state.deliveryType === 'delivery' && (!state.userInfo.address || !state.deliveryFee)) return 3;
         if (!state.orderSchedule?.date || !state.orderSchedule?.time) return 1;
         if (hasCheckoutExtras() && savedStep < 3) return 2;
     }
 
     // Step 4 requires payment method (defaults to 'mercadopago', but guard anyway)
-    if (!state.paymentMethod) return 4;
+    if (!state.paymentMethod) return 3;
 
     // All data present: respect where the user actually was, capped between 1 and 4
-    return Math.max(1, Math.min(5, savedStep));
+    return Math.max(1, Math.min(4, savedStep));
 }
 
 document.getElementById('checkout-back-btn')?.addEventListener('click', () => {
     if (state.currentStep > 1) {
-        const previousStep = (state.currentStep === 3 && !hasCheckoutExtras()) ? 1 : state.currentStep - 1;
+        const previousStep = ((state.activeTab === 'order' && !hasCheckoutExtras()) || (state.activeTab === 'delivery' && state.currentStep === 3)) ? 1 : state.currentStep - 1;
         goToStep(previousStep);
     } else closeWithAnimation('checkout-modal');
 });
@@ -2577,15 +2496,6 @@ function renderStep1() {
         return;
     }
     document.getElementById('next-step-btn').disabled = false;
-    const scheduleHtml = state.activeTab === 'order' ? `
-        <div class="checkout-schedule-step">
-            <div>
-                <strong>Data e horário da encomenda</strong>
-                <span>${state.orderSchedule?.date && state.orderSchedule?.time ? formatOrderSchedule() : 'Escolha quando deseja receber ou retirar.'}</span>
-            </div>
-            <button type="button" class="change-schedule-btn" onclick="openScheduleModal('resume')">${state.orderSchedule?.date && state.orderSchedule?.time ? 'Alterar' : 'Escolher'}</button>
-        </div>
-    ` : '';
     list.innerHTML = cart.map(item => `
                     <div class="checkout-item">
                         <div class="item-name-qty">
@@ -2609,7 +2519,7 @@ function renderStep1() {
                             <div class="item-price">R$ ${(item.price * item.quantity).toFixed(2)}</div>
                         </div>
                     </div>
-                `).join('') + scheduleHtml;
+                `).join('');
     lucide.createIcons();
 }
 
@@ -2652,13 +2562,6 @@ function renderStep3() {
     const addressDisplay = document.getElementById('delivery-address-display');
     if (addressDisplay) {
         addressDisplay.textContent = state.userInfo.address || 'Informe seu endereço';
-    }
-    if (state.deliveryType === 'delivery' && window.google && !state.googleMap) {
-        initMapsAutocomplete();
-        initDeliveryMap();
-    }
-    if (state.googleMap) {
-        setTimeout(() => google.maps.event.trigger(state.googleMap, 'resize'), 0);
     }
 
     const isCashAllowed = ['pickup', 'local'].includes(state.deliveryType) || state.allowCash;
@@ -2741,7 +2644,26 @@ function renderStep2() {
     }
 
     const deliveryContent = document.getElementById('delivery-step-content');
+    const orderContent = document.getElementById('order-step-content');
     if (deliveryContent) deliveryContent.classList.toggle('hidden', !isDelivery);
+    if (orderContent) {
+        if (isDelivery) {
+            orderContent.classList.add('hidden');
+            orderContent.innerHTML = '';
+        } else {
+            const hasExtras = hasCheckoutExtras();
+            if (hasExtras) {
+                orderContent.classList.remove('hidden');
+                orderContent.innerHTML = `
+                                <div id="order-extra-step-content"></div>
+                            `;
+                renderCheckoutExtraStep();
+            } else {
+                orderContent.classList.add('hidden');
+                orderContent.innerHTML = '';
+            }
+        }
+    }
 
     const isScheduledOrder = state.activeTab === 'order';
     document.querySelectorAll('.receiving-store-hours').forEach((hours) => {
@@ -2750,12 +2672,9 @@ function renderStep2() {
     document.querySelectorAll('.order-schedule-notice').forEach((notice) => {
         const hasSchedule = isScheduledOrder && state.orderSchedule?.date && state.orderSchedule?.time;
         notice.hidden = !hasSchedule;
-        if (hasSchedule) {
-            const action = state.deliveryType === 'delivery' ? 'entrega' : 'retirada';
-            notice.innerHTML = `<strong>${action[0].toUpperCase() + action.slice(1)} agendada</strong><span>${formatOrderSchedule()}</span><small>Compareça neste horário para que possamos atender seu pedido.</small>`;
-        } else {
-            notice.innerHTML = '';
-        }
+        notice.innerHTML = hasSchedule
+            ? `<strong>${state.deliveryType === 'delivery' ? 'Entrega' : 'Retirada'} agendada</strong><span>${formatOrderSchedule()}</span><small>Compareça neste horário para que possamos atender seu pedido.</small>`
+            : '';
     });
 
     // Sempre carrega o mapa se deliveryType = delivery
@@ -2845,7 +2764,12 @@ async function handleNextStep() {
         }
         goToStep(3);
     } else if (state.currentStep === 2) {
-        if (state.activeTab === 'order') {
+        if (state.activeTab === 'delivery') {
+            if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
+            if (state.deliveryFee === 0 && state.deliveryType === 'delivery' && state.userInfo.address) {
+                return showAlert('Taxa Indisponível', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereço está no raio de entrega.');
+            }
+        } else if (state.activeTab === 'order') {
             if (!isOrderEnabled()) return showAlert('Encomendas desativadas', 'No momento não estamos aceitando encomendas.');
             if (hasCheckoutExtras()) {
                 const extrasResult = collectCheckoutExtraStep();
@@ -2858,16 +2782,8 @@ async function handleNextStep() {
         }
         goToStep(3);
     } else if (state.currentStep === 3) {
-        if (state.activeTab === 'delivery') {
-            if (state.deliveryType === 'delivery' && !state.userInfo.address) return showAlert('Endereço Ausente', 'Por favor, selecione seu endereço no mapa.');
-            if (state.deliveryType === 'delivery' && !state.deliveryFee) return showAlert('Taxa Indisponível', 'Por favor, aguarde o cálculo da taxa de entrega ou verifique se o endereço está no raio de entrega.');
-        } else if (state.activeTab === 'order' && state.deliveryType === 'delivery') {
-            if (!state.userInfo.address || !state.deliveryFee) return showAlert('Taxa Indisponível', 'Confirme o endereço e aguarde o cálculo da taxa de entrega.');
-        }
-        goToStep(4);
-    } else if (state.currentStep === 4) {
         if (!state.paymentMethod) return showAlert('Atenção', 'Selecione uma forma de pagamento.');
-        goToStep(5);
+        goToStep(4);
     }
 }
 
@@ -2914,7 +2830,7 @@ function updateStep4Summary() {
         listEl.innerHTML = cart.map(item => `
                         <div style="margin-bottom: 8px;">
                             <p style="font-size: 0.9rem; margin-bottom: 0;">${item.quantity}x ${item.name} ${item.variation ? `(${item.variation}${item.subItem ? ' - ' + item.subItem : ''})` : ''}</p>
-                            ${getCustomFieldSummaryParts(item).map(({ key, value, isUrl }) => '<div class="checkout-summary-field"><span>- ' + key + ': </span>' + (isUrl ? renderCheckoutAttachments(value) : String(value)) + '</div>').join('')}
+                            ${getCustomFieldSummaryParts(item).map(({ key, value, isUrl }) => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">- ' + key + ': ' + (isUrl ? 'Anexo' : String(value)) + '</p>').join('')}
                             ${item.addons ? (() => { try { const ads = JSON.parse(item.addons); return ads.map(a => '<p style="font-size:0.75rem;color:var(--text-gray);margin-left:15px;margin-bottom:0;">- ' + a.name + '</p>').join(''); } catch (e) { return ''; } })() : ''}
                         </div>
                     `).join('');
