@@ -40,7 +40,7 @@ const makeInMemoryStore = Baileys.makeInMemoryStore || (() => {
 });
 const prisma = require('./lib/prisma');
 const { calculateFee } = require('./lib/maps');
-const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock, getDeliveryCatalog, getRestaurantGreeting } = require('./lib/utils');
+const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock, getDeliveryCatalog, getRestaurantGreeting, shouldSendRestaurantGreeting } = require('./lib/utils');
 const { initFlows, handleFlows, runFlowNode, startFlowMonitor } = require('./lib/flows');
 const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODEL_MAP } = require('./lib/ai');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -2152,7 +2152,9 @@ async function initInstance(instanceId) {
                                     // Pronta-entrega nunca deve ser respondida com estoque antigo quando a loja fechou.
                                     if (statusLoja === "FECHADA" && isDeliveryRequest && !isOrderRequest) {
                                         console.log(`[AI][BLOCKED] delivery catalog blocked because store is closed: time=${storeInfo.horaAtual}`);
-                                        await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
+                                        if (await shouldSendRestaurantGreeting(instanceId, jid)) {
+                                            await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
+                                        }
                                         await sendRichMessage(sock, jid, `A loja esta fechada no momento. A pronta-entrega funciona dentro do horario de atendimento.`);
                                         const tomorrowCatalog = await getDeliveryCatalog(userId);
                                         await sock.sendMessage(jid, { text: 'Mas o nosso catalogo de amanha sera:' });
@@ -2532,7 +2534,9 @@ async function initInstance(instanceId) {
                                             const isDelivery = pendingCatalogType === 'delivery';
                                             console.log(`[AI][CATALOG_SEND] instance=${instanceId} jid=${jid} type=${pendingCatalogType} chars=${pendingCatalogMessage.length}`);
 
-                                            await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
+                                            if (await shouldSendRestaurantGreeting(instanceId, jid)) {
+                                                await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
+                                            }
 
                                             // Balão 1: Intro
                                             await sock.sendPresenceUpdate('composing', jid);
