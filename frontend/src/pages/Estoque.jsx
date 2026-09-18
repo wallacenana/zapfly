@@ -364,8 +364,8 @@ const Estoque = () => {
         promoPrice: parseMoneyInput(subItem?.promoPrice) ?? undefined,
         stock: Number.parseInt(subItem?.stock, 10) || 0
       })) : [],
-      price: Array.isArray(variation?.subItems) && variation.subItems.length > 0 ? undefined : (parseMoneyInput(variation?.price) ?? 0),
-      promoPrice: Array.isArray(variation?.subItems) && variation.subItems.length > 0 ? undefined : (parseMoneyInput(variation?.promoPrice) ?? undefined),
+      price: parseMoneyInput(variation?.price) ?? 0,
+      promoPrice: parseMoneyInput(variation?.promoPrice) ?? undefined,
       stock: Array.isArray(variation?.subItems) && variation.subItems.length > 0 ? undefined : (Number.parseInt(variation?.stock, 10) || 0)
     }));
     const selectedCategory = categories.find(cat => String(cat.id) === String(sourceForm.categoryId));
@@ -457,18 +457,6 @@ const Estoque = () => {
 
     if (!hasVariations && !(parseMoneyInput(form.price) > 0)) {
       Swal.fire({ title: 'Campo Obrigatório', text: 'Informe um valor base para o item.', icon: 'warning', confirmButtonColor: '#3b82f6' });
-      return;
-    }
-
-    const invalidVariation = (form.variations || []).find(variation => {
-      const subItems = Array.isArray(variation?.subItems) ? variation.subItems : [];
-      if (subItems.length > 0) {
-        return subItems.some(subItem => !(parseMoneyInput(subItem?.price) > 0));
-      }
-      return !(parseMoneyInput(variation?.price) > 0);
-    });
-    if (hasVariations && invalidVariation) {
-      Swal.fire({ title: 'Preço obrigatório', text: 'Informe o preço normal de todas as variações e subitens antes de salvar.', icon: 'warning', confirmButtonColor: '#3b82f6' });
       return;
     }
 
@@ -572,16 +560,20 @@ const Estoque = () => {
       return true;
     });
 
-  const getVariationPriceRange = (variations = []) => {
+  const getVariationPriceRange = (variations = [], fallbackPrice = null) => {
+    const resolvePrice = (value, fallback) => {
+      const parsed = parseMoneyInput(value);
+      return parsed !== null && parsed > 0 ? parsed : fallback;
+    };
     const prices = variations.flatMap((variation) => {
       const subItems = Array.isArray(variation?.subItems) ? variation.subItems : [];
+      const variationPrice = resolvePrice(variation?.promoPrice || variation?.price, fallbackPrice);
       if (subItems.length > 0) {
         return subItems
-          .map(subItem => parseMoneyInput(subItem?.promoPrice || subItem?.price))
-          .filter(value => Number.isFinite(value));
+          .map(subItem => resolvePrice(subItem?.promoPrice || subItem?.price, variationPrice))
+          .filter(value => Number.isFinite(value) && value > 0);
       }
-      return [parseMoneyInput(variation?.promoPrice || variation?.price)]
-        .filter(value => Number.isFinite(value));
+      return [variationPrice].filter(value => Number.isFinite(value) && value > 0);
     })
       .filter(value => Number.isFinite(value));
     const min = prices.length ? Math.min(...prices) : null;
@@ -802,7 +794,7 @@ const Estoque = () => {
                           </div>
                           {!p.variations.length && !isCombo && <div className="estoque-product-meta" style={{ marginTop: '4px' }}>R$ {p.price.toFixed(2)} {p.trackStock && `| Estoque: ${p.stock}`} {!p.trackStock && '| Estoque: Ilimitado'}</div>}
                           {p.variations.length > 0 && !isCombo && (() => {
-                            const { min, max } = getVariationPriceRange(p.variations);
+                            const { min, max } = getVariationPriceRange(p.variations, parseMoneyInput(p.promoPrice || p.price));
                             const stock = getVariationStockSummary(p.variations);
                             const stockLabel = p.trackStock ? ` | Estoque: ${stock}` : ' | Estoque: Ilimitado';
                             if (min !== null && max !== null) {
@@ -904,8 +896,8 @@ const Estoque = () => {
                               const subItems = Array.isArray(variation?.subItems) ? variation.subItems : [];
                               const hasSubItems = subItems.length > 0;
                               const { min, max } = hasSubItems
-                                ? getVariationPriceRange([{ subItems }])
-                                : { min: parseMoneyInput(variation?.promoPrice || variation?.price), max: parseMoneyInput(variation?.promoPrice || variation?.price) };
+                                ? getVariationPriceRange([{ ...variation, subItems }], parseMoneyInput(p.promoPrice || p.price))
+                                : { min: parseMoneyInput(variation?.promoPrice || variation?.price) || parseMoneyInput(p.promoPrice || p.price), max: parseMoneyInput(variation?.promoPrice || variation?.price) || parseMoneyInput(p.promoPrice || p.price) };
                               const variationStock = hasSubItems
                                 ? getVariationStockSummary([{ subItems }])
                                 : (Number.parseInt(variation?.stock, 10) || 0);

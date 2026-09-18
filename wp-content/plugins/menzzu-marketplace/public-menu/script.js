@@ -140,13 +140,21 @@ function getEffectiveProductPrice(product) {
     return Math.max(0, price);
 }
 
-function getVariationPrice(variation) {
-    const directPrice = getEffectiveProductPrice(variation);
-    if (directPrice > 0) return directPrice;
+function getResolvedProductPrice(product, ...fallbackProducts) {
+    for (const candidate of [product, ...fallbackProducts]) {
+        const price = getEffectiveProductPrice(candidate);
+        if (price > 0) return price;
+    }
+    return 0;
+}
+
+function getVariationPrice(variation, product = null) {
+    const directPrice = getResolvedProductPrice(variation, product);
+    if (directPrice > 0 && !(Array.isArray(variation?.subItems) && variation.subItems.length > 0)) return directPrice;
 
     const subItemPrices = (Array.isArray(variation?.subItems) ? variation.subItems : [])
         .filter(subItem => !subItem?.hidden)
-        .map(getEffectiveProductPrice)
+        .map(subItem => getResolvedProductPrice(subItem, variation, product))
         .filter(price => Number.isFinite(price) && price > 0);
 
     return subItemPrices.length > 0 ? Math.min(...subItemPrices) : 0;
@@ -176,7 +184,7 @@ function getDisplayPriceText(product) {
 
     if (variations.length > 0) {
         const effectiveVariationPrices = variations
-            .map(getVariationPrice)
+            .map(variation => getVariationPrice(variation, product))
             .filter(price => Number.isFinite(price) && price > 0);
         const fromPrice = effectiveVariationPrices.length > 0 ? Math.min(...effectiveVariationPrices) : basePrice;
         return fromPrice > 0 ? `A partir de ${formatDisplayPrice(fromPrice)}` : 'Preço não informado';
@@ -1497,7 +1505,7 @@ function openItemDetail(productId) {
                     `;
 
         const variationsHtml = variations.length > 0 ?
-            `<div class="variation-section"><div class="addon-group-header"><h4>Escolha uma opção</h4></div>${variations.map(v => { const directPrice = getEffectiveProductPrice(v); const price = getVariationPrice(v); const priceLabel = directPrice > 0 ? formatDisplayPrice(directPrice) : (price > 0 ? `A partir de ${formatDisplayPrice(price)}` : 'Preço não informado'); return `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${directPrice})"><div class="var-label">${v.name}</div><div class="var-price">${priceLabel}</div></div>`; }).join('')}</div>` :
+            `<div class="variation-section"><div class="addon-group-header"><h4>Escolha uma opção</h4></div>${variations.map(v => { const price = getVariationPrice(v, item); const hasSubItemOverrides = (Array.isArray(v.subItems) ? v.subItems : []).some(subItem => getEffectiveProductPrice(subItem) > 0); const priceLabel = hasSubItemOverrides ? `A partir de ${formatDisplayPrice(price)}` : formatDisplayPrice(price); return `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${getResolvedProductPrice(v, item)})"><div class="var-label">${v.name}</div><div class="var-price">${priceLabel}</div></div>`; }).join('')}</div>` :
             '';
 
         const customFieldsHtml = state.activeTab === 'order' ? '' : (() => {
@@ -1740,7 +1748,7 @@ function renderVariationAccordion() {
                 option.style.boxSizing = 'border-box';
                 option.innerHTML = '<div class="var-label"></div><div class="var-price"></div>';
                 option.querySelector('.var-label').textContent = subItem.name || 'Opção';
-                const price = getEffectiveProductPrice(subItem);
+                const price = getResolvedProductPrice(subItem, variation, state.currentItem);
                 option.querySelector('.var-price').textContent = formatDisplayPrice(price);
                 option.querySelector('.var-label').style.cssText = 'min-width: 0; flex: 1 1 auto;';
                 option.querySelector('.var-price').style.cssText = 'margin-left: auto; flex: 0 0 auto; white-space: nowrap;';
@@ -1930,9 +1938,8 @@ function getOrderAddonsJSON(item) {
 }
 
 function updateDetailFooter() {
-    const subItemPrice = state.currentSubItem ? getEffectiveProductPrice(state.currentSubItem) : 0;
     const basePrice = state.currentVariation
-        ? (subItemPrice > 0 ? subItemPrice : getEffectiveProductPrice(state.currentVariation))
+        ? getResolvedProductPrice(state.currentSubItem, state.currentVariation, state.currentItem)
         : getEffectiveProductPrice(state.currentItem);
     const {
         addonTotal
@@ -2947,9 +2954,8 @@ function commitAddToCart() {
         addons,
         addonTotal
     } = getSelectedAddons();
-    const subItemPrice = state.currentSubItem ? getEffectiveProductPrice(state.currentSubItem) : 0;
     const basePrice = variation
-        ? (subItemPrice > 0 ? subItemPrice : getEffectiveProductPrice(variation))
+        ? getResolvedProductPrice(state.currentSubItem, variation, item)
         : getEffectiveProductPrice(item);
     const finalUnitPrice = basePrice + addonTotal;
 
@@ -3007,7 +3013,7 @@ function commitAddToCart() {
     }
 
     // Tracking: AddToCart
-    const finalPrice = variation ? variation.price : item.price;
+    const finalPrice = finalUnitPrice;
     if (typeof fbq === 'function') {
         fbq('track', 'AddToCart', {
             content_ids: [item.id],
