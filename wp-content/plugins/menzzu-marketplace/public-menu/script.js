@@ -1698,7 +1698,8 @@ function renderVariationAccordion() {
         const details = document.createElement('div');
         details.className = 'variation-subitems';
         details.dataset.open = 'false';
-        details.style.cssText = 'margin: -2px 0 10px; max-height: 0; overflow: hidden; opacity: 0; pointer-events: none; padding: 0 12px 0 24px; border-left: 2px solid var(--primary-color); background: var(--bg-gray); border-radius: 0 0 10px 10px; transition: max-height 280ms ease, opacity 180ms ease, padding 280ms ease;';
+        const detailsInner = document.createElement('div');
+        detailsInner.className = 'variation-subitems-inner';
 
         const subItems = variationSubItems
             .filter(item => !item.hidden && (!state.currentItem?.trackStock || Number(item.stock) > 0));
@@ -1707,12 +1708,12 @@ function renderVariationAccordion() {
             const empty = document.createElement('div');
             empty.textContent = 'Nenhuma opção adicional';
             empty.style.cssText = 'padding: 4px 0; color: var(--text-secondary); font-size: 13px;';
-            details.appendChild(empty);
+            detailsInner.appendChild(empty);
         } else {
             const title = document.createElement('div');
             title.textContent = 'Escolha uma opção';
             title.style.cssText = 'margin-bottom: 6px; color: var(--text-secondary); font-size: 12px; font-weight: 700;';
-            details.appendChild(title);
+            detailsInner.appendChild(title);
 
             subItems.forEach(subItem => {
                 const option = document.createElement('div');
@@ -1731,9 +1732,10 @@ function renderVariationAccordion() {
                     event.stopPropagation();
                     selectSubItem(subItem.name, subItem.price);
                 });
-                details.appendChild(option);
+                detailsInner.appendChild(option);
             });
         }
+        details.appendChild(detailsInner);
 
         const indicator = document.createElement('span');
         indicator.className = 'variation-accordion-indicator';
@@ -1756,11 +1758,7 @@ function renderVariationAccordion() {
             const shouldOpen = details.dataset.open !== 'true';
             section.querySelectorAll('.variation-subitems').forEach(item => {
                 item.dataset.open = 'false';
-                item.style.maxHeight = '0px';
-                item.style.opacity = '0';
-                item.style.pointerEvents = 'none';
-                item.style.paddingTop = '0';
-                item.style.paddingBottom = '0';
+                item.classList.remove('is-open');
             });
             section.querySelectorAll(':scope > .var-option').forEach(item => {
                 item.classList.remove('selected');
@@ -1775,23 +1773,11 @@ function renderVariationAccordion() {
             selectVariation(variation.name, variation.price, false);
             if (shouldOpen) {
                 details.dataset.open = 'true';
-                details.style.pointerEvents = 'auto';
-                details.style.opacity = '1';
-                details.style.paddingTop = '8px';
-                details.style.paddingBottom = '10px';
+                details.classList.add('is-open');
                 row.classList.add('selected');
                 row.setAttribute('aria-expanded', 'true');
                 indicator.style.transform = 'rotate(45deg)';
                 indicator.style.background = 'color-mix(in srgb, var(--primary-color) 20%, transparent)';
-                requestAnimationFrame(() => {
-                    // Measure the full content before animating; measuring while collapsed can return a truncated height.
-                    details.style.maxHeight = 'none';
-                    const expandedHeight = details.scrollHeight;
-                    details.style.maxHeight = '0px';
-                    requestAnimationFrame(() => {
-                        details.style.maxHeight = `${expandedHeight}px`;
-                    });
-                });
             }
         });
         row.insertAdjacentElement('afterend', details);

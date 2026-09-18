@@ -396,7 +396,7 @@ try {
         <script>
             window.__SSR__ = <?php echo json_encode($ssrData, JSON_HEX_TAG | JSON_HEX_AMP); ?>;
         </script>
-        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.78">
+        <link rel="stylesheet" href="https://menzzu.com/cardapio/style.css?v=3.79">
         <style>
             :root {
                 --primary-color:
@@ -1147,7 +1147,7 @@ try {
         </svg>
 
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11" defer></script>
-        <script type="text/javascript" src="/cardapio/script.js?v=2.18" defer></script>
+        <script type="text/javascript" src="/cardapio/script.js?v=2.19" defer></script>
 
     </html>
 <?php
