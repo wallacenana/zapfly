@@ -460,6 +460,18 @@ const Estoque = () => {
       return;
     }
 
+    const invalidVariation = (form.variations || []).find(variation => {
+      const subItems = Array.isArray(variation?.subItems) ? variation.subItems : [];
+      if (subItems.length > 0) {
+        return subItems.some(subItem => !(parseMoneyInput(subItem?.price) > 0));
+      }
+      return !(parseMoneyInput(variation?.price) > 0);
+    });
+    if (hasVariations && invalidVariation) {
+      Swal.fire({ title: 'Preço obrigatório', text: 'Informe o preço normal de todas as variações e subitens antes de salvar.', icon: 'warning', confirmButtonColor: '#3b82f6' });
+      return;
+    }
+
     if (isComboMode && (!form.comboItems || form.comboItems.length === 0)) {
       Swal.fire({ title: 'Combo Vazio', text: 'Selecione pelo menos um item para compor o combo.', icon: 'warning', confirmButtonColor: '#8b5cf6' });
       return;

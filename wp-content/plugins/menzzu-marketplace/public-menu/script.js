@@ -140,6 +140,22 @@ function getEffectiveProductPrice(product) {
     return Math.max(0, price);
 }
 
+function getVariationPrice(variation) {
+    const directPrice = getEffectiveProductPrice(variation);
+    if (directPrice > 0) return directPrice;
+
+    const subItemPrices = (Array.isArray(variation?.subItems) ? variation.subItems : [])
+        .filter(subItem => !subItem?.hidden)
+        .map(getEffectiveProductPrice)
+        .filter(price => Number.isFinite(price) && price > 0);
+
+    return subItemPrices.length > 0 ? Math.min(...subItemPrices) : 0;
+}
+
+function formatDisplayPrice(price, prefix = 'R$') {
+    return price > 0 ? `${prefix} ${price.toFixed(2).replace('.', ',')}` : 'Preço não informado';
+}
+
 function hasPaidAddonsForProduct(product) {
     try {
         const groupIds = JSON.parse(product?.addonGroups || '[]');
@@ -160,22 +176,22 @@ function getDisplayPriceText(product) {
 
     if (variations.length > 0) {
         const effectiveVariationPrices = variations
-            .map(v => getEffectiveProductPrice(v))
+            .map(getVariationPrice)
             .filter(price => Number.isFinite(price) && price > 0);
         const fromPrice = effectiveVariationPrices.length > 0 ? Math.min(...effectiveVariationPrices) : basePrice;
-        return `A partir de R$ ${fromPrice.toFixed(2)}`;
+        return fromPrice > 0 ? `A partir de ${formatDisplayPrice(fromPrice)}` : 'Preço não informado';
     }
 
     if (hasPaidAddonsForProduct(product)) {
-        return `A partir de R$ ${basePrice.toFixed(2)}`;
+        return basePrice > 0 ? `A partir de ${formatDisplayPrice(basePrice)}` : 'Preço não informado';
     }
 
     const price = parseFloat(product?.price || 0) || 0;
     const promoPrice = parseFloat(product?.promoPrice || 0) || 0;
     if (promoPrice > 0 && promoPrice < price) {
-        return `de R$ ${price.toFixed(2)} por R$ ${promoPrice.toFixed(2)}`;
+        return `de ${formatDisplayPrice(price)} por ${formatDisplayPrice(basePrice)}`;
     }
-    return `R$ ${basePrice.toFixed(2)}`;
+    return formatDisplayPrice(basePrice);
 }
 
 function getSuggestedProductForItem(item) {
@@ -1481,7 +1497,7 @@ function openItemDetail(productId) {
                     `;
 
         const variationsHtml = variations.length > 0 ?
-            `<div class="variation-section"><div class="addon-group-header"><h4>Escolha uma opção</h4></div>${variations.map(v => `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${v.price || 0})"><div class="var-label">${v.name}</div><div class="var-price">R$ ${getEffectiveProductPrice(v).toFixed(2)}</div></div>`).join('')}</div>` :
+            `<div class="variation-section"><div class="addon-group-header"><h4>Escolha uma opção</h4></div>${variations.map(v => { const directPrice = getEffectiveProductPrice(v); const price = getVariationPrice(v); const priceLabel = directPrice > 0 ? formatDisplayPrice(directPrice) : (price > 0 ? `A partir de ${formatDisplayPrice(price)}` : 'Preço não informado'); return `<div class="var-option" onclick="selectVariation('${v.name.replace(/'/g, "\\'")}', ${directPrice})"><div class="var-label">${v.name}</div><div class="var-price">${priceLabel}</div></div>`; }).join('')}</div>` :
             '';
 
         const customFieldsHtml = state.activeTab === 'order' ? '' : (() => {
@@ -1725,7 +1741,7 @@ function renderVariationAccordion() {
                 option.innerHTML = '<div class="var-label"></div><div class="var-price"></div>';
                 option.querySelector('.var-label').textContent = subItem.name || 'Opção';
                 const price = getEffectiveProductPrice(subItem);
-                option.querySelector('.var-price').textContent = price > 0 ? `R$ ${price.toFixed(2)}` : '';
+                option.querySelector('.var-price').textContent = formatDisplayPrice(price);
                 option.querySelector('.var-label').style.cssText = 'min-width: 0; flex: 1 1 auto;';
                 option.querySelector('.var-price').style.cssText = 'margin-left: auto; flex: 0 0 auto; white-space: nowrap;';
                 option.addEventListener('click', event => {
