@@ -2143,9 +2143,6 @@ async function initInstance(instanceId) {
                                     return true;
                                 };
                                 try {
-                                    // Reapresenta a IA no primeiro contato de cada dia, mesmo sem pedido de catálogo.
-                                    const greetingSentNow = await sendDailyGreeting();
-
                                     // Detecta se o usuario esta pedindo o cardapio e forca a ferramenta correta
                                     const lastUserMsgObj = messages.filter(m => m.role === 'user').pop();
                                     const lastUserMsgContent = Array.isArray(lastUserMsgObj?.content)
@@ -2154,8 +2151,14 @@ async function initInstance(instanceId) {
                                     const lastUserMsg = lastUserMsgContent.toLowerCase();
                                     const isSimpleGreeting = /^(oi|olá|ola|bom dia|boa tarde|boa noite|hey|hello)[!,.\s]*$/i.test(lastUserMsg.trim());
 
-                                    // A saudação rica já atende cumprimentos simples; não gere uma segunda apresentação.
-                                    if (greetingSentNow && isSimpleGreeting) return true;
+                                    // Cumprimentos simples recebem apenas a apresentação rica, sem status da loja.
+                                    if (isSimpleGreeting) {
+                                        await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
+                                        return true;
+                                    }
+
+                                    // Reapresenta a IA no primeiro contato de cada dia, mesmo sem pedido de catálogo.
+                                    await sendDailyGreeting();
 
                                     const isDeliveryRequest = /delivery|card[aá]pio|o que tem|o que temos|o que voc[eê] tem|pronta entrega|temos hoje|tem hoje|tem pra hoje|para hoje|dispon[ií]vel|pre[cç]o|o que vende|possibilidades|opções|opcoes|opção|opcao|\btem\b|\bprodutos?\b|\bitens?\b/i.test(lastUserMsg);
                                     const isOrderRequest = /encomenda|bolo de festa|personalizado|encomendar|quero encomendar/i.test(lastUserMsg);
