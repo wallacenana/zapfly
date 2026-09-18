@@ -187,3 +187,4 @@ if (!function_exists('menzzu_marketplace_render_restaurants_shortcode')) {
 
 add_shortcode('menzzu_marketplace_restaurants', 'menzzu_marketplace_render_restaurants_shortcode');
 add_shortcode('menzzu_restaurants', 'menzzu_marketplace_render_restaurants_shortcode');
+add_shortcode('digizap_home_2_restaurants', 'menzzu_marketplace_render_restaurants_shortcode');
