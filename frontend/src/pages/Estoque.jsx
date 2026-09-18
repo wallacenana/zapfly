@@ -1314,7 +1314,7 @@ const Estoque = () => {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {(form.variations || []).map((variation, idx) => (
                           <div key={idx} style={{ backgroundColor: '#fafaf8', border: '1px solid #d8e0d7', borderRadius: '12px', padding: '12px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.8fr auto auto', gap: '10px', alignItems: 'center' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1.4fr) minmax(90px, 0.8fr) minmax(110px, 0.7fr) minmax(110px, 0.7fr) auto auto', gap: '10px', alignItems: 'center' }}>
                               <div>
                                 <label className="estoque-label estoque-label--compact">Nome</label>
                                 <input
@@ -1337,6 +1337,36 @@ const Estoque = () => {
                                   onChange={e => {
                                     const next = [...(form.variations || [])];
                                     next[idx] = { ...(next[idx] || {}), stock: e.target.value === '' ? 0 : parseInt(e.target.value, 10) || 0 };
+                                    setForm(f => ({ ...f, variations: next }));
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label className="estoque-label estoque-label--compact">Preço (R$)</label>
+                                <input
+                                  {...inp}
+                                  type="text"
+                                  inputMode="decimal"
+                                  placeholder="Pai"
+                                  value={variation.price || ''}
+                                  onChange={e => {
+                                    const next = [...(form.variations || [])];
+                                    next[idx] = { ...(next[idx] || {}), price: maskMoneyInput(e.target.value) };
+                                    setForm(f => ({ ...f, variations: next }));
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <label className="estoque-label estoque-label--compact">Promoção (R$)</label>
+                                <input
+                                  {...inp}
+                                  type="text"
+                                  inputMode="decimal"
+                                  placeholder="Opcional"
+                                  value={variation.promoPrice || ''}
+                                  onChange={e => {
+                                    const next = [...(form.variations || [])];
+                                    next[idx] = { ...(next[idx] || {}), promoPrice: maskMoneyInput(e.target.value) };
                                     setForm(f => ({ ...f, variations: next }));
                                   }}
                                 />
@@ -1379,43 +1409,6 @@ const Estoque = () => {
                                 </button>
                               </div>
                             </div>
-
-                            {!Array.isArray(variation.subItems) || variation.subItems.length === 0 ? (
-                              <div style={{ marginTop: '12px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                  <div>
-                                    <label className="estoque-label estoque-label--compact">Preço (R$)</label>
-                                    <input
-                                      {...inp}
-                                      type="text"
-                                      inputMode="decimal"
-                                      placeholder="0,00"
-                                      value={variation.price}
-                                      onChange={e => {
-                                        const next = [...(form.variations || [])];
-                                        next[idx] = { ...(next[idx] || {}), price: maskMoneyInput(e.target.value) };
-                                        setForm(f => ({ ...f, variations: next }));
-                                      }}
-                                    />
-                                  </div>
-                                  <div>
-                                    <label className="estoque-label estoque-label--compact">Preço promocional (R$)</label>
-                                    <input
-                                      {...inp}
-                                      type="text"
-                                      inputMode="decimal"
-                                      placeholder="Opcional"
-                                      value={variation.promoPrice}
-                                      onChange={e => {
-                                        const next = [...(form.variations || [])];
-                                        next[idx] = { ...(next[idx] || {}), promoPrice: maskMoneyInput(e.target.value) };
-                                        setForm(f => ({ ...f, variations: next }));
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            ) : null}
 
                             <div style={{ marginTop: '10px' }}>
                               <label className="estoque-label estoque-label--compact">Descrição</label>
