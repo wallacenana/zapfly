@@ -40,7 +40,8 @@ const makeInMemoryStore = Baileys.makeInMemoryStore || (() => {
 });
 const prisma = require('./lib/prisma');
 const { calculateFee } = require('./lib/maps');
-const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock, getDeliveryCatalog, getOrderCatalog, getRestaurantGreeting, shouldSendRestaurantGreeting } = require('./lib/utils');
+const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock, getDeliveryCatalog, getOrderCatalog } = require('./lib/utils');
+const { ensureRestaurantGreeting, getClosedDeliveryMessage, isSimpleGreeting } = require('./lib/utils');
 const { initFlows, handleFlows, runFlowNode, startFlowMonitor } = require('./lib/flows');
 const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODEL_MAP } = require('./lib/ai');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -1912,6 +1913,11 @@ async function initInstance(instanceId) {
 
                         let flowHandled = false;
                         if (!msg.key.fromMe && currentChat?.aiEnabled) {
+                            const greeted = await ensureRestaurantGreeting(sock, instanceId, jid, userId);
+                            if (combinedImages.length === 0 && isSimpleGreeting(textForFlow)) {
+                                if (!greeted) await sock.sendMessage(jid, { text: 'Oi! Como posso ajudar?' });
+                                return;
+                            }
                             flowHandled = await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages, userId);
                         }
                         if (flowHandled) return;
@@ -1943,7 +1949,7 @@ async function initInstance(instanceId) {
                                 // Mantem o historico na conversa para evitar que a IA se reapresente a cada mensagem.
                                 const historyMessages = history
                                     .reverse()
-                                    .slice(0, -1)
+                                    .filter(m => !messagesToProcess.some(entry => entry.msg?.key?.id === m.msgId))
                                     .map(m => ({
                                         role: m.fromMe ? 'assistant' : 'user',
                                         content: m.text || '[Imagem/Arquivo]'
@@ -2137,8 +2143,8 @@ async function initInstance(instanceId) {
                                 let pendingCatalogCTA = null; // 3a mensagem: CTA da Lily apos o catalogo
                                 let greetingSentThisTurn = false;
                                 const sendDailyGreeting = async () => {
-                                    if (greetingSentThisTurn || !(await shouldSendRestaurantGreeting(instanceId, jid))) return false;
-                                    await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
+                                    if (greetingSentThisTurn) return false;
+                                    await ensureRestaurantGreeting(sock, instanceId, jid, userId);
                                     greetingSentThisTurn = true;
                                     return true;
                                 };
@@ -2149,18 +2155,11 @@ async function initInstance(instanceId) {
                                         ? lastUserMsgObj.content.map(c => c.text || '').join(' ')
                                         : (lastUserMsgObj?.content || '');
                                     const lastUserMsg = lastUserMsgContent.toLowerCase();
-                                    const isSimpleGreeting = /^(oi|olá|ola|bom dia|boa tarde|boa noite|hey|hello)[!,.\s]*$/i.test(lastUserMsg.trim());
-
-                                    // Cumprimentos simples recebem apenas a apresentação rica, sem status da loja.
-                                    if (isSimpleGreeting) {
-                                        await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
-                                        return true;
-                                    }
 
                                     // Reapresenta a IA no primeiro contato de cada dia, mesmo sem pedido de catálogo.
                                     await sendDailyGreeting();
 
-                                    const isDeliveryRequest = /delivery|card[aá]pio|o que tem|o que temos|o que voc[eê] tem|pronta entrega|temos hoje|tem hoje|tem pra hoje|para hoje|dispon[ií]vel|pre[cç]o|o que vende|possibilidades|opções|opcoes|opção|opcao|\btem\b|\bprodutos?\b|\bitens?\b/i.test(lastUserMsg);
+                                    const isDeliveryRequest = /delivery|pronta entrega|o que tem.*hoje|temos hoje|tem (?:pra |para )?hoje/i.test(lastUserMsg);
                                     const isOrderRequest = /encomenda|bolo de festa|personalizado|encomendar|quero encomendar/i.test(lastUserMsg);
                                     const isOrderCatalogRequest = isOrderRequest
                                         && /card[aá]pio|cat[aá]logo|lista|op[cç][õo]es|opcoes|o que tem|o que temos|quais/i.test(lastUserMsg);
@@ -2169,11 +2168,7 @@ async function initInstance(instanceId) {
                                     // Pronta-entrega nunca deve ser respondida com estoque antigo quando a loja fechou.
                                     if (statusLoja === "FECHADA" && isDeliveryRequest && !isOrderRequest) {
                                         await sendDailyGreeting();
-                                        await sendRichMessage(sock, jid, `A loja está fechada no momento. A pronta-entrega funciona dentro do horário de atendimento.`);
-                                        const tomorrowCatalog = await getDeliveryCatalog(userId);
-                                        await sock.sendMessage(jid, { text: 'Mas o nosso catálogo de amanhã será:' });
-                                        await sock.sendMessage(jid, { text: tomorrowCatalog.text });
-                                        await sock.sendMessage(jid, { text: 'Mas você também pode deixar encomendado algum desses itens.' });
+                                        await sendRichMessage(sock, jid, getClosedDeliveryMessage(settings));
                                         return;
                                     }
 
@@ -2183,17 +2178,6 @@ async function initInstance(instanceId) {
                                         forcedToolChoice = { type: "function", function: { name: "get_order_catalog" } };
                                     } else if (isDeliveryRequest && !isOrderRequest) {
                                         forcedToolChoice = { type: "function", function: { name: "get_delivery_catalog" } };
-                                    } else if (statusLoja.includes("FECHADA")) {
-                                        // Detecta se e um "SIM" generico ou se ja e o nome de um produto
-                                        const isGenericAcceptance = /^(sim|quero|pode|manda|veja|ve|ok|agendar|amanha|pode ser|com certeza|claro|uhum)$/i.test(lastUserMsg.trim());
-                                        const isAskingOptions = /o que tem|opções|cardapio|catalogo|ve ai/i.test(combinedText);
-
-                                        if (isGenericAcceptance || isAskingOptions) {
-                                            forcedToolChoice = { type: "function", function: { name: "get_delivery_catalog" } };
-                                        } else {
-                                            // Se ele já falou o nome de um produto (ex: "quero um vulcão"), deixa o fluxo seguir normal
-                                            forcedToolChoice = "auto";
-                                        }
                                     }
 
                                     if (isMediaRequest && forcedToolChoice === "auto") {
@@ -2246,6 +2230,10 @@ async function initInstance(instanceId) {
                                                 result = await executeChamarGerente(reason, jid, currentChat, settings, null, sock, prisma, instanceId);
                                             }
                                             else if (functionName === "get_delivery_catalog") {
+                                                if (statusLoja === 'FECHADA') {
+                                                    await sendRichMessage(sock, jid, getClosedDeliveryMessage(settings));
+                                                    return;
+                                                }
                                                 const catalog = await getDeliveryCatalog(userId);
                                                 const catalogText = catalog.text;
                                                 pendingCatalogMessage = catalogText;
