@@ -1739,6 +1739,7 @@ function renderVariationAccordion() {
             title.style.cssText = 'margin-bottom: 6px; color: var(--text-secondary); font-size: 12px; font-weight: 700;';
             detailsInner.appendChild(title);
 
+            const basePrice = getResolvedProductPrice(variation, state.currentItem);
             subItems.forEach(subItem => {
                 const option = document.createElement('div');
                 option.className = 'var-option subitem-option';
@@ -1749,7 +1750,10 @@ function renderVariationAccordion() {
                 option.innerHTML = '<div class="var-label"></div><div class="var-price"></div>';
                 option.querySelector('.var-label').textContent = subItem.name || 'Opção';
                 const price = getResolvedProductPrice(subItem, variation, state.currentItem);
-                option.querySelector('.var-price').textContent = formatDisplayPrice(price);
+                const priceDelta = price > basePrice ? price - basePrice : 0;
+                option.querySelector('.var-price').textContent = priceDelta > 0
+                    ? `+ ${formatDisplayPrice(priceDelta)}`
+                    : '';
                 option.querySelector('.var-label').style.cssText = 'min-width: 0; flex: 1 1 auto;';
                 option.querySelector('.var-price').style.cssText = 'margin-left: auto; flex: 0 0 auto; white-space: nowrap;';
                 option.addEventListener('click', event => {
