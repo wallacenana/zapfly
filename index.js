@@ -2023,8 +2023,8 @@ async function initInstance(instanceId) {
                                                     type: { type: "string", enum: ["order", "delivery"], description: "OBRIGATORIO: Use 'delivery' para pedidos imediatos (hoje/agora) com entrega. Use 'order' para agendamentos futuros, encomendas de bolos ou retiradas programadas." },
                                                     deliveryAddress: { type: "string", description: "Endereco se for delivery" },
                                                     deliveryFee: { type: "number", description: "Valor da entrega calculado por get_delivery_fee" },
-                                                    massa: { type: "string", description: "Sabor da massa escolhida" },
-                                                    recheio: { type: "string", description: "Sabor do recheio escolhido" },
+                                                    massa: { type: "string", description: "Sabor da massa escolhida, somente quando identificado explicitamente como massa" },
+                                                    recheio: { type: "string", description: "Sabor do recheio escolhido, somente quando identificado explicitamente como recheio" },
                                                     topo: { type: "string", description: "Informações sobre o topo do bolo" },
                                                     carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Produtos ADICIONAIS. IMPORTANTE: Para Kits/Combos, NAO coloque aqui os itens que ja fazem parte do kit, senao o cliente sera cobrado em dobro. Use apenas para itens extras comprados a parte." },
                                                     notes: { type: "string", description: "Outras observações gerais" }
