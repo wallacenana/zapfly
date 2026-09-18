@@ -1940,14 +1940,19 @@ async function initInstance(instanceId) {
                                     take: 30
                                 });
 
-                                // Formata o historico como texto para injetar no final do prompt do sistema
-                                const formattedHistory = history.reverse().map(m =>
-                                    `${m.fromMe ? 'Lily' : 'Cliente'}: ${m.text || '[Imagem/Arquivo]'}`
-                                ).join('\n');
+                                // Mantem o historico na conversa para evitar que a IA se reapresente a cada mensagem.
+                                const historyMessages = history
+                                    .reverse()
+                                    .slice(0, -1)
+                                    .map(m => ({
+                                        role: m.fromMe ? 'assistant' : 'user',
+                                        content: m.text || '[Imagem/Arquivo]'
+                                    }));
 
-                                const finalSystemPrompt = await buildLilyPrompt(instanceId, jid, formattedHistory, storeInfo, msg.pushName, userId);
+                                const finalSystemPrompt = await buildLilyPrompt(instanceId, jid, '', storeInfo, msg.pushName, userId);
                                 const messages = [
                                     { role: 'system', content: finalSystemPrompt },
+                                    ...historyMessages,
                                     { role: 'user', content: userMessageContent }
                                 ];
 
