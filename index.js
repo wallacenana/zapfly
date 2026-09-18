@@ -42,7 +42,7 @@ const prisma = require('./lib/prisma');
 const { calculateFee } = require('./lib/maps');
 const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock, getDeliveryCatalog, getOrderCatalog } = require('./lib/utils');
 const { ensureRestaurantGreeting, getClosedDeliveryMessage, isSimpleGreeting } = require('./lib/utils');
-const { isDeliveryOrderFollowUp } = require('./lib/utils');
+const { isDeliveryOrderFollowUp, isCatalogRequest, findSelectedProduct } = require('./lib/utils');
 const { initFlows, handleFlows, runFlowNode, startFlowMonitor } = require('./lib/flows');
 const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODEL_MAP } = require('./lib/ai');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -2157,6 +2157,10 @@ async function initInstance(instanceId) {
                                         : (lastUserMsgObj?.content || '');
                                     const lastUserMsg = lastUserMsgContent.toLowerCase();
                                     const deliveryOrderFollowUp = isDeliveryOrderFollowUp(messages, lastUserMsg);
+                                    const requestsCatalog = isCatalogRequest(lastUserMsg);
+                                    const selectedProduct = requestsCatalog ? null : await findSelectedProduct(userId, lastUserMsg, deliveryOrderFollowUp);
+                                    if (deliveryOrderFollowUp) messages.push({ role: 'system', content: 'O assunto atual sao os itens de delivery para encomendar. Preserve esse catalogo nas correcoes do cliente; nao mude para bolos de festa nem reenvie a lista sem pedido.' });
+                                    if (selectedProduct) messages.push({ role: 'system', content: `O cliente selecionou o produto cadastrado ${JSON.stringify(selectedProduct.name)}. Continue a escolha da proxima opcao ainda nao respondida. Nao envie o catalogo novamente.` });
 
                                     // Reapresenta a IA no primeiro contato de cada dia, mesmo sem pedido de catálogo.
                                     await sendDailyGreeting();
@@ -2176,7 +2180,7 @@ async function initInstance(instanceId) {
 
                                     let forcedToolChoice = "auto";
 
-                                    if (isOrderCatalogRequest || deliveryOrderFollowUp) {
+                                    if (isOrderCatalogRequest || (deliveryOrderFollowUp && requestsCatalog)) {
                                         forcedToolChoice = { type: "function", function: { name: "get_order_catalog" } };
                                     } else if (isDeliveryRequest && !isOrderRequest) {
                                         forcedToolChoice = { type: "function", function: { name: "get_delivery_catalog" } };
@@ -2191,8 +2195,8 @@ async function initInstance(instanceId) {
                                     const completion = await ai.chat.completions.create({
                                         model: modelToUse,
                                         messages,
-                                        tools,
-                                        tool_choice: forcedToolChoice
+                                        tools: selectedProduct ? tools.filter(tool => !['get_delivery_catalog', 'get_order_catalog'].includes(tool.function.name)) : tools,
+                                        tool_choice: selectedProduct && ['get_delivery_catalog', 'get_order_catalog'].includes(forcedToolChoice?.function?.name) ? 'auto' : forcedToolChoice
                                     });
 
                                     responseMessage = completion.choices[0].message;
