@@ -1106,8 +1106,7 @@ body.theme-dark .var-option.selected {
 }
 
 .variation-subitems {
-    display: grid;
-    grid-template-rows: 0fr;
+    display: none;
     margin: -2px 0 10px;
     box-sizing: border-box;
     width: 100%;
@@ -1116,11 +1115,10 @@ body.theme-dark .var-option.selected {
     border-left: 2px solid var(--primary-color);
     background: var(--bg-gray);
     border-radius: 0 0 10px 10px;
-    transition: grid-template-rows 380ms ease, opacity 180ms ease;
 }
 
 .variation-subitems.is-open {
-    grid-template-rows: 1fr;
+    display: grid;
     opacity: 1;
     pointer-events: auto;
 }
