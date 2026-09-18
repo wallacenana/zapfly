@@ -482,13 +482,22 @@ const Estoque = () => {
     }
 
     const payload = buildProductPayload(form, isComboMode);
+    Swal.fire({
+      title: editing ? 'Salvando alterações...' : 'Salvando item...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
     try {
       if (editing) await api.patch(`/orders/products/${editing}`, payload);
       else await api.post('/orders/products', payload);
+      Swal.close();
       setShowModal(false);
       fetchProducts();
       Swal.fire({ title: 'Salvo!', icon: 'success', toast: true, position: 'bottom-end', timer: 2000, showConfirmButton: false });
-    } catch (err) { Swal.fire('Erro', 'Falha ao salvar.', 'error'); }
+    } catch (err) {
+      Swal.close();
+      Swal.fire('Erro', 'Falha ao salvar.', 'error');
+    }
   };
 
   const addVar = () => setForm(f => ({ ...f, variations: [...f.variations, { name: '', price: '', promoPrice: '', stock: 0, description: '', subItems: [] }] }));
@@ -529,13 +538,22 @@ const Estoque = () => {
       Swal.fire({ title: 'Atenção', text: 'Nome e Data do Evento são obrigatórios.', icon: 'warning' });
       return;
     }
+    Swal.fire({
+      title: editingSeasonal ? 'Salvando alterações...' : 'Salvando catálogo...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
     try {
       if (editingSeasonal) await api.patch(`/orders/seasonal/${editingSeasonal}`, seasonalForm);
       else await api.post('/orders/seasonal', seasonalForm);
+      Swal.close();
       setShowSeasonalModal(false);
       fetchSeasonal();
       Swal.fire({ title: 'Salvo!', icon: 'success', toast: true, position: 'bottom-end', timer: 2000, showConfirmButton: false });
-    } catch (err) { Swal.fire('Erro', 'Falha ao salvar catálogo sazonal.', 'error'); }
+    } catch (err) {
+      Swal.close();
+      Swal.fire('Erro', 'Falha ao salvar catálogo sazonal.', 'error');
+    }
   };
 
   const openAddSeasonal = () => {
@@ -1821,23 +1839,41 @@ const Estoque = () => {
                     <>
                       <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setEditingCategory(null)}>Cancelar</button>
                       <button className="btn btn-primary" style={{ flex: 2 }} onClick={async () => {
+                        Swal.fire({
+                          title: 'Salvando categoria...',
+                          allowOutsideClick: false,
+                          didOpen: () => Swal.showLoading()
+                        });
                         try {
                           await api.patch(`/orders/categories/${editingCategory}`, categoryForm);
+                          Swal.close();
                           setEditingCategory(null);
                           fetchCategories();
                           Swal.fire({ title: 'Atualizado!', icon: 'success', toast: true, position: 'bottom-end', timer: 2000, showConfirmButton: false });
-                        } catch (err) { Swal.fire('Erro', 'Falha ao atualizar.', 'error'); }
+                        } catch (err) {
+                          Swal.close();
+                          Swal.fire('Erro', 'Falha ao atualizar.', 'error');
+                        }
                       }}>Salvar Alterações</button>
                     </>
                   ) : (
                     <button className="btn btn-primary" style={{ width: '100%' }} onClick={async () => {
                       if (!newCategoryName.trim()) return;
+                      Swal.fire({
+                        title: 'Salvando categoria...',
+                        allowOutsideClick: false,
+                        didOpen: () => Swal.showLoading()
+                      });
                       try {
                         await api.post('/orders/categories', { name: newCategoryName });
+                        Swal.close();
                         setNewCategoryName('');
                         fetchCategories();
                         Swal.fire({ title: 'Adicionado!', icon: 'success', toast: true, position: 'bottom-end', timer: 2000, showConfirmButton: false });
-                      } catch (err) { Swal.fire('Erro', 'Falha ao adicionar.', 'error'); }
+                      } catch (err) {
+                        Swal.close();
+                        Swal.fire('Erro', 'Falha ao adicionar.', 'error');
+                      }
                     }}>Adicionar Categoria</button>
                   )}
                 </div>

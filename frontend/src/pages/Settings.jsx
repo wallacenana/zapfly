@@ -453,6 +453,11 @@ const Settings = () => {
   };
 
   const handleSaveSlots = async () => {
+    Swal.fire({
+      title: 'Salvando horários...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
     try {
       const validSlots = (Array.isArray(slots) ? slots : [])
         .filter(slot => slot && slot.startTime && slot.endTime)
@@ -462,8 +467,10 @@ const Settings = () => {
           endTime: String(slot.endTime).slice(0, 5)
         }));
       await api.post('/config/slots', { slots: validSlots });
+      Swal.close();
       Swal.fire({ title: 'Horários Atualizados!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
     } catch (err) {
+      Swal.close();
       Swal.fire('Erro', 'Não foi possível salvar os horários.', 'error');
     }
   };
@@ -486,6 +493,11 @@ const Settings = () => {
     }
   };
   const handleSave = async () => {
+    Swal.fire({
+      title: 'Salvando configurações...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading()
+    });
     try {
       const { slug: _ignoredSlug, googleApiKey: _ignoredGoogleApiKey, ...safeSettings } = settings;
       const payload = {
@@ -497,8 +509,10 @@ const Settings = () => {
       };
       await api.post('/config/keys', payload);
       await loadSettings(); // Recarrega para garantir que o estado local bata com o banco (especialmente GCal)
+      Swal.close();
       Swal.fire({ title: 'Configurações Salvas!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
     } catch (err) {
+      Swal.close();
       Swal.fire('Erro', 'Não foi possível salvar.', 'error');
     }
   };
@@ -991,6 +1005,7 @@ const Settings = () => {
                   <select {...inp} value={settings.activeModel} onChange={e => setSettings({ ...settings, activeModel: e.target.value })}>
                     <option value="openai">OpenAI GPT-4o (Recomendado)</option>
                     <option value="openai-mini">OpenAI GPT-4o Mini (Econômico)</option>
+                    <option value="openai-gpt5-mini">OpenAI GPT-5 Mini</option>
                     <option value="openai-nano">OpenAI GPT-4.1 Nano</option>
                     <option value="claude">Anthropic Claude 3.5 Sonnet</option>
                   </select>

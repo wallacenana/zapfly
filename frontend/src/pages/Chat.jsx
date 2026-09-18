@@ -548,11 +548,21 @@ const Chat = () => {
   const formatMessage = (text) => {
     if (!text) return '';
 
+    // Messages may contain partial HTML from an AI response. Do not inject it into the chat.
+    const normalized = String(text).replace(/<\/?(?:strong|b)(?:\s[^>]*)?>/gi, '');
+    const escaped = normalized.replace(/[&<>"']/g, character => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[character]));
+
     // 1. Handle markdown links: [text](url)
-    let formatted = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" style="color: inherit; text-decoration: underline; font-weight: bold;">$1</a>');
+    let formatted = escaped.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer" style="color: inherit; text-decoration: underline; font-weight: bold;">$1</a>');
 
     // 2. Handle raw URLs (that are not already inside an <a> tag)
-    formatted = formatted.replace(/(?<!href=")(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color: inherit; text-decoration: underline;">$1</a>');
+    formatted = formatted.replace(/(?<!href=")(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noreferrer" style="color: inherit; text-decoration: underline;">$1</a>');
 
     // 3. Handle WhatsApp bold (*text*)
     formatted = formatted.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');

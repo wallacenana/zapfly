@@ -156,8 +156,8 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
         gap: '16px',
         padding: '18px 20px',
         borderRadius: '16px',
-        border: '1px solid rgba(245, 158, 11, 0.16)',
-        background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(17, 17, 19, 0.96))'
+        border: '1px solid rgba(245, 158, 11, 0.22)',
+        background: 'linear-gradient(135deg, #fff8e8, #ffffff)'
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
@@ -174,7 +174,7 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
               <Layers size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#fff' }}>Grupos de adicionais</h3>
+              <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)' }}>Grupos de adicionais</h3>
               <p style={{ margin: '4px 0 0', color: 'var(--text-secondary)', fontSize: '13px' }}>
                 Crie um grupo uma vez e reutilize em vários produtos, com preço adicional e regras de seleção.
               </p>
@@ -185,7 +185,7 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
         <button
           className="btn btn-primary"
           onClick={openCreate}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: '#f59e0b' }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', backgroundColor: 'var(--accent-primary)' }}
         >
           <Plus size={18} />
           Novo grupo
@@ -196,8 +196,8 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
         <div style={{
           padding: '28px',
           borderRadius: '16px',
-          border: '1px dashed rgba(255,255,255,0.08)',
-          backgroundColor: 'rgba(255,255,255,0.02)',
+          border: '1px dashed var(--border-color)',
+          backgroundColor: '#ffffff',
           color: 'var(--text-secondary)',
           textAlign: 'center'
         }}>
@@ -215,8 +215,8 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
                 key={group.id}
                 style={{
                   borderRadius: '16px',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  backgroundColor: '#18181b',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: '#ffffff',
                   overflow: 'hidden'
                 }}
               >
@@ -229,8 +229,8 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
                     alignItems: 'center',
                     gap: '14px',
                     padding: '18px 20px',
-                    background: isExpanded ? 'rgba(255,255,255,0.02)' : 'transparent',
-                    color: '#fff',
+                    background: isExpanded ? 'var(--bg-tertiary)' : '#ffffff',
+                    color: 'var(--text-primary)',
                     border: 'none',
                     cursor: 'pointer'
                   }}
@@ -250,13 +250,13 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
                     </div>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '16px', fontWeight: 800 }}>{group.name}</span>
+                        <span style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)' }}>{group.name}</span>
                         <span style={{
                           fontSize: '10px',
                           padding: '3px 8px',
                           borderRadius: '999px',
                           backgroundColor: group.min > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(255,255,255,0.08)',
-                          color: group.min > 0 ? '#fca5a5' : 'var(--text-secondary)',
+                          color: group.min > 0 ? '#b91c1c' : 'var(--text-secondary)',
                           fontWeight: 800,
                           textTransform: 'uppercase',
                           letterSpacing: '0.04em'
@@ -308,13 +308,13 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
                 </div>
 
                 {isExpanded && (
-                  <div style={{ padding: '0 20px 20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ padding: '0 20px 20px', borderTop: '1px solid var(--border-color)' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginTop: '18px' }}>
                       {items.length === 0 ? (
                         <div style={{
                           padding: '16px',
                           borderRadius: '12px',
-                          backgroundColor: 'rgba(255,255,255,0.03)',
+                          backgroundColor: 'var(--bg-tertiary)',
                           color: 'var(--text-secondary)',
                           fontSize: '13px'
                         }}>
@@ -330,12 +330,12 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
                             gap: '12px',
                             padding: '16px 18px',
                             borderRadius: '12px',
-                            border: '1px solid rgba(255,255,255,0.06)',
-                            backgroundColor: 'rgba(255,255,255,0.03)'
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: '#ffffff'
                           }}
                         >
                           <div>
-                            <div style={{ fontWeight: 700, color: '#fff' }}>{item.name}</div>
+                            <div style={{ fontWeight: 700, color: 'var(--text-primary)' }}>{item.name}</div>
                             <div style={{ color: 'var(--text-secondary)', fontSize: '12px', marginTop: '4px' }}>
                               Valor adicional aplicado ao produto
                             </div>
@@ -370,7 +370,7 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
           <div style={modalStyle}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#fff' }}>
+                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)' }}>
                   {editingId ? 'Editar grupo' : 'Novo grupo'}
                 </h3>
                 <p style={{ margin: '6px 0 0', color: 'var(--text-secondary)', fontSize: '13px' }}>
@@ -435,7 +435,7 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
                     <div style={{
                       padding: '14px',
                       borderRadius: '12px',
-                      backgroundColor: 'rgba(255,255,255,0.03)',
+                      backgroundColor: 'var(--bg-tertiary)',
                       color: 'var(--text-secondary)',
                       fontSize: '13px'
                     }}>
@@ -451,8 +451,8 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
                         alignItems: 'end',
                         padding: '12px',
                         borderRadius: '12px',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        backgroundColor: 'rgba(255,255,255,0.02)'
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: '#ffffff'
                       }}
                     >
                       <div>
@@ -504,7 +504,7 @@ const AddonGroupManager = ({ groups = [], products = [], onReloadGroups, onReloa
               </button>
               <button
                 className="btn btn-primary"
-                style={{ flex: 2, backgroundColor: '#f59e0b' }}
+                style={{ flex: 2, backgroundColor: 'var(--accent-primary)' }}
                 onClick={persistGroup}
                 disabled={saving}
               >
@@ -536,10 +536,10 @@ const modalStyle = {
   maxWidth: '840px',
   maxHeight: '92vh',
   overflowY: 'auto',
-  backgroundColor: '#18181b',
+  backgroundColor: '#ffffff',
   borderRadius: '18px',
-  border: '1px solid rgba(255,255,255,0.08)',
-  boxShadow: '0 30px 60px rgba(0,0,0,0.5)',
+  border: '1px solid var(--border-color)',
+  boxShadow: '0 30px 60px rgba(15, 23, 42, 0.18)',
   padding: '28px'
 };
 
@@ -556,7 +556,7 @@ const inputStyle = {
   borderRadius: '12px',
   backgroundColor: 'var(--bg-tertiary)',
   border: '1px solid var(--border-color)',
-  color: '#fff',
+  color: 'var(--text-primary)',
   fontSize: '14px',
   outline: 'none'
 };
@@ -587,7 +587,7 @@ const sectionLabelStyle = {
 };
 
 const sectionBoxStyle = {
-  backgroundColor: 'rgba(255,255,255,0.03)',
+  backgroundColor: 'var(--bg-tertiary)',
   padding: '18px',
   borderRadius: '14px',
   border: '1px dashed var(--border-color)'

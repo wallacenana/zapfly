@@ -2634,10 +2634,11 @@ async function initInstance(instanceId) {
                                             ? "O cardapio de hoje foi enviado. Agora, como Lily, envie UM CTA final (1 frase) perfeito para fechar a venda. Seja natural e direta, sem formalidades. Ex: 'Dê uma olhadinha nas opcoes e me diz qual dessas posso separar para voce?'"
                                             : "O cardapio de encomendas foi enviado. Agora, como Lily, envie UM CTA final (1 frase) humano e simpatico para entender o desejo do cliente. Ex: 'Qual dessas combina mais com o que voce esta imaginando?'";
                                         try {
+                                            const ctaModel = MODEL_MAP[settings?.activeModel] || 'gpt-4o';
                                             const ctaResponse = await ai.chat.completions.create({
-                                                model: MODEL_MAP[settings?.activeModel] || 'gpt-4o',
+                                                model: ctaModel,
                                                 messages: [...messages, { role: 'user', content: ctaPrompt }],
-                                                max_tokens: 60
+                                                ...(ctaModel === 'gpt-5-mini' ? { max_completion_tokens: 60 } : { max_tokens: 60 })
                                             });
                                             let ctaText = ctaResponse.choices[0].message.content?.trim();
                                             if (ctaText) {
