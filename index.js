@@ -2130,7 +2130,16 @@ async function initInstance(instanceId) {
                                 let pendingCatalogMessage = null;
                                 let pendingCatalogType = null;
                                 let pendingCatalogCTA = null; // 3a mensagem: CTA da Lily apos o catalogo
+                                let greetingSentThisTurn = false;
+                                const sendDailyGreeting = async () => {
+                                    if (greetingSentThisTurn || !(await shouldSendRestaurantGreeting(instanceId, jid))) return;
+                                    await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
+                                    greetingSentThisTurn = true;
+                                };
                                 try {
+                                    // Reapresenta a IA no primeiro contato de cada dia, mesmo sem pedido de catálogo.
+                                    await sendDailyGreeting();
+
                                     // Detecta se o usuario esta pedindo o cardapio e forca a ferramenta correta
                                     const lastUserMsgObj = messages.filter(m => m.role === 'user').pop();
                                     const lastUserMsgContent = Array.isArray(lastUserMsgObj?.content)
@@ -2146,9 +2155,7 @@ async function initInstance(instanceId) {
 
                                     // Pronta-entrega nunca deve ser respondida com estoque antigo quando a loja fechou.
                                     if (statusLoja === "FECHADA" && isDeliveryRequest && !isOrderRequest) {
-                                        if (await shouldSendRestaurantGreeting(instanceId, jid)) {
-                                            await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
-                                        }
+                                        await sendDailyGreeting();
                                         await sendRichMessage(sock, jid, `A loja está fechada no momento. A pronta-entrega funciona dentro do horário de atendimento.`);
                                         const tomorrowCatalog = await getDeliveryCatalog(userId);
                                         await sock.sendMessage(jid, { text: 'Mas o nosso catálogo de amanhã será:' });
@@ -2500,9 +2507,7 @@ async function initInstance(instanceId) {
                                         if (pendingCatalogMessage) {
                                             const isDelivery = pendingCatalogType === 'delivery';
 
-                                            if (await shouldSendRestaurantGreeting(instanceId, jid)) {
-                                                await sendRichMessage(sock, jid, await getRestaurantGreeting(instanceId, userId));
-                                            }
+                                            await sendDailyGreeting();
 
                                             // Balão 1: Intro
                                             await sock.sendPresenceUpdate('composing', jid);
