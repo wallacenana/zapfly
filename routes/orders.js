@@ -158,6 +158,12 @@ function isDateBeforeToday(dateStr) {
   return dateStr < getBrazilDateString();
 }
 
+function isSameDayOrderAllowed(settings, date, type = 'order') {
+  return type !== 'order'
+    || date !== getBrazilDateString()
+    || settings?.acceptSameDayOrders === true;
+}
+
 function getTimeWindowForOrder(dateStr, time) {
   if (!dateStr || !time) return null;
   const parsed = new Date(`${dateStr}T${time}:00-03:00`);
@@ -930,6 +936,12 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
 
     if (isDateBeforeToday(date)) {
       const reason = 'Data anterior a hoje.';
+      if (!time) return { available: false, reason, date, times: [] };
+      return { available: false, reason };
+    }
+
+    if (!isSameDayOrderAllowed(settings, date, type || 'order')) {
+      const reason = 'Encomendas para o mesmo dia não estão disponíveis.';
       if (!time) return { available: false, reason, date, times: [] };
       return { available: false, reason };
     }
@@ -2260,4 +2272,4 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 });
 
-module.exports = { router, setupCronJobs, syncCalendarEvents, sendDailyReport, checkAvailability, calculateOrderBreakdown, calculateOrderTotal, resolveEffectivePrice, updateCalendarEvent };
+module.exports = { router, setupCronJobs, syncCalendarEvents, sendDailyReport, checkAvailability, calculateOrderBreakdown, calculateOrderTotal, resolveEffectivePrice, isSameDayOrderAllowed, updateCalendarEvent };

@@ -363,6 +363,7 @@ model Setting {
   maxDeliveryKm        Float   @default(15.0)
   deliveryMode         String  @default("hibrido")
   acceptOrders         Boolean @default(true)
+  acceptSameDayOrders  Boolean @default(false)
   allowCashOnDelivery  Boolean @default(true)
   featuredCountDesktop Int     @default(4)
   featuredCountTablet  Int     @default(2)

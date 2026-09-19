@@ -212,6 +212,7 @@ const Settings = () => {
     freeDeliveryEnabled: false,
     freeDeliveryKm: 0,
     deliveryMode: 'hibrido',
+    acceptSameDayOrders: false,
     allowCashOnDelivery: true
   });
   const [slots, setSlots] = useState([]);
@@ -263,6 +264,7 @@ const Settings = () => {
           freeDeliveryEnabled: dataWithoutSlug.freeDeliveryEnabled ?? false,
           freeDeliveryKm: dataWithoutSlug.freeDeliveryKm ?? 0,
           deliveryMode: dataWithoutSlug.deliveryMode || 'hibrido',
+          acceptSameDayOrders: dataWithoutSlug.acceptSameDayOrders === true,
           allowCashOnDelivery: dataWithoutSlug.allowCashOnDelivery ?? true
         });
 
@@ -671,8 +673,25 @@ const Settings = () => {
                     })}
                   </div>
                   <p className="settings-helper">O cardápio só exibe as opções que estiverem ativadas aqui.</p>
-                  {settings.dailyDeliveryItems?.orderTypes?.order && (
+                  {acceptOrders && settings.dailyDeliveryItems?.orderTypes?.order && (
                     <div style={{ marginTop: '18px', paddingTop: '18px', borderTop: '1px solid var(--border-color)' }}>
+                      <label style={labelStyle}>Disponibilidade de encomendas</label>
+                      <button
+                        type="button"
+                        onClick={() => setSettings(s => ({
+                          ...s,
+                          acceptSameDayOrders: !s.acceptSameDayOrders
+                        }))}
+                        className={`settings-toggle-card settings-toggle-card--full ${settings.acceptSameDayOrders ? 'is-on' : ''}`}
+                      >
+                        <span>Aceitar encomendas para o mesmo dia</span>
+                        <span className="settings-switch" aria-hidden="true">
+                          <span className="settings-switch__thumb" />
+                        </span>
+                      </button>
+                      <p className="settings-helper">Quando desativado, as encomendas ficam disponíveis a partir de amanhã.</p>
+
+                      <div style={{ marginTop: '18px', paddingTop: '18px', borderTop: '1px solid var(--border-color)' }}>
                       <label style={labelStyle}>Métodos de retirada para encomendas</label>
                       <div className="settings-option-grid settings-option-grid--stack">
                         {[
@@ -707,6 +726,7 @@ const Settings = () => {
                             </button>
                           );
                         })}
+                      </div>
                       </div>
                     </div>
                   )}

@@ -416,6 +416,7 @@ app.post('/settings', authenticate, async (req, res) => {
             slug,
             menuTheme,
             acceptOrders,
+            acceptSameDayOrders,
             freeDeliveryEnabled,
             freeDeliveryKm,
             featuredCountDesktop,
@@ -460,6 +461,9 @@ app.post('/settings', authenticate, async (req, res) => {
         }
         if (featuredCountMobile !== undefined) {
             settingPayload.featuredCountMobile = parsePositiveInt(featuredCountMobile, 1);
+        }
+        if (acceptSameDayOrders !== undefined) {
+            settingPayload.acceptSameDayOrders = !!acceptSameDayOrders;
         }
 
         if (Object.keys(settingPayload).length > 0) {
@@ -2947,6 +2951,7 @@ app.get('/config/keys', authenticate, async (req, res) => {
         googleAnalyticsId: config.googleAnalyticsId,
         microsoftClarityId: config.microsoftClarityId,
         acceptOrders: config.acceptOrders,
+        acceptSameDayOrders: config.acceptSameDayOrders,
         dailyMaxOrders: config.dailyMaxOrders,
         managerJid: config.managerJid,
         deliveryJid: config.deliveryJid,
@@ -2985,7 +2990,7 @@ app.post('/config/keys', authenticate, async (req, res) => {
         buttonTextColor, backgroundColor, textColor,
         seoDescription, pixelId, googleAnalyticsId, microsoftClarityId,
         customDomain,
-        acceptOrders, active
+        acceptOrders, acceptSameDayOrders, active
     } = req.body;
 
     if (slug) {
@@ -3027,6 +3032,10 @@ app.post('/config/keys', authenticate, async (req, res) => {
         pixReceiverKey,
         dailyDeliveryItems: typeof dailyDeliveryItems === 'string' ? dailyDeliveryItems : JSON.stringify(dailyDeliveryItems || [])
     };
+
+    if (acceptSameDayOrders !== undefined) {
+        updateData.acceptSameDayOrders = !!acceptSameDayOrders;
+    }
 
     const storeProfileData = {
         businessName,
