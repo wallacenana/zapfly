@@ -2013,7 +2013,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "create_order",
-                                            description: "Cria um novo pedido e gera o link de pagamento. REGRAS CRITICAS: Nao crie pedidos duplicados; para corrigir um pedido existente use update_order. Para encomendas, use SOMENTE apos item, variacao, adicionais/opcoes cadastrados, data, hora disponivel e nome coletados, resumo apresentado e confirmacao explicita do cliente. Escolher produto ou opcao nao e confirmacao final. Nao invente etapas de massa ou recheio. Colete uma etapa por mensagem.",
+                                            description: "Cria um novo pedido e gera o link de pagamento. REGRAS CRITICAS: Nao crie pedidos duplicados; para corrigir um pedido existente use update_order. Para encomendas, use SOMENTE apos item, variacao, data e horario disponiveis, adicionais/opcoes cadastrados, nome coletado, resumo apresentado e confirmacao explicita do cliente. Escolher produto ou opcao nao e confirmacao final. Nao invente etapas de massa ou recheio. Colete uma etapa por mensagem.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
