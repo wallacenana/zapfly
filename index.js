@@ -2482,7 +2482,7 @@ async function initInstance(instanceId) {
                                                 let deliveryStr = '';
                                                 prods.forEach(p => {
                                                     const vars = typeof p.variations === 'string' ? JSON.parse(p.variations || '[]') : (p.variations || []);
-                                                    deliveryStr += formatProduct(p, vars, false) + '\n\n';
+                                                    deliveryStr += formatProduct(p, vars, false, false, false) + '\n\n';
                                                 });
                                                 pendingCatalogMessage = deliveryStr.trim() || 'Nenhum item de pronta entrega no momento.';
                                                 pendingCatalogType = 'delivery';

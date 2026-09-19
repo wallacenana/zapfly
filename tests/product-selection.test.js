@@ -22,7 +22,7 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../lib/utils.js'), 'utf8'), context);
-const { findSelectedProduct, isCatalogRequest, isFinalOrderConfirmation } = context.module.exports;
+const { findSelectedProduct, isCatalogRequest, isFinalOrderConfirmation, formatProduct } = context.module.exports;
 const history = [{ role: 'assistant', content: 'Qual tamanho do Vulcao voce quer? Mini: R$ 18.00; P: R$ 25.00' }];
 
 test('recognizes product names with descriptive prefixes', async () => {
@@ -59,4 +59,16 @@ test('recognizes only an explicit response to the final order confirmation', () 
     assert.equal(isFinalOrderConfirmation(finalSummary, 'pode prosseguir'), true);
     assert.equal(isFinalOrderConfirmation([{ role: 'assistant', content: 'Você confirma a entrega neste endereço?' }], 'sim'), false);
     assert.equal(isFinalOrderConfirmation(finalSummary, 'quero alterar'), false);
+});
+
+test('formats customer catalog entries without descriptions or subitems', () => {
+    const text = formatProduct({ name: 'Vulcao', description: 'Descricao interna' }, [{
+        name: 'P',
+        price: 25,
+        subItems: [{ name: 'Chocolate', price: 30 }]
+    }], false, false, false);
+
+    assert.match(text, /Vulcao/);
+    assert.match(text, /P: R\$ 25\.00/);
+    assert.doesNotMatch(text, /Descricao interna|Subitens|Chocolate/);
 });
