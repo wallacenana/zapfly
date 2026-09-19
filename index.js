@@ -2029,6 +2029,7 @@ async function initInstance(instanceId) {
                                                     type: { type: "string", enum: ["order", "delivery"], description: "OBRIGATORIO: Use 'delivery' para pedidos imediatos (hoje/agora) com entrega. Use 'order' para agendamentos futuros, encomendas de bolos ou retiradas programadas." },
                                                     deliveryAddress: { type: "string", description: "Endereco se for delivery" },
                                                     deliveryFee: { type: "number", description: "Valor da entrega calculado por get_delivery_fee" },
+                                                    addons: { type: "array", description: "Adicionais escolhidos nos grupos vinculados ao produto. Cada item precisa conter groupId, groupName, name, price e quantity. Use os precos exatos do catalogo.", items: { type: "object", properties: { groupId: { type: "string" }, groupName: { type: "string" }, name: { type: "string" }, price: { type: "number" }, quantity: { type: "number", default: 1 } }, required: ["groupId", "groupName", "name", "price", "quantity"] } },
                                                     massa: { type: "string", description: "Sabor da massa escolhida, somente quando identificado explicitamente como massa" },
                                                     recheio: { type: "string", description: "Sabor do recheio escolhido, somente quando identificado explicitamente como recheio" },
                                                     topo: { type: "string", description: "Informações sobre o topo do bolo" },
@@ -2301,6 +2302,7 @@ async function initInstance(instanceId) {
                                                         const internalBase = `http://127.0.0.1:${process.env.PORT || 3001}`;
                                                         const res = await axios.post(`${internalBase}/orders`, {
                                                             ...args,
+                                                            addons: Array.isArray(args.addons) ? JSON.stringify(args.addons) : args.addons,
                                                             deliveryFee: args.deliveryFee || lastDeliveryFee, // FALLBACK: Usa o ultimo frete calculado
                                                             notes: finalNotes.trim(),
                                                             clientJid: jid,
