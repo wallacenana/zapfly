@@ -2033,7 +2033,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "create_order",
-                                            description: "Cria um novo pedido e gera o link de pagamento. REGRAS CRITICAS: Nao crie pedidos duplicados; para corrigir um pedido existente use update_order. Para encomendas (type order), use SOMENTE apos item, variacao, data e horario disponiveis, adicionais/opcoes cadastrados, nome, resumo e confirmacao. Para delivery (type delivery), e para hoje: nao solicite data ou horario; colete item, variacao, adicionais/opcoes, nome/endereco quando necessario, resumo e confirmacao. Escolher produto ou opcao nao e confirmacao final. Nao invente etapas de massa ou recheio. Colete uma etapa por mensagem.",
+                                            description: "Cria um novo pedido e gera o link de pagamento. REGRAS CRITICAS: Nao crie pedidos duplicados; para corrigir um pedido existente use update_order. Para encomendas (type order), use SOMENTE apos item, variacao, data e horario disponiveis, adicionais/opcoes cadastrados, resumo e confirmacao. Para delivery (type delivery), e para hoje: nao solicite data ou horario; colete item, variacao, adicionais/opcoes, endereco quando necessario, resumo e confirmacao. Nunca pergunte o nome: use o nome ja presente no contexto, se houver. Escolher produto ou opcao nao e confirmacao final. Nao invente etapas de massa ou recheio. Colete uma etapa por mensagem.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
@@ -2044,7 +2044,7 @@ async function initInstance(instanceId) {
                                                     quantity: { type: "string", description: "Peso do bolo (ex: 2kg) ou Quantidade" },
                                                     scheduledDate: { type: "string", description: "Data convertida internamente para YYYY-MM-DD a partir da resposta natural do cliente. Nunca pedir esse formato ao cliente." },
                                                     scheduledTime: { type: "string", description: "Horário do agendamento HH:MM" },
-                                                    clientName: { type: "string", description: "Nome do cliente" },
+                                                    clientName: { type: "string", description: "Nome ja presente no contexto do cliente; nunca pergunte por ele." },
                                                     paymentMethod: { type: "string", description: "Forma de pagamento (ex: Pix e Cartão com link de pagamento e Dinheiro em alguns casos)" },
                                                     type: { type: "string", enum: ["order", "delivery"], description: "OBRIGATORIO: Use 'delivery' para pedidos imediatos (hoje/agora) com entrega. Use 'order' para agendamentos futuros, encomendas de bolos ou retiradas programadas." },
                                                     deliveryAddress: { type: "string", description: "Endereco se for delivery" },
@@ -2346,6 +2346,7 @@ async function initInstance(instanceId) {
                                                             addons: Array.isArray(args.addons) ? JSON.stringify(args.addons) : args.addons,
                                                             deliveryFee: args.deliveryFee || lastDeliveryFee, // FALLBACK: Usa o ultimo frete calculado
                                                             notes: finalNotes.trim(),
+                                                            clientName: args.clientName || currentChat?.name || undefined,
                                                             clientJid: jid,
                                                             instanceId: instanceId
                                                         });

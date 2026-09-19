@@ -1505,10 +1505,16 @@ router.post('/', async (req, res) => {
       }
     }
 
+    const existingCustomer = await prisma.customer.findUnique({
+      where: { jid_userId: { jid: finalClientJid, userId } },
+      select: { name: true }
+    });
+    const resolvedClientName = String(clientName || existingCustomer?.name || 'Cliente').trim() || 'Cliente';
+
     await prisma.customer.upsert({
       where: { jid_userId: { jid: finalClientJid, userId } },
-      update: { name: clientName || 'Cliente Balcão', address: deliveryAddress, lastOrderDate: new Date() },
-      create: { jid: finalClientJid, userId, name: clientName || 'Cliente Balcão', address: deliveryAddress }
+      update: { name: resolvedClientName, address: deliveryAddress, lastOrderDate: new Date() },
+      create: { jid: finalClientJid, userId, name: resolvedClientName, address: deliveryAddress }
     });
 
     const computedTotal = await calculateOrderTotal(req.body, userId);
@@ -1530,7 +1536,7 @@ router.post('/', async (req, res) => {
       notes: [notes, subItem ? ('Subvariação: ' + subItem) : ''].filter(Boolean).join(' | '),
       scheduledDate: scheduledDate || getBrazilDateString(),
       scheduledTime: scheduledTime || fallbackTime,
-      clientName: clientName || 'Cliente',
+      clientName: resolvedClientName,
       clientJid: finalClientJid,
       clientPhone: clientPhone || (finalClientJid && finalClientJid.includes('@') ? finalClientJid.split('@')[0] : null),
       type: orderType,
