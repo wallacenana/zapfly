@@ -2276,7 +2276,7 @@ async function initInstance(instanceId) {
                                                 result = await checkAvailability(userId, args.date, args.time, args.type || 'order');
                                             }
                                             else if (functionName === "get_delivery_fee") {
-                                                const feeRes = await calculateFee(args.address);
+                                                const feeRes = await calculateFee(args.address, userId);
                                                 if (feeRes.error) result = "Erro: " + feeRes.error;
                                                 else {
                                                     const rules = JSON.parse(settings?.deliveryRules || '[]');
