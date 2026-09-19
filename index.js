@@ -2002,7 +2002,7 @@ async function initInstance(instanceId) {
                                             parameters: {
                                                 type: "object",
                                                 properties: {
-                                                    date: { type: "string", description: "A data no formato YYYY-MM-DD" },
+                                                    date: { type: "string", description: "Data convertida internamente para YYYY-MM-DD. Aceitar datas em linguagem natural; esclarecer ambiguidades antes de converter." },
                                                     time: { type: "string", description: "O horário no formato HH:MM" },
                                                     type: { type: "string", description: "O tipo do pedido: 'order' (encomenda) ou 'delivery' (entrega)" }
                                                 },
@@ -2023,7 +2023,7 @@ async function initInstance(instanceId) {
                                                     variation: { type: "string", description: "Nome da variacao EXACTA (ex: 'P', 'M', 'Mini'). Nao coloque sabores aqui." },
                                                     subItem: { type: "string", description: "Subvariacao/opcao escolhida dentro da variacao, como Baunilha ou Chocolate. Use exatamente o nome cadastrado." },
                                                     quantity: { type: "string", description: "Peso do bolo (ex: 2kg) ou Quantidade" },
-                                                    scheduledDate: { type: "string", description: "Data do agendamento YYYY-MM-DD" },
+                                                    scheduledDate: { type: "string", description: "Data convertida internamente para YYYY-MM-DD a partir da resposta natural do cliente. Nunca pedir esse formato ao cliente." },
                                                     scheduledTime: { type: "string", description: "Horário do agendamento HH:MM" },
                                                     clientName: { type: "string", description: "Nome do cliente" },
                                                     paymentMethod: { type: "string", description: "Forma de pagamento (ex: Pix e Cartão com link de pagamento e Dinheiro em alguns casos)" },
@@ -2051,7 +2051,7 @@ async function initInstance(instanceId) {
                                                     orderId: { type: "string", description: "Codigo de referencia curto do pedido (ex: FJBIR)" },
                                                     product: { type: "string", description: "Novo produto (opcional)" },
                                                     quantity: { type: "string", description: "Novo peso ou quantidade (opcional)" },
-                                                    scheduledDate: { type: "string", description: "Nova data YYYY-MM-DD (opcional)" },
+                                                    scheduledDate: { type: "string", description: "Nova data (opcional), convertida internamente para YYYY-MM-DD. Nunca pedir esse formato ao cliente." },
                                                     scheduledTime: { type: "string", description: "Novo horário HH:MM (opcional)" },
                                                     notes: { type: "string", description: "Novas observacoes ou mudancas nos sabores (opcional)" },
                                                     carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Nova lista completa de produtos extras." },
