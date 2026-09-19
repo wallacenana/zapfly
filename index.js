@@ -2088,7 +2088,7 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "get_order_catalog",
-                                            description: "OBRIGATORIO: Chame SEMPRE que o cliente pedir cardapio de encomendas, bolos de festa, personalizados ou agendamentos futuros. Proibido listar produtos manualmente.",
+                                            description: "Chame quando o cliente pedir a lista de produtos para encomenda. Nao chame para selecionar produto, tamanho ou opcao, nem para continuar um pedido em andamento.",
                                             parameters: { type: "object", properties: {} }
                                         }
                                     },
@@ -2157,7 +2157,7 @@ async function initInstance(instanceId) {
                                     const lastUserMsg = lastUserMsgContent.toLowerCase();
                                     const deliveryOrderFollowUp = isDeliveryOrderFollowUp(messages, lastUserMsg);
                                     const requestsCatalog = isCatalogRequest(lastUserMsg);
-                                    const selectedProduct = requestsCatalog ? null : await findSelectedProduct(userId, lastUserMsg, deliveryOrderFollowUp);
+                                    const selectedProduct = requestsCatalog ? null : await findSelectedProduct(userId, lastUserMsg, deliveryOrderFollowUp, messages);
                                     if (deliveryOrderFollowUp) messages.push({ role: 'system', content: 'O assunto atual sao os itens de delivery para encomendar. Preserve esse catalogo nas correcoes do cliente; nao mude para bolos de festa nem reenvie a lista sem pedido.' });
                                     if (selectedProduct) messages.push({ role: 'system', content: `O cliente selecionou o produto cadastrado ${JSON.stringify(selectedProduct.name)}. Continue a escolha da proxima opcao ainda nao respondida. Nao envie o catalogo novamente.` });
 
