@@ -200,6 +200,40 @@ function buildOrderTimeOptions(availableSlots) {
   return [...times].sort((a, b) => parseTimeToMinutes(a) - parseTimeToMinutes(b));
 }
 
+function getTimePeriod(time) {
+  const minutes = parseTimeToMinutes(time);
+  if (minutes === null) return null;
+  if (minutes < 12 * 60) return 'manhã';
+  if (minutes < 18 * 60) return 'tarde';
+  return 'noite';
+}
+
+function buildAvailabilityByPeriod(times) {
+  const periods = new Map();
+  const availableTimes = (times || [])
+    .filter(item => item?.available)
+    .map(item => item.time)
+    .filter(time => parseTimeToMinutes(time) !== null)
+    .sort((left, right) => parseTimeToMinutes(left) - parseTimeToMinutes(right));
+
+  for (const time of availableTimes) {
+    const period = getTimePeriod(time);
+    if (!period) continue;
+    const ranges = periods.get(period) || [];
+    const previous = ranges[ranges.length - 1];
+    if (previous && parseTimeToMinutes(time) === parseTimeToMinutes(previous.end) + ORDER_TIME_STEP_MINUTES) {
+      previous.end = time;
+    } else {
+      ranges.push({ start: time, end: time });
+    }
+    periods.set(period, ranges);
+  }
+
+  return ['manhã', 'tarde', 'noite']
+    .filter(period => periods.has(period))
+    .map(period => ({ period, ranges: periods.get(period) }));
+}
+
 function buildDisabledTimes(reason, availableSlots = []) {
   return buildOrderTimeOptions(availableSlots).map(time => ({
     time,
@@ -1060,6 +1094,7 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
         used: totalUsed,
         limit: dailyLimit,
         remaining: Math.max(0, dailyLimit - totalUsed),
+        availabilityByPeriod: buildAvailabilityByPeriod(times),
         times
       };
     }
@@ -2272,4 +2307,4 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 });
 
-module.exports = { router, setupCronJobs, syncCalendarEvents, sendDailyReport, checkAvailability, calculateOrderBreakdown, calculateOrderTotal, resolveEffectivePrice, isSameDayOrderAllowed, updateCalendarEvent };
+module.exports = { router, setupCronJobs, syncCalendarEvents, sendDailyReport, checkAvailability, calculateOrderBreakdown, calculateOrderTotal, resolveEffectivePrice, isSameDayOrderAllowed, buildAvailabilityByPeriod, updateCalendarEvent };

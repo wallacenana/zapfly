@@ -2001,15 +2001,15 @@ async function initInstance(instanceId) {
                                         type: "function",
                                         function: {
                                             name: "check_availability",
-                                            description: "Verifica se ha horarios disponiveis para agendamento em uma data e hora especifica.",
+                                            description: "Verifica disponibilidade de encomenda. Sem time, confirma a data e retorna faixas agrupadas por período; com time, confirma aquele horário específico.",
                                             parameters: {
                                                 type: "object",
                                                 properties: {
                                                     date: { type: "string", description: "Data convertida internamente para YYYY-MM-DD. Aceitar datas em linguagem natural; esclarecer ambiguidades antes de converter." },
-                                                    time: { type: "string", description: "O horário no formato HH:MM" },
+                                                    time: { type: "string", description: "Horário opcional no formato HH:MM" },
                                                     type: { type: "string", description: "O tipo do pedido: 'order' (encomenda) ou 'delivery' (entrega)" }
                                                 },
-                                                required: ["date", "time", "type"]
+                                                required: ["date", "type"]
                                             }
                                         }
                                     },
