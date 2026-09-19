@@ -2012,6 +2012,22 @@ async function initInstance(instanceId) {
                                     {
                                         type: "function",
                                         function: {
+                                            name: "calculate_order_total",
+                                            description: "OBRIGATORIO antes de mostrar resumo ou total ao cliente. Calcula o total real no backend usando produto, variacao, subitem, adicionais e frete. Nunca calcule mentalmente.",
+                                            parameters: {
+                                                type: "object",
+                                                properties: {
+                                                    productId: { type: "string" }, product: { type: "string" }, variation: { type: "string" }, subItem: { type: "string" }, quantity: { type: "string", default: "1" },
+                                                    addons: { type: "array", items: { type: "object", properties: { groupId: { type: "string" }, groupName: { type: "string" }, name: { type: "string" }, price: { type: "number" }, quantity: { type: "number", default: 1 } } } },
+                                                    carrinho_itens_extras: { type: "array", items: { type: "object" } }, deliveryFee: { type: "number" }
+                                                },
+                                                required: ["product"]
+                                            }
+                                        }
+                                    },
+                                    {
+                                        type: "function",
+                                        function: {
                                             name: "create_order",
                                             description: "Cria um novo pedido e gera o link de pagamento. REGRAS CRITICAS: Nao crie pedidos duplicados; para corrigir um pedido existente use update_order. Para encomendas (type order), use SOMENTE apos item, variacao, data e horario disponiveis, adicionais/opcoes cadastrados, nome, resumo e confirmacao. Para delivery (type delivery), e para hoje: nao solicite data ou horario; colete item, variacao, adicionais/opcoes, nome/endereco quando necessario, resumo e confirmacao. Escolher produto ou opcao nao e confirmacao final. Nao invente etapas de massa ou recheio. Colete uma etapa por mensagem.",
                                             parameters: {
@@ -2277,6 +2293,14 @@ async function initInstance(instanceId) {
 
                                                     result = `${feeLabel}: R$ ${feeValue.toFixed(2)}. ${canCash ? 'DINHEIRO LIBERADO' : 'APENAS PIX/CARTAO (Link)'}`;
                                                 }
+                                            }
+                                            else if (functionName === "calculate_order_total") {
+                                                const { calculateOrderTotal } = require('./routes/orders');
+                                                const totalValue = await calculateOrderTotal({
+                                                    ...args,
+                                                    deliveryFee: args.deliveryFee ?? lastDeliveryFee
+                                                }, userId);
+                                                result = { totalValue, currency: 'BRL', message: 'Use este total exatamente no resumo para o cliente.' };
                                             }
                                             else if (functionName === "create_order") {
                                                 // Notes are now kept clean, cake details passed as separate fields
