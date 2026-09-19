@@ -712,6 +712,14 @@ async function deleteCalendarEvent(userId, calendarEventId) {
 }
 
 
+function resolveEffectivePrice(item, fallback = 0) {
+  const fallbackPrice = Number(fallback) || 0;
+  const basePrice = Number(item?.price);
+  const price = Number.isFinite(basePrice) && basePrice > 0 ? basePrice : fallbackPrice;
+  const promoPrice = Number(item?.promoPrice);
+  return Number.isFinite(promoPrice) && promoPrice > 0 && promoPrice < price ? promoPrice : price;
+}
+
 // Helper para calcular o total do pedido com inteligência (storefront + IA)
 async function calculateOrderTotal(data, userId) {
   let computedTotalValue = parseFloat(data.totalValue);
@@ -731,33 +739,45 @@ async function calculateOrderTotal(data, userId) {
   if (productId) {
     const p = await prisma.product.findUnique({ where: { id: productId } });
     if (p) {
-      mainProductPrice = p.price;
+      mainProductPrice = resolveEffectivePrice(p);
       if (variation && p.variations) {
         try {
           const vars = typeof p.variations === 'string' ? JSON.parse(p.variations) : p.variations;
           const vObj = vars.find(v => v.name === variation);
-          if (vObj && vObj.price !== undefined) {
+          if (vObj) {
             const selectedSubItem = Array.isArray(vObj.subItems)
               ? vObj.subItems.find(item => String(item?.name || '') === String(subItem || ''))
               : null;
-            mainProductPrice = selectedSubItem?.price !== undefined ? selectedSubItem.price : vObj.price;
+            mainProductPrice = resolveEffectivePrice(selectedSubItem, resolveEffectivePrice(vObj, mainProductPrice));
           }
         } catch (e) { }
       }
     }
   } else if (product) {
-    const p = await prisma.product.findFirst({ where: { userId, name: { contains: product, mode: 'insensitive' } } });
+    const normalizeProductName = (value) => String(value || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+    const requestedName = normalizeProductName(product);
+    const products = await prisma.product.findMany({ where: { userId } });
+    const p = products.find(candidate => {
+      const candidateName = normalizeProductName(candidate.name);
+      return candidateName === requestedName
+        || candidateName.includes(requestedName)
+        || requestedName.includes(candidateName);
+    });
     if (p) {
-      mainProductPrice = p.price;
+      mainProductPrice = resolveEffectivePrice(p);
       if (variation && p.variations) {
         try {
           const vars = typeof p.variations === 'string' ? JSON.parse(p.variations) : p.variations;
           const vObj = vars.find(v => v.name === variation);
-          if (vObj && vObj.price !== undefined) {
+          if (vObj) {
             const selectedSubItem = Array.isArray(vObj.subItems)
               ? vObj.subItems.find(item => String(item?.name || '') === String(subItem || ''))
               : null;
-            mainProductPrice = selectedSubItem?.price !== undefined ? selectedSubItem.price : vObj.price;
+            mainProductPrice = resolveEffectivePrice(selectedSubItem, resolveEffectivePrice(vObj, mainProductPrice));
           }
         } catch (e) { }
       }
@@ -2225,4 +2245,4 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 });
 
-module.exports = { router, setupCronJobs, syncCalendarEvents, sendDailyReport, checkAvailability, calculateOrderTotal, updateCalendarEvent };
+module.exports = { router, setupCronJobs, syncCalendarEvents, sendDailyReport, checkAvailability, calculateOrderTotal, resolveEffectivePrice, updateCalendarEvent };
