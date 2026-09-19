@@ -721,11 +721,12 @@ function resolveEffectivePrice(item, fallback = 0) {
 }
 
 // Helper para calcular o total do pedido com inteligência (storefront + IA)
-async function calculateOrderTotal(data, userId) {
-  let computedTotalValue = parseFloat(data.totalValue);
-  if (!isNaN(computedTotalValue)) return Math.max(0, computedTotalValue);
+async function calculateOrderBreakdown(data, userId) {
+  const providedTotal = parseFloat(data.totalValue);
+  if (!isNaN(providedTotal)) {
+    return { productTotal: 0, extrasTotal: 0, addonsTotal: 0, deliveryFee: 0, total: Math.max(0, providedTotal) };
+  }
 
-  computedTotalValue = 0;
   let mainProductPrice = 0;
 
   const productId = data.productId;
@@ -785,34 +786,48 @@ async function calculateOrderTotal(data, userId) {
   }
 
   const mainQty = parseFloat(quantity) || 1;
-  computedTotalValue += (mainProductPrice * mainQty);
+  const productTotal = mainProductPrice * mainQty;
+  let extrasTotal = 0;
 
   if (carrinho_itens_extras && Array.isArray(carrinho_itens_extras)) {
     for (const item of carrinho_itens_extras) {
       if (typeof item === 'object' && item !== null) {
         let itemPrice = parseFloat(item.price) || 0;
         let itemQty = parseFloat(item.quantity) || 1;
-        computedTotalValue += (itemPrice * itemQty);
+        extrasTotal += (itemPrice * itemQty);
       } else if (typeof item === 'string') {
-        const extraP = await prisma.product.findFirst({ where: { userId, name: { contains: item, mode: 'insensitive' } } });
-        if (extraP) computedTotalValue += extraP.price;
+        const normalizedItem = String(item).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        const products = await prisma.product.findMany({ where: { userId } });
+        const extraP = products.find(candidate => String(candidate.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().includes(normalizedItem));
+        if (extraP) extrasTotal += resolveEffectivePrice(extraP);
       }
     }
   }
 
   const addonItems = safeJsonParse(data.addons, []);
+  let addonsTotal = 0;
   if (Array.isArray(addonItems)) {
     for (const item of addonItems) {
       if (typeof item === 'object' && item !== null) {
         const itemPrice = parseFloat(item.price) || 0;
         const itemQty = parseFloat(item.quantity) || 1;
-        computedTotalValue += (itemPrice * itemQty);
+        addonsTotal += (itemPrice * itemQty);
       }
     }
   }
 
-  computedTotalValue += (parseFloat(deliveryFee) || 0);
-  return computedTotalValue;
+  const normalizedDeliveryFee = parseFloat(deliveryFee) || 0;
+  return {
+    productTotal,
+    extrasTotal,
+    addonsTotal,
+    deliveryFee: normalizedDeliveryFee,
+    total: productTotal + extrasTotal + addonsTotal + normalizedDeliveryFee
+  };
+}
+
+async function calculateOrderTotal(data, userId) {
+  return (await calculateOrderBreakdown(data, userId)).total;
 }
 
 // ─── MERCADO PAGO ───────────────────────────────────────────────────────────
@@ -2245,4 +2260,4 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 });
 
-module.exports = { router, setupCronJobs, syncCalendarEvents, sendDailyReport, checkAvailability, calculateOrderTotal, resolveEffectivePrice, updateCalendarEvent };
+module.exports = { router, setupCronJobs, syncCalendarEvents, sendDailyReport, checkAvailability, calculateOrderBreakdown, calculateOrderTotal, resolveEffectivePrice, updateCalendarEvent };

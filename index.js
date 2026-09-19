@@ -2307,9 +2307,9 @@ async function initInstance(instanceId) {
                                                         });
                                                         deliveryFee = lastDeliveryFee || customer?.lastDeliveryFee || 0;
                                                     }
-                                                    const { calculateOrderTotal } = require('./routes/orders');
-                                                    const totalValue = await calculateOrderTotal({ ...args, deliveryFee }, userId);
-                                                    result = { success: true, totalValue, currency: 'BRL', message: 'Use este total exatamente no resumo para o cliente.' };
+                                                    const { calculateOrderBreakdown } = require('./routes/orders');
+                                                    const breakdown = await calculateOrderBreakdown({ ...args, deliveryFee }, userId);
+                                                    result = { success: true, ...breakdown, currency: 'BRL', message: 'Use estes valores exatamente no resumo para o cliente.' };
                                                 } catch (error) {
                                                     console.error(`[AI][CALCULATE_ORDER_TOTAL_ERROR] instance=${instanceId} jid=${jid} message=${error.message}`);
                                                     result = { success: false, error: 'Não foi possível calcular o total agora. Não apresente resumo nem valor; informe a falha ao cliente.' };
