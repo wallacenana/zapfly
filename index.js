@@ -1915,8 +1915,7 @@ async function initInstance(instanceId) {
                         let flowHandled = false;
                         if (!msg.key.fromMe && currentChat?.aiEnabled) {
                             const greeted = await ensureRestaurantGreeting(sock, instanceId, jid, userId);
-                            if (combinedImages.length === 0 && isSimpleGreeting(textForFlow)) {
-                                if (!greeted) await sock.sendMessage(jid, { text: 'Oi! Como posso ajudar?' });
+                            if (greeted && combinedImages.length === 0 && isSimpleGreeting(textForFlow)) {
                                 return;
                             }
                             flowHandled = await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages, userId);
