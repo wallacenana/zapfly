@@ -42,7 +42,7 @@ const prisma = require('./lib/prisma');
 const { calculateFee } = require('./lib/maps');
 const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock, getDeliveryCatalog, getOrderCatalog } = require('./lib/utils');
 const { ensureRestaurantGreeting, getClosedDeliveryMessage, isSimpleGreeting } = require('./lib/utils');
-const { isDeliveryOrderFollowUp, isCatalogRequest, findSelectedProduct } = require('./lib/utils');
+const { isDeliveryOrderFollowUp, isCatalogRequest, isFinalOrderConfirmation, findSelectedProduct } = require('./lib/utils');
 const { initFlows, handleFlows, runFlowNode, startFlowMonitor } = require('./lib/flows');
 const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODEL_MAP } = require('./lib/ai');
 const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
@@ -2052,7 +2052,7 @@ async function initInstance(instanceId) {
                                                     carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Produtos ADICIONAIS. IMPORTANTE: Para Kits/Combos, NAO coloque aqui os itens que ja fazem parte do kit, senao o cliente sera cobrado em dobro. Use apenas para itens extras comprados a parte." },
                                                     notes: { type: "string", description: "Outras observações gerais" }
                                                 },
-                                                required: ["product", "paymentMethod"],
+                                                required: ["product"],
                                             },
                                         },
                                     },
@@ -2174,6 +2174,7 @@ async function initInstance(instanceId) {
                                     const lastUserMsg = lastUserMsgContent.toLowerCase();
                                     const deliveryOrderFollowUp = isDeliveryOrderFollowUp(messages, lastUserMsg);
                                     const requestsCatalog = isCatalogRequest(lastUserMsg);
+                                    const finalOrderConfirmed = isFinalOrderConfirmation(messages, lastUserMsg);
                                     const selectedProduct = requestsCatalog ? null : await findSelectedProduct(userId, lastUserMsg, deliveryOrderFollowUp, messages);
                                     if (deliveryOrderFollowUp) messages.push({ role: 'system', content: 'O assunto atual sao os itens de delivery para encomendar. Preserve esse catalogo nas correcoes do cliente; nao mude para bolos de festa nem reenvie a lista sem pedido.' });
                                     if (selectedProduct) messages.push({ role: 'system', content: `O cliente selecionou o produto cadastrado ${JSON.stringify(selectedProduct.name)}. Continue a escolha da proxima opcao ainda nao respondida. Nao envie o catalogo novamente.` });
@@ -2196,7 +2197,9 @@ async function initInstance(instanceId) {
 
                                     let forcedToolChoice = "auto";
 
-                                    if (isOrderCatalogRequest || (deliveryOrderFollowUp && requestsCatalog)) {
+                                    if (finalOrderConfirmed) {
+                                        forcedToolChoice = { type: "function", function: { name: "create_order" } };
+                                    } else if (isOrderCatalogRequest || (deliveryOrderFollowUp && requestsCatalog)) {
                                         forcedToolChoice = { type: "function", function: { name: "get_order_catalog" } };
                                     } else if (isDeliveryRequest && !isOrderRequest) {
                                         forcedToolChoice = { type: "function", function: { name: "get_delivery_catalog" } };

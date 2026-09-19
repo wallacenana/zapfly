@@ -22,7 +22,7 @@ const context = {
 };
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../lib/utils.js'), 'utf8'), context);
-const { findSelectedProduct, isCatalogRequest } = context.module.exports;
+const { findSelectedProduct, isCatalogRequest, isFinalOrderConfirmation } = context.module.exports;
 const history = [{ role: 'assistant', content: 'Qual tamanho do Vulcao voce quer? Mini: R$ 18.00; P: R$ 25.00' }];
 
 test('recognizes product names with descriptive prefixes', async () => {
@@ -51,4 +51,12 @@ test('ignores hidden and unknown options and preserves catalog requests', async 
         assert.equal(await findSelectedProduct('u', reply, true, history), null);
     }
     assert.equal(isCatalogRequest('me manda o cardapio novamente'), true);
+});
+
+test('recognizes only an explicit response to the final order confirmation', () => {
+    const finalSummary = [{ role: 'assistant', content: 'Total: R$ 40,00. Por favor, confirme se posso prosseguir com o pedido.' }];
+    assert.equal(isFinalOrderConfirmation(finalSummary, 'sim'), true);
+    assert.equal(isFinalOrderConfirmation(finalSummary, 'pode prosseguir'), true);
+    assert.equal(isFinalOrderConfirmation([{ role: 'assistant', content: 'Você confirma a entrega neste endereço?' }], 'sim'), false);
+    assert.equal(isFinalOrderConfirmation(finalSummary, 'quero alterar'), false);
 });
