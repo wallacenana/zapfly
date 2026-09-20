@@ -694,7 +694,10 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
 
   const product = String(order.product || 'seu pedido').replace(/\s*\[[^\]]+\]\s*$/, '').trim();
   const orderId = String(order.id || '').slice(-4).toUpperCase();
-  const statusIcon = isDelivery && String(status || '').toLowerCase() === 'ready' ? '🚚' : '✅';
+  const normalizedStatus = String(status || '').toLowerCase();
+  const statusIcon = normalizedStatus === 'cancelled'
+    ? '❌'
+    : (isDelivery && normalizedStatus === 'ready' ? '🚚' : '✅');
   let message = `${statusIcon} *${messageData[0]}* (#${orderId})
 
 Olá, *${order.clientName || 'cliente'}*! ${messageData[1]}
@@ -702,7 +705,7 @@ Pedido de *${product}*.
 
 Se precisar, pode me perguntar aqui mais informações sobre o pedido.`;
 
-  if (String(status || '').toLowerCase() === 'accepted' && !isDelivery) {
+  if (normalizedStatus === 'accepted' && !isDelivery) {
     const settings = await getSettings(order.userId).catch(() => null);
     const reminderHours = Math.max(1, Number(settings?.reminderHours) || 2);
     const reminderLabel = `${reminderHours} ${reminderHours === 1 ? 'hora' : 'horas'}`;
