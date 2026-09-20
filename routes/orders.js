@@ -2467,7 +2467,7 @@ router.patch('/:id', authenticate, async (req, res) => {
 
     // 4. Regenerar link de pagamento se não for em dinheiro e o valor for maior que 0
     const isCashPayment = String(order.paymentMethod || '').trim().toLowerCase() === 'dinheiro';
-    const changesPayment = Object.keys(updateData).some((key) => !['status', 'reminderSent'].includes(key));
+    const changesPayment = Object.keys(updateData).some((key) => !['status', 'reminderSent', 'paymentStatus'].includes(key));
     if (!isCancellation && !isCashPayment && order.totalValue > 0 && changesPayment) {
       const paymentLink = await createPaymentLink(order, settings);
       if (paymentLink) {

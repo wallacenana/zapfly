@@ -189,6 +189,15 @@ const getOrderItems = (order) => {
   }];
 };
 
+const hasAcceptedPendingPayment = (order) => {
+  const paymentStatus = String(order?.paymentStatus || '').trim().toLowerCase();
+  const paymentMethod = String(order?.paymentMethod || '').trim().toLowerCase();
+  const isCashPayment = ['dinheiro', 'cash'].includes(paymentMethod);
+  return String(order?.status || '').toLowerCase() === 'accepted'
+    && !isCashPayment
+    && paymentStatus !== 'confirmed';
+};
+
 const Production = () => {
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
@@ -453,6 +462,7 @@ const Production = () => {
     const quantity = orderItems.reduce((sum, item) => sum + (Number(item.quantity) || 1), 0);
     const freightValue = order.deliveryFee || 0;
     const isCashPayment = ['dinheiro', 'cash'].includes(String(order.paymentMethod || '').trim().toLowerCase());
+    const acceptedWithoutPayment = hasAcceptedPendingPayment(order);
     const displayParts = getPrintableOrderParts(order);
     // Pega o preço real do produto ou calcula dinamicamente subtraindo a taxa de entrega, com fallback seguro
     const unitPrice = Number(orderItems[0]?.price) || 0;
@@ -722,6 +732,21 @@ const Production = () => {
           };
         });
 
+        const markPaymentButton = document.getElementById('btn-mark-payment-received');
+        if (markPaymentButton) {
+          markPaymentButton.onclick = async () => {
+            markPaymentButton.disabled = true;
+            try {
+              await api.patch(`/orders/${order.id}`, { paymentStatus: 'confirmed' });
+              setOrders(current => current.map(item => item.id === order.id ? { ...item, paymentStatus: 'confirmed' } : item));
+              Swal.fire({ title: 'Pagamento registrado', text: 'O pedido foi marcado como pago.', icon: 'success', timer: 1800, showConfirmButton: false });
+            } catch (error) {
+              markPaymentButton.disabled = false;
+              Swal.fire('Erro', 'Não foi possível registrar o pagamento.', 'error');
+            }
+          };
+        }
+
         const actionBtn = document.getElementById('btn-action-next');
         if (actionBtn) {
           actionBtn.onclick = () => {
@@ -818,9 +843,9 @@ const Production = () => {
             </div>
             <div style="background: #f8fafc; padding: 12px; border-radius: 12px; border: 1px solid rgba(15,23,42,0.08);">
               <div style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">💰 Pagamento</div>
-              <div style="background: #fbbf24; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 900; display: inline-block; margin-top: 2px;">
-                ${order.paymentMethod || 'A COMBINAR'}
-              </div>
+              ${acceptedWithoutPayment
+                ? `<div style="background: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 900; display: inline-block; margin-top: 2px;">⚠️ ACEITO SEM PAGAMENTO</div><div style="font-size: 11px; color: #64748b; margin-top: 5px;">${order.paymentMethod || 'A COMBINAR'}</div>`
+                : `<div style="background: #fbbf24; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 900; display: inline-block; margin-top: 2px;">${order.paymentMethod || 'A COMBINAR'}</div>`}
             </div>
           </div>
 
@@ -839,6 +864,7 @@ const Production = () => {
           </div>
 
           <div style="display: flex; gap: 10px;">
+            ${acceptedWithoutPayment ? '<button id="btn-mark-payment-received" style="flex: 1; background: #16a34a; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">MARCAR COMO PAGO</button>' : ''}
             ${actionBtnHtml}
           </div>
         </div>
@@ -1105,7 +1131,7 @@ const KanbanColumn = ({ col, orders, updateStatus, openDetails, height = '100%' 
               backgroundColor: 'var(--bg-secondary)',
               padding: '12px',
               borderRadius: '12px',
-              border: '1px solid var(--border-color)',
+              border: hasAcceptedPendingPayment(order) ? '1px solid #f97316' : '1px solid var(--border-color)',
               boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
               cursor: 'pointer',
               textAlign: 'center',
@@ -1153,6 +1179,11 @@ const KanbanColumn = ({ col, orders, updateStatus, openDetails, height = '100%' 
               <Clock size={10} />
               {order.scheduledTime}
             </div>
+            {hasAcceptedPendingPayment(order) && (
+              <div style={{ marginTop: '7px', padding: '3px 6px', borderRadius: '5px', background: '#fff7ed', color: '#c2410c', fontSize: '9px', fontWeight: 900 }}>
+                ⚠️ SEM PAGAMENTO
+              </div>
+            )}
           </div>
         ))}
 
