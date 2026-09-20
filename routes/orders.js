@@ -2292,6 +2292,7 @@ router.patch('/:id', authenticate, async (req, res) => {
     const updateData = { ...req.body };
     delete updateData.id;
     delete updateData.userId;
+    delete updateData.orderId;
 
     console.log('[Orders][UPDATE_INPUT]', JSON.stringify({ id, internal: !!req.user?.internal, userId, payload: updateData }));
     if (req.user?.internal) delete updateData.totalValue;
@@ -2389,6 +2390,7 @@ router.patch('/:id', authenticate, async (req, res) => {
 
     res.json(order);
   } catch (err) {
+    console.error('[Orders][UPDATE_ERROR]', JSON.stringify({ id, message: err.message, code: err.code }));
     res.status(500).json({ error: err.message });
   }
 });
