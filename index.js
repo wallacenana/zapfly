@@ -229,6 +229,41 @@ const productStorage = multer.diskStorage({
 });
 const uploadProduct = multer({ storage: productStorage });
 
+function getIncomingImageMimeType(message) {
+    return message?.message?.imageMessage?.mimetype
+        || message?.message?.viewOnceMessageV2?.message?.imageMessage?.mimetype
+        || message?.message?.viewOnceMessage?.message?.imageMessage?.mimetype
+        || message?.message?.documentMessage?.mimetype
+        || '';
+}
+
+function isIncomingImage(message) {
+    const mimeType = getIncomingImageMimeType(message);
+    return Boolean(message?.message?.imageMessage
+        || message?.message?.viewOnceMessageV2?.message?.imageMessage
+        || message?.message?.viewOnceMessage?.message?.imageMessage
+        || mimeType.startsWith('image/'));
+}
+
+async function saveIncomingOrderImage(message) {
+    if (message?.key?.fromMe || !isIncomingImage(message)) return null;
+
+    try {
+        const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+        const buffer = await downloadMediaMessage(message, 'buffer', {});
+        const extension = String(getIncomingImageMimeType(message).split('/')[1] || 'jpg').replace(/[^a-z0-9]/gi, '') || 'jpg';
+        const directory = path.join(__dirname, 'assets', 'order-references');
+        await fs.promises.mkdir(directory, { recursive: true });
+        const filename = `reference-${Date.now()}-${crypto.randomUUID()}.${extension}`;
+        await fs.promises.writeFile(path.join(directory, filename), buffer);
+        const baseUrl = String(process.env.FILES_URL || process.env.PUBLIC_URL || '').replace(/\/$/, '');
+        return baseUrl ? `${baseUrl}/order-references/${filename}` : `/assets/order-references/${filename}`;
+    } catch (error) {
+        console.error('[Order Attachments] Falha ao salvar imagem recebida:', error.message);
+        return null;
+    }
+}
+
 
 // Prisma singleton is now loaded from lib/prisma.js
 
@@ -1795,6 +1830,7 @@ async function initInstance(instanceId) {
                     }
                 }
 
+                const mediaUrl = await saveIncomingOrderImage(msg);
                 const data = {
                     msgId: msg.key.id,
                     instanceId,
@@ -1806,6 +1842,7 @@ async function initInstance(instanceId) {
                     quotedText: msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.conversation ||
                         msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.extendedTextMessage?.text || null,
                     quotedParticipant: msg.message?.extendedTextMessage?.contextInfo?.participant || null,
+                    mediaUrl,
                     timestamp: new Date(msg.messageTimestamp * 1000),
                     status: msg.key.fromMe ? 'sent' : 'received'
                 };

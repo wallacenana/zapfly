@@ -72,6 +72,14 @@ const getOrderSelectionRows = (order) => {
     (Array.isArray(addons) ? addons : []).forEach(addon => addRow(addon.groupName || 'Opção', addon.name, addon.isAttachment, addon.isCustomField));
   } catch (e) { }
 
+  try {
+    const customFields = typeof order.customFields === 'string' ? JSON.parse(order.customFields) : order.customFields;
+    (Array.isArray(customFields) ? customFields : []).forEach(field => {
+      const value = field?.type === 'image' ? JSON.stringify(field.urls || []) : field?.value;
+      addRow(field?.name, value, field?.type === 'image', true);
+    });
+  } catch (e) { }
+
   if (!rows.length) {
     productParts.extras.forEach(extra => {
       const separator = extra.indexOf(':');

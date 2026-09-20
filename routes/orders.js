@@ -158,6 +158,57 @@ function isDateBeforeToday(dateStr) {
   return dateStr < getBrazilDateString();
 }
 
+function normalizeCatalogName(value) {
+  return String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+async function buildOrderCustomFields({ userId, productId, productName, notes, clientJid, instanceId }) {
+  let product = productId
+    ? await prisma.product.findFirst({ where: { id: productId, userId }, select: { customFields: true } })
+    : null;
+  if (!product && productName) {
+    const normalizedName = normalizeCatalogName(productName);
+    const products = await prisma.product.findMany({ where: { userId }, select: { name: true, customFields: true } });
+    product = products.find(item => normalizeCatalogName(item.name) === normalizedName) || null;
+  }
+
+  const definitions = safeJsonParse(product?.customFields, []);
+  if (!Array.isArray(definitions) || !definitions.length || !notes) return null;
+
+  const noteParts = String(notes).split(/\s*\|\s*/);
+  const fields = [];
+  for (const definition of definitions) {
+    const name = String(definition?.name || '').trim();
+    if (!name) continue;
+    const note = noteParts.find(part => part.toLowerCase().startsWith(`${name.toLowerCase()}:`));
+    if (!note) continue;
+    const value = note.slice(note.indexOf(':') + 1).trim();
+    const type = String(definition?.type || 'text').toLowerCase();
+
+    if (type !== 'image') {
+      fields.push({ name, type, value });
+      continue;
+    }
+
+    const requestedCount = Number(value.match(/\d+/)?.[0] || 0);
+    if (!requestedCount || !clientJid || !instanceId) continue;
+    const messages = await prisma.message.findMany({
+      where: { instanceId, jid: clientJid, fromMe: false, mediaUrl: { not: null } },
+      orderBy: { timestamp: 'desc' },
+      take: requestedCount,
+      select: { mediaUrl: true }
+    });
+    const urls = messages.reverse().map(message => message.mediaUrl).filter(Boolean);
+    fields.push({ name, type: 'image', urls });
+  }
+
+  return fields.length ? JSON.stringify(fields) : null;
+}
+
 function isSameDayOrderAllowed(settings, date, type = 'order') {
   return type !== 'order'
     || date !== getBrazilDateString()
@@ -763,9 +814,6 @@ function resolveEffectivePrice(item, fallback = 0) {
 // Helper para calcular o total do pedido com inteligência (storefront + IA)
 async function calculateOrderBreakdown(data, userId) {
   const providedTotal = parseFloat(data.totalValue);
-  if (!isNaN(providedTotal)) {
-    return { productTotal: 0, extrasTotal: 0, addonsTotal: 0, deliveryFee: 0, total: Math.max(0, providedTotal) };
-  }
 
   let mainProductPrice = 0;
 
@@ -857,6 +905,11 @@ async function calculateOrderBreakdown(data, userId) {
   }
 
   const normalizedDeliveryFee = parseFloat(deliveryFee) || 0;
+  // A IA nunca define o valor: use o total informado apenas para pedidos manuais
+  // sem produto identificável no catálogo.
+  if (mainProductPrice <= 0 && !isNaN(providedTotal)) {
+    return { productTotal: 0, extrasTotal: 0, addonsTotal: 0, deliveryFee: 0, total: Math.max(0, providedTotal) };
+  }
   return {
     productTotal,
     extrasTotal,
@@ -1518,6 +1571,14 @@ router.post('/', async (req, res) => {
     });
 
     const computedTotal = await calculateOrderTotal(req.body, userId);
+    const customFields = await buildOrderCustomFields({
+      userId,
+      productId,
+      productName: product,
+      notes,
+      clientJid: finalClientJid,
+      instanceId: instanceId || 'global'
+    });
 
     let fallbackTime = '00:00';
     try {
@@ -1545,6 +1606,7 @@ router.post('/', async (req, res) => {
       deliveryFee: parseFloat(deliveryFee) || 0,
       totalValue: computedTotal,
       addons: addons || null,
+      customFields,
       cartItems: Array.isArray(cartItems) ? JSON.stringify(cartItems) : null,
       // Pedido público só entra na operação depois da confirmação do pagamento.
       status: isManual ? 'accepted' : (isCashPayment ? 'pending' : 'waiting_payment'),
@@ -1557,13 +1619,14 @@ router.post('/', async (req, res) => {
       order = await prisma.order.create({ data: orderData });
     } catch (createError) {
       // Compatibilidade durante o deploy: permite criar pedidos enquanto a
-      // coluna cartItems ainda nao foi aplicada no banco de producao.
-      const cartItemsUnavailable = createError?.code === 'P2022'
-        || /Unknown argument `cartItems`|column `cartItems` does not exist/i.test(String(createError?.message || ''));
-      if (!cartItemsUnavailable) throw createError;
-      console.warn('[Orders] Coluna cartItems ausente; criando pedido sem carrinho completo. Aplique prisma migrate deploy.');
+      // colunas novas ainda nao foram aplicadas no banco de producao.
+      const unavailableColumns = createError?.code === 'P2022'
+        || /Unknown argument `(cartItems|customFields)`|column `(cartItems|customFields)` does not exist/i.test(String(createError?.message || ''));
+      if (!unavailableColumns) throw createError;
+      console.warn('[Orders] Colunas novas ausentes; criando pedido em modo de compatibilidade. Aplique prisma migrate deploy.');
       const legacyOrderData = { ...orderData };
       delete legacyOrderData.cartItems;
+      delete legacyOrderData.customFields;
       // Usa um campo legado existente para nao perder os demais itens durante
       // o periodo em que a migracao ainda nao foi aplicada.
       legacyOrderData.addons = JSON.stringify({
