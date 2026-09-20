@@ -114,6 +114,26 @@ function getBrazilDateString(date = new Date()) {
   return `${parts.year}-${parts.month}-${parts.day}`;
 }
 
+function formatScheduledDateForCustomer(dateStr) {
+  if (typeof dateStr !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return 'a data combinada';
+
+  const date = new Date(`${dateStr}T12:00:00-03:00`);
+  if (Number.isNaN(date.getTime())) return 'a data combinada';
+
+  const formatted = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: SCHEDULING_TIME_ZONE,
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  }).format(date);
+  const today = getBrazilDateString();
+  const tomorrow = getBrazilDateString(new Date(Date.now() + (24 * 60 * 60 * 1000)));
+
+  if (dateStr === today) return `hoje (${formatted})`;
+  if (dateStr === tomorrow) return `amanhã (${formatted})`;
+  return formatted;
+}
+
 function getBrazilTimeString(date = new Date()) {
   const parts = new Intl.DateTimeFormat('en-GB', {
     timeZone: SCHEDULING_TIME_ZONE,
@@ -656,12 +676,31 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
   const product = String(order.product || 'seu pedido').replace(/\s*\[[^\]]+\]\s*$/, '').trim();
   const orderId = String(order.id || '').slice(-4).toUpperCase();
   const statusIcon = isDelivery && String(status || '').toLowerCase() === 'ready' ? '🚚' : '✅';
-  const message = `${statusIcon} *${messageData[0]}* (#${orderId})
+  let message = `${statusIcon} *${messageData[0]}* (#${orderId})
 
 Olá, *${order.clientName || 'cliente'}*! ${messageData[1]}
 Pedido de *${product}*.
 
 Se precisar, pode me perguntar aqui mais informações sobre o pedido.`;
+
+  if (String(status || '').toLowerCase() === 'accepted' && !isDelivery) {
+    const settings = await getSettings(order.userId).catch(() => null);
+    const reminderHours = Math.max(1, Number(settings?.reminderHours) || 2);
+    const reminderLabel = `${reminderHours} ${reminderHours === 1 ? 'hora' : 'horas'}`;
+    const scheduledDay = formatScheduledDateForCustomer(order.scheduledDate);
+    const scheduledTime = String(order.scheduledTime || '').trim();
+    const itemDescription = [product, order.variation].filter(Boolean).join(' - ');
+
+    message = `✅ *Pedido de encomenda aceito!* (#${orderId})
+
+Olá, *${order.clientName || 'cliente'}*! Sua encomenda para *${scheduledDay}*${scheduledTime ? `, às *${scheduledTime}*` : ''} foi aceita.
+
+Seu pedido é *${itemDescription || 'a encomenda solicitada'}*.
+
+Não se preocupe, já está tudo certo. Vamos enviar uma mensagem *${reminderLabel} antes* do horário agendado para confirmar que continua tudo bem.
+
+Se quiser mais informações ou precisar fazer alguma alteração, é só falar comigo por aqui. Vamos resolver qualquer necessidade do seu pedido.`;
+  }
   await sock.sendMessage(jid, { text: message });
   console.log(`[WhatsApp] Aviso de status ${status} enviado para ${jid} (pedido ${order.id}).`);
 }
