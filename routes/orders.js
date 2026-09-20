@@ -2334,6 +2334,31 @@ router.patch('/:id', authenticate, async (req, res) => {
       updateData.reminderSent = false;
     }
 
+    // A IA atualiza o pedido à medida que coleta os dados. Reconstroi os campos
+    // extras aqui para vincular as imagens recebidas pelo WhatsApp ao pedido.
+    if (Object.prototype.hasOwnProperty.call(updateData, 'notes')
+      || Object.prototype.hasOwnProperty.call(updateData, 'product')
+      || Object.prototype.hasOwnProperty.call(updateData, 'productId')) {
+      const customFields = await buildOrderCustomFields({
+        userId,
+        productId: updateData.productId || existing.productId,
+        productName: updateData.product || existing.product,
+        notes: updateData.notes ?? existing.notes,
+        clientJid: existing.clientJid,
+        instanceId: existing.instanceId || 'global'
+      });
+      if (customFields) updateData.customFields = customFields;
+      console.log('[Orders][UPDATE_ATTACHMENTS]', JSON.stringify({
+        id,
+        rebuilt: !!customFields,
+        fields: customFields ? safeJsonParse(customFields, []).map(field => ({
+          name: field.name,
+          type: field.type,
+          attachments: Array.isArray(field.urls) ? field.urls.length : 0
+        })) : []
+      }));
+    }
+
     // 1. Atualizar o pedido principal com o payload recebido
     let order = await prisma.order.update({
       where: { id },

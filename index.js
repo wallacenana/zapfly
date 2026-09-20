@@ -229,37 +229,58 @@ const productStorage = multer.diskStorage({
 });
 const uploadProduct = multer({ storage: productStorage });
 
+function getIncomingMessageContent(message) {
+    let content = message?.message || {};
+    while (content?.ephemeralMessage?.message) content = content.ephemeralMessage.message;
+    return content;
+}
+
 function getIncomingImageMimeType(message) {
-    return message?.message?.imageMessage?.mimetype
-        || message?.message?.viewOnceMessageV2?.message?.imageMessage?.mimetype
-        || message?.message?.viewOnceMessage?.message?.imageMessage?.mimetype
-        || message?.message?.documentMessage?.mimetype
+    const content = getIncomingMessageContent(message);
+    return content?.imageMessage?.mimetype
+        || content?.viewOnceMessageV2?.message?.imageMessage?.mimetype
+        || content?.viewOnceMessage?.message?.imageMessage?.mimetype
+        || content?.documentMessage?.mimetype
         || '';
 }
 
 function isIncomingImage(message) {
+    const content = getIncomingMessageContent(message);
     const mimeType = getIncomingImageMimeType(message);
-    return Boolean(message?.message?.imageMessage
-        || message?.message?.viewOnceMessageV2?.message?.imageMessage
-        || message?.message?.viewOnceMessage?.message?.imageMessage
+    return Boolean(content?.imageMessage
+        || content?.viewOnceMessageV2?.message?.imageMessage
+        || content?.viewOnceMessage?.message?.imageMessage
         || mimeType.startsWith('image/'));
 }
 
-async function saveIncomingOrderImage(message) {
+async function saveIncomingOrderImage(sock, message, instanceId) {
     if (message?.key?.fromMe || !isIncomingImage(message)) return null;
 
     try {
         const { downloadMediaMessage } = require('@whiskeysockets/baileys');
-        const buffer = await downloadMediaMessage(message, 'buffer', {});
+        const msgId = message?.key?.id || null;
+        const mimeType = getIncomingImageMimeType(message);
+        console.log('[Order Attachments][DOWNLOAD_START]', JSON.stringify({ instanceId, msgId, mimeType }));
+        const buffer = await downloadMediaMessage(message, 'buffer', {}, {
+            // Reenvia a mídia ao WhatsApp quando a URL original já expirou.
+            reuploadRequest: sock?.updateMediaMessage?.bind(sock)
+        });
+        if (!buffer?.length) throw new Error('A imagem recebida está vazia.');
         const extension = String(getIncomingImageMimeType(message).split('/')[1] || 'jpg').replace(/[^a-z0-9]/gi, '') || 'jpg';
         const directory = path.join(__dirname, 'assets', 'order-references');
         await fs.promises.mkdir(directory, { recursive: true });
         const filename = `reference-${Date.now()}-${crypto.randomUUID()}.${extension}`;
         await fs.promises.writeFile(path.join(directory, filename), buffer);
-        const baseUrl = String(process.env.FILES_URL || process.env.PUBLIC_URL || '').replace(/\/$/, '');
-        return baseUrl ? `${baseUrl}/order-references/${filename}` : `/assets/order-references/${filename}`;
+        const baseUrl = String(process.env.PUBLIC_URL || 'http://localhost:3001').replace(/\/$/, '');
+        const mediaUrl = `${baseUrl}/assets/order-references/${filename}`;
+        console.log('[Order Attachments][SAVED]', JSON.stringify({ instanceId, msgId, mediaUrl, bytes: buffer.length }));
+        return mediaUrl;
     } catch (error) {
-        console.error('[Order Attachments] Falha ao salvar imagem recebida:', error.message);
+        console.error('[Order Attachments][ERROR]', JSON.stringify({
+            instanceId,
+            msgId: message?.key?.id || null,
+            error: error.message
+        }));
         return null;
     }
 }
@@ -1766,7 +1787,7 @@ async function initInstance(instanceId) {
             }
         }
 
-        const isMedia = !!(msg.message?.imageMessage ||
+        const isMedia = !!(isIncomingImage(msg) ||
             msg.message?.videoMessage ||
             msg.message?.audioMessage ||
             msg.message?.documentMessage ||
@@ -1780,7 +1801,7 @@ async function initInstance(instanceId) {
         if (text || isMedia) {
             // Se for midia sem texto, define um placeholder para o banco de dados
             if (!text && isMedia) {
-                if (msg.message?.imageMessage) text = "[Imagem]";
+                if (isIncomingImage(msg)) text = "[Imagem]";
                 else if (msg.message?.videoMessage) text = "[Video]";
                 else if (msg.message?.audioMessage) text = "[Audio]";
                 else if (msg.message?.documentMessage) text = "[Documento]";
@@ -1830,7 +1851,7 @@ async function initInstance(instanceId) {
                     }
                 }
 
-                const mediaUrl = await saveIncomingOrderImage(msg);
+                const mediaUrl = await saveIncomingOrderImage(sock, msg, instanceId);
                 const data = {
                     msgId: msg.key.id,
                     instanceId,
@@ -1893,10 +1914,7 @@ async function initInstance(instanceId) {
                 if (isConnectedAccountAdmin || isConfiguredAdmin) {
 
                     let adminImages = [];
-                    const isImg = !!msg.message?.imageMessage ||
-                        !!msg.message?.viewOnceMessageV2?.message?.imageMessage ||
-                        !!msg.message?.viewOnceMessage?.message?.imageMessage ||
-                        (msg.message?.documentMessage?.mimetype?.startsWith('image/'));
+                    const isImg = isIncomingImage(msg);
 
                     if (isImg) {
                         try {
@@ -1945,10 +1963,7 @@ async function initInstance(instanceId) {
 
                         for (const m of messagesToProcess) {
                             if (m.text) combinedText += (combinedText ? "\n" : "") + m.text;
-                            const isImg = !!m.msg.message?.imageMessage ||
-                                !!m.msg.message?.viewOnceMessageV2?.message?.imageMessage ||
-                                !!m.msg.message?.viewOnceMessage?.message?.imageMessage ||
-                                (m.msg.message?.documentMessage?.mimetype?.startsWith('image/'));
+                            const isImg = isIncomingImage(m.msg);
                             if (isImg) {
                                 try {
                                     const { downloadMediaMessage } = require('@whiskeysockets/baileys');
