@@ -2396,6 +2396,11 @@ async function initInstance(instanceId) {
                                                             clientName: args.clientName || currentChat?.name || undefined,
                                                             clientJid: jid,
                                                             instanceId: instanceId
+                                                        }, {
+                                                            headers: {
+                                                                'x-internal-token': process.env.INTERNAL_TOKEN || 'menzzu-internal-bypass-key',
+                                                                'x-user-id': userId
+                                                            }
                                                         });
                                                         result = {
                                                             success: true,
@@ -2440,7 +2445,7 @@ async function initInstance(instanceId) {
                                                         const res = await axios.patch(`${internalBase}/orders/${targetOrder.id}`, updateData, {
                                                             headers: {
                                                                 'x-internal-token': process.env.INTERNAL_TOKEN || 'menzzu-internal-bypass-key',
-                                                                'x-user-id': settings.userId
+                                                                'x-user-id': userId
                                                             }
                                                         });
 
