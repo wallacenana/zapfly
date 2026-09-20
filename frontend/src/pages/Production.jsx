@@ -56,6 +56,13 @@ const getLegacyGroupName = (order, value) => {
   })?.name || '';
 };
 
+const normalizeCatalogName = (value) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/\s+/g, ' ')
+  .trim();
+
 const getOrderSelectionRows = (order) => {
   const rows = [];
   const productParts = getPrintableOrderParts(order);
