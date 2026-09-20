@@ -65,6 +65,16 @@ const {
 
 
 const phoneToLid = new Map();
+const CHAT_TIME_FORMATTER = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+});
+
+function formatChatTime(date = new Date()) {
+    return CHAT_TIME_FORMATTER.format(date);
+}
 
 async function getStatusSendOptions(sock) {
     const statusJidList = typeof sock.__getStatusJidList === 'function'
@@ -1750,7 +1760,7 @@ async function initInstance(instanceId) {
                         where: { jid_instanceId: { jid, instanceId } },
                         update: {
                             lastMsg: text,
-                            lastMsgTime: new Date(msg.messageTimestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            lastMsgTime: formatChatTime(new Date(msg.messageTimestamp * 1000)),
                             unreadCount: { increment: msg.key.fromMe ? 0 : 1 },
                             updatedAt: new Date(),
                             isGroup: isGroup,
@@ -1761,7 +1771,7 @@ async function initInstance(instanceId) {
                             jid,
                             name: (!isGroup && msg.pushName) ? msg.pushName : null,
                             lastMsg: text,
-                            lastMsgTime: new Date(msg.messageTimestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                            lastMsgTime: formatChatTime(new Date(msg.messageTimestamp * 1000)),
                             unreadCount: msg.key.fromMe ? 0 : 1,
                             isGroup: isGroup
                         }
@@ -1773,7 +1783,7 @@ async function initInstance(instanceId) {
                             where: { jid_instanceId: { jid, instanceId } },
                             data: {
                                 lastMsg: text,
-                                lastMsgTime: new Date(msg.messageTimestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                                lastMsgTime: formatChatTime(new Date(msg.messageTimestamp * 1000)),
                                 unreadCount: { increment: msg.key.fromMe ? 0 : 1 },
                                 updatedAt: new Date(),
                                 isGroup: isGroup,
@@ -3337,7 +3347,7 @@ app.get('/instances/:id/messages/:jid', authenticate, async (req, res) => {
         senderName: m.senderName,
         quotedText: m.quotedText,
         quotedParticipant: m.quotedParticipant,
-        time: new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time: formatChatTime(new Date(m.timestamp)),
         status: m.status
     }));
     res.json(formatted);
@@ -3560,7 +3570,7 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
             where: { jid_instanceId: { jid: finalJid, instanceId: id } },
             update: {
                 lastMsg: text,
-                lastMsgTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                lastMsgTime: formatChatTime(),
                 updatedAt: new Date(),
                 ...(contactName && { name: contactName }),
             },
@@ -3569,7 +3579,7 @@ app.post('/instances/:id/send', authenticate, async (req, res) => {
                 jid: finalJid,
                 name: contactName,
                 lastMsg: text,
-                lastMsgTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                lastMsgTime: formatChatTime()
             }
         });
 
@@ -3655,14 +3665,14 @@ app.post('/instances/:id/send-audio', uploadAudio.single('audio'), async (req, r
             where: { jid_instanceId: { jid: finalJid, instanceId: id } },
             update: {
                 lastMsg: '[Audio]',
-                lastMsgTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                lastMsgTime: formatChatTime(),
                 updatedAt: new Date(),
             },
             create: {
                 instanceId: id,
                 jid: finalJid,
                 lastMsg: '[Audio]',
-                lastMsgTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                lastMsgTime: formatChatTime()
             }
         });
 

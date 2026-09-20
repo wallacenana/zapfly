@@ -65,6 +65,15 @@ const areJidsSame = (jid1, jid2) => {
   return false;
 };
 
+const chatTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: 'America/Sao_Paulo',
+  hour: '2-digit',
+  minute: '2-digit',
+  hourCycle: 'h23'
+});
+
+const formatChatTime = (date = new Date()) => chatTimeFormatter.format(date);
+
 const Chat = () => {
   const { jid: urlJid } = useParams();
   const navigate = useNavigate();
@@ -206,7 +215,7 @@ const Chat = () => {
                 id: msgId,
                 text,
                 fromMe: data.message.key.fromMe,
-                time: new Date(data.message.messageTimestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                time: formatChatTime(new Date(data.message.messageTimestamp * 1000)),
                 status: 'received'
               }];
             });
@@ -391,7 +400,7 @@ const Chat = () => {
           id: realId,
           text: textToSend,
           fromMe: true,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          time: formatChatTime(),
           status: 'sent'
         }];
       });
@@ -481,7 +490,7 @@ const Chat = () => {
           id: realId,
           text: '🎤 Áudio',
           fromMe: true,
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          time: formatChatTime(),
           status: 'sent'
         }
       ]);
@@ -924,7 +933,7 @@ const Chat = () => {
                       if (!p || p.status === 'unavailable') {
                         return p?.lastSeen
                           ? <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>
-                            visto por último {new Date(p.lastSeen * 1000).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            visto por último {formatChatTime(new Date(p.lastSeen * 1000))}
                           </p>
                           : <p style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 500 }}>offline</p>;
                       }
