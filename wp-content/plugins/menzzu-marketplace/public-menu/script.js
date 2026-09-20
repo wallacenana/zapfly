@@ -238,7 +238,8 @@ function isOrderEnabled() {
 }
 
 function isDeliveryTabEnabled() {
-    return getMenuDeliveryOptions().orderTypes.delivery !== false;
+    return state.publicSettings.acceptOrders !== false
+        && getMenuDeliveryOptions().orderTypes.delivery !== false;
 }
 
 function getMenuDeliveryOptions() {
@@ -762,8 +763,13 @@ function checkStoreStatus() {
         return time >= start && time <= end;
     });
 
-    const statusLabel = !hasMinimumSetup ? 'Inativo' : state.isOpen ? 'Aberto' : (isOrderEnabled() ? 'Apenas encomendas' : 'Fechado');
-    const statusClass = !hasMinimumSetup || !state.isOpen ? 'status-badge closed' : 'status-badge open';
+    const ordersPaused = state.publicSettings.acceptOrders === false;
+    const statusLabel = ordersPaused
+        ? 'Fechado agora'
+        : (!hasMinimumSetup ? 'Inativo' : state.isOpen ? 'Aberto' : (isOrderEnabled() ? 'Apenas encomendas' : 'Fechado'));
+    const statusClass = ordersPaused || !hasMinimumSetup || !state.isOpen
+        ? 'status-badge closed'
+        : 'status-badge open';
 
     const statusEl = document.getElementById('store-status-badge');
     if (statusEl) {
