@@ -59,17 +59,23 @@ const getLegacyGroupName = (order, value) => {
 const getOrderSelectionRows = (order) => {
   const rows = [];
   const productParts = getPrintableOrderParts(order);
-  const addRow = (label, value, isAttachment = false, isCustomField = false) => {
+  const addRow = (label, value, isAttachment = false, isCustomField = false, price = 0) => {
     const cleanLabel = String(label || '').trim();
     const cleanValue = String(value || '').trim();
     if (cleanLabel && cleanValue && !rows.some(([rowLabel, rowValue]) => rowLabel === cleanLabel && rowValue === cleanValue)) {
-      rows.push([cleanLabel, cleanValue, isAttachment, isCustomField]);
+      rows.push([cleanLabel, cleanValue, isAttachment, isCustomField, Math.max(0, Number(price) || 0)]);
     }
   };
   try {
     const parsedAddons = typeof order.addons === 'string' ? JSON.parse(order.addons) : order.addons;
     const addons = Array.isArray(parsedAddons) ? parsedAddons : parsedAddons?.addons;
-    (Array.isArray(addons) ? addons : []).forEach(addon => addRow(addon.groupName || 'Opção', addon.name, addon.isAttachment, addon.isCustomField));
+    (Array.isArray(addons) ? addons : []).forEach(addon => addRow(
+      addon.groupName || 'Opção',
+      addon.name,
+      addon.isAttachment,
+      addon.isCustomField,
+      (Number(addon?.price) || 0) * (Number(addon?.quantity) || 1)
+    ));
   } catch (e) { }
 
   try {
@@ -88,9 +94,10 @@ const getOrderSelectionRows = (order) => {
       else addRow(getLegacyGroupName(order, extra) || 'Opção', extra, /^https?:\/\//i.test(extra), false);
     });
   }
+  const hasGroupFor = (name) => rows.some(([label]) => normalizeCatalogName(label).includes(normalizeCatalogName(name)));
   // Compatibilidade com pedidos antigos que gravavam estes campos fixos.
   addRow('Massa', order.massa);
-  addRow('Recheio', order.recheio);
+  if (!hasGroupFor('recheio')) addRow('Recheio', order.recheio);
   addRow('Topo', order.topo);
   addRow('Variação', order.variation);
   return rows;
@@ -101,7 +108,7 @@ const getOrderSelectionSections = (order) => {
   const sections = [];
   const variation = String(order.variation || '').trim();
 
-  rows.forEach(([rowLabel, value, isAttachment, isCustomField]) => {
+  rows.forEach(([rowLabel, value, isAttachment, isCustomField, price]) => {
     if (value === variation) return;
     const label = isCustomField ? 'Informações extras' : rowLabel || 'Opção';
     let section = sections.find(item => item.label === label);
@@ -109,7 +116,7 @@ const getOrderSelectionSections = (order) => {
       section = { label, values: [] };
       sections.push(section);
     }
-    if (!section.values.some(([currentValue]) => currentValue === value)) section.values.push([value, isAttachment]);
+    if (!section.values.some(([currentValue]) => currentValue === value)) section.values.push([value, isAttachment, price]);
   });
   return sections;
 };
@@ -451,15 +458,6 @@ const Production = () => {
     const totalValueStr = finalTotal.toFixed(2);
     const subtotalStr = itemsSubtotal.toFixed(2);
     const freightStr = freightValue.toFixed(2);
-    let addonsTotal = 0;
-    try {
-      const parsedAddons = typeof order.addons === 'string' ? JSON.parse(order.addons) : order.addons;
-      const addons = Array.isArray(parsedAddons) ? parsedAddons : parsedAddons?.addons;
-      addonsTotal = (Array.isArray(addons) ? addons : []).reduce((sum, addon) => (
-        sum + ((Number(addon?.price) || 0) * (Number(addon?.quantity) || 1))
-      ), 0);
-    } catch (e) { }
-    const addonsTotalStr = addonsTotal.toFixed(2);
     const selectionSections = getOrderSelectionSections(order);
     const detailRows = selectionSections.flatMap(section => section.values.map(([value, isAttachment]) => [section.label, value, isAttachment]));
     const printSelectionHtml = selectionSections.map(section => `<div style="margin-bottom: 8px;"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 10px;">${isAttachment || getAttachmentUrls(value).length ? renderAttachmentGallery(value, false) : value}</div>`).join('')}</div>`).join('');
@@ -470,6 +468,19 @@ const Production = () => {
     const selectionSummaryHtml = selectionSections.length
 ? `<div style="font-size: 13px; color: #475569; margin-top: 12px; padding-top: 0; line-height: 1.6;">${selectionSections.map((section, index) => `<div style="margin-top: 10px; padding-top: ${index ? '10px' : '0'}; ${index ? 'border-top: 1px dashed #cbd5e1;' : ''}"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 8px;">${isAttachment || getAttachmentUrls(value).length ? renderAttachmentGallery(value) : value}</div>`).join('')}</div>`).join('')}</div>`
       : '';
+
+    const selectionTableRowsHtml = selectionSections.map((section, sectionIndex) => `
+      <tr${sectionIndex ? ' style="border-top: 1px dashed rgba(15,23,42,0.08);"' : ''}>
+        <td style="padding: 8px 0 2px;"></td>
+        <td style="padding: 8px 10px 2px; font-size: 13px; color: #475569; font-weight: 700;">${section.label}:</td>
+        <td></td>
+      </tr>
+      ${section.values.map(([value, isAttachment, price]) => `
+        <tr>
+          <td style="padding: 2px 0;"></td>
+          <td style="padding: 2px 10px 2px 18px; font-size: 13px; color: #475569;">${isAttachment || getAttachmentUrls(value).length ? renderAttachmentGallery(value) : value}</td>
+          <td style="padding: 2px 0; text-align: right; white-space: nowrap; font-weight: 700; font-size: 14px; color: #f59e0b;">${price > 0 ? `R$ ${price.toFixed(2)}` : ''}</td>
+        </tr>`).join('')}`).join('');
 
     let notesHtml = '';
     // Limpa a tag de frete da exibição visual das notas para não ficar repetitivo
@@ -508,7 +519,7 @@ const Production = () => {
       }
       const itemExtras = extrasMatch ? extrasMatch[1] : '';
       const itemDetailsHtml = index === 0
-        ? `${selectionSummaryHtml}${notesHtml}`
+        ? notesHtml
         : (itemExtras ? `<div style="font-size: 13px; color: #475569; margin-top: 10px;">Extras: ${itemExtras}</div>` : '');
 
       return `
@@ -757,13 +768,7 @@ const Production = () => {
               </thead>
               <tbody>
                 ${orderItemsHtml}
-                ${addonsTotal > 0 ? `
-                <tr style="border-top: 1px dashed rgba(15,23,42,0.08);">
-                  <td style="padding: 10px 0;"></td>
-                  <td style="padding: 10px 10px; font-size: 13px; color: #64748b; font-weight: 600;">Adicionais</td>
-                  <td style="padding: 10px 0; text-align: right; font-weight: 700; font-size: 15px; color: #f59e0b;">R$ ${addonsTotalStr}</td>
-                </tr>
-                ` : ''}
+                ${selectionTableRowsHtml}
                 <tr style="display: none;">
                   <td style="padding: 20px 0; vertical-align: top;">
                     <div style="background: #3b82f6; color: #fff; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 20px; font-weight: 900;">
