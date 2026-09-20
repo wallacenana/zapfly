@@ -124,6 +124,35 @@ const getEditSelectionValue = (order, aliases, fallback = '') => {
   return row ? rows.filter(([label]) => label === row[0]).map(([, value]) => value).join(', ') : fallback;
 };
 
+const normalizeVariationName = (value) => String(value || '')
+  .normalize('NFD')
+  .replace(/[\u0300-\u036f]/g, '')
+  .toLowerCase()
+  .replace(/^bolo\s+de\s+/, '')
+  .replace(/\s+/g, '');
+
+const resolveOrderItemPrice = (order) => {
+  const product = order.productRelation;
+  if (!product) return 0;
+
+  try {
+    const variations = typeof product.variations === 'string' ? JSON.parse(product.variations) : product.variations;
+    const selectedName = normalizeVariationName(order.variation);
+    const matches = (Array.isArray(variations) ? variations : [])
+      .filter(variation => normalizeVariationName(variation?.name) === selectedName);
+    const selected = matches.find(variation => !variation?.hidden) || matches[0];
+    if (selected) {
+      const price = Number(selected.price) || 0;
+      const promoPrice = Number(selected.promoPrice) || 0;
+      return promoPrice > 0 && promoPrice < price ? promoPrice : price;
+    }
+  } catch (e) { }
+
+  const price = Number(product.price) || 0;
+  const promoPrice = Number(product.promoPrice) || 0;
+  return promoPrice > 0 && promoPrice < price ? promoPrice : price;
+};
+
 const getOrderItems = (order) => {
   try {
     const rawItems = order.cartItems ?? order.cartitems ?? order.cart_items;
@@ -141,7 +170,7 @@ const getOrderItems = (order) => {
     productId: order.productId,
     name: order.product || 'Produto',
     variation: order.variation || null,
-    price: Number(order.productRelation?.price || 0),
+    price: resolveOrderItemPrice(order),
     quantity: Number(order.quantity) || 1
   }];
 };
@@ -412,13 +441,7 @@ const Production = () => {
     const isCashPayment = ['dinheiro', 'cash'].includes(String(order.paymentMethod || '').trim().toLowerCase());
     const displayParts = getPrintableOrderParts(order);
     // Pega o preço real do produto ou calcula dinamicamente subtraindo a taxa de entrega, com fallback seguro
-    let unitPrice = order.productRelation?.price || 0;
-    if (orderItems.length === 1 && order.totalValue > 0) {
-      const computedUnit = (order.totalValue - freightValue) / quantity;
-      if (computedUnit > 0) {
-        unitPrice = computedUnit;
-      }
-    }
+    const unitPrice = Number(orderItems[0]?.price) || 0;
 
     const itemsSubtotal = orderItems.length > 1
       ? orderItems.reduce((sum, item) => sum + ((Number(item.price) || 0) * (Number(item.quantity) || 1)), 0)
@@ -428,6 +451,15 @@ const Production = () => {
     const totalValueStr = finalTotal.toFixed(2);
     const subtotalStr = itemsSubtotal.toFixed(2);
     const freightStr = freightValue.toFixed(2);
+    let addonsTotal = 0;
+    try {
+      const parsedAddons = typeof order.addons === 'string' ? JSON.parse(order.addons) : order.addons;
+      const addons = Array.isArray(parsedAddons) ? parsedAddons : parsedAddons?.addons;
+      addonsTotal = (Array.isArray(addons) ? addons : []).reduce((sum, addon) => (
+        sum + ((Number(addon?.price) || 0) * (Number(addon?.quantity) || 1))
+      ), 0);
+    } catch (e) { }
+    const addonsTotalStr = addonsTotal.toFixed(2);
     const selectionSections = getOrderSelectionSections(order);
     const detailRows = selectionSections.flatMap(section => section.values.map(([value, isAttachment]) => [section.label, value, isAttachment]));
     const printSelectionHtml = selectionSections.map(section => `<div style="margin-bottom: 8px;"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 10px;">${isAttachment || getAttachmentUrls(value).length ? renderAttachmentGallery(value, false) : value}</div>`).join('')}</div>`).join('');
@@ -725,6 +757,13 @@ const Production = () => {
               </thead>
               <tbody>
                 ${orderItemsHtml}
+                ${addonsTotal > 0 ? `
+                <tr style="border-top: 1px dashed rgba(15,23,42,0.08);">
+                  <td style="padding: 10px 0;"></td>
+                  <td style="padding: 10px 10px; font-size: 13px; color: #64748b; font-weight: 600;">Adicionais</td>
+                  <td style="padding: 10px 0; text-align: right; font-weight: 700; font-size: 15px; color: #f59e0b;">R$ ${addonsTotalStr}</td>
+                </tr>
+                ` : ''}
                 <tr style="display: none;">
                   <td style="padding: 20px 0; vertical-align: top;">
                     <div style="background: #3b82f6; color: #fff; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 20px; font-weight: 900;">
