@@ -441,7 +441,12 @@ const Production = () => {
 
     let notesHtml = '';
     // Limpa a tag de frete da exibição visual das notas para não ficar repetitivo
-    const cleanNotes = (order.notes || '').replace(/\[Frete: R\$ [\d.]+\]/, '').trim();
+    const cleanNotes = (order.notes || '')
+      .replace(/\[Frete: R\$ [\d.]+\]/, '')
+      .split(/\r?\n/)
+      .filter(note => !/\d+\s+imagens?\s+recebidas/i.test(note))
+      .join('\n')
+      .trim();
 
     if (cleanNotes) {
       notesHtml = `
