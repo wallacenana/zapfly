@@ -2298,6 +2298,7 @@ async function initInstance(instanceId) {
                                         for (const toolCall of responseMessage.tool_calls) {
                                             const functionName = toolCall.function.name;
                                             const args = JSON.parse(toolCall.function.arguments);
+                                            console.log('[AI][TOOL_CALL]', JSON.stringify({ instanceId, jid, functionName, args }));
                                             let result;
 
 

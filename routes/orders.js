@@ -172,6 +172,12 @@ function normalizeVariationName(value) {
     .replace(/\s+/g, '');
 }
 
+function parseOrderQuantity(value) {
+  const normalized = String(value ?? '').trim().replace(',', '.');
+  if (!/^\d+(?:\.\d+)?$/.test(normalized)) return 1;
+  return Math.max(1, Number(normalized));
+}
+
 function findCatalogVariation(variations, variationName) {
   const normalizedVariation = normalizeVariationName(variationName);
   if (!normalizedVariation) return null;
@@ -883,7 +889,7 @@ async function calculateOrderBreakdown(data, userId) {
     }
   }
 
-  const mainQty = parseFloat(quantity) || 1;
+  const mainQty = parseOrderQuantity(quantity);
   const productTotal = mainProductPrice * mainQty;
   let extrasTotal = 0;
 
@@ -1429,6 +1435,11 @@ router.post('/', async (req, res) => {
 
     if (!userId) return res.status(400).json({ error: 'User ID não identificado.' });
 
+    console.log('[Orders][CREATE_INPUT]', JSON.stringify({
+      internal: !!req.user?.internal, userId, instanceId, productId, product,
+      variation, subItem, quantity, deliveryFee, totalValue, addons
+    }));
+
     const orderType = type || 'order';
     const normalizedPaymentMethod = String(paymentMethod || '').trim().toLowerCase();
     const isCashPayment = ['dinheiro', 'cash'].includes(normalizedPaymentMethod);
@@ -1456,7 +1467,7 @@ router.post('/', async (req, res) => {
       }
     }
 
-    const qtyNum = parseFloat(quantity) || 1;
+    const qtyNum = parseOrderQuantity(quantity);
     const finalClientJid = (clientJid && clientJid.trim() !== "") ? clientJid.trim() : 'manual_LOJA';
     const isManual = finalClientJid === 'manual_LOJA';
 
@@ -1582,7 +1593,11 @@ router.post('/', async (req, res) => {
 
     const catalogProduct = await findCatalogProduct(userId, productId, product);
     if (!productId && catalogProduct) productId = catalogProduct.id;
-    const computedTotal = await calculateOrderTotal({ ...req.body, productId }, userId);
+    const breakdown = await calculateOrderBreakdown({ ...req.body, productId }, userId);
+    const computedTotal = breakdown.total;
+    console.log('[Orders][CREATE_CALCULATED]', JSON.stringify({
+      productId, product, variation, quantity: qtyNum, ...breakdown
+    }));
     const customFields = await buildOrderCustomFields({
       userId,
       productId,
@@ -1629,6 +1644,7 @@ router.post('/', async (req, res) => {
     let order;
     try {
       order = await prisma.order.create({ data: orderData });
+      console.log('[Orders][CREATE_SAVED]', JSON.stringify({ id: order.id, productId: order.productId, totalValue: order.totalValue }));
     } catch (createError) {
       // Compatibilidade durante o deploy: permite criar pedidos enquanto a
       // colunas novas ainda nao foram aplicadas no banco de producao.
@@ -2277,6 +2293,13 @@ router.patch('/:id', authenticate, async (req, res) => {
     delete updateData.id;
     delete updateData.userId;
 
+    console.log('[Orders][UPDATE_INPUT]', JSON.stringify({ id, internal: !!req.user?.internal, userId, payload: updateData }));
+    if (req.user?.internal) delete updateData.totalValue;
+    if (req.user?.internal && updateData.quantity && parseOrderQuantity(updateData.quantity) === 1 && !/^1(?:\.0+)?$/.test(String(updateData.quantity).trim())) {
+      updateData.variation = updateData.variation || updateData.quantity;
+      delete updateData.quantity;
+    }
+
     const isCancellation = ['cancelled', 'canceled', 'cancelado'].includes(String(updateData.status || '').toLowerCase());
     const isCashOrder = String(existing.paymentMethod || '').trim().toLowerCase() === 'dinheiro';
     if (String(updateData.status || '').toLowerCase() === 'production'
@@ -2336,12 +2359,17 @@ router.patch('/:id', authenticate, async (req, res) => {
     }
 
     const computedTotal = await calculateOrderTotal(order, userId);
+    console.log('[Orders][UPDATE_CALCULATED]', JSON.stringify({
+      id, productId: order.productId, product: order.product, variation: order.variation,
+      quantity: order.quantity, deliveryFee: order.deliveryFee, totalValue: computedTotal
+    }));
 
     // Atualiza com o valor final recalculado
     order = await prisma.order.update({
       where: { id },
       data: { totalValue: computedTotal }
     });
+    console.log('[Orders][UPDATE_SAVED]', JSON.stringify({ id: order.id, totalValue: order.totalValue }));
 
     // 3. Buscar as configurações do usuário
     const settings = await getSettings(userId);
