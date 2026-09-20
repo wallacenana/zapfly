@@ -27,6 +27,7 @@ import AccountHome from './pages/AccountHome';
 import PasswordReset from './pages/PasswordReset';
 import Plans from './pages/Plans';
 import BillingSettings from './pages/BillingSettings';
+import ImageReference from './pages/ImageReference';
 
 const FullScreenLoader = () => (
   <div style={{
@@ -93,6 +94,7 @@ const AdminRoute = ({ children }) => {
 function AppRoutes() {
   return (
     <Routes>
+      <Route path="/image" element={<ImageReference />} />
       <Route path="/login" element={<LoginRoute />} />
       <Route path="/forgot-password" element={<PasswordReset />} />
       <Route path="/reset-password" element={<PasswordReset />} />

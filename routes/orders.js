@@ -555,6 +555,19 @@ function buildCalendarOrderDescription(order, links = []) {
   const extrasMatch = rawProduct.match(/\s*\[([^\]]+)\]\s*$/);
   const productName = (extrasMatch ? rawProduct.slice(0, extrasMatch.index) : rawProduct).trim();
   const extras = extrasMatch ? extrasMatch[1].split(/,\s*/).filter(Boolean) : [];
+  const customFields = safeJsonParse(order?.customFields, []);
+  const referenceLinks = (Array.isArray(customFields) ? customFields : []).flatMap((field) => {
+    if (String(field?.type || '').toLowerCase() !== 'image') return [];
+    const name = String(field?.name || 'Referência').trim();
+    const urls = Array.isArray(field?.urls) ? field.urls.filter(Boolean) : [];
+    return urls.map((url, index) => `${name} ${index + 1}: ${buildReferenceImageLink(url)}`);
+  });
+  const notes = String(order.notes || '')
+    .split(/\s*(?:\||\r?\n)\s*/)
+    .filter(note => !/\b\d+\s+imagens?\s+recebidas\b/i.test(note))
+    .join(' | ')
+    .trim();
+
   return [
     `ITEM ${order.quantity || '1'}x`,
     productName,
@@ -564,11 +577,28 @@ function buildCalendarOrderDescription(order, links = []) {
     order.recheio ? `RECHEIO: ${order.recheio}` : '',
     order.topo ? `TOPO: ${order.topo}` : '',
     extras.length ? `INFORMAÇÕES: ${extras.join(' | ')}` : '',
-    order.notes ? `OBSERVAÇÃO: ${order.notes}` : '',
+    notes ? `OBSERVAÇÃO: ${notes}` : '',
     order.deliveryAddress ? `ENTREGA: ${order.deliveryAddress}` : 'RETIRADA NA LOJA',
+    referenceLinks.length ? 'REFERÊNCIAS:' : '',
+    ...referenceLinks,
     '------------------------------',
     ...links
   ].filter(Boolean).join('\n');
+}
+
+function getFrontendUrl() {
+  return String(process.env.FRONTEND_URL || 'https://app.menzzu.com').replace(/\/$/, '');
+}
+
+function buildReferenceImageLink(url) {
+  const encodedUrl = Buffer.from(String(url), 'utf8').toString('base64url');
+  return `${getFrontendUrl()}/image?i=${encodeURIComponent(encodedUrl)}`;
+}
+
+function buildOrderSystemLink(order) {
+  const params = new URLSearchParams({ orderId: String(order.id || '') });
+  if (order.scheduledDate) params.set('date', String(order.scheduledDate));
+  return `${getFrontendUrl()}/production?${params.toString()}`;
 }
 
 function hasRequestedProductStock(product, variationName, subItemName) {
@@ -764,7 +794,7 @@ async function createCalendarEvent(order) {
 
     const user = await prisma.user.findUnique({ where: { id: order.userId } });
     const waLink = `https://wa.me/${phone}`;
-    const systemLink = `${process.env.PUBLIC_URL || 'http://localhost:5173'}/chat?jid=${order.clientJid}`;
+    const systemLink = buildOrderSystemLink(order);
 
     const isDelivery = order.type === 'delivery' || !!order.deliveryAddress;
     const event = {
@@ -830,7 +860,7 @@ async function updateCalendarEvent(order) {
     const phone = order.clientJid ? order.clientJid.split('@')[0] : '';
 
     const waLink = `https://wa.me/${phone}`;
-    const systemLink = `${process.env.PUBLIC_URL || 'http://localhost:5173'}/chat?jid=${order.clientJid}`;
+    const systemLink = buildOrderSystemLink(order);
 
     const isCompleted = order.status === 'completed';
     const cleanProduct = (order.product || '').replace(/^✅\s*/, '');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Package, Clock, CheckCircle, Search, Truck, XCircle, ChevronLeft, ChevronRight, Calendar as CalendarIcon, MapPin, CreditCard } from 'lucide-react';
 import { api } from '../api';
 import { socket } from '../api';
@@ -200,6 +200,7 @@ const hasAcceptedPendingPayment = (order) => {
 
 const Production = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -207,6 +208,15 @@ const Production = () => {
   const [selectedDate, setSelectedDate] = useState(localStorage.getItem('kanban_selectedDate') || new Date().toISOString().split('T')[0]);
   const [showWaitingDrawer, setShowWaitingDrawer] = useState(false);
   const ordersRequestRef = useRef(null);
+  const openedLinkedOrderRef = useRef('');
+  const linkedOrderId = String(searchParams.get('orderId') || '').trim();
+  const linkedOrderDate = String(searchParams.get('date') || '').trim();
+
+  useEffect(() => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(linkedOrderDate) && linkedOrderDate !== selectedDate) {
+      setSelectedDate(linkedOrderDate);
+    }
+  }, [linkedOrderDate, selectedDate]);
 
   // Persistência de estado
   useEffect(() => {
@@ -871,6 +881,17 @@ const Production = () => {
       `
     });
   };
+
+  useEffect(() => {
+    if (!linkedOrderId || openedLinkedOrderRef.current === linkedOrderId) return;
+    const linkedOrder = orders.find(order => String(order.id) === linkedOrderId);
+    if (!linkedOrder) return;
+
+    openedLinkedOrderRef.current = linkedOrderId;
+    setActiveType(linkedOrder.type === 'delivery' ? 'delivery' : 'order');
+    openDetails(linkedOrder);
+    setSearchParams({}, { replace: true });
+  }, [linkedOrderId, orders, setSearchParams]);
 
   const filteredOrders = orders.filter(o => {
     const matchSearch =
