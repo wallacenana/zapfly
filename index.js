@@ -2054,7 +2054,7 @@ async function initInstance(instanceId) {
                                                     recheio: { type: "string", description: "Sabor do recheio escolhido, somente quando identificado explicitamente como recheio" },
                                                     topo: { type: "string", description: "Informações sobre o topo do bolo" },
                                                     carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Produtos ADICIONAIS. IMPORTANTE: Para Kits/Combos, NAO coloque aqui os itens que ja fazem parte do kit, senao o cliente sera cobrado em dobro. Use apenas para itens extras comprados a parte." },
-                                                    notes: { type: "string", description: "Outras observações gerais" }
+                                                    notes: { type: "string", description: "Observações e respostas dos campos extras, sempre no formato 'Nome do campo: resposta'. Para imagem, use 'Nome do campo: imagem recebida'." }
                                                 },
                                                 required: ["product"],
                                             },
