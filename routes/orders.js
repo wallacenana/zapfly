@@ -614,6 +614,25 @@ Olá, *${order.clientName || 'cliente'}*! Seu pedido de *${product}* foi aceito 
   await sock.sendMessage(jid, { text: message });
 }
 
+function getOrderCustomFieldsSummary(order) {
+  const fields = safeJsonParse(order?.customFields, []);
+  if (!Array.isArray(fields)) return [];
+
+  return fields.flatMap((field) => {
+    const name = String(field?.name || '').trim();
+    if (!name) return [];
+
+    if (String(field?.type || '').toLowerCase() === 'image') {
+      const count = Array.isArray(field.urls) ? field.urls.filter(Boolean).length : 0;
+      if (!count) return [];
+      return `- *${name}:* ${count} ${count === 1 ? 'imagem foi enviada' : 'imagens foram enviadas'}.`;
+    }
+
+    const value = String(field?.value || '').trim();
+    return value ? `- *${name}:* "${value}".` : [];
+  });
+}
+
 async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
   const isDelivery = String(order?.type || '').toLowerCase() === 'delivery';
   const isLocalConsumption = String(order?.deliveryAddress || '').trim().toLowerCase() === 'consumo no local';
@@ -690,12 +709,16 @@ Se precisar, pode me perguntar aqui mais informações sobre o pedido.`;
     const scheduledDay = formatScheduledDateForCustomer(order.scheduledDate);
     const scheduledTime = String(order.scheduledTime || '').trim();
     const itemDescription = [product, order.variation].filter(Boolean).join(' - ');
+    const extras = getOrderCustomFieldsSummary(order);
+    const extrasMessage = extras.length
+      ? ['', '', '*Informações extras:*', ...extras].join('\n')
+      : '';
 
     message = `✅ *Pedido de encomenda aceito!* (#${orderId})
 
 Olá, *${order.clientName || 'cliente'}*! Sua encomenda para *${scheduledDay}*${scheduledTime ? `, às *${scheduledTime}*` : ''} foi aceita.
 
-Seu pedido é *${itemDescription || 'a encomenda solicitada'}*.
+Seu pedido é *${itemDescription || 'a encomenda solicitada'}*.${extrasMessage}
 
 Não se preocupe, já está tudo certo. Vamos enviar uma mensagem *${reminderLabel} antes* do horário agendado para confirmar que continua tudo bem.
 
