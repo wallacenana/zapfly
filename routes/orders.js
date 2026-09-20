@@ -166,25 +166,47 @@ function normalizeCatalogName(value) {
     .trim();
 }
 
-async function buildOrderCustomFields({ userId, productId, productName, notes, clientJid, instanceId }) {
-  let product = productId
-    ? await prisma.product.findFirst({ where: { id: productId, userId }, select: { customFields: true } })
-    : null;
-  if (!product && productName) {
-    const normalizedName = normalizeCatalogName(productName);
-    const products = await prisma.product.findMany({ where: { userId }, select: { name: true, customFields: true } });
-    product = products.find(item => normalizeCatalogName(item.name) === normalizedName) || null;
+function normalizeVariationName(value) {
+  return normalizeCatalogName(value)
+    .replace(/^bolo\s+de\s+/, '')
+    .replace(/\s+/g, '');
+}
+
+function findCatalogVariation(variations, variationName) {
+  const normalizedVariation = normalizeVariationName(variationName);
+  if (!normalizedVariation) return null;
+  const matches = (Array.isArray(variations) ? variations : [])
+    .filter(item => normalizeVariationName(item?.name) === normalizedVariation);
+  return matches.find(item => !item?.hidden) || matches[0] || null;
+}
+
+async function findCatalogProduct(userId, productId, productName) {
+  if (productId) {
+    const byId = await prisma.product.findFirst({ where: { id: productId, userId } });
+    if (byId) return byId;
   }
+  const normalizedName = normalizeCatalogName(productName);
+  if (!normalizedName) return null;
+  const products = await prisma.product.findMany({ where: { userId } });
+  return products.find(candidate => normalizeCatalogName(candidate.name) === normalizedName)
+    || products.find(candidate => normalizeCatalogName(candidate.name).includes(normalizedName)
+      || normalizedName.includes(normalizeCatalogName(candidate.name)))
+    || null;
+}
+
+async function buildOrderCustomFields({ userId, productId, productName, notes, clientJid, instanceId }) {
+  const product = await findCatalogProduct(userId, productId, productName);
 
   const definitions = safeJsonParse(product?.customFields, []);
   if (!Array.isArray(definitions) || !definitions.length || !notes) return null;
 
-  const noteParts = String(notes).split(/\s*\|\s*/);
+  const noteParts = String(notes).split(/\s*(?:\||\r?\n)\s*/);
   const fields = [];
   for (const definition of definitions) {
     const name = String(definition?.name || '').trim();
     if (!name) continue;
-    const note = noteParts.find(part => part.toLowerCase().startsWith(`${name.toLowerCase()}:`));
+    const normalizedFieldName = normalizeCatalogName(name).replace(/\s*\(.+\)$/, '');
+    const note = noteParts.find(part => normalizeCatalogName(part).startsWith(`${normalizedFieldName}:`));
     if (!note) continue;
     const value = note.slice(note.indexOf(':') + 1).trim();
     const type = String(definition?.type || 'text').toLowerCase();
@@ -826,13 +848,13 @@ async function calculateOrderBreakdown(data, userId) {
   const carrinho_itens_extras = data.carrinho_itens_extras;
 
   if (productId) {
-    const p = await prisma.product.findUnique({ where: { id: productId } });
+    const p = await findCatalogProduct(userId, productId, product);
     if (p) {
       mainProductPrice = resolveEffectivePrice(p);
       if (variation && p.variations) {
         try {
           const vars = typeof p.variations === 'string' ? JSON.parse(p.variations) : p.variations;
-          const vObj = vars.find(v => v.name === variation);
+          const vObj = findCatalogVariation(vars, variation);
           if (vObj) {
             const selectedSubItem = Array.isArray(vObj.subItems)
               ? vObj.subItems.find(item => String(item?.name || '') === String(subItem || ''))
@@ -843,25 +865,13 @@ async function calculateOrderBreakdown(data, userId) {
       }
     }
   } else if (product) {
-    const normalizeProductName = (value) => String(value || '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .toLowerCase()
-      .trim();
-    const requestedName = normalizeProductName(product);
-    const products = await prisma.product.findMany({ where: { userId } });
-    const p = products.find(candidate => {
-      const candidateName = normalizeProductName(candidate.name);
-      return candidateName === requestedName
-        || candidateName.includes(requestedName)
-        || requestedName.includes(candidateName);
-    });
+    const p = await findCatalogProduct(userId, null, product);
     if (p) {
       mainProductPrice = resolveEffectivePrice(p);
       if (variation && p.variations) {
         try {
           const vars = typeof p.variations === 'string' ? JSON.parse(p.variations) : p.variations;
-          const vObj = vars.find(v => v.name === variation);
+          const vObj = findCatalogVariation(vars, variation);
           if (vObj) {
             const selectedSubItem = Array.isArray(vObj.subItems)
               ? vObj.subItems.find(item => String(item?.name || '') === String(subItem || ''))
@@ -1570,7 +1580,9 @@ router.post('/', async (req, res) => {
       create: { jid: finalClientJid, userId, name: resolvedClientName, address: deliveryAddress }
     });
 
-    const computedTotal = await calculateOrderTotal(req.body, userId);
+    const catalogProduct = await findCatalogProduct(userId, productId, product);
+    if (!productId && catalogProduct) productId = catalogProduct.id;
+    const computedTotal = await calculateOrderTotal({ ...req.body, productId }, userId);
     const customFields = await buildOrderCustomFields({
       userId,
       productId,
