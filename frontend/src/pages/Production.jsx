@@ -549,7 +549,9 @@ const Production = () => {
     }).join('');
 
     let actionBtnHtml = '';
-    if (order.status === 'pending') {
+    if (order.status === 'waiting_payment' && order.type === 'order') {
+      actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #8b5cf6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">ACEITAR PEDIDO</button>`;
+    } else if (order.status === 'pending') {
       const nextLabel = order.type === 'delivery' ? 'INICIAR PRODUÇÃO' : 'ACEITAR PEDIDO';
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #8b5cf6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">${nextLabel}</button>`;
     } else if (order.status === 'accepted') {
@@ -724,7 +726,7 @@ const Production = () => {
         if (actionBtn) {
           actionBtn.onclick = () => {
             const nextStatusMap = {
-              'waiting_payment': 'pending',
+              'waiting_payment': order.type === 'order' ? 'accepted' : 'pending',
               'pending': order.type === 'delivery' ? 'production' : 'accepted',
               'accepted': 'production',
               'production': 'ready',
