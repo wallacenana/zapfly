@@ -875,6 +875,39 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             })
         ]);
 
+        const [financialPeriodOrders, acceptedUnpaidCandidates] = await Promise.all([
+            prisma.order.findMany({
+                where: {
+                    userId,
+                    createdAt: { gte: chartStart, lte: chartEnd },
+                    NOT: { status: { in: ['cancelled', 'canceled'] } }
+                },
+                select: { totalValue: true, paymentStatus: true }
+            }),
+            prisma.order.findMany({
+                where: {
+                    userId,
+                    type: 'order',
+                    status: 'accepted',
+                    NOT: { status: { in: ['cancelled', 'canceled'] } }
+                },
+                orderBy: [{ scheduledDate: 'asc' }, { scheduledTime: 'asc' }],
+                select: {
+                    id: true,
+                    product: true,
+                    variation: true,
+                    clientName: true,
+                    clientJid: true,
+                    clientPhone: true,
+                    paymentMethod: true,
+                    paymentStatus: true,
+                    totalValue: true,
+                    scheduledDate: true,
+                    scheduledTime: true
+                }
+            })
+        ]);
+
         const ordersTodayCount = ordersToday.length;
         const messagesToday = instances.length > 0
             ? await prisma.message.count({
@@ -1009,6 +1042,17 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             imageUrl: order.productRelation?.imageUrl || order.productRelation?.image || '',
         }));
 
+        const isPaymentReceived = (paymentStatus) => ['confirmed', 'paid'].includes(String(paymentStatus || '').toLowerCase());
+        const receivedInPeriodValue = financialPeriodOrders
+            .filter((order) => isPaymentReceived(order.paymentStatus))
+            .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
+        const acceptedWithoutPayment = acceptedUnpaidCandidates.filter((order) => {
+            const paymentMethod = String(order.paymentMethod || '').trim().toLowerCase();
+            return !isPaymentReceived(order.paymentStatus) && !['dinheiro', 'cash'].includes(paymentMethod);
+        });
+        const acceptedWithoutPaymentValue = acceptedWithoutPayment
+            .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
+
         const topProducts = topOrderGroups.map((item) => {
             const product = topProductsMap.get(item.productId);
             return {
@@ -1093,6 +1137,23 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                 })),
                 paymentBreakdown,
                 orderTypeBreakdown
+            },
+            finance: {
+                receivedInPeriodValue: Number(receivedInPeriodValue.toFixed(2)),
+                acceptedWithoutPaymentValue: Number(acceptedWithoutPaymentValue.toFixed(2)),
+                acceptedWithoutPaymentCount: acceptedWithoutPayment.length,
+                acceptedWithoutPayment: acceptedWithoutPayment.map((order) => ({
+                    id: order.id,
+                    product: order.product || 'Produto',
+                    variation: order.variation || '',
+                    clientName: order.clientName || 'Cliente',
+                    clientJid: order.clientJid || '',
+                    clientPhone: order.clientPhone || '',
+                    paymentMethod: order.paymentMethod || 'A combinar',
+                    totalValue: Number(order.totalValue || 0),
+                    scheduledDate: order.scheduledDate || '',
+                    scheduledTime: order.scheduledTime || ''
+                }))
             },
             lists: {
                 recentOrders: normalizedRecentOrders,

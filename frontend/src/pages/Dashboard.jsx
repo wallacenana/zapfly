@@ -179,8 +179,10 @@ export default function Dashboard() {
   const metrics = summary?.metrics || {};
   const charts = summary?.charts || {};
   const lists = summary?.lists || {};
+  const finance = summary?.finance || {};
   const days = Array.isArray(charts.ordersByDay) ? charts.ordersByDay : [];
   const recentOrders = Array.isArray(lists.recentOrders) ? lists.recentOrders : [];
+  const acceptedWithoutPayment = Array.isArray(finance.acceptedWithoutPayment) ? finance.acceptedWithoutPayment : [];
   const connected = safeNumber(metrics.connectedInstancesCount);
   const instances = safeNumber(metrics.instancesCount);
   const modeLabel = String(store.deliveryMode || '').toLowerCase() === 'delivery' ? 'Delivery ativo' : String(store.deliveryMode || '').toLowerCase() === 'pickup' ? 'Retirada na loja' : 'Entrega + retirada';
@@ -219,6 +221,23 @@ export default function Dashboard() {
           <MetricCard label="Ticket médio" value={money.format(safeNumber(metrics.averageTicketToday))} caption="Por pedido" icon={BarChart3} tone="violet" />
           <MetricCard label="Cancelados / período" value={integer.format(safeNumber(metrics.cancelledOrdersCount))} caption="Pedidos cancelados" icon={XCircle} tone="red" />
         </div>
+
+        <Panel eyebrow="Financeiro" title="Recebimentos e cobranças pendentes" description="Acompanhe os pagamentos confirmados no período e as encomendas aceitas que ainda precisam de cobrança." actions={<Button variant="secondary" size="sm" onClick={() => navigate('/production')}>Ver produção <ExternalLink size={14} /></Button>}>
+          <div className="dashboard-finance-summary">
+            <div className="dashboard-finance-card dashboard-finance-card--received"><span>Recebido no período</span><strong>{money.format(safeNumber(finance.receivedInPeriodValue))}</strong><small>Pedidos com pagamento confirmado</small></div>
+            <div className="dashboard-finance-card dashboard-finance-card--pending"><span>A receber</span><strong>{money.format(safeNumber(finance.acceptedWithoutPaymentValue))}</strong><small>{integer.format(safeNumber(finance.acceptedWithoutPaymentCount))} encomenda(s) aceita(s) sem pagamento</small></div>
+          </div>
+          <div className="dashboard-finance-list">
+            <div className="dashboard-finance-list-head"><strong>Encomendas a cobrar</strong><span>{acceptedWithoutPayment.length ? 'Acesse a produção para registrar o pagamento ou abrir a conversa.' : 'Tudo regularizado'}</span></div>
+            {acceptedWithoutPayment.length ? acceptedWithoutPayment.slice(0, 6).map(order => (
+              <button type="button" className="dashboard-finance-row" key={order.id} onClick={() => navigate('/production')}>
+                <span className="dashboard-finance-alert">!</span>
+                <span className="dashboard-finance-main"><strong>{safeText(order.clientName, 'Cliente')}</strong><small>{safeText(order.product, 'Produto')}{order.variation ? ` · ${order.variation}` : ''} · {order.scheduledDate ? `${order.scheduledDate.split('-').reverse().join('/')} ${order.scheduledTime || ''}` : 'Data a combinar'}</small></span>
+                <span className="dashboard-finance-value"><strong>{money.format(safeNumber(order.totalValue))}</strong><small>{safeText(order.paymentMethod, 'A combinar')}</small></span>
+              </button>
+            )) : <div className="dashboard-finance-empty">Nenhuma encomenda aceita está aguardando pagamento.</div>}
+          </div>
+        </Panel>
 
         <Panel eyebrow="Performance operacional" title="Volume de pedidos e faturamento" description="Acompanhe a movimentação da loja no período selecionado." actions={<div className="dashboard-period-controls"><Tabs items={periodItems} value={period} onChange={handlePeriodChange} />{period === 'custom' ? <div className="dashboard-custom-period"><input type="date" value={customDates.start} onChange={event => setCustomDates(current => ({ ...current, start: event.target.value }))} /><span>até</span><input type="date" value={customDates.end} onChange={event => setCustomDates(current => ({ ...current, end: event.target.value }))} /><Button variant="secondary" size="sm" onClick={applyCustomPeriod}>Aplicar</Button></div> : null}</div>}>
           <PerformanceChart days={days} />
