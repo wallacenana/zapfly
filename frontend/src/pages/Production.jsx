@@ -467,7 +467,7 @@ const Production = () => {
     const freightStr = freightValue.toFixed(2);
     const selectionSections = getOrderSelectionSections(order);
     const detailRows = selectionSections.flatMap(section => section.values.map(([value, isAttachment]) => [section.label, value, isAttachment]));
-    const printSelectionHtml = selectionSections.map(section => `<div style="margin-bottom: 8px;"><b>${section.label}:</b>${section.values.map(([value, isAttachment]) => `<div style="padding-left: 10px;">${isAttachment || getAttachmentUrls(value).length ? renderAttachmentGallery(value, false) : value}</div>`).join('')}</div>`).join('');
+    const printSelectionHtml = selectionSections.map(section => `<div style="margin-bottom: 8px;"><b>${section.label}:</b>${section.values.map(([value, isAttachment, price]) => `<div style="display: flex; justify-content: space-between; gap: 12px; padding-left: 10px;"><span>${isAttachment || getAttachmentUrls(value).length ? renderAttachmentGallery(value, false) : value}</span><span style="white-space: nowrap; font-weight: 700;">${price > 0 ? `R$ ${price.toFixed(2)}` : ''}</span></div>`).join('')}</div>`).join('');
     const detailSummaryHtml = detailRows.length
 ? `<div style="font-size: 13px; color: #475569; margin-top: 12px; padding-top: 0; line-height: 1.6;">${detailRows.map(([label, value, isAttachment]) => `<div><b>${label}:</b><br><span style="padding-left: 8px;">${isAttachment || getAttachmentUrls(value).length ? renderAttachmentGallery(value) : value}</span></div>`).join('')}</div>`
       : '';
@@ -638,7 +638,7 @@ const Production = () => {
           if (opts.prod) content += printItemsHtml;
 
           if (opts.massa && printSelectionHtml) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${printSelectionHtml}</div>`;
-          if (opts.notes && order.notes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>📝 OBS:</b> ${order.notes}</p>`;
+          if (opts.notes && cleanNotes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>📝 OBS:</b> ${cleanNotes}</p>`;
           if (opts.addr && order.deliveryAddress) content += `<p style="font-size: 16px; margin: 10px 0;"><b>📍 ENTREGA:</b> ${order.deliveryAddress}</p>`;
           if (opts.value) content += `<div style="margin-top: 15px; border-top: 2px solid #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 24px;">TOTAL: R$ ${order.totalValue?.toFixed(2)}</h2></div>`;
 
