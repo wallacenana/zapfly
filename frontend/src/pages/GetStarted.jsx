@@ -26,7 +26,7 @@ const loadGooglePlaces = (apiKey) => {
   return googlePlacesLoaderPromise;
 };
 
-const defaultDeliveryOptions = { orderTypes: { delivery: true, order: true }, fulfillmentMethods: { delivery: true, pickup: true, local: true }, orderFulfillmentMethods: { delivery: true, pickup: true, local: true } };
+const defaultDeliveryOptions = { orderTypes: { delivery: true, order: true }, fulfillmentMethods: { delivery: true, pickup: true, local: true }, orderFulfillmentMethods: { delivery: false, pickup: true, local: false }, includeDeliveryItemsInOrders: false };
 const businessCategoryOptions = ['Açaí', 'Adega', 'Árabe', 'Assados', 'Bakery', 'Barbearia', 'Bebidas', 'Brasileira', 'Cafeteria', 'Carnes', 'Churrascaria', 'Comida Fit', 'Comida Japonesa', 'Comida Típica', 'Confeitaria', 'Doces & Bolos', 'Esfiharia', 'Frutos do Mar', 'Gelateria', 'Hambúrguer', 'Italiana', 'Lanches', 'Loja de Conveniência', 'Marmitaria', 'Massas', 'Padaria', 'Pastelaria', 'Pet Shop', 'Pizza', 'Pizzaria', 'Presentes', 'Saudável', 'Sorvetes', 'Sushi', 'Vegana', 'Vegetariana'];
 const normalizeBusinessCategory = (value) => ({ 'Restaurante': 'Brasileira', 'Lanchonete': 'Lanches', 'Hamburgueria': 'Hambúrguer', 'Doces e bolos': 'Doces & Bolos', 'Marmitas': 'Marmitaria' }[value] || value);
 const weekDays = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
@@ -46,10 +46,11 @@ const normalizeDeliveryOptions = (value) => {
       local: parsed?.fulfillmentMethods?.local !== false,
     },
     orderFulfillmentMethods: {
-      delivery: parsed?.orderFulfillmentMethods?.delivery !== false,
+      delivery: parsed?.orderFulfillmentMethods?.delivery === true,
       pickup: parsed?.orderFulfillmentMethods?.pickup !== false,
-      local: parsed?.orderFulfillmentMethods?.local !== false,
+      local: parsed?.orderFulfillmentMethods?.local === true,
     },
+    includeDeliveryItemsInOrders: parsed?.includeDeliveryItemsInOrders === true,
   };
 };
 

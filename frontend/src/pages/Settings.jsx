@@ -44,7 +44,8 @@ const DEFAULT_DELIVERY_MENU_OPTIONS = {
   fulfillmentMethods: { delivery: true, pickup: true, local: true },
   // Encomendas nao devem herdar delivery da pronta-entrega. Retirada e o
   // padrao seguro ate que a loja habilite os demais meios explicitamente.
-  orderFulfillmentMethods: { delivery: false, pickup: true, local: false }
+  orderFulfillmentMethods: { delivery: false, pickup: true, local: false },
+  includeDeliveryItemsInOrders: false
 };
 
 const BUSINESS_CATEGORY_OPTIONS = [
@@ -91,7 +92,8 @@ function normalizeDeliveryMenuOptions(value) {
   const base = {
     orderTypes: { ...DEFAULT_DELIVERY_MENU_OPTIONS.orderTypes },
     fulfillmentMethods: { ...DEFAULT_DELIVERY_MENU_OPTIONS.fulfillmentMethods },
-    orderFulfillmentMethods: { ...DEFAULT_DELIVERY_MENU_OPTIONS.orderFulfillmentMethods }
+    orderFulfillmentMethods: { ...DEFAULT_DELIVERY_MENU_OPTIONS.orderFulfillmentMethods },
+    includeDeliveryItemsInOrders: DEFAULT_DELIVERY_MENU_OPTIONS.includeDeliveryItemsInOrders
   };
 
   if (!value) return base;
@@ -129,7 +131,8 @@ function normalizeDeliveryMenuOptions(value) {
       delivery: orderFulfillmentMethods.delivery !== false,
       pickup: orderFulfillmentMethods.pickup !== false,
       local: orderFulfillmentMethods.local !== false
-    }
+    },
+    includeDeliveryItemsInOrders: parsed.includeDeliveryItemsInOrders === true
   };
 }
 
@@ -701,14 +704,11 @@ const Settings = () => {
                             ...s,
                             dailyDeliveryItems: {
                               ...current,
-                              orderFulfillmentMethods: {
-                                ...current.orderFulfillmentMethods,
-                                delivery: !current.orderFulfillmentMethods.delivery
-                              }
+                              includeDeliveryItemsInOrders: !current.includeDeliveryItemsInOrders
                             }
                           };
                         })}
-                        className={`settings-toggle-card settings-toggle-card--full ${settings.dailyDeliveryItems?.orderFulfillmentMethods?.delivery ? 'is-on' : ''}`}
+                        className={`settings-toggle-card settings-toggle-card--full ${settings.dailyDeliveryItems?.includeDeliveryItemsInOrders ? 'is-on' : ''}`}
                       >
                         <span>Aceitar encomendas com delivery</span>
                         <span className="settings-switch" aria-hidden="true">
