@@ -721,6 +721,7 @@ const Settings = () => {
                       <label style={labelStyle}>Métodos de recebimento para encomendas</label>
                       <div className="settings-option-grid settings-option-grid--stack">
                         {[
+                          { key: 'delivery', label: 'Delivery' },
                           { key: 'pickup', label: 'Retirada na loja' },
                           { key: 'local', label: 'Consumo no local' }
                         ].map(item => {
