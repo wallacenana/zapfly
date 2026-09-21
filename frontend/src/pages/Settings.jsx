@@ -42,7 +42,9 @@ function parseGoogleLocationMeta(value) {
 const DEFAULT_DELIVERY_MENU_OPTIONS = {
   orderTypes: { delivery: true, order: true },
   fulfillmentMethods: { delivery: true, pickup: true, local: true },
-  orderFulfillmentMethods: { delivery: true, pickup: true, local: true }
+  // Encomendas nao devem herdar delivery da pronta-entrega. Retirada e o
+  // padrao seguro ate que a loja habilite os demais meios explicitamente.
+  orderFulfillmentMethods: { delivery: false, pickup: true, local: false }
 };
 
 const BUSINESS_CATEGORY_OPTIONS = [
@@ -111,7 +113,7 @@ function normalizeDeliveryMenuOptions(value) {
   const fulfillmentMethods = parsed.fulfillmentMethods && typeof parsed.fulfillmentMethods === 'object' ? parsed.fulfillmentMethods : {};
   const orderFulfillmentMethods = parsed.orderFulfillmentMethods && typeof parsed.orderFulfillmentMethods === 'object'
     ? parsed.orderFulfillmentMethods
-    : fulfillmentMethods;
+    : DEFAULT_DELIVERY_MENU_OPTIONS.orderFulfillmentMethods;
 
   return {
     orderTypes: {
@@ -691,32 +693,8 @@ const Settings = () => {
                       </button>
                       <p className="settings-helper">Quando desativado, as encomendas ficam disponíveis a partir de amanhã.</p>
 
-                      <button
-                        type="button"
-                        onClick={() => setSettings(s => {
-                          const current = normalizeDeliveryMenuOptions(s.dailyDeliveryItems);
-                          return {
-                            ...s,
-                            dailyDeliveryItems: {
-                              ...current,
-                              orderFulfillmentMethods: {
-                                ...current.orderFulfillmentMethods,
-                                delivery: !current.orderFulfillmentMethods.delivery
-                              }
-                            }
-                          };
-                        })}
-                        className={`settings-toggle-card settings-toggle-card--full ${settings.dailyDeliveryItems?.orderFulfillmentMethods?.delivery ? 'is-on' : ''}`}
-                      >
-                        <span>Aceitar encomendas com delivery</span>
-                        <span className="settings-switch" aria-hidden="true">
-                          <span className="settings-switch__thumb" />
-                        </span>
-                      </button>
-                      <p className="settings-helper">Permite agendar encomendas para entrega no endereço do cliente.</p>
-
                       <div style={{ marginTop: '18px', paddingTop: '18px', borderTop: '1px solid var(--border-color)' }}>
-                      <label style={labelStyle}>Métodos de retirada para encomendas</label>
+                      <label style={labelStyle}>Métodos de recebimento para encomendas</label>
                       <div className="settings-option-grid settings-option-grid--stack">
                         {[
                           { key: 'delivery', label: 'Delivery' },
