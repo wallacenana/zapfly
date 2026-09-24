@@ -1318,7 +1318,9 @@ app.post('/mercadopago/webhook', async (req, res) => {
                         const updatedOrder = await prisma.order.update({
                             where: { id: orderId },
                             data: {
-                                status: order.type === 'delivery' ? 'production' : 'pending',
+                                // A confirmação financeira não substitui o aceite da loja.
+                                // Todo pedido pago entra em pendentes e só vai à produção manualmente.
+                                status: 'pending',
                                 paymentStatus: 'confirmed'
                             }
                         });
@@ -1336,11 +1338,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                                 let aviso = "";
                                 const orderIdShort = updatedOrder.id.slice(-4).toUpperCase();
 
-                                if (updatedOrder.type === 'order') {
-                                    aviso = `🚨 *NOVA ENCOMENDA!* (#${orderIdShort}) 🚨\n\n👤 *Cliente:* ${updatedOrder.clientName}\n📦 *Pedido:* ${updatedOrder.product}\n📅 *Data:* ${updatedOrder.scheduledDate}\n⏰ *Hora:* ${updatedOrder.scheduledTime}\n📝 *Obs:* ${updatedOrder.notes || '-'}\n🚵 *Entrega:* ${updatedOrder.deliveryAddress || 'Retirada'}\n\nO pagamento foi confirmado e o pedido ja esta no seu painel! ✨`;
-                                } else {
-                                    aviso = `✅ *PAGAMENTO APROVADO!* (#${orderIdShort}) ✅\n\n👤 *Cliente:* ${updatedOrder.clientName}\n📦 *Pedido:* ${updatedOrder.product}\n\nO pedido ja esta na aba *PENDENTES* do seu painel. Aceite-o para iniciar a producao! ✨`;
-                                }
+                                aviso = `✅ *PAGAMENTO APROVADO!* (#${orderIdShort}) ✅\n\n👤 *Cliente:* ${updatedOrder.clientName}\n📦 *Pedido:* ${updatedOrder.product}\n\nO pedido ja esta na aba *PENDENTES* do seu painel. Aceite-o para iniciar a producao! ✨`;
 
                                 const managerJid = await resolveJidWithSocket(
                                     await resolveConfiguredJid(settings.managerJid, updatedOrder.instanceId || 'global'),
@@ -1354,7 +1352,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                         if (updatedOrder.clientJid) {
                             const sock = sessions.get(updatedOrder.instanceId || 'global') || Array.from(sessions.values())[0];
                             if (sock) {
-                                const msg = `✅ *PAGAMENTO APROVADO!* 🎉\n\nOi, *${updatedOrder.clientName}*! Seu pagamento foi aprovado e seu pedido ja esta na nossa fila de producao. 👩‍🍳🚀✨\n\nAvisaremos voce assim que estiver pronto! 💖🚵`;
+                                const msg = `✅ *PAGAMENTO APROVADO!* 🎉\n\nOi, *${updatedOrder.clientName}*! Recebemos seu pagamento e a loja vai confirmar seu pedido em breve.\n\nAvisaremos voce assim que ele entrar em producao! 💖🚵`;
                                 await sock.sendMessage(updatedOrder.clientJid, { text: msg }).catch(() => { });
                             }
                         }
