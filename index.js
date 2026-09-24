@@ -771,7 +771,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                     createdAt: { gte: todayStart, lte: todayEnd },
                     NOT: { status: { in: ['cancelled', 'canceled'] } }
                 },
-                select: { totalValue: true, status: true }
+                select: { totalValue: true, deliveryFee: true, type: true, status: true }
             }),
             prisma.order.findMany({
                 where: { userId },
@@ -882,7 +882,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                     createdAt: { gte: chartStart, lte: chartEnd },
                     NOT: { status: { in: ['cancelled', 'canceled'] } }
                 },
-                select: { totalValue: true, paymentStatus: true }
+                select: { totalValue: true, deliveryFee: true, paymentStatus: true }
             }),
             prisma.order.findMany({
                 where: {
@@ -929,6 +929,9 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             : new Map();
 
         const todayOrdersValue = ordersToday.reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
+        const deliveryOrdersToday = ordersToday.filter((order) => String(order.type || '').toLowerCase() === 'delivery');
+        const deliveryFeesTodayValue = deliveryOrdersToday
+            .reduce((sum, order) => sum + (Number(order.deliveryFee) || 0), 0);
         const completedOrdersTodayValue = ordersToday
             .filter((order) => String(order.status || '').toLowerCase() === 'completed')
             .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
@@ -1043,9 +1046,13 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
         }));
 
         const isPaymentReceived = (paymentStatus) => ['confirmed', 'paid'].includes(String(paymentStatus || '').toLowerCase());
-        const receivedInPeriodValue = financialPeriodOrders
-            .filter((order) => isPaymentReceived(order.paymentStatus))
+        const receivedOrdersInPeriod = financialPeriodOrders
+            .filter((order) => isPaymentReceived(order.paymentStatus));
+        const receivedInPeriodValue = receivedOrdersInPeriod
             .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
+        const deliveryFeesInPeriodValue = receivedOrdersInPeriod
+            .reduce((sum, order) => sum + (Number(order.deliveryFee) || 0), 0);
+        const storeRevenueInPeriodValue = Math.max(0, receivedInPeriodValue - deliveryFeesInPeriodValue);
         const acceptedWithoutPayment = acceptedUnpaidCandidates.filter((order) => {
             const paymentMethod = String(order.paymentMethod || '').trim().toLowerCase();
             return !isPaymentReceived(order.paymentStatus) && !['dinheiro', 'cash'].includes(paymentMethod);
@@ -1140,6 +1147,10 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             },
             finance: {
                 receivedInPeriodValue: Number(receivedInPeriodValue.toFixed(2)),
+                deliveryFeesInPeriodValue: Number(deliveryFeesInPeriodValue.toFixed(2)),
+                storeRevenueInPeriodValue: Number(storeRevenueInPeriodValue.toFixed(2)),
+                deliveryFeesTodayValue: Number(deliveryFeesTodayValue.toFixed(2)),
+                deliveryOrdersTodayCount: deliveryOrdersToday.length,
                 acceptedWithoutPaymentValue: Number(acceptedWithoutPaymentValue.toFixed(2)),
                 acceptedWithoutPaymentCount: acceptedWithoutPayment.length,
                 acceptedWithoutPayment: acceptedWithoutPayment.map((order) => ({

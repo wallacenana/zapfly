@@ -222,11 +222,14 @@ export default function Dashboard() {
           <MetricCard label="Cancelados / período" value={integer.format(safeNumber(metrics.cancelledOrdersCount))} caption="Pedidos cancelados" icon={XCircle} tone="red" />
         </div>
 
-        <Panel eyebrow="Financeiro" title="Recebimentos e cobranças pendentes" description="Acompanhe os pagamentos confirmados no período e as encomendas aceitas que ainda precisam de cobrança." actions={<Button variant="secondary" size="sm" onClick={() => navigate('/production')}>Ver produção <ExternalLink size={14} /></Button>}>
+        <Panel eyebrow="Financeiro" title="Recebimentos, entregas e cobranças" description="As taxas de entrega são separadas da receita da loja para facilitar o repasse ao entregador." actions={<Button variant="secondary" size="sm" onClick={() => navigate('/production')}>Ver produção <ExternalLink size={14} /></Button>}>
           <div className="dashboard-finance-summary">
-            <div className="dashboard-finance-card dashboard-finance-card--received"><span>Recebido no período</span><strong>{money.format(safeNumber(finance.receivedInPeriodValue))}</strong><small>Pedidos com pagamento confirmado</small></div>
+            <div className="dashboard-finance-card dashboard-finance-card--received"><span>Recebido bruto</span><strong>{money.format(safeNumber(finance.receivedInPeriodValue))}</strong><small>Pagamentos confirmados no período</small></div>
+            <div className="dashboard-finance-card dashboard-finance-card--delivery"><span>Taxas de entrega</span><strong>{money.format(safeNumber(finance.deliveryFeesInPeriodValue))}</strong><small>Valor destinado aos entregadores</small></div>
+            <div className="dashboard-finance-card dashboard-finance-card--net"><span>Receita da loja</span><strong>{money.format(safeNumber(finance.storeRevenueInPeriodValue))}</strong><small>Recebido bruto menos taxas de entrega</small></div>
             <div className="dashboard-finance-card dashboard-finance-card--pending"><span>A receber</span><strong>{money.format(safeNumber(finance.acceptedWithoutPaymentValue))}</strong><small>{integer.format(safeNumber(finance.acceptedWithoutPaymentCount))} encomenda(s) aceita(s) sem pagamento</small></div>
           </div>
+          <div className="dashboard-delivery-today"><div><span>Taxas de entrega de hoje</span><strong>{money.format(safeNumber(finance.deliveryFeesTodayValue))}</strong></div><small>{integer.format(safeNumber(finance.deliveryOrdersTodayCount))} delivery(s) lançado(s) hoje. Este é o valor para conferência e repasse.</small></div>
           <div className="dashboard-finance-list">
             <div className="dashboard-finance-list-head"><strong>Encomendas a cobrar</strong><span>{acceptedWithoutPayment.length ? 'Acesse a produção para registrar o pagamento ou abrir a conversa.' : 'Tudo regularizado'}</span></div>
             {acceptedWithoutPayment.length ? acceptedWithoutPayment.slice(0, 6).map(order => (
