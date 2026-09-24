@@ -671,7 +671,6 @@ const Production = () => {
             printWindow.document.write(`
               <html>
                 <head>
-                  <meta charset="UTF-8">
                   <title>Pedido #${idShort}</title>
                   <style>
                     @page { margin: 0; size: auto; }
