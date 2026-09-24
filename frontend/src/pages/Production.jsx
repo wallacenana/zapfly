@@ -569,7 +569,7 @@ const Production = () => {
     }).join('');
 
     let actionBtnHtml = '';
-    if (order.status === 'waiting_payment' && order.type === 'order') {
+    if (order.status === 'waiting_payment') {
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #8b5cf6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">ACEITAR PEDIDO</button>`;
     } else if (order.status === 'pending') {
       const nextLabel = order.type === 'delivery' ? 'INICIAR PRODUÇÃO' : 'ACEITAR PEDIDO';
@@ -662,6 +662,7 @@ const Production = () => {
           if (opts.massa && printSelectionHtml) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${printSelectionHtml}</div>`;
           if (opts.notes && cleanNotes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>📝 OBS:</b> ${cleanNotes}</p>`;
           if (opts.addr && order.deliveryAddress) content += `<p style="font-size: 16px; margin: 10px 0;"><b>📍 ENTREGA:</b> ${order.deliveryAddress}</p>`;
+          if (freightValue > 0) content += `<p style="font-size: 16px; margin: 10px 0;"><b>TAXA DE ENTREGA:</b> R$ ${freightValue.toFixed(2)}</p>`;
           if (opts.value) content += `<div style="margin-top: 15px; border-top: 2px solid #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 24px;">TOTAL: R$ ${order.totalValue?.toFixed(2)}</h2></div>`;
 
           content += '</div>';
@@ -673,8 +674,8 @@ const Production = () => {
                 <head>
                   <title>Pedido #${idShort}</title>
                   <style>
-                    @page { margin: 0; size: auto; }
-                    body { margin: 0; padding: 10px; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; }
+                    @page { size: 80mm auto; margin: 4mm; }
+                    body { width: 72mm; margin: 0; padding: 0; font-family: Arial, sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     * { box-sizing: border-box; }
                   </style>
                 </head>
