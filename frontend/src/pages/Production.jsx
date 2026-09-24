@@ -586,7 +586,7 @@ const Production = () => {
     }
 
     const handlePrint = (order) => {
-      const saved = JSON.parse(localStorage.getItem('print_settings') || '{"showId":true,"prod":true,"massa":true,"notes":true,"value":true,"addr":true,"client":true}');
+      const saved = JSON.parse(localStorage.getItem('print_settings') || '{"showId":true,"prod":true,"massa":true,"notes":true,"value":true,"addr":true,"client":true,"driver":false}');
 
       Swal.fire({
         title: 'Opções de Impressão',
@@ -605,6 +605,7 @@ const Production = () => {
             <div style="margin-bottom: 10px;"><label><input type="checkbox" id="p-value" ${saved.value ? 'checked' : ''}> Valor Total</label></div>
             <div style="margin-bottom: 10px;"><label><input type="checkbox" id="p-addr" ${saved.addr ? 'checked' : ''}> Endereço de Entrega</label></div>
             <div style="margin-bottom: 10px;"><label><input type="checkbox" id="p-client" ${saved.client ? 'checked' : ''}> Nome do Cliente</label></div>
+            <div style="margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.2);"><label><input type="checkbox" id="p-driver" ${saved.driver ? 'checked' : ''}> Imprimir versão do entregador</label><div style="font-size: 12px; opacity: 0.7; margin: 5px 0 0 20px;">ID, cliente, endereço e taxa. Em dinheiro, inclui o total a receber.</div></div>
           </div>
         `,
         showCancelButton: true,
@@ -620,6 +621,7 @@ const Production = () => {
             value: document.getElementById('p-value').checked,
             addr: document.getElementById('p-addr').checked,
             client: document.getElementById('p-client').checked,
+            driver: document.getElementById('p-driver').checked,
           };
           localStorage.setItem('print_settings', JSON.stringify(settings));
           return settings;
@@ -653,18 +655,27 @@ const Production = () => {
           let content = `
             <div style="font-family: 'Inter', Arial, sans-serif; width: 100%; max-width: 280px; margin: 0 auto; color: #000; line-height: 1.4;">
               <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px;">
-                ${opts.showId ? `<h1 style="margin: 0; font-size: 32px; font-weight: 900;">#${idShort}</h1>` : ''}
+                ${opts.showId || opts.driver ? `<h1 style="margin: 0; font-size: 32px; font-weight: 900;">#${idShort}</h1>` : ''}
                 <p style="margin: 5px 0; font-size: 16px; font-weight: 700;">${order.scheduledDate} - ${order.scheduledTime}</p>
               </div>
           `;
 
-          if (opts.client) content += `<p style="font-size: 18px; margin: 8px 0;"><b>👤 CLIENTE:</b> ${order.clientName}</p>`;
-          if (opts.prod) content += printItemsHtml;
+          if (opts.driver) {
+            const isCashPayment = ['dinheiro', 'cash'].includes(String(order.paymentMethod || '').trim().toLowerCase());
+            content += `<p style="font-size: 18px; margin: 8px 0;"><b>CLIENTE:</b> ${order.clientName || 'Cliente'}</p>`;
+            content += `<p style="font-size: 16px; margin: 10px 0;"><b>ENDEREÇO:</b> ${order.deliveryAddress || 'Retirada na loja'}</p>`;
+            content += `<div style="margin-top: 15px; border-top: 2px solid #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 22px;">TAXA DE ENTREGA: R$ ${freightValue.toFixed(2)}</h2></div>`;
+            if (isCashPayment) content += `<div style="margin-top: 12px; border-top: 1px dashed #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 22px;">RECEBER: R$ ${finalTotal.toFixed(2)}</h2></div>`;
+          } else {
+            if (opts.client) content += `<p style="font-size: 18px; margin: 8px 0;"><b>👤 CLIENTE:</b> ${order.clientName}</p>`;
+            if (opts.prod) content += printItemsHtml;
 
-          if (opts.massa && printSelectionHtml) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${printSelectionHtml}</div>`;
-          if (opts.notes && cleanNotes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>📝 OBS:</b> ${cleanNotes}</p>`;
-          if (opts.addr && order.deliveryAddress) content += `<p style="font-size: 16px; margin: 10px 0;"><b>📍 ENTREGA:</b> ${order.deliveryAddress}</p>`;
-          if (opts.value) content += `<div style="margin-top: 15px; border-top: 2px solid #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 24px;">TOTAL: R$ ${order.totalValue?.toFixed(2)}</h2></div>`;
+            if (opts.massa && printSelectionHtml) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${printSelectionHtml}</div>`;
+            if (opts.notes && cleanNotes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>📝 OBS:</b> ${cleanNotes}</p>`;
+            if (opts.addr && order.deliveryAddress) content += `<p style="font-size: 16px; margin: 10px 0;"><b>📍 ENTREGA:</b> ${order.deliveryAddress}</p>`;
+            if (freightValue > 0) content += `<p style="font-size: 16px; margin: 10px 0;"><b>TAXA DE ENTREGA:</b> R$ ${freightValue.toFixed(2)}</p>`;
+            if (opts.value) content += `<div style="margin-top: 15px; border-top: 2px solid #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 24px;">TOTAL: R$ ${finalTotal.toFixed(2)}</h2></div>`;
+          }
 
           content += '</div>';
 
