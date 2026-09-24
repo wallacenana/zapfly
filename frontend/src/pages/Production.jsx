@@ -480,7 +480,9 @@ const Production = () => {
     const itemsSubtotal = orderItems.length > 1
       ? orderItems.reduce((sum, item) => sum + ((Number(item.price) || 0) * (Number(item.quantity) || 1)), 0)
       : unitPrice * quantity;
-    const finalTotal = order.totalValue || (itemsSubtotal + freightValue);
+    // O detalhamento do carrinho e a fonte de verdade para pedidos com varios itens.
+    // Pedidos antigos podem ter salvo apenas o valor do primeiro item em totalValue.
+    const finalTotal = itemsSubtotal > 0 ? (itemsSubtotal + freightValue) : Number(order.totalValue || 0);
 
     const totalValueStr = finalTotal.toFixed(2);
     const subtotalStr = itemsSubtotal.toFixed(2);

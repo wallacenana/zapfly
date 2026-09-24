@@ -937,6 +937,11 @@ function resolveEffectivePrice(item, fallback = 0) {
 // Helper para calcular o total do pedido com inteligência (storefront + IA)
 async function calculateOrderBreakdown(data, userId) {
   const providedTotal = parseFloat(data.totalValue);
+  const rawCartItems = data.cartItems ?? data.cartitems ?? data.cart_items;
+  const cartItems = safeJsonParse(rawCartItems, rawCartItems);
+  const normalizedCartItems = Array.isArray(cartItems)
+    ? cartItems.filter(item => item && typeof item === 'object')
+    : [];
 
   let mainProductPrice = 0;
 
@@ -1016,6 +1021,23 @@ async function calculateOrderBreakdown(data, userId) {
   }
 
   const normalizedDeliveryFee = parseFloat(deliveryFee) || 0;
+  // O checkout publico envia todos os produtos em cartItems. O primeiro produto
+  // continua nos campos legados apenas para compatibilidade, mas nao representa
+  // o total quando o carrinho possui mais de um item.
+  if (normalizedCartItems.length > 0) {
+    const cartTotal = normalizedCartItems.reduce((total, item) => {
+      const itemPrice = parseFloat(item.price) || 0;
+      const itemQuantity = parseOrderQuantity(item.quantity);
+      return total + (itemPrice * itemQuantity);
+    }, 0);
+    return {
+      productTotal: cartTotal,
+      extrasTotal: 0,
+      addonsTotal: 0,
+      deliveryFee: normalizedDeliveryFee,
+      total: cartTotal + normalizedDeliveryFee
+    };
+  }
   // A IA nunca define o valor: use o total informado apenas para pedidos manuais
   // sem produto identificável no catálogo.
   if (mainProductPrice <= 0 && !isNaN(providedTotal)) {
