@@ -233,11 +233,12 @@ export default function Dashboard() {
 
         <Panel eyebrow="Financeiro" title="Recebimentos por método" description="Valores recebidos no período selecionado. Taxas e repasses ficam detalhados na tela Entregas." actions={<Button variant="secondary" size="sm" onClick={() => navigate('/entregas')}>Ver entregas <ExternalLink size={14} /></Button>}>
           <div className="dashboard-finance-summary">
-            <div className="dashboard-finance-card dashboard-finance-card--received"><span>Mercado Pago</span><strong>{money.format(safeNumber(finance.mercadoPagoReceivedValue))}</strong><small>Pagamentos confirmados</small></div>
-            <div className="dashboard-finance-card dashboard-finance-card--cash"><span>Dinheiro</span><strong>{money.format(safeNumber(finance.cashReceivedValue))}</strong><small>Pedidos finalizados</small></div>
-            <div className="dashboard-finance-card dashboard-finance-card--net"><span>Total recebido</span><strong>{money.format(safeNumber(finance.receivedInPeriodValue))}</strong><small>Mercado Pago mais dinheiro</small></div>
+            <div className="dashboard-finance-card dashboard-finance-card--received"><span>Mercado Pago</span><strong>{money.format(safeNumber(finance.mercadoPagoReceivedValue))}</strong><small>Pagamentos confirmados, com entrega</small></div>
+            <div className="dashboard-finance-card dashboard-finance-card--cash"><span>Dinheiro</span><strong>{money.format(safeNumber(finance.cashReceivedValue))}</strong><small>Pedidos finalizados, com entrega</small></div>
+            <div className="dashboard-finance-card dashboard-finance-card--net"><span>Total recebido</span><strong>{money.format(safeNumber(finance.receivedInPeriodValue))}</strong><small>Produtos e taxas de entrega</small></div>
             <div className="dashboard-finance-card dashboard-finance-card--count"><span>Quantidade de pedidos</span><strong>{integer.format(safeNumber(finance.receivedOrdersCount))}</strong><small>Pedidos com valor recebido</small></div>
           </div>
+          <div className="dashboard-finance-net-total"><div><strong>Receita sem taxas de entrega</strong><span>Valor dos produtos depois de separar o repasse dos entregadores.</span></div><strong>{money.format(safeNumber(finance.storeRevenueInPeriodValue))}</strong></div>
         </Panel>
 
         <Panel eyebrow="Performance operacional" title="Volume de pedidos e faturamento" description="Apenas pedidos recebidos no período selecionado.">
