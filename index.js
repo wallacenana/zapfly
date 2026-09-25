@@ -771,7 +771,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                     createdAt: { gte: todayStart, lte: todayEnd },
                     NOT: { status: { in: ['cancelled', 'canceled'] } }
                 },
-                select: { totalValue: true, deliveryFee: true, type: true, status: true, paymentStatus: true }
+                select: { totalValue: true, deliveryFee: true, type: true, status: true, paymentStatus: true, paymentMethod: true }
             }),
             prisma.order.findMany({
                 where: { userId },
@@ -802,7 +802,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                     createdAt: { gte: chartStart, lte: chartEnd },
                     NOT: { status: { in: ['cancelled', 'canceled'] } }
                 },
-                select: { createdAt: true, totalValue: true, status: true, paymentStatus: true }
+                select: { createdAt: true, totalValue: true, status: true, paymentStatus: true, paymentMethod: true }
             }),
             prisma.order.groupBy({
                 by: ['productId'],
@@ -882,7 +882,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                     createdAt: { gte: chartStart, lte: chartEnd },
                     NOT: { status: { in: ['cancelled', 'canceled'] } }
                 },
-                select: { totalValue: true, deliveryFee: true, paymentStatus: true }
+                select: { totalValue: true, deliveryFee: true, paymentStatus: true, paymentMethod: true, status: true }
             }),
             prisma.order.findMany({
                 where: {
@@ -908,8 +908,14 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             })
         ]);
 
-        const isPaymentReceived = (paymentStatus) => ['confirmed', 'paid'].includes(String(paymentStatus || '').toLowerCase());
-        const paidOrdersToday = ordersToday.filter((order) => isPaymentReceived(order.paymentStatus));
+        const isOrderReceived = (order) => {
+            const paymentStatus = String(order?.paymentStatus || '').toLowerCase();
+            const paymentMethod = String(order?.paymentMethod || '').trim().toLowerCase();
+            const status = String(order?.status || '').toLowerCase();
+            return ['confirmed', 'paid'].includes(paymentStatus)
+                || (['dinheiro', 'cash'].includes(paymentMethod) && status === 'completed');
+        };
+        const paidOrdersToday = ordersToday.filter(isOrderReceived);
         const ordersTodayCount = ordersToday.length;
         const messagesToday = instances.length > 0
             ? await prisma.message.count({
@@ -1022,7 +1028,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
 
         const ordersByDay = chartDays.map((day) => {
             const dayOrders = last7DaysOrders.filter((order) => (
-                getBrazilDateString(order.createdAt) === day.key && isPaymentReceived(order.paymentStatus)
+                getBrazilDateString(order.createdAt) === day.key && isOrderReceived(order)
             ));
             const total = dayOrders.reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
             return {
@@ -1050,7 +1056,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
         }));
 
         const receivedOrdersInPeriod = financialPeriodOrders
-            .filter((order) => isPaymentReceived(order.paymentStatus));
+            .filter(isOrderReceived);
         const receivedInPeriodValue = receivedOrdersInPeriod
             .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
         const deliveryFeesInPeriodValue = receivedOrdersInPeriod
@@ -1058,9 +1064,14 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
         const storeRevenueInPeriodValue = Math.max(0, receivedInPeriodValue - deliveryFeesInPeriodValue);
         const acceptedWithoutPayment = acceptedUnpaidCandidates.filter((order) => {
             const paymentMethod = String(order.paymentMethod || '').trim().toLowerCase();
-            return !isPaymentReceived(order.paymentStatus) && !['dinheiro', 'cash'].includes(paymentMethod);
+            return !isOrderReceived(order) && !['dinheiro', 'cash'].includes(paymentMethod);
         });
         const acceptedWithoutPaymentValue = acceptedWithoutPayment
+            .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
+        const waitingPaymentOrders = financialPeriodOrders.filter((order) => (
+            String(order.status || '').toLowerCase() === 'waiting_payment' && !isOrderReceived(order)
+        ));
+        const waitingPaymentValue = waitingPaymentOrders
             .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
 
         const topProducts = topOrderGroups.map((item) => {
@@ -1154,6 +1165,8 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                 storeRevenueInPeriodValue: Number(storeRevenueInPeriodValue.toFixed(2)),
                 deliveryFeesTodayValue: Number(deliveryFeesTodayValue.toFixed(2)),
                 deliveryOrdersTodayCount: deliveryOrdersToday.length,
+                waitingPaymentValue: Number(waitingPaymentValue.toFixed(2)),
+                waitingPaymentCount: waitingPaymentOrders.length,
                 acceptedWithoutPaymentValue: Number(acceptedWithoutPaymentValue.toFixed(2)),
                 acceptedWithoutPaymentCount: acceptedWithoutPayment.length,
                 acceptedWithoutPayment: acceptedWithoutPayment.map((order) => ({
@@ -1259,7 +1272,13 @@ app.get('/dashboard/deliveries', authenticate, async (req, res) => {
                 orderBy: { deliveryDate: 'asc' }
             })
         ]);
-        const isPaymentReceived = (paymentStatus) => ['confirmed', 'paid'].includes(String(paymentStatus || '').toLowerCase());
+        const isPaymentReceived = (order) => {
+            const paymentStatus = String(order?.paymentStatus || '').toLowerCase();
+            const paymentMethod = String(order?.paymentMethod || '').trim().toLowerCase();
+            const status = String(order?.status || '').toLowerCase();
+            return ['confirmed', 'paid'].includes(paymentStatus)
+                || (['dinheiro', 'cash'].includes(paymentMethod) && status === 'completed');
+        };
         const systemRecords = orders.map((order) => {
             const totalValue = Number(order.totalValue) || 0;
             const deliveryFee = Number(order.deliveryFee) || 0;
@@ -1277,7 +1296,7 @@ app.get('/dashboard/deliveries', authenticate, async (req, res) => {
                 orderValue: totalValue,
                 deliveryFee,
                 storeRevenue: Math.max(0, totalValue - deliveryFee),
-                paymentReceived: isPaymentReceived(order.paymentStatus)
+                paymentReceived: isPaymentReceived(order)
             };
         });
         const manualEntries = manualRecords.map((record) => {

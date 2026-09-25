@@ -52,7 +52,7 @@ function PerformanceChart({ days }) {
         labels: days.map(day => day.label || day.date || ''),
         datasets: [
           {
-            label: 'Faturamento (R$)',
+            label: 'Faturamento recebido (R$)',
             data: days.map(day => safeNumber(day.total)),
             borderColor: '#0a9f68',
             backgroundColor: 'rgba(10, 159, 104, 0.10)',
@@ -64,7 +64,7 @@ function PerformanceChart({ days }) {
             pointBorderWidth: 2,
           },
           {
-            label: 'Qtd. pedidos',
+            label: 'Qtd. recebidos',
             data: days.map(day => safeNumber(day.count)),
             borderColor: '#2563eb',
             backgroundColor: 'transparent',
@@ -224,9 +224,10 @@ export default function Dashboard() {
 
         <Panel eyebrow="Financeiro" title="Recebimentos, entregas e cobranças" description="As taxas de entrega são separadas da receita da loja para facilitar o repasse ao entregador." actions={<Button variant="secondary" size="sm" onClick={() => navigate('/production')}>Ver produção <ExternalLink size={14} /></Button>}>
           <div className="dashboard-finance-summary">
-            <div className="dashboard-finance-card dashboard-finance-card--received"><span>Recebido bruto</span><strong>{money.format(safeNumber(finance.receivedInPeriodValue))}</strong><small>Pagamentos confirmados no período</small></div>
+            <div className="dashboard-finance-card dashboard-finance-card--received"><span>Recebido bruto</span><strong>{money.format(safeNumber(finance.receivedInPeriodValue))}</strong><small>Confirmados e dinheiro finalizado</small></div>
             <div className="dashboard-finance-card dashboard-finance-card--delivery"><span>Taxas de entrega</span><strong>{money.format(safeNumber(finance.deliveryFeesInPeriodValue))}</strong><small>Valor destinado aos entregadores</small></div>
             <div className="dashboard-finance-card dashboard-finance-card--net"><span>Receita da loja</span><strong>{money.format(safeNumber(finance.storeRevenueInPeriodValue))}</strong><small>Recebido bruto menos taxas de entrega</small></div>
+            <div className="dashboard-finance-card dashboard-finance-card--waiting"><span>Aguardando pagamento</span><strong>{money.format(safeNumber(finance.waitingPaymentValue))}</strong><small>{integer.format(safeNumber(finance.waitingPaymentCount))} pedido(s) com link pendente</small></div>
             <div className="dashboard-finance-card dashboard-finance-card--pending"><span>A receber</span><strong>{money.format(safeNumber(finance.acceptedWithoutPaymentValue))}</strong><small>{integer.format(safeNumber(finance.acceptedWithoutPaymentCount))} encomenda(s) aceita(s) sem pagamento</small></div>
           </div>
           <div className="dashboard-delivery-today"><div><span>Taxas de entrega de hoje</span><strong>{money.format(safeNumber(finance.deliveryFeesTodayValue))}</strong></div><small>{integer.format(safeNumber(finance.deliveryOrdersTodayCount))} delivery(s) lançado(s) hoje. Este é o valor para conferência e repasse.</small></div>
@@ -247,7 +248,7 @@ export default function Dashboard() {
         </Panel>
 
         <div className="dashboard-lower-grid">
-          <Panel eyebrow="Atividade recente" title="Pedidos recentes" description="Acompanhamento das últimas transações." actions={<span className="dashboard-count-pill">{recentOrders.length} transações</span>}>
+          <Panel eyebrow="Atividade recente" title="Pedidos recentes" description="Acompanhamento das últimas transações." actions={<span className="dashboard-count-pill">Últimos {recentOrders.length}</span>}>
             <div className="dashboard-order-list">
               {recentOrders.length ? recentOrders.slice(0, 5).map(order => (
                 <div className="dashboard-order-row" key={order.id}>

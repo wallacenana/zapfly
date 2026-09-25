@@ -126,6 +126,8 @@
 .dashboard-finance-card--delivery strong { color: #c2410c; }
 .dashboard-finance-card--net { border-color: #bfdbfe; background: #f5f9ff; }
 .dashboard-finance-card--net strong { color: #1d4ed8; }
+.dashboard-finance-card--waiting { border-color: #e9d5ff; background: #faf7ff; }
+.dashboard-finance-card--waiting strong { color: #7e22ce; }
 .dashboard-finance-card--pending { border-color: #fed7aa; background: #fffaf3; }
 .dashboard-finance-card--pending strong { color: #c2410c; }
 .dashboard-delivery-today { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 12px 14px; margin-bottom: 16px; border: 1px solid #fed7aa; border-radius: 10px; background: #fffaf3; }
