@@ -2240,17 +2240,13 @@ async function initInstance(instanceId) {
                         const instanceData = await getCachedInstance(instanceId);
                         const userId = instanceData?.userId;
 
-                        let flowHandled = false;
+                        // The per-chat switch is authoritative: an enabled agent responds
+                        // directly, without an active flow intercepting the conversation.
                         if (!msg.key.fromMe && currentChat?.aiEnabled) {
                             const greeted = await ensureRestaurantGreeting(sock, instanceId, jid, userId);
                             if (greeted && combinedImages.length === 0 && isSimpleGreeting(textForFlow)) {
                                 return;
                             }
-                            flowHandled = await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages, userId);
-                        }
-                        if (flowHandled) return;
-
-                        if (!msg.key.fromMe && currentChat?.aiEnabled) {
                             const ai = await getOpenAI(userId);
                             if (ai) {
                                 const settings = await getSettings(userId);
@@ -3628,7 +3624,7 @@ app.get('/instances/:id/resolve-chat/:jid', authenticate, async (req, res) => {
 app.patch('/instances/:id/chats/:jid', authenticate, async (req, res) => {
     let { id, jid } = req.params;
     jid = await getCanonicalJid(jid, id);
-    const { aiEnabled } = req.body;
+    const aiEnabled = Boolean(req.body?.aiEnabled);
 
     // Verifica propriedade
     const instance = await prisma.instance.findUnique({ where: { id, userId: req.user.id } });
@@ -3638,6 +3634,14 @@ app.patch('/instances/:id/chats/:jid', authenticate, async (req, res) => {
         where: { jid_instanceId: { jid, instanceId: id } },
         data: { aiEnabled }
     });
+    if (!aiEnabled) {
+        if (aiDebounceTimers[jid]) clearTimeout(aiDebounceTimers[jid]);
+        delete aiDebounceTimers[jid];
+        delete aiMessageBuffer[jid];
+        if (aiProcessingTokens[jid]) aiProcessingTokens[jid].cancelled = true;
+        await prisma.flowState.deleteMany({ where: { instanceId: id, jid } });
+        io.emit('chat_update', { instanceId: id, jid, aiEnabled: false, inFlow: false });
+    }
     res.json(chat);
 });
 
