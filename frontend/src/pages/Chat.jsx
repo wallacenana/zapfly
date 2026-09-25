@@ -511,14 +511,16 @@ const Chat = () => {
     if (!activeContact || !activeInstance) return;
     try {
       const newState = !activeContact.aiEnabled;
-      await api.patch(`/instances/${activeInstance.id}/chats/${activeContact.jid}`, {
+      const { data } = await api.patch(`/instances/${activeInstance.id}/chats/${activeContact.jid}`, {
         aiEnabled: newState
       });
-      setActiveContact({ ...activeContact, aiEnabled: newState });
+      const aiEnabled = Boolean(data?.aiEnabled);
+      setActiveContact({ ...activeContact, aiEnabled });
       // Update contacts list to reflect state
-      setContacts(prev => prev.map(c => (c.id === activeContact.id || areJidsSame(c.jid, activeContact.jid)) ? { ...c, aiEnabled: newState } : c));
+      setContacts(prev => prev.map(c => (c.id === activeContact.id || areJidsSame(c.jid, activeContact.jid)) ? { ...c, aiEnabled } : c));
     } catch (err) {
       console.error(err);
+      Toast.fire({ icon: 'error', title: 'Nao foi possivel alterar o agente IA.' });
     }
   };
 
