@@ -82,14 +82,14 @@ export default function Deliveries() {
     {error ? <div className="dashboard-alert">{error}</div> : null}
     {loading ? <div className="deliveries-loading">Carregando entregas...</div> : <>
       <section className="deliveries-metrics">
-        <DeliveryMetric label="Entregas registradas" value={summary.deliveriesCount || 0} caption={`Lancadas ${rangeLabel}`} tone="blue" />
-        <DeliveryMetric label="Taxas para repasse" value={money.format(Number(summary.deliveryFeesValue) || 0)} caption="Inclui sistema e lancamentos externos" tone="orange" />
+        <DeliveryMetric label="Entregas recebidas" value={summary.deliveriesCount || 0} caption={`Confirmadas ${rangeLabel}`} tone="blue" />
+        <DeliveryMetric label="Taxas para repasse" value={money.format(Number(summary.deliveryFeesValue) || 0)} caption="Somente entregas recebidas" tone="orange" />
         <DeliveryMetric label="Recebido dos clientes" value={money.format(Number(summary.receivedValue) || 0)} caption="Somente pagamentos confirmados" tone="green" />
         <DeliveryMetric label="Receita da loja" value={money.format(Number(summary.storeRevenueValue) || 0)} caption={`Menos ${money.format(Number(summary.receivedDeliveryFeesValue) || 0)} em taxas recebidas`} tone="blue" />
       </section>
 
       <section className="deliveries-panel">
-        <div className="deliveries-panel-head"><div><h2>Conferencia por entrega</h2><p>Taxa e receita da loja ficam separados em cada lancamento.</p></div><span><Truck size={16} /> {entries.length} entrega(s)</span></div>
+        <div className="deliveries-panel-head"><div><h2>Conferencia por entrega</h2><p>Somente entregas com pagamento confirmado entram neste relatorio.</p></div><span><Truck size={16} /> {entries.length} entrega(s)</span></div>
         {entries.length ? <div className="deliveries-table-wrap"><table className="deliveries-table"><thead><tr><th>Origem</th><th>Entrega</th><th>Cliente e endereco</th><th>Status</th><th>Pagamento</th><th>Pedido</th><th>Taxa</th><th>Loja</th><th /></tr></thead><tbody>{entries.map((entry) => <tr key={`${entry.origin}-${entry.id}`}><td><span className={`deliveries-origin deliveries-origin--${entry.origin}`}>{entry.origin === 'manual' ? 'Externa' : 'Sistema'}</span></td><td><strong>{entry.origin === 'manual' ? 'Manual' : `#${String(entry.id || '').slice(-4).toUpperCase()}`}</strong><small>{formatDate(String(entry.deliveryDate || '').slice(0, 10))} {entry.scheduledTime || ''}</small></td><td><strong>{entry.clientName || 'Cliente'}</strong><small>{entry.deliveryAddress || 'Endereco nao informado'}{entry.deliveryPerson ? ` · ${entry.deliveryPerson}` : ''}</small></td><td><span className="deliveries-status">{statusLabel(entry.status)}</span></td><td><strong className={entry.paymentReceived ? 'is-paid' : 'is-unpaid'}>{entry.paymentReceived ? 'Confirmado' : 'Pendente'}</strong><small>{entry.paymentMethod || 'A combinar'}</small></td><td>{money.format(Number(entry.orderValue) || 0)}</td><td className="deliveries-fee">{money.format(Number(entry.deliveryFee) || 0)}</td><td className="deliveries-store-value">{entry.paymentReceived ? money.format(Number(entry.storeRevenue) || 0) : '-'}</td><td>{entry.origin === 'manual' ? <button type="button" className="deliveries-delete" onClick={() => deleteManualDelivery(entry)} title="Excluir lancamento manual"><Trash2 size={15} /></button> : null}</td></tr>)}</tbody></table></div> : <div className="deliveries-empty">Nenhuma entrega registrada neste periodo.</div>}
       </section>
     </>}

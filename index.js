@@ -1347,11 +1347,11 @@ app.get('/dashboard/deliveries', authenticate, async (req, res) => {
                 notes: record.notes || ''
             };
         });
-        const entries = [...systemRecords, ...manualEntries].sort((a, b) => new Date(a.deliveryDate) - new Date(b.deliveryDate));
-        const receivedOrders = entries.filter((entry) => entry.paymentReceived);
-        const receivedValue = receivedOrders.reduce((sum, entry) => sum + entry.orderValue, 0);
+        const entries = [...systemRecords, ...manualEntries]
+            .filter((entry) => entry.paymentReceived)
+            .sort((a, b) => new Date(a.deliveryDate) - new Date(b.deliveryDate));
+        const receivedValue = entries.reduce((sum, entry) => sum + entry.orderValue, 0);
         const deliveryFeesValue = entries.reduce((sum, entry) => sum + entry.deliveryFee, 0);
-        const receivedDeliveryFeesValue = receivedOrders.reduce((sum, order) => sum + order.deliveryFee, 0);
 
         res.json({
             date,
@@ -1360,8 +1360,8 @@ app.get('/dashboard/deliveries', authenticate, async (req, res) => {
                 deliveriesCount: entries.length,
                 receivedValue: Number(receivedValue.toFixed(2)),
                 deliveryFeesValue: Number(deliveryFeesValue.toFixed(2)),
-                receivedDeliveryFeesValue: Number(receivedDeliveryFeesValue.toFixed(2)),
-                storeRevenueValue: Number(Math.max(0, receivedValue - receivedDeliveryFeesValue).toFixed(2))
+                receivedDeliveryFeesValue: Number(deliveryFeesValue.toFixed(2)),
+                storeRevenueValue: Number(Math.max(0, receivedValue - deliveryFeesValue).toFixed(2))
             },
             entries
         });
