@@ -1307,7 +1307,13 @@ app.get('/dashboard/deliveries', authenticate, async (req, res) => {
             return ['confirmed', 'paid'].includes(paymentStatus)
                 || (['dinheiro', 'cash'].includes(paymentMethod) && status === 'completed');
         };
-        const systemRecords = orders.map((order) => {
+        const isActualDelivery = (order) => {
+            const address = String(order?.deliveryAddress || '').trim().toLowerCase();
+            return Boolean(address)
+                && address !== 'retirada na loja'
+                && address !== 'consumo no local';
+        };
+        const systemRecords = orders.filter(isActualDelivery).map((order) => {
             const totalValue = Number(order.totalValue) || 0;
             const deliveryFee = Number(order.deliveryFee) || 0;
             return {
