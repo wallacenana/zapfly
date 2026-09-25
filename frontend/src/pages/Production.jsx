@@ -578,7 +578,7 @@ const Production = () => {
     }).join('');
 
     let actionBtnHtml = '';
-    if (order.status === 'waiting_payment' && order.type === 'order') {
+    if (order.status === 'waiting_payment') {
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #8b5cf6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">ACEITAR PEDIDO</button>`;
     } else if (order.status === 'pending') {
       const nextLabel = 'ACEITAR PEDIDO';
@@ -794,7 +794,48 @@ const Production = () => {
 
         const actionBtn = document.getElementById('btn-action-next');
         if (actionBtn) {
-          actionBtn.onclick = () => {
+          actionBtn.onclick = async () => {
+            if (order.status === 'waiting_payment' && order.type === 'delivery') {
+              const paymentDecision = await Swal.fire({
+                title: 'Pagamento recebido?',
+                text: 'Confirme se recebeu este pedido fora do link, por exemplo via Pix ou transferência.',
+                icon: 'question',
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: 'Sim, confirmar pagamento',
+                denyButtonText: 'Ainda não recebi',
+                cancelButtonText: 'Voltar',
+                confirmButtonColor: '#16a34a',
+                denyButtonColor: '#f59e0b'
+              });
+
+              if (!paymentDecision.isConfirmed && !paymentDecision.isDenied) return;
+
+              actionBtn.disabled = true;
+              const paymentStatus = paymentDecision.isConfirmed ? 'confirmed' : 'pending';
+              try {
+                const response = await api.patch(`/orders/${order.id}`, {
+                  status: 'pending',
+                  paymentStatus
+                });
+                setOrders(current => current.map(item => item.id === order.id ? response.data : item));
+                Swal.close();
+                Swal.fire({
+                  title: paymentDecision.isConfirmed ? 'Pagamento confirmado' : 'Pedido em aberto',
+                  text: paymentDecision.isConfirmed
+                    ? 'O delivery foi enviado para Pendentes.'
+                    : 'O delivery foi enviado para Pendentes e ficará em A receber.',
+                  icon: 'success',
+                  timer: 2200,
+                  showConfirmButton: false
+                });
+              } catch (error) {
+                actionBtn.disabled = false;
+                Swal.fire('Erro', 'Não foi possível atualizar o pedido.', 'error');
+              }
+              return;
+            }
+
             const nextStatusMap = {
               'waiting_payment': order.type === 'order' ? 'accepted' : 'pending',
               'pending': 'accepted',

@@ -900,8 +900,10 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             prisma.order.findMany({
                 where: {
                     userId,
-                    type: 'order',
-                    status: 'accepted',
+                    OR: [
+                        { type: 'order', status: 'accepted' },
+                        { type: 'delivery', status: { in: ['pending', 'accepted'] } }
+                    ],
                     NOT: { status: { in: ['cancelled', 'canceled'] } }
                 },
                 orderBy: [{ scheduledDate: 'asc' }, { scheduledTime: 'asc' }],
