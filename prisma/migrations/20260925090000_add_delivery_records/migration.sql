@@ -14,6 +14,5 @@ CREATE TABLE `delivery_record` (
   `updatedAt` DATETIME(3) NOT NULL,
 
   INDEX `delivery_record_userId_deliveryDate_idx`(`userId`, `deliveryDate`),
-  PRIMARY KEY (`id`),
-  CONSTRAINT `delivery_record_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+  PRIMARY KEY (`id`)
 );

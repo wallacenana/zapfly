@@ -150,7 +150,8 @@ model Chat {
   unreadCount     Int      @default(0)
   lastPixAnalysis String?  @db.Text
   adminJid        String?
-  aiEnabled       Boolean  @default(true)
+  aiEnabled       Boolean  @default(false)
+  aiManuallyPaused Boolean @default(false)
   instanceId      String
   instance        Instance @relation(fields: [instanceId], references: [id])
   createdAt       DateTime @default(now())

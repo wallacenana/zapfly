@@ -3027,25 +3027,13 @@ async function initInstance(instanceId) {
                                         }
                                     }
                                 }
-                                // PONTE ROBUSTA: Busca o fluxo tentando bater o numero (prefixo) se o JID exato falhar
-                                const cleanJid = jid.split('@')[0];
-
-                                let flowState = await prisma.flowState.findFirst({
-                                    where: {
-                                        instanceId,
-                                        jid: { contains: cleanJid }
-                                    }
-                                });
-
-                                if (flowState) {
-                                    const flow = await prisma.flow.findUnique({ where: { id: flowState.flowId } });
-                                    if (flow && flow.status === 'Ativo') {
-                                        await runFlowNode(sock, instanceId, jid, flow, flowState.currentNodeId, null, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages, textForFlow, userId);
-                                    }
-                                }
                             } else {
                                 console.warn(`[AI] Agente está ligado para ${jid}, mas a OpenAI API Key não está configurada.`);
                             }
+                        } else if (!msg.key.fromMe && !currentChat?.aiManuallyPaused) {
+                            // New chats start with the agent off. A flow can enable it,
+                            // unless an attendant explicitly paused this conversation.
+                            await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages, userId);
                         }
                     } catch (errDbnc) {
                         console.error('[AI Debounce Error]', errDbnc);
@@ -3632,7 +3620,7 @@ app.patch('/instances/:id/chats/:jid', authenticate, async (req, res) => {
 
     const chat = await prisma.chat.update({
         where: { jid_instanceId: { jid, instanceId: id } },
-        data: { aiEnabled }
+        data: { aiEnabled, aiManuallyPaused: !aiEnabled }
     });
     if (!aiEnabled) {
         if (aiDebounceTimers[jid]) clearTimeout(aiDebounceTimers[jid]);
