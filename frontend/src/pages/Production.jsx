@@ -661,6 +661,21 @@ const Production = () => {
           `;
 
           if (opts.driver) {
+            // Keep the regular kitchen receipt, then append a dedicated driver copy.
+            if (opts.client) content += `<p style="font-size: 18px; margin: 8px 0;"><b>CLIENTE:</b> ${order.clientName}</p>`;
+            if (opts.prod) content += printItemsHtml;
+            if (opts.massa && printSelectionHtml) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${printSelectionHtml}</div>`;
+            if (opts.notes && cleanNotes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>OBS:</b> ${cleanNotes}</p>`;
+            if (opts.addr && order.deliveryAddress) content += `<p style="font-size: 16px; margin: 10px 0;"><b>ENTREGA:</b> ${order.deliveryAddress}</p>`;
+            if (freightValue > 0) content += `<p style="font-size: 16px; margin: 10px 0;"><b>TAXA DE ENTREGA:</b> R$ ${freightValue.toFixed(2)}</p>`;
+            if (opts.value) content += `<div style="margin-top: 15px; border-top: 2px solid #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 24px;">TOTAL: R$ ${finalTotal.toFixed(2)}</h2></div>`;
+            content += `</div><div style="break-before: page; page-break-before: always; height: 1px;"></div>
+              <div style="font-family: 'Inter', Arial, sans-serif; width: 100%; max-width: 280px; margin: 0 auto; color: #000; line-height: 1.4;">
+                <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 10px;">
+                  <div style="font-size: 12px; font-weight: 900; letter-spacing: 1px;">VIA ENTREGADOR</div>
+                  <h1 style="margin: 0; font-size: 32px; font-weight: 900;">#${idShort}</h1>
+                  <p style="margin: 5px 0; font-size: 16px; font-weight: 700;">${order.scheduledDate} - ${order.scheduledTime}</p>
+                </div>`;
             const isCashPayment = ['dinheiro', 'cash'].includes(String(order.paymentMethod || '').trim().toLowerCase());
             content += `<p style="font-size: 18px; margin: 8px 0;"><b>CLIENTE:</b> ${order.clientName || 'Cliente'}</p>`;
             content += `<p style="font-size: 16px; margin: 10px 0;"><b>ENDEREÇO:</b> ${order.deliveryAddress || 'Retirada na loja'}</p>`;

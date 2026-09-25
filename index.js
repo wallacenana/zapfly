@@ -686,31 +686,6 @@ app.post('/settings/custom-domain', authenticate, async (req, res) => {
     }
 });
 
-function getSavedOrderCartItems(order) {
-    const parseItems = (rawValue) => {
-        if (!rawValue) return [];
-        try {
-            const parsed = typeof rawValue === 'string' ? JSON.parse(rawValue) : rawValue;
-            const items = Array.isArray(parsed) ? parsed : parsed?.cartItems;
-            return Array.isArray(items) ? items.filter((item) => item && typeof item === 'object') : [];
-        } catch (_) {
-            return [];
-        }
-    };
-
-    const cartItems = parseItems(order?.cartItems);
-    return cartItems.length > 0 ? cartItems : parseItems(order?.addons);
-}
-
-function getSavedOrderTotal(order) {
-    const cartTotal = getSavedOrderCartItems(order).reduce((total, item) => (
-        total + ((Number(item.price) || 0) * (Number(item.quantity) || 1))
-    ), 0);
-    return cartTotal > 0
-        ? cartTotal + (Number(order?.deliveryFee) || 0)
-        : (Number(order?.totalValue) || 0);
-}
-
 app.get('/dashboard/summary', authenticate, async (req, res) => {
     try {
         const userId = req.user.id;
@@ -805,7 +780,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                     createdAt: { gte: todayStart, lte: todayEnd },
                     NOT: { status: { in: ['cancelled', 'canceled'] } }
                 },
-                select: { totalValue: true, deliveryFee: true, type: true, status: true, paymentStatus: true, paymentMethod: true, cartItems: true, addons: true }
+                select: { totalValue: true, deliveryFee: true, type: true, status: true, paymentStatus: true, paymentMethod: true }
             }),
             prisma.order.findMany({
                 where: {
@@ -828,8 +803,6 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                     createdAt: true,
                     paymentStatus: true,
                     deliveryFee: true,
-                    cartItems: true,
-                    addons: true,
                     productId: true,
                     productRelation: {
                         select: { id: true, name: true, imageUrl: true, image: true }
@@ -842,7 +815,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                     createdAt: { gte: chartStart, lte: chartEnd },
                     NOT: { status: { in: ['cancelled', 'canceled'] } }
                 },
-                select: { createdAt: true, totalValue: true, deliveryFee: true, cartItems: true, addons: true, status: true, paymentStatus: true, paymentMethod: true }
+                select: { createdAt: true, totalValue: true, status: true, paymentStatus: true, paymentMethod: true }
             }),
             prisma.order.groupBy({
                 by: ['productId'],
@@ -922,7 +895,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                     createdAt: { gte: chartStart, lte: chartEnd },
                     NOT: { status: { in: ['cancelled', 'canceled'] } }
                 },
-                select: { totalValue: true, deliveryFee: true, cartItems: true, addons: true, paymentStatus: true, paymentMethod: true, status: true }
+                select: { totalValue: true, deliveryFee: true, paymentStatus: true, paymentMethod: true, status: true }
             }),
             prisma.order.findMany({
                 where: {
@@ -976,7 +949,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             })).map((product) => [product.id, product]))
             : new Map();
 
-        const todayOrdersValue = paidOrdersToday.reduce((sum, order) => sum + getSavedOrderTotal(order), 0);
+        const todayOrdersValue = paidOrdersToday.reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
         const deliveryOrdersToday = ordersToday.filter((order) => String(order.type || '').toLowerCase() === 'delivery');
         const deliveryFeesTodayValue = deliveryOrdersToday
             .reduce((sum, order) => sum + (Number(order.deliveryFee) || 0), 0);
@@ -1074,7 +1047,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             const dayOrders = last7DaysOrders.filter((order) => (
                 getBrazilDateString(order.createdAt) === day.key && isOrderReceived(order)
             ));
-            const total = dayOrders.reduce((sum, order) => sum + getSavedOrderTotal(order), 0);
+            const total = dayOrders.reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
             return {
                 date: day.key,
                 label: day.label,
@@ -1090,7 +1063,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             clientName: order.clientName || 'Cliente',
             status: order.status,
             type: order.type,
-            totalValue: getSavedOrderTotal(order),
+            totalValue: Number(order.totalValue || 0),
             scheduledDate: order.scheduledDate || '',
             scheduledTime: order.scheduledTime || '',
             paymentStatus: order.paymentStatus || 'pending',
@@ -1102,13 +1075,13 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
         const receivedOrdersInPeriod = financialPeriodOrders
             .filter(isOrderReceived);
         const receivedInPeriodValue = receivedOrdersInPeriod
-            .reduce((sum, order) => sum + getSavedOrderTotal(order), 0);
+            .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
         const mercadoPagoReceivedValue = receivedOrdersInPeriod
             .filter((order) => String(order.paymentMethod || '').trim().toLowerCase().includes('mercado'))
-            .reduce((sum, order) => sum + getSavedOrderTotal(order), 0);
+            .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
         const cashReceivedValue = receivedOrdersInPeriod
             .filter((order) => ['dinheiro', 'cash'].includes(String(order.paymentMethod || '').trim().toLowerCase()))
-            .reduce((sum, order) => sum + getSavedOrderTotal(order), 0);
+            .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
         const deliveryFeesInPeriodValue = receivedOrdersInPeriod
             .reduce((sum, order) => sum + (Number(order.deliveryFee) || 0), 0);
         const storeRevenueInPeriodValue = Math.max(0, receivedInPeriodValue - deliveryFeesInPeriodValue);
@@ -1314,8 +1287,6 @@ app.get('/dashboard/deliveries', authenticate, async (req, res) => {
                     scheduledTime: true,
                     totalValue: true,
                     deliveryFee: true,
-                    cartItems: true,
-                    addons: true,
                     paymentMethod: true,
                     paymentStatus: true,
                     status: true,
@@ -1335,7 +1306,7 @@ app.get('/dashboard/deliveries', authenticate, async (req, res) => {
                 || (['dinheiro', 'cash'].includes(paymentMethod) && status === 'completed');
         };
         const systemRecords = orders.map((order) => {
-            const totalValue = getSavedOrderTotal(order);
+            const totalValue = Number(order.totalValue) || 0;
             const deliveryFee = Number(order.deliveryFee) || 0;
             return {
                 id: order.id,
