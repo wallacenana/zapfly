@@ -42,6 +42,7 @@ model User {
   flows                  Flow[]
   availableSlots         AvailableSlot[]
   addonGroups            AddonGroup[]
+  deliveryRecords        DeliveryRecord[]
   subscription           Subscription?
 
   @@map("user")
@@ -301,6 +302,26 @@ model Order {
   updatedAt       DateTime     @default(now()) @updatedAt
 
   @@map("order")
+}
+
+model DeliveryRecord {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  deliveryDate    DateTime
+  clientName      String?
+  deliveryAddress String?  @db.Text
+  deliveryFee     Float    @default(0)
+  orderValue      Float    @default(0)
+  paymentMethod   String?
+  paymentReceived Boolean  @default(false)
+  deliveryPerson  String?
+  notes           String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId, deliveryDate])
+  @@map("delivery_record")
 }
 
 model StoreReview {

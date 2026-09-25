@@ -1228,60 +1228,141 @@ app.get('/dashboard/deliveries', authenticate, async (req, res) => {
         const date = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.date || ''))
             ? String(req.query.date)
             : new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
-        const start = new Date(`${date}T00:00:00-03:00`);
+        const range = String(req.query.range || 'day').toLowerCase() === 'week' ? 'week' : 'day';
         const end = new Date(`${date}T23:59:59.999-03:00`);
-        const orders = await prisma.order.findMany({
-            where: {
-                userId,
-                type: 'delivery',
-                createdAt: { gte: start, lte: end },
-                NOT: { status: { in: ['cancelled', 'canceled'] } }
-            },
-            orderBy: { createdAt: 'asc' },
-            select: {
-                id: true,
-                clientName: true,
-                deliveryAddress: true,
-                scheduledTime: true,
-                totalValue: true,
-                deliveryFee: true,
-                paymentMethod: true,
-                paymentStatus: true,
-                status: true,
-                createdAt: true
-            }
-        });
+        const start = new Date(`${date}T00:00:00-03:00`);
+        if (range === 'week') start.setDate(start.getDate() - 6);
+        const [orders, manualRecords] = await Promise.all([
+            prisma.order.findMany({
+                where: {
+                    userId,
+                    type: 'delivery',
+                    createdAt: { gte: start, lte: end },
+                    NOT: { status: { in: ['cancelled', 'canceled'] } }
+                },
+                orderBy: { createdAt: 'asc' },
+                select: {
+                    id: true,
+                    clientName: true,
+                    deliveryAddress: true,
+                    scheduledTime: true,
+                    totalValue: true,
+                    deliveryFee: true,
+                    paymentMethod: true,
+                    paymentStatus: true,
+                    status: true,
+                    createdAt: true
+                }
+            }),
+            prisma.deliveryRecord.findMany({
+                where: { userId, deliveryDate: { gte: start, lte: end } },
+                orderBy: { deliveryDate: 'asc' }
+            })
+        ]);
         const isPaymentReceived = (paymentStatus) => ['confirmed', 'paid'].includes(String(paymentStatus || '').toLowerCase());
-        const normalizedOrders = orders.map((order) => {
+        const systemRecords = orders.map((order) => {
             const totalValue = Number(order.totalValue) || 0;
             const deliveryFee = Number(order.deliveryFee) || 0;
             return {
-                ...order,
-                totalValue,
+                id: order.id,
+                origin: 'system',
+                createdAt: order.createdAt,
+                deliveryDate: order.createdAt,
+                clientName: order.clientName || 'Cliente',
+                deliveryAddress: order.deliveryAddress || '',
+                scheduledTime: order.scheduledTime || '',
+                paymentMethod: order.paymentMethod || '',
+                paymentStatus: order.paymentStatus || 'pending',
+                status: order.status || 'pending',
+                orderValue: totalValue,
                 deliveryFee,
                 storeRevenue: Math.max(0, totalValue - deliveryFee),
                 paymentReceived: isPaymentReceived(order.paymentStatus)
             };
         });
-        const receivedOrders = normalizedOrders.filter((order) => order.paymentReceived);
-        const receivedValue = receivedOrders.reduce((sum, order) => sum + order.totalValue, 0);
-        const deliveryFeesValue = normalizedOrders.reduce((sum, order) => sum + order.deliveryFee, 0);
+        const manualEntries = manualRecords.map((record) => {
+            const orderValue = Number(record.orderValue) || 0;
+            const deliveryFee = Number(record.deliveryFee) || 0;
+            return {
+                id: record.id,
+                origin: 'manual',
+                createdAt: record.createdAt,
+                deliveryDate: record.deliveryDate,
+                clientName: record.clientName || 'Entrega externa',
+                deliveryAddress: record.deliveryAddress || '',
+                scheduledTime: '',
+                paymentMethod: record.paymentMethod || '',
+                paymentStatus: record.paymentReceived ? 'confirmed' : 'pending',
+                status: 'manual',
+                orderValue,
+                deliveryFee,
+                storeRevenue: Math.max(0, orderValue - deliveryFee),
+                paymentReceived: Boolean(record.paymentReceived),
+                deliveryPerson: record.deliveryPerson || '',
+                notes: record.notes || ''
+            };
+        });
+        const entries = [...systemRecords, ...manualEntries].sort((a, b) => new Date(a.deliveryDate) - new Date(b.deliveryDate));
+        const receivedOrders = entries.filter((entry) => entry.paymentReceived);
+        const receivedValue = receivedOrders.reduce((sum, entry) => sum + entry.orderValue, 0);
+        const deliveryFeesValue = entries.reduce((sum, entry) => sum + entry.deliveryFee, 0);
         const receivedDeliveryFeesValue = receivedOrders.reduce((sum, order) => sum + order.deliveryFee, 0);
 
         res.json({
             date,
+            range,
             summary: {
-                deliveriesCount: normalizedOrders.length,
+                deliveriesCount: entries.length,
                 receivedValue: Number(receivedValue.toFixed(2)),
                 deliveryFeesValue: Number(deliveryFeesValue.toFixed(2)),
                 receivedDeliveryFeesValue: Number(receivedDeliveryFeesValue.toFixed(2)),
                 storeRevenueValue: Number(Math.max(0, receivedValue - receivedDeliveryFeesValue).toFixed(2))
             },
-            orders: normalizedOrders
+            entries
         });
     } catch (err) {
         console.error('[Delivery Summary] Error:', err);
         res.status(500).json({ error: err.message || 'Falha ao carregar entregas.' });
+    }
+});
+
+app.post('/dashboard/deliveries/manual', authenticate, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { deliveryDate, clientName, deliveryAddress, deliveryFee, orderValue, paymentMethod, paymentReceived, deliveryPerson, notes } = req.body || {};
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(String(deliveryDate || ''))) {
+            return res.status(400).json({ error: 'Informe uma data valida para a entrega.' });
+        }
+        const record = await prisma.deliveryRecord.create({
+            data: {
+                userId,
+                deliveryDate: new Date(`${deliveryDate}T12:00:00-03:00`),
+                clientName: String(clientName || '').trim() || null,
+                deliveryAddress: String(deliveryAddress || '').trim() || null,
+                deliveryFee: Math.max(0, Number(deliveryFee) || 0),
+                orderValue: Math.max(0, Number(orderValue) || 0),
+                paymentMethod: String(paymentMethod || '').trim() || null,
+                paymentReceived: Boolean(paymentReceived),
+                deliveryPerson: String(deliveryPerson || '').trim() || null,
+                notes: String(notes || '').trim() || null
+            }
+        });
+        res.status(201).json(record);
+    } catch (err) {
+        console.error('[Manual Delivery] Create error:', err);
+        res.status(500).json({ error: err.message || 'Falha ao cadastrar entrega externa.' });
+    }
+});
+
+app.delete('/dashboard/deliveries/manual/:id', authenticate, async (req, res) => {
+    try {
+        const record = await prisma.deliveryRecord.findFirst({ where: { id: req.params.id, userId: req.user.id }, select: { id: true } });
+        if (!record) return res.status(404).json({ error: 'Lancamento manual nao encontrado.' });
+        await prisma.deliveryRecord.delete({ where: { id: record.id } });
+        res.sendStatus(204);
+    } catch (err) {
+        console.error('[Manual Delivery] Delete error:', err);
+        res.status(500).json({ error: err.message || 'Falha ao excluir entrega externa.' });
     }
 });
 
