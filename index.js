@@ -3030,7 +3030,7 @@ async function initInstance(instanceId) {
                             } else {
                                 console.warn(`[AI] Agente está ligado para ${jid}, mas a OpenAI API Key não está configurada.`);
                             }
-                        } else if (!msg.key.fromMe && !currentChat?.aiManuallyPaused) {
+                        } else if (!msg.key.fromMe && currentChat?.aiManuallyPaused === false) {
                             // New chats start with the agent off. A flow can enable it,
                             // unless an attendant explicitly paused this conversation.
                             await handleFlows(sock, instanceId, jid, textForFlow, messagesToProcess[messagesToProcess.length - 1].msg, buildLilyPrompt, getOpenAI, executeChamarGerente, settings, msg.pushName, combinedImages, userId);
@@ -3620,8 +3620,14 @@ app.patch('/instances/:id/chats/:jid', authenticate, async (req, res) => {
 
     const chat = await prisma.chat.update({
         where: { jid_instanceId: { jid, instanceId: id } },
-        data: { aiEnabled, aiManuallyPaused: !aiEnabled }
+        data: { aiEnabled }
     });
+    // Keep the endpoint compatible while an older Prisma client is still deployed.
+    await prisma.$executeRaw`
+        UPDATE \`chat\`
+        SET \`aiManuallyPaused\` = ${!aiEnabled}
+        WHERE \`id\` = ${chat.id}
+    `;
     if (!aiEnabled) {
         if (aiDebounceTimers[jid]) clearTimeout(aiDebounceTimers[jid]);
         delete aiDebounceTimers[jid];
