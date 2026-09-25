@@ -23,7 +23,11 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, LineCont
 const money = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 const integer = new Intl.NumberFormat('pt-BR');
 const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
-const toInputDate = date => new Date(date).toISOString().slice(0, 10);
+const toInputDate = (date) => {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).formatToParts(new Date(date));
+  const value = type => parts.find(part => part.type === type)?.value || '';
+  return `${value('year')}-${value('month')}-${value('day')}`;
+};
 const safeText = (value, fallback = 'Não informado') => String(value || '').trim() || fallback;
 
 function MetricCard({ label, value, caption, icon: Icon, tone = 'blue' }) {
@@ -128,6 +132,7 @@ export default function Dashboard() {
   const [period, setPeriod] = useState('7');
   const [customDates, setCustomDates] = useState({ start: toInputDate(Date.now() - 6 * 24 * 60 * 60 * 1000), end: toInputDate(Date.now()) });
   const [savingStoreStatus, setSavingStoreStatus] = useState(false);
+  const [recentPage, setRecentPage] = useState(1);
 
   const loadSummary = async ({ silent = false, nextPeriod = period, dates = customDates } = {}) => {
     silent ? setRefreshing(true) : setLoading(true);
@@ -138,6 +143,7 @@ export default function Dashboard() {
         : { range: nextPeriod };
       const { data } = await api.get('/dashboard/summary', { params });
       setSummary(data || {});
+      setRecentPage(1);
     } catch (err) {
       setError(err?.response?.data?.error || 'Não foi possível carregar o resumo do painel.');
     } finally {
@@ -182,7 +188,9 @@ export default function Dashboard() {
   const finance = summary?.finance || {};
   const days = Array.isArray(charts.ordersByDay) ? charts.ordersByDay : [];
   const recentOrders = Array.isArray(lists.recentOrders) ? lists.recentOrders : [];
-  const acceptedWithoutPayment = Array.isArray(finance.acceptedWithoutPayment) ? finance.acceptedWithoutPayment : [];
+  const recentPageSize = 8;
+  const recentPages = Math.max(1, Math.ceil(recentOrders.length / recentPageSize));
+  const visibleRecentOrders = recentOrders.slice((recentPage - 1) * recentPageSize, recentPage * recentPageSize);
   const connected = safeNumber(metrics.connectedInstancesCount);
   const instances = safeNumber(metrics.instancesCount);
   const modeLabel = String(store.deliveryMode || '').toLowerCase() === 'delivery' ? 'Delivery ativo' : String(store.deliveryMode || '').toLowerCase() === 'pickup' ? 'Retirada na loja' : 'Entrega + retirada';
@@ -215,42 +223,31 @@ export default function Dashboard() {
 
       <main className="dashboard-page-content">
         {error ? <div className="dashboard-alert"><XCircle size={17} /> {error}</div> : null}
+        <div className="dashboard-global-period"><div><strong>Período do dashboard</strong><span>Todos os números, gráfico e pedidos recentes seguem este filtro.</span></div><div className="dashboard-period-controls"><Tabs items={periodItems} value={period} onChange={handlePeriodChange} />{period === 'custom' ? <div className="dashboard-custom-period"><input type="date" value={customDates.start} onChange={event => setCustomDates(current => ({ ...current, start: event.target.value }))} /><span>até</span><input type="date" value={customDates.end} onChange={event => setCustomDates(current => ({ ...current, end: event.target.value }))} /><Button variant="secondary" size="sm" onClick={applyCustomPeriod}>Aplicar</Button></div> : null}</div></div>
         <div className="dashboard-metrics-grid">
-          <MetricCard label="Pedidos hoje" value={integer.format(safeNumber(metrics.ordersTodayCount))} caption={`${integer.format(safeNumber(metrics.pendingOrdersCount))} em preparo`} icon={ShoppingBag} tone="blue" />
-          <MetricCard label="Faturamento hoje" value={money.format(safeNumber(metrics.todayOrdersValue))} caption="Somente pagamentos confirmados" icon={TrendingUp} tone="green" />
-          <MetricCard label="Ticket médio" value={money.format(safeNumber(metrics.averageTicketToday))} caption="Por pedido pago" icon={BarChart3} tone="violet" />
+          <MetricCard label="Pedidos no período" value={integer.format(safeNumber(metrics.ordersTodayCount))} caption={`${integer.format(safeNumber(metrics.pendingOrdersCount))} em preparo agora`} icon={ShoppingBag} tone="blue" />
+          <MetricCard label="Faturamento recebido" value={money.format(safeNumber(metrics.todayOrdersValue))} caption="Mercado Pago e dinheiro finalizado" icon={TrendingUp} tone="green" />
+          <MetricCard label="Ticket médio" value={money.format(safeNumber(metrics.averageTicketToday))} caption="Por pedido recebido" icon={BarChart3} tone="violet" />
           <MetricCard label="Cancelados / período" value={integer.format(safeNumber(metrics.cancelledOrdersCount))} caption="Pedidos cancelados" icon={XCircle} tone="red" />
         </div>
 
-        <Panel eyebrow="Financeiro" title="Recebimentos, entregas e cobranças" description="As taxas de entrega são separadas da receita da loja para facilitar o repasse ao entregador." actions={<Button variant="secondary" size="sm" onClick={() => navigate('/production')}>Ver produção <ExternalLink size={14} /></Button>}>
+        <Panel eyebrow="Financeiro" title="Recebimentos por método" description="Valores recebidos no período selecionado. Taxas e repasses ficam detalhados na tela Entregas." actions={<Button variant="secondary" size="sm" onClick={() => navigate('/entregas')}>Ver entregas <ExternalLink size={14} /></Button>}>
           <div className="dashboard-finance-summary">
-            <div className="dashboard-finance-card dashboard-finance-card--received"><span>Recebido bruto</span><strong>{money.format(safeNumber(finance.receivedInPeriodValue))}</strong><small>Confirmados e dinheiro finalizado</small></div>
-            <div className="dashboard-finance-card dashboard-finance-card--delivery"><span>Taxas de entrega</span><strong>{money.format(safeNumber(finance.deliveryFeesInPeriodValue))}</strong><small>Valor destinado aos entregadores</small></div>
-            <div className="dashboard-finance-card dashboard-finance-card--net"><span>Receita da loja</span><strong>{money.format(safeNumber(finance.storeRevenueInPeriodValue))}</strong><small>Recebido bruto menos taxas de entrega</small></div>
-            <div className="dashboard-finance-card dashboard-finance-card--waiting"><span>Aguardando pagamento</span><strong>{money.format(safeNumber(finance.waitingPaymentValue))}</strong><small>{integer.format(safeNumber(finance.waitingPaymentCount))} pedido(s) com link pendente</small></div>
-            <div className="dashboard-finance-card dashboard-finance-card--pending"><span>A receber</span><strong>{money.format(safeNumber(finance.acceptedWithoutPaymentValue))}</strong><small>{integer.format(safeNumber(finance.acceptedWithoutPaymentCount))} encomenda(s) aceita(s) sem pagamento</small></div>
-          </div>
-          <div className="dashboard-delivery-today"><div><span>Taxas de entrega de hoje</span><strong>{money.format(safeNumber(finance.deliveryFeesTodayValue))}</strong></div><small>{integer.format(safeNumber(finance.deliveryOrdersTodayCount))} delivery(s) lançado(s) hoje. Este é o valor para conferência e repasse.</small></div>
-          <div className="dashboard-finance-list">
-            <div className="dashboard-finance-list-head"><strong>Encomendas a cobrar</strong><span>{acceptedWithoutPayment.length ? 'Acesse a produção para registrar o pagamento ou abrir a conversa.' : 'Tudo regularizado'}</span></div>
-            {acceptedWithoutPayment.length ? acceptedWithoutPayment.slice(0, 6).map(order => (
-              <button type="button" className="dashboard-finance-row" key={order.id} onClick={() => navigate('/production')}>
-                <span className="dashboard-finance-alert">!</span>
-                <span className="dashboard-finance-main"><strong>{safeText(order.clientName, 'Cliente')}</strong><small>{safeText(order.product, 'Produto')}{order.variation ? ` · ${order.variation}` : ''} · {order.scheduledDate ? `${order.scheduledDate.split('-').reverse().join('/')} ${order.scheduledTime || ''}` : 'Data a combinar'}</small></span>
-                <span className="dashboard-finance-value"><strong>{money.format(safeNumber(order.totalValue))}</strong><small>{safeText(order.paymentMethod, 'A combinar')}</small></span>
-              </button>
-            )) : <div className="dashboard-finance-empty">Nenhuma encomenda aceita está aguardando pagamento.</div>}
+            <div className="dashboard-finance-card dashboard-finance-card--received"><span>Mercado Pago</span><strong>{money.format(safeNumber(finance.mercadoPagoReceivedValue))}</strong><small>Pagamentos confirmados</small></div>
+            <div className="dashboard-finance-card dashboard-finance-card--cash"><span>Dinheiro</span><strong>{money.format(safeNumber(finance.cashReceivedValue))}</strong><small>Pedidos finalizados</small></div>
+            <div className="dashboard-finance-card dashboard-finance-card--net"><span>Total recebido</span><strong>{money.format(safeNumber(finance.receivedInPeriodValue))}</strong><small>Mercado Pago mais dinheiro</small></div>
+            <div className="dashboard-finance-card dashboard-finance-card--count"><span>Quantidade de pedidos</span><strong>{integer.format(safeNumber(finance.receivedOrdersCount))}</strong><small>Pedidos com valor recebido</small></div>
           </div>
         </Panel>
 
-        <Panel eyebrow="Performance operacional" title="Volume de pedidos e faturamento" description="Acompanhe a movimentação da loja no período selecionado." actions={<div className="dashboard-period-controls"><Tabs items={periodItems} value={period} onChange={handlePeriodChange} />{period === 'custom' ? <div className="dashboard-custom-period"><input type="date" value={customDates.start} onChange={event => setCustomDates(current => ({ ...current, start: event.target.value }))} /><span>até</span><input type="date" value={customDates.end} onChange={event => setCustomDates(current => ({ ...current, end: event.target.value }))} /><Button variant="secondary" size="sm" onClick={applyCustomPeriod}>Aplicar</Button></div> : null}</div>}>
+        <Panel eyebrow="Performance operacional" title="Volume de pedidos e faturamento" description="Apenas pedidos recebidos no período selecionado.">
           <PerformanceChart days={days} />
         </Panel>
 
         <div className="dashboard-lower-grid">
-          <Panel eyebrow="Atividade recente" title="Pedidos recentes" description="Acompanhamento das últimas transações." actions={<span className="dashboard-count-pill">Últimos {recentOrders.length}</span>}>
+          <Panel eyebrow="Atividade recente" title="Pedidos recentes" description="Todos os pedidos ativos do período selecionado." actions={<span className="dashboard-count-pill">{recentOrders.length} pedido(s)</span>}>
             <div className="dashboard-order-list">
-              {recentOrders.length ? recentOrders.slice(0, 5).map(order => (
+              {visibleRecentOrders.length ? visibleRecentOrders.map(order => (
                 <div className="dashboard-order-row" key={order.id}>
                   <span className="dashboard-order-icon"><Package size={16} /></span>
                   <div className="dashboard-order-main"><strong>{safeText(order.product, 'Produto')}</strong><span>{safeText(order.clientName, 'Cliente')} · {order.type === 'delivery' ? 'Delivery' : 'Encomenda'}</span><small>{order.createdAt ? new Date(order.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Data não informada'}</small></div>
@@ -258,6 +255,7 @@ export default function Dashboard() {
                 </div>
               )) : <div className="dashboard-empty">Nenhum pedido recente.</div>}
             </div>
+            {recentOrders.length > recentPageSize ? <div className="dashboard-pagination"><Button variant="secondary" size="sm" disabled={recentPage === 1} onClick={() => setRecentPage(current => current - 1)}>Anterior</Button><span>Página {recentPage} de {recentPages}</span><Button variant="secondary" size="sm" disabled={recentPage === recentPages} onClick={() => setRecentPage(current => current + 1)}>Próxima</Button></div> : null}
           </Panel>
 
           <Panel eyebrow="Canais & inteligência" title="Visão da operação" description="Parâmetros ativos e agentes da loja.">

@@ -693,7 +693,11 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
         const requestedRange = String(req.query.range || '7');
         const rangeDays = requestedRange === '15' ? 15 : requestedRange === '30' ? 30 : 7;
         const brazilDateFormatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' });
-        const getBrazilDateString = (date = new Date()) => brazilDateFormatter.format(date);
+        const getBrazilDateString = (date = new Date()) => {
+            const parts = brazilDateFormatter.formatToParts(date);
+            const value = (type) => parts.find((part) => part.type === type)?.value || '';
+            return `${value('year')}-${value('month')}-${value('day')}`;
+        };
 
         const today = getBrazilDateString(now);
         const todayStart = new Date(`${today}T00:00:00-03:00`);
@@ -701,8 +705,9 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
 
         const customStart = /^\d{4}-\d{2}-\d{2}$/.test(req.query.start || '') ? req.query.start : null;
         const customEnd = /^\d{4}-\d{2}-\d{2}$/.test(req.query.end || '') ? req.query.end : null;
-        const chartStartKey = customStart || getBrazilDateString(new Date(now.getTime() - (rangeDays - 1) * 24 * 60 * 60 * 1000));
-        const chartEndKey = customEnd || today;
+        const chartEndKey = customEnd && customEnd < today ? customEnd : today;
+        const fallbackStartKey = getBrazilDateString(new Date(now.getTime() - (rangeDays - 1) * 24 * 60 * 60 * 1000));
+        const chartStartKey = customStart && customStart <= chartEndKey ? customStart : fallbackStartKey;
         const chartStart = new Date(`${chartStartKey}T00:00:00-03:00`);
         const chartEnd = new Date(`${chartEndKey}T23:59:59.999-03:00`);
         const chartDays = [];
@@ -710,7 +715,11 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
         for (let i = 0; i < chartDayCount; i += 1) {
             const day = new Date(chartStart.getTime() + i * 24 * 60 * 60 * 1000);
             const key = getBrazilDateString(day);
-            chartDays.push({ key, label: new Intl.DateTimeFormat('pt-BR', { weekday: 'short', day: '2-digit' }).format(day) });
+            chartDays.push({ key, label: new Intl.DateTimeFormat('pt-BR', {
+                weekday: 'short',
+                day: '2-digit',
+                timeZone: 'America/Sao_Paulo'
+            }).format(day) });
         }
 
         const [user, settings, storeProfile, products, categories, reviewsSummary, stockItems, instances, flows, customers, ordersToday, recentOrders, last7DaysOrders, topOrderGroups, orderStatusGroups, paymentStatusGroups, availableSlots, recentReviews, upcomingOrders] = await Promise.all([
@@ -774,9 +783,13 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                 select: { totalValue: true, deliveryFee: true, type: true, status: true, paymentStatus: true, paymentMethod: true }
             }),
             prisma.order.findMany({
-                where: { userId },
+                where: {
+                    userId,
+                    createdAt: { gte: chartStart, lte: chartEnd },
+                    NOT: { status: { in: ['cancelled', 'canceled'] } }
+                },
                 orderBy: { createdAt: 'desc' },
-                take: 8,
+                take: 200,
                 select: {
                     id: true,
                     product: true,
@@ -963,7 +976,11 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             where: { userId, status: 'ready' }
         });
         const cancelledOrdersCount = await prisma.order.count({
-            where: { userId, status: { in: ['cancelled', 'canceled'] } }
+            where: {
+                userId,
+                createdAt: { gte: chartStart, lte: chartEnd },
+                status: { in: ['cancelled', 'canceled'] }
+            }
         });
         const connectedInstancesCount = instances.filter((item) => String(item.status || '').toLowerCase() === 'connected').length;
         const activeFlowsCount = flows.filter((item) => String(item.status || '').toLowerCase() !== 'rascunho').length;
@@ -1059,6 +1076,12 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             .filter(isOrderReceived);
         const receivedInPeriodValue = receivedOrdersInPeriod
             .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
+        const mercadoPagoReceivedValue = receivedOrdersInPeriod
+            .filter((order) => String(order.paymentMethod || '').trim().toLowerCase().includes('mercado'))
+            .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
+        const cashReceivedValue = receivedOrdersInPeriod
+            .filter((order) => ['dinheiro', 'cash'].includes(String(order.paymentMethod || '').trim().toLowerCase()))
+            .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
         const deliveryFeesInPeriodValue = receivedOrdersInPeriod
             .reduce((sum, order) => sum + (Number(order.deliveryFee) || 0), 0);
         const storeRevenueInPeriodValue = Math.max(0, receivedInPeriodValue - deliveryFeesInPeriodValue);
@@ -1114,17 +1137,17 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             },
             metrics: {
                 totalOrders: await prisma.order.count({ where: { userId, NOT: { status: { in: ['cancelled', 'canceled'] } } } }),
-                ordersTodayCount,
+                ordersTodayCount: financialPeriodOrders.length,
                 pendingOrdersCount,
                 acceptedOrdersCount,
                 productionOrdersCount,
                 readyOrdersCount,
                 completedOrdersCount,
                 cancelledOrdersCount,
-                todayOrdersValue: Number(todayOrdersValue.toFixed(2)),
-                completedOrdersTodayValue: Number(completedOrdersTodayValue.toFixed(2)),
+                todayOrdersValue: Number(receivedInPeriodValue.toFixed(2)),
+                completedOrdersTodayValue: Number(receivedInPeriodValue.toFixed(2)),
                 totalOrdersValue: Number((totalOrdersValue?._sum?.totalValue || 0).toFixed(2)),
-                averageTicketToday: paidOrdersToday.length > 0 ? Number((todayOrdersValue / paidOrdersToday.length).toFixed(2)) : 0,
+                averageTicketToday: receivedOrdersInPeriod.length > 0 ? Number((receivedInPeriodValue / receivedOrdersInPeriod.length).toFixed(2)) : 0,
                 productsCount: products.length,
                 featuredProductsCount,
                 promotionProductsCount,
@@ -1161,6 +1184,9 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             },
             finance: {
                 receivedInPeriodValue: Number(receivedInPeriodValue.toFixed(2)),
+                mercadoPagoReceivedValue: Number(mercadoPagoReceivedValue.toFixed(2)),
+                cashReceivedValue: Number(cashReceivedValue.toFixed(2)),
+                receivedOrdersCount: receivedOrdersInPeriod.length,
                 deliveryFeesInPeriodValue: Number(deliveryFeesInPeriodValue.toFixed(2)),
                 storeRevenueInPeriodValue: Number(storeRevenueInPeriodValue.toFixed(2)),
                 deliveryFeesTodayValue: Number(deliveryFeesTodayValue.toFixed(2)),

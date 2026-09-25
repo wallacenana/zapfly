@@ -111,6 +111,7 @@
 .dashboard-panel-actions { flex: 0 0 auto; }
 .dashboard-range-pill { display: inline-flex; align-items: center; min-height: 34px; padding: 0 12px; border: 1px solid #9ee8cd; border-radius: 9px; background: #effbf6; color: #087a52; font-size: 12px; font-weight: 800; }
 .dashboard-period-controls { display: grid; justify-items: end; gap: 8px; }
+.dashboard-global-period { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; padding: 12px 14px; border: 1px solid #dce8e0; border-radius: 11px; background: #fbfdfb; }.dashboard-global-period > div:first-child { display: grid; gap: 3px; }.dashboard-global-period strong { color: var(--ui-text); font-size: 13px; }.dashboard-global-period span { color: var(--ui-muted); font-size: 11px; }
 .dashboard-custom-period { display: flex; align-items: center; gap: 7px; color: var(--ui-muted); font-size: 12px; }
 .dashboard-custom-period input { min-height: 32px; padding: 0 8px; border: 1px solid var(--ui-border); border-radius: 8px; color: var(--ui-text); background: var(--ui-surface); font: inherit; }
 .dashboard-chart-canvas { height: 300px; }
@@ -122,6 +123,10 @@
 .dashboard-finance-card small { color: #708178; font-size: 12px; }
 .dashboard-finance-card--received { border-color: #b8eedb; background: #f1fcf7; }
 .dashboard-finance-card--received strong { color: #087a52; }
+.dashboard-finance-card--cash { border-color: #fed7aa; background: #fffaf3; }
+.dashboard-finance-card--cash strong { color: #c2410c; }
+.dashboard-finance-card--count { border-color: #e9d5ff; background: #faf7ff; }
+.dashboard-finance-card--count strong { color: #7e22ce; }
 .dashboard-finance-card--delivery { border-color: #fed7aa; background: #fffaf3; }
 .dashboard-finance-card--delivery strong { color: #c2410c; }
 .dashboard-finance-card--net { border-color: #bfdbfe; background: #f5f9ff; }
@@ -174,6 +179,7 @@
 .dashboard-order-main strong, .dashboard-channel-card strong { overflow: hidden; color: var(--ui-text); font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
 .dashboard-order-main span, .dashboard-order-main small, .dashboard-channel-card small { overflow: hidden; color: var(--ui-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .dashboard-order-value { display: grid; justify-items: end; gap: 4px; }
+.dashboard-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 14px; padding-top: 14px; border-top: 1px solid #e4ece6; }.dashboard-pagination span { color: var(--ui-muted); font-size: 12px; }
 .dashboard-order-value strong { color: var(--ui-text); font-size: 13px; }
 .dashboard-order-status { padding: 3px 7px; border-radius: 5px; background: #fff8e8; color: #a66c00; font-size: 10px; font-weight: 800; }
 .dashboard-mini-grid { grid-template-columns: repeat(2, 1fr); margin-top: 14px; }
@@ -189,4 +195,4 @@
 .dashboard-skeleton-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 @keyframes dashboard-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 @media (max-width: 900px) { .dashboard-metrics-grid, .dashboard-finance-summary, .deliveries-metrics { grid-template-columns: repeat(2, 1fr); } .dashboard-lower-grid { grid-template-columns: 1fr; gap: 0; } }
-@media (max-width: 640px) { .dashboard-topbar { align-items: flex-start; flex-direction: column; padding: 12px 16px; } .dashboard-topbar-actions { width: 100%; overflow-x: auto; } .dashboard-page-content, .deliveries-page { width: min(100% - 20px, 1500px); padding-top: 18px; } .dashboard-metrics-grid, .dashboard-finance-summary, .deliveries-metrics { grid-template-columns: 1fr 1fr; gap: 10px; } .dashboard-metric { min-height: 96px; padding: 14px 12px; } .dashboard-metric-icon { width: 34px; height: 34px; } .dashboard-metric-value { font-size: 18px; } .dashboard-finance-card { padding: 13px; } .dashboard-finance-card strong { font-size: 19px; } .dashboard-delivery-today { align-items: flex-start; flex-direction: column; gap: 7px; } .dashboard-delivery-today small { text-align: left; } .dashboard-finance-list-head { display: grid; } .dashboard-finance-list-head span { text-align: left; } .dashboard-panel { padding: 15px; } .dashboard-panel-head { display: grid; gap: 12px; } .dashboard-panel-actions { width: 100%; overflow-x: auto; } .dashboard-panel-actions .ui-tabs { width: max-content; } .dashboard-chart-canvas { height: 240px; } .deliveries-header { align-items: stretch; flex-direction: column; }.deliveries-actions { justify-content: space-between; }.deliveries-controls { align-items: flex-start; flex-wrap: wrap; }.deliveries-metric { padding: 13px; }.deliveries-metric strong { font-size: 19px; }.deliveries-form-grid { grid-template-columns: 1fr; }.deliveries-form-grid label.is-wide { grid-column: auto; }.deliveries-modal { padding: 18px; } }
+@media (max-width: 640px) { .dashboard-topbar { align-items: flex-start; flex-direction: column; padding: 12px 16px; } .dashboard-topbar-actions { width: 100%; overflow-x: auto; } .dashboard-page-content, .deliveries-page { width: min(100% - 20px, 1500px); padding-top: 18px; } .dashboard-metrics-grid, .dashboard-finance-summary, .deliveries-metrics { grid-template-columns: 1fr 1fr; gap: 10px; } .dashboard-metric { min-height: 96px; padding: 14px 12px; } .dashboard-metric-icon { width: 34px; height: 34px; } .dashboard-metric-value { font-size: 18px; } .dashboard-finance-card { padding: 13px; } .dashboard-finance-card strong { font-size: 19px; } .dashboard-global-period { align-items: flex-start; flex-direction: column; }.dashboard-period-controls { justify-items: start; }.dashboard-delivery-today { align-items: flex-start; flex-direction: column; gap: 7px; } .dashboard-delivery-today small { text-align: left; } .dashboard-finance-list-head { display: grid; } .dashboard-finance-list-head span { text-align: left; } .dashboard-panel { padding: 15px; } .dashboard-panel-head { display: grid; gap: 12px; } .dashboard-panel-actions { width: 100%; overflow-x: auto; } .dashboard-panel-actions .ui-tabs { width: max-content; } .dashboard-chart-canvas { height: 240px; } .deliveries-header { align-items: stretch; flex-direction: column; }.deliveries-actions { justify-content: space-between; }.deliveries-controls { align-items: flex-start; flex-wrap: wrap; }.deliveries-metric { padding: 13px; }.deliveries-metric strong { font-size: 19px; }.deliveries-form-grid { grid-template-columns: 1fr; }.deliveries-form-grid label.is-wide { grid-column: auto; }.deliveries-modal { padding: 18px; } }
