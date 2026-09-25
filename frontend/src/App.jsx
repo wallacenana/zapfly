@@ -28,6 +28,7 @@ import PasswordReset from './pages/PasswordReset';
 import Plans from './pages/Plans';
 import BillingSettings from './pages/BillingSettings';
 import ImageReference from './pages/ImageReference';
+import Deliveries from './pages/Deliveries';
 
 const FullScreenLoader = () => (
   <div style={{
@@ -111,6 +112,7 @@ function AppRoutes() {
         <Route path="estoque" element={<Estoque />} />
         <Route path="inventory" element={<Navigate to="/estoque" replace />} />
         <Route path="production" element={<Production />} />
+        <Route path="entregas" element={<Deliveries />} />
         <Route path="agenda" element={<Agenda />} />
         <Route path="connections" element={<Connections />} />
         <Route path="chat" element={<Chat />} />

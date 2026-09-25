@@ -17,6 +17,7 @@ import {
   ExternalLink,
   CreditCard,
   Menu,
+  Truck,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { PUBLIC_SITE_URL, socket } from '../api';
@@ -80,6 +81,7 @@ const MainLayout = ({ clientMode = false }) => {
     { path: '/chat', icon: <MessageCircle size={20} />, label: 'Chat' },
     { path: '/estoque', icon: <Package size={20} />, label: 'Estoque' },
     { path: '/production', icon: <ClipboardList size={20} />, label: 'Produção' },
+    { path: '/entregas', icon: <Truck size={20} />, label: 'Entregas' },
     { path: '/agenda', icon: <Calendar size={20} />, label: 'Agenda' },
     { path: '/flows', icon: <Zap size={20} />, label: 'Automação' },
     { path: '/connections', icon: <Share2 size={20} />, label: 'Conexões' },

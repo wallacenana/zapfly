@@ -771,7 +771,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                     createdAt: { gte: todayStart, lte: todayEnd },
                     NOT: { status: { in: ['cancelled', 'canceled'] } }
                 },
-                select: { totalValue: true, deliveryFee: true, type: true, status: true }
+                select: { totalValue: true, deliveryFee: true, type: true, status: true, paymentStatus: true }
             }),
             prisma.order.findMany({
                 where: { userId },
@@ -802,7 +802,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                     createdAt: { gte: chartStart, lte: chartEnd },
                     NOT: { status: { in: ['cancelled', 'canceled'] } }
                 },
-                select: { createdAt: true, totalValue: true, status: true }
+                select: { createdAt: true, totalValue: true, status: true, paymentStatus: true }
             }),
             prisma.order.groupBy({
                 by: ['productId'],
@@ -908,6 +908,8 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             })
         ]);
 
+        const isPaymentReceived = (paymentStatus) => ['confirmed', 'paid'].includes(String(paymentStatus || '').toLowerCase());
+        const paidOrdersToday = ordersToday.filter((order) => isPaymentReceived(order.paymentStatus));
         const ordersTodayCount = ordersToday.length;
         const messagesToday = instances.length > 0
             ? await prisma.message.count({
@@ -928,11 +930,11 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             })).map((product) => [product.id, product]))
             : new Map();
 
-        const todayOrdersValue = ordersToday.reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
+        const todayOrdersValue = paidOrdersToday.reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
         const deliveryOrdersToday = ordersToday.filter((order) => String(order.type || '').toLowerCase() === 'delivery');
         const deliveryFeesTodayValue = deliveryOrdersToday
             .reduce((sum, order) => sum + (Number(order.deliveryFee) || 0), 0);
-        const completedOrdersTodayValue = ordersToday
+        const completedOrdersTodayValue = paidOrdersToday
             .filter((order) => String(order.status || '').toLowerCase() === 'completed')
             .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
         const totalOrdersValue = await prisma.order.aggregate({
@@ -1019,7 +1021,9 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
         };
 
         const ordersByDay = chartDays.map((day) => {
-            const dayOrders = last7DaysOrders.filter((order) => getBrazilDateString(order.createdAt) === day.key);
+            const dayOrders = last7DaysOrders.filter((order) => (
+                getBrazilDateString(order.createdAt) === day.key && isPaymentReceived(order.paymentStatus)
+            ));
             const total = dayOrders.reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
             return {
                 date: day.key,
@@ -1045,7 +1049,6 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             imageUrl: order.productRelation?.imageUrl || order.productRelation?.image || '',
         }));
 
-        const isPaymentReceived = (paymentStatus) => ['confirmed', 'paid'].includes(String(paymentStatus || '').toLowerCase());
         const receivedOrdersInPeriod = financialPeriodOrders
             .filter((order) => isPaymentReceived(order.paymentStatus));
         const receivedInPeriodValue = receivedOrdersInPeriod
@@ -1110,7 +1113,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                 todayOrdersValue: Number(todayOrdersValue.toFixed(2)),
                 completedOrdersTodayValue: Number(completedOrdersTodayValue.toFixed(2)),
                 totalOrdersValue: Number((totalOrdersValue?._sum?.totalValue || 0).toFixed(2)),
-                averageTicketToday: ordersTodayCount > 0 ? Number((todayOrdersValue / ordersTodayCount).toFixed(2)) : 0,
+                averageTicketToday: paidOrdersToday.length > 0 ? Number((todayOrdersValue / paidOrdersToday.length).toFixed(2)) : 0,
                 productsCount: products.length,
                 featuredProductsCount,
                 promotionProductsCount,
@@ -1216,6 +1219,69 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
     } catch (err) {
         console.error('[Dashboard Summary] Error:', err);
         res.status(500).json({ error: err.message || 'Falha ao carregar dashboard.' });
+    }
+});
+
+app.get('/dashboard/deliveries', authenticate, async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const date = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.date || ''))
+            ? String(req.query.date)
+            : new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
+        const start = new Date(`${date}T00:00:00-03:00`);
+        const end = new Date(`${date}T23:59:59.999-03:00`);
+        const orders = await prisma.order.findMany({
+            where: {
+                userId,
+                type: 'delivery',
+                createdAt: { gte: start, lte: end },
+                NOT: { status: { in: ['cancelled', 'canceled'] } }
+            },
+            orderBy: { createdAt: 'asc' },
+            select: {
+                id: true,
+                clientName: true,
+                deliveryAddress: true,
+                scheduledTime: true,
+                totalValue: true,
+                deliveryFee: true,
+                paymentMethod: true,
+                paymentStatus: true,
+                status: true,
+                createdAt: true
+            }
+        });
+        const isPaymentReceived = (paymentStatus) => ['confirmed', 'paid'].includes(String(paymentStatus || '').toLowerCase());
+        const normalizedOrders = orders.map((order) => {
+            const totalValue = Number(order.totalValue) || 0;
+            const deliveryFee = Number(order.deliveryFee) || 0;
+            return {
+                ...order,
+                totalValue,
+                deliveryFee,
+                storeRevenue: Math.max(0, totalValue - deliveryFee),
+                paymentReceived: isPaymentReceived(order.paymentStatus)
+            };
+        });
+        const receivedOrders = normalizedOrders.filter((order) => order.paymentReceived);
+        const receivedValue = receivedOrders.reduce((sum, order) => sum + order.totalValue, 0);
+        const deliveryFeesValue = normalizedOrders.reduce((sum, order) => sum + order.deliveryFee, 0);
+        const receivedDeliveryFeesValue = receivedOrders.reduce((sum, order) => sum + order.deliveryFee, 0);
+
+        res.json({
+            date,
+            summary: {
+                deliveriesCount: normalizedOrders.length,
+                receivedValue: Number(receivedValue.toFixed(2)),
+                deliveryFeesValue: Number(deliveryFeesValue.toFixed(2)),
+                receivedDeliveryFeesValue: Number(receivedDeliveryFeesValue.toFixed(2)),
+                storeRevenueValue: Number(Math.max(0, receivedValue - receivedDeliveryFeesValue).toFixed(2))
+            },
+            orders: normalizedOrders
+        });
+    } catch (err) {
+        console.error('[Delivery Summary] Error:', err);
+        res.status(500).json({ error: err.message || 'Falha ao carregar entregas.' });
     }
 });
 

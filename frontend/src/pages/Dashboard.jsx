@@ -217,8 +217,8 @@ export default function Dashboard() {
         {error ? <div className="dashboard-alert"><XCircle size={17} /> {error}</div> : null}
         <div className="dashboard-metrics-grid">
           <MetricCard label="Pedidos hoje" value={integer.format(safeNumber(metrics.ordersTodayCount))} caption={`${integer.format(safeNumber(metrics.pendingOrdersCount))} em preparo`} icon={ShoppingBag} tone="blue" />
-          <MetricCard label="Faturamento hoje" value={money.format(safeNumber(metrics.todayOrdersValue))} caption="Total do dia" icon={TrendingUp} tone="green" />
-          <MetricCard label="Ticket médio" value={money.format(safeNumber(metrics.averageTicketToday))} caption="Por pedido" icon={BarChart3} tone="violet" />
+          <MetricCard label="Faturamento hoje" value={money.format(safeNumber(metrics.todayOrdersValue))} caption="Somente pagamentos confirmados" icon={TrendingUp} tone="green" />
+          <MetricCard label="Ticket médio" value={money.format(safeNumber(metrics.averageTicketToday))} caption="Por pedido pago" icon={BarChart3} tone="violet" />
           <MetricCard label="Cancelados / período" value={integer.format(safeNumber(metrics.cancelledOrdersCount))} caption="Pedidos cancelados" icon={XCircle} tone="red" />
         </div>
 
