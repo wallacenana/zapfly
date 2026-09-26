@@ -207,6 +207,8 @@ const Production = () => {
   const [activeType, setActiveType] = useState(localStorage.getItem('kanban_activeType') || 'order');
   const [selectedDate, setSelectedDate] = useState(localStorage.getItem('kanban_selectedDate') || new Date().toISOString().split('T')[0]);
   const [showWaitingDrawer, setShowWaitingDrawer] = useState(false);
+  const [showAllWaiting, setShowAllWaiting] = useState(false);
+  const [waitingPage, setWaitingPage] = useState(0);
   const ordersRequestRef = useRef(null);
   const openedLinkedOrderRef = useRef('');
   const linkedOrderId = String(searchParams.get('orderId') || '').trim();
@@ -987,6 +989,13 @@ const Production = () => {
     return matchType && matchSearch && matchDate;
   });
 
+  const waitingOrders = orders.filter(o => o.status === 'waiting_payment'
+    && (o.type === activeType || (!o.type && activeType === 'order')));
+  const waitingOrdersForSelectedDate = waitingOrders.filter(o => o.scheduledDate === selectedDate);
+  const waitingPageSize = 8;
+  const waitingPageCount = Math.max(1, Math.ceil(waitingOrders.length / waitingPageSize));
+  const paginatedWaitingOrders = waitingOrders.slice(waitingPage * waitingPageSize, (waitingPage + 1) * waitingPageSize);
+
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#fff' }}>Carregando Produção...</div>;
 
   return (
@@ -1089,9 +1098,9 @@ const Production = () => {
                 }}
               >
                 <span>💳</span> Aguardando Pagamento
-                {orders.filter(o => o.status === 'waiting_payment' && (o.type === activeType || (!o.type && activeType === 'order'))).length > 0 && (
+                {waitingOrdersForSelectedDate.length > 0 && (
                   <span style={{ position: 'absolute', top: '-5px', right: '-5px', backgroundColor: '#ef4444', color: '#ffffff', borderRadius: '50%', width: '18px', height: '18px', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {orders.filter(o => o.status === 'waiting_payment' && (o.type === activeType || (!o.type && activeType === 'order'))).length}
+                    {waitingOrdersForSelectedDate.length}
                   </span>
                 )}
               </button>
@@ -1151,7 +1160,7 @@ const Production = () => {
             </button>
           </div>
           <div style={{ flex: 1, overflowY: 'auto' }}>
-            {orders.filter(o => o.status === 'waiting_payment' && (o.type === activeType || (!o.type && activeType === 'order'))).map(order => (
+            {waitingOrdersForSelectedDate.map(order => (
               <div
                 key={order.id}
                 onClick={() => openDetails(order)}
@@ -1167,13 +1176,43 @@ const Production = () => {
                 <div style={{ fontSize: '12px', marginTop: '8px', color: '#9ca3af' }}>🕒 {order.scheduledTime}</div>
               </div>
             ))}
-            {orders.filter(o => o.status === 'waiting_payment' && (o.type === activeType || (!o.type && activeType === 'order'))).length === 0 && (
+            {waitingOrdersForSelectedDate.length === 0 && (
               <div style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '50px' }}>Nenhum pedido aguardando pagamento nesta categoria.</div>
             )}
           </div>
+          {waitingOrders.length > waitingOrdersForSelectedDate.length && (
+            <button
+              onClick={() => { setWaitingPage(0); setShowAllWaiting(true); }}
+              style={{ marginTop: '16px', width: '100%', padding: '11px', borderRadius: '10px', border: '1px solid #3b82f6', background: '#eff6ff', color: '#2563eb', fontWeight: 800, cursor: 'pointer' }}
+            >
+              VER TODOS ({waitingOrders.length})
+            </button>
+          )}
         </div>
       )}
       {showWaitingDrawer && <div onClick={() => setShowWaitingDrawer(false)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1999 }} />}
+      {showAllWaiting && <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.55)', zIndex: 2100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+        <div style={{ width: 'min(680px, 100%)', maxHeight: '80vh', backgroundColor: '#ffffff', borderRadius: '18px', padding: '24px', display: 'flex', flexDirection: 'column', boxShadow: '0 24px 60px rgba(15,23,42,0.25)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', marginBottom: '18px' }}>
+            <div><h3 style={{ margin: 0, color: '#0f172a', fontSize: '20px' }}>Aguardando pagamento</h3><p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '13px' }}>{waitingOrders.length} pedido(s) em todos os dias</p></div>
+            <button onClick={() => setShowAllWaiting(false)} aria-label="Fechar" style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer' }}><XCircle size={24} /></button>
+          </div>
+          <div style={{ overflowY: 'auto', display: 'grid', gap: '10px', paddingRight: '4px' }}>
+            {paginatedWaitingOrders.map(order => (
+              <button key={order.id} type="button" onClick={() => { setShowAllWaiting(false); setShowWaitingDrawer(false); openDetails(order); }} style={{ textAlign: 'left', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', cursor: 'pointer', color: '#0f172a' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontWeight: 800 }}><span>#{order.id.slice(-4).toUpperCase()}</span><span style={{ color: '#64748b', fontSize: '12px' }}>{order.scheduledDate}</span></div>
+                <div style={{ marginTop: '5px', fontSize: '14px' }}>{order.clientName || 'Cliente'}</div>
+                <div style={{ marginTop: '4px', color: '#64748b', fontSize: '12px' }}>{order.scheduledTime || 'Sem horario'}</div>
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', marginTop: '18px' }}>
+            <button type="button" disabled={waitingPage === 0} onClick={() => setWaitingPage(page => Math.max(0, page - 1))} style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#334155', cursor: waitingPage === 0 ? 'not-allowed' : 'pointer', opacity: waitingPage === 0 ? 0.45 : 1 }}>Anterior</button>
+            <span style={{ color: '#64748b', fontSize: '13px', fontWeight: 700 }}>Pagina {waitingPage + 1} de {waitingPageCount}</span>
+            <button type="button" disabled={waitingPage >= waitingPageCount - 1} onClick={() => setWaitingPage(page => Math.min(waitingPageCount - 1, page + 1))} style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#334155', cursor: waitingPage >= waitingPageCount - 1 ? 'not-allowed' : 'pointer', opacity: waitingPage >= waitingPageCount - 1 ? 0.45 : 1 }}>Proxima</button>
+          </div>
+        </div>
+      </div>}
 
     </div>
   );
