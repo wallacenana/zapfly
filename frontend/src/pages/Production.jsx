@@ -1126,9 +1126,7 @@ const Production = () => {
 
         <KanbanColumn col={columns.find(c => c.id === 'pending')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} />
 
-        {activeType === 'order' && (
-          <KanbanColumn col={columns.find(c => c.id === 'accepted')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} />
-        )}
+        <KanbanColumn col={columns.find(c => c.id === 'accepted')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} />
 
         <KanbanColumn col={columns.find(c => c.id === 'production')} orders={filteredOrders} updateStatus={updateStatus} openDetails={openDetails} />
 
