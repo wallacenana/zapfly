@@ -1112,6 +1112,7 @@ try {
                 <p>Informe seu endereço para calcular a entrega e mostrar as lojas mais próximas.</p>
                 <form id="restaurant-location-form">
                     <input type="text" id="user-address" class="ifood-input" placeholder="Rua, número, bairro..." autocomplete="off" spellcheck="false">
+                    <input type="text" id="user-address-complement" class="ifood-input" placeholder="Complemento: apto, bloco, casa, ponto de referência..." autocomplete="address-line2" maxlength="160">
                     <div id="restaurant-location-fee" class="restaurant-location-fee" hidden></div>
                     <button type="submit" class="primary-btn" disabled>Salvar endereço</button>
                 </form>
@@ -1191,9 +1192,17 @@ try {
                 const modal = document.getElementById('restaurant-location-modal');
                 const form = document.getElementById('restaurant-location-form');
                 const input = document.getElementById('user-address');
-                if (!modal || !form || !input) return;
+                const complementInput = document.getElementById('user-address-complement');
+                if (!modal || !form || !input || !complementInput) return;
 
                 window.openRestaurantLocationModal = () => {
+                    try {
+                        const saved = JSON.parse(localStorage.getItem('menzzu_home_address') || '{}');
+                        input.value = String(saved.address || saved.formatted_address || input.value || '').trim();
+                        complementInput.value = String(saved.complement || '').trim();
+                    } catch (error) {
+                        // Keep the values already typed when local storage is unavailable.
+                    }
                     modal.classList.remove('hidden');
                     lockPage();
                     if (submitButton) {
@@ -1205,19 +1214,11 @@ try {
                     });
                 };
 
-                const hasSavedAddress = () => {
-                    try {
-                        const saved = JSON.parse(localStorage.getItem('menzzu_home_address') || '{}');
-                        return Boolean(String(saved.address || saved.formatted_address || '').trim());
-                    } catch (error) {
-                        return false;
-                    }
-                };
-
                 const close = () => {
                     modal.classList.add('hidden');
                     unlockPage();
                 };
+                modal.querySelector('.restaurant-location-backdrop')?.addEventListener('click', close);
 
                 const feeDisplay = document.getElementById('restaurant-location-fee');
                 const submitButton = form.querySelector('button[type="submit"]');
@@ -1265,6 +1266,7 @@ try {
                 form.addEventListener('submit', (event) => {
                     event.preventDefault();
                     const address = input.value.trim();
+                    const complement = complementInput.value.trim();
                     if (!address) {
                         input.focus();
                         return;
@@ -1285,10 +1287,14 @@ try {
                             ...saved,
                             address,
                             formatted_address: address,
+                            complement,
                             ...selectedCoordinates
                         }));
                         window.dispatchEvent(new CustomEvent('menzzu-address-saved', {
-                            detail: { address, coordinates: selectedCoordinates }
+                            detail: {
+                                address: complement ? `${address}, ${complement}` : address,
+                                coordinates: selectedCoordinates
+                            }
                         }));
                         close();
                         return;
@@ -1304,15 +1310,6 @@ try {
                     }
                 });
 
-                if (!hasSavedAddress()) {
-                    setTimeout(() => {
-                        modal.classList.remove('hidden');
-                        lockPage();
-                        input.focus({
-                            preventScroll: true
-                        });
-                    }, 250);
-                }
             })();
         </script>
 
