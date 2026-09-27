@@ -193,6 +193,30 @@ async function resolveJidWithSocket(jid, sock, instanceId) {
     return resolvedJid;
 }
 
+async function getEquivalentJids(jid, sock) {
+    const rawValue = String(jid || '').split(':')[0].trim();
+    const rawJid = rawValue && !rawValue.includes('@') ? normalizePhoneJid(rawValue) : rawValue;
+    if (!rawJid) return new Set();
+
+    const equivalents = new Set([rawJid]);
+    const lidMapping = sock?.signalRepository?.lidMapping;
+    if (!lidMapping) return equivalents;
+
+    try {
+        if (rawJid.endsWith('@lid')) {
+            const phoneJid = await lidMapping.getPNForLID(rawJid);
+            if (phoneJid) equivalents.add(String(phoneJid).split(':')[0]);
+        } else if (rawJid.endsWith('@s.whatsapp.net')) {
+            const lidJid = await lidMapping.getLIDForPN(normalizePhoneJid(rawJid));
+            if (lidJid) equivalents.add(String(lidJid).split(':')[0]);
+        }
+    } catch (error) {
+        console.warn(`[WhatsApp] Falha ao resolver aliases do JID ${rawJid}:`, error.message);
+    }
+
+    return equivalents;
+}
+
 // Configuracao do Multer para Marketing Assets
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, 'assets/marketing'),
@@ -2177,9 +2201,13 @@ async function initInstance(instanceId) {
                 const normalizedIncomingJid = String(jid || '').split(':')[0];
                 const isConnectedAccountAdmin = msg.key.fromMe
                     && ownJids.includes(normalizedIncomingJid);
+                const [incomingJidAliases, managerJidAliases] = await Promise.all([
+                    getEquivalentJids(jid, sock),
+                    getEquivalentJids(configuredManagerJid || settings?.managerJid, sock)
+                ]);
                 const isConfiguredAdmin = !msg.key.fromMe
-                    && configuredManagerJid
-                    && jid === configuredManagerJid;
+                    && managerJidAliases.size > 0
+                    && [...incomingJidAliases].some(candidate => managerJidAliases.has(candidate));
 
                 if (isConnectedAccountAdmin || isConfiguredAdmin) {
 
