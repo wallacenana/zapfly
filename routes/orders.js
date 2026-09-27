@@ -728,11 +728,10 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
   const statusIcon = normalizedStatus === 'cancelled'
     ? '❌'
     : (isDelivery && normalizedStatus === 'ready' ? '🚚' : '✅');
+  const productSummary = normalizedStatus === 'accepted' ? '' : `\nPedido de *${product}*.\n`;
   let message = `${statusIcon} *${messageData[0]}* (#${orderId})
 
-Olá, *${order.clientName || 'cliente'}*! ${messageData[1]}
-Pedido de *${product}*.
-
+Olá, *${order.clientName || 'cliente'}*! ${messageData[1]}${productSummary}
 Se precisar, pode me perguntar aqui mais informações sobre o pedido.`;
 
   if (normalizedStatus === 'accepted' && !isDelivery) {
