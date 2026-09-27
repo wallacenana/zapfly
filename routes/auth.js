@@ -203,6 +203,7 @@ const sendPasswordResetEmail = async (user) => {
   const frontendUrl = String(process.env.FRONTEND_URL || 'https://app.menzzu.com').replace(/\/$/, '');
   const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
   const userName = escapeEmailHtml(user.name || 'usuário');
+  const appName = escapeEmailHtml(APP_NAME);
 
   await prisma.user.update({
     where: { id: user.id },
@@ -214,26 +215,33 @@ const sendPasswordResetEmail = async (user) => {
     from: `"${APP_NAME}" <${fromEmail}>`,
     to: user.email,
     subject: `Redefinicao de senha - ${APP_NAME}`,
-    html: `
-      <div style="margin:0;padding:32px 16px;background:#f3f7f2;font-family:Arial,Helvetica,sans-serif;color:#172033">
-        <div style="max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e3eadf;border-radius:22px;overflow:hidden;box-shadow:0 12px 35px rgba(20,55,25,.08)">
-          <div style="padding:28px 34px;background:#10251a">
-            <div style="font-size:22px;font-weight:800;letter-spacing:-.5px;color:#ffffff">Menzzu<span style="color:#8bd64d">.</span></div>
-            <div style="margin-top:7px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#a9c9a3">Cardápio digital com automação</div>
-          </div>
-          <div style="padding:38px 34px 32px">
-            <div style="display:inline-block;padding:9px 11px;border-radius:12px;background:#edf8e7;color:#4c9e25;font-size:20px">&#128273;</div>
-            <h1 style="margin:20px 0 10px;font-size:27px;line-height:1.2;color:#142019">Redefina sua senha</h1>
-            <p style="margin:0 0 20px;font-size:16px;line-height:1.65;color:#536158">Ol&aacute;, <strong style="color:#172033">${userName}</strong>.</p>
-            <p style="margin:0;font-size:15px;line-height:1.7;color:#536158">Recebemos uma solicita&ccedil;&atilde;o para criar uma nova senha para sua conta Menzzu.</p>
-            <div style="margin:26px 0;padding:17px 18px;border-left:4px solid #5db72c;border-radius:8px;background:#f5faF2;color:#425247;font-size:14px;line-height:1.55"><strong>O link &eacute; v&aacute;lido por 30 minutos</strong> e s&oacute; pode ser usado uma vez.</div>
-            <div style="text-align:center;margin:30px 0 26px"><a href="${resetUrl}" style="display:inline-block;padding:15px 27px;border-radius:11px;background:#5db72c;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;box-shadow:0 7px 16px rgba(93,183,44,.25)">Redefinir minha senha&nbsp; &rarr;</a></div>
-            <p style="margin:0;font-size:13px;line-height:1.6;color:#78847b">Se o bot&atilde;o n&atilde;o funcionar, copie e cole este endere&ccedil;o no navegador:</p>
-            <p style="word-break:break-all;margin:7px 0 0;font-size:12px;line-height:1.6;color:#5b9f35">${resetUrl}</p>
-          </div>
-          <div style="padding:20px 34px;background:#f8faf8;border-top:1px solid #edf1ec;text-align:center"><p style="margin:0;font-size:12px;line-height:1.6;color:#8a958d">Se voc&ecirc; n&atilde;o solicitou esta altera&ccedil;&atilde;o, pode ignorar este e-mail com seguran&ccedil;a.</p><p style="margin:9px 0 0;font-size:11px;color:#a1aaa3">Menzzu &bull; Card&aacute;pio digital com automa&ccedil;&atilde;o no WhatsApp</p></div>
-        </div>
-      </div>`,
+    html: `<!doctype html>
+      <html lang="pt-BR">
+        <body style="margin:0;padding:0;background:#f4f7f3;font-family:Arial,Helvetica,sans-serif;color:#172033">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#f4f7f3">
+            <tr><td align="center" style="padding:36px 16px">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:600px;background:#ffffff;border:1px solid #dfe8dc;border-radius:20px;overflow:hidden">
+                <tr><td style="padding:30px 36px;background:#10251a">
+                  <div style="font-size:24px;line-height:1;font-weight:800;letter-spacing:-.6px;color:#ffffff">${appName}<span style="color:#8bd64d">.</span></div>
+                  <div style="padding-top:9px;font-size:11px;line-height:1.4;letter-spacing:1.4px;text-transform:uppercase;color:#b8d4b2">Segurança da conta</div>
+                </td></tr>
+                <tr><td style="padding:40px 36px 32px">
+                  <div style="width:42px;height:42px;line-height:42px;text-align:center;background:#edf8e7;border-radius:12px;font-size:21px">&#128273;</div>
+                  <h1 style="margin:20px 0 12px;font-size:28px;line-height:1.2;letter-spacing:-.5px;color:#142019">Redefina sua senha</h1>
+                  <p style="margin:0 0 16px;font-size:16px;line-height:1.65;color:#536158">Ol&aacute;, <strong style="color:#172033">${userName}</strong>.</p>
+                  <p style="margin:0;font-size:15px;line-height:1.7;color:#536158">Recebemos uma solicita&ccedil;&atilde;o para criar uma nova senha para sua conta ${appName}.</p>
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:24px 0;background:#f5faf2;border-radius:10px;border-left:4px solid #5db72c"><tr><td style="padding:15px 16px;font-size:14px;line-height:1.55;color:#425247"><strong>Este link &eacute; v&aacute;lido por 30 minutos</strong><br>Por seguran&ccedil;a, ele s&oacute; pode ser usado uma vez.</td></tr></table>
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" align="center" style="margin:30px auto"><tr><td align="center" bgcolor="#5db72c" style="border-radius:10px"><a href="${resetUrl}" style="display:inline-block;padding:15px 26px;font-size:15px;line-height:1;text-decoration:none;font-weight:700;color:#ffffff">Redefinir minha senha &rarr;</a></td></tr></table>
+                  <p style="margin:0;font-size:12px;line-height:1.65;color:#78847b">Se voc&ecirc; n&atilde;o solicitou essa altera&ccedil;&atilde;o, ignore este e-mail. Sua senha atual continuar&aacute; a mesma.</p>
+                  <p style="margin:22px 0 0;font-size:12px;line-height:1.55;color:#78847b">Se o bot&atilde;o n&atilde;o funcionar, copie este link:</p>
+                  <p style="margin:6px 0 0;word-break:break-all;font-size:11px;line-height:1.55;color:#4c9e25">${resetUrl}</p>
+                </td></tr>
+                <tr><td style="padding:19px 36px;background:#f8faf8;border-top:1px solid #edf1ec;text-align:center;font-size:11px;line-height:1.5;color:#8a958d">${appName} &bull; Mensagem autom&aacute;tica de seguran&ccedil;a</td></tr>
+              </table>
+            </td></tr>
+          </table>
+        </body>
+      </html>`,
   });
 };
 
