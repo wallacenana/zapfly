@@ -1077,8 +1077,11 @@ async function createPaymentLink(order, settings) {
       .trim() || 'Produto';
     const paymentTitle = variationName || productName;
 
-    const managerPhone = settings?.managerJid ? settings.managerJid.split('@')[0] : '5511999999999';
-    const redirectUrl = `https://wa.me/${managerPhone}?text=Ol%C3%A1%2C+meu+pedido+%23${order.id.slice(-4).toUpperCase()}+teve+o+pagamento+processado.`;
+    const store = await prisma.user.findUnique({ where: { id: order.userId }, select: { slug: true } });
+    const publicMenuBaseUrl = String(process.env.PUBLIC_MENU_URL || 'https://menzzu.com').replace(/\/$/, '');
+    const redirectUrl = store?.slug
+      ? `${publicMenuBaseUrl}/${encodeURIComponent(store.slug)}/?pedido=${encodeURIComponent(order.id)}`
+      : `${publicMenuBaseUrl}/`;
 
     const preferenceBody = {
       body: {
@@ -2126,16 +2129,24 @@ router.get('/history/:phone', authenticate, async (req, res) => {
 router.get('/history/public/:slug/:phone', async (req, res) => {
   try {
     const slug = req.params.slug.toLowerCase();
-    const phone = req.params.phone.replace(/\D/g, '');
+    let phone = req.params.phone.replace(/\D/g, '');
+    if (phone && !phone.startsWith('55')) phone = `55${phone}`;
     const jid = `${phone}@s.whatsapp.net`;
+    const phoneSuffix = phone.slice(-8);
 
     const store = await prisma.user.findFirst({ where: { slug } });
     if (!store) return res.status(404).json({ error: 'Loja não encontrada' });
 
-    const orders = await prisma.order.findMany({
-      where: { userId: store.id, clientJid: jid },
+    const orderCandidates = await prisma.order.findMany({
+      where: {
+        userId: store.id,
+        OR: [
+          { clientJid: jid },
+          ...(phoneSuffix ? [{ clientPhone: { contains: phoneSuffix } }] : [])
+        ]
+      },
       orderBy: { createdAt: 'desc' },
-      take: 10,
+      take: 30,
       select: {
         id: true,
         product: true,
@@ -2145,9 +2156,17 @@ router.get('/history/public/:slug/:phone', async (req, res) => {
         status: true,
         paymentStatus: true,
         type: true,
-        createdAt: true
+        createdAt: true,
+        clientPhone: true
       }
     });
+    const orders = orderCandidates
+      .filter((order) => {
+        const storedPhone = String(order.clientPhone || '').replace(/\D/g, '');
+        const normalizedStoredPhone = storedPhone && !storedPhone.startsWith('55') ? `55${storedPhone}` : storedPhone;
+        return order.clientJid === jid || normalizedStoredPhone === phone;
+      })
+      .slice(0, 10);
 
     const reviews = await prisma.storeReview.findMany({
       where: {
@@ -2158,7 +2177,7 @@ router.get('/history/public/:slug/:phone', async (req, res) => {
     });
 
     const reviewedOrderIds = new Set(reviews.map(review => review.orderId).filter(Boolean));
-    const serialized = orders.map((order) => ({
+    const serialized = orders.map(({ clientPhone, ...order }) => ({
       ...order,
       totalPrice: Number(order.totalValue || 0),
       reviewed: reviewedOrderIds.has(order.id),
@@ -2533,6 +2552,42 @@ router.patch('/:id', authenticate, async (req, res) => {
   } catch (err) {
     console.error('[Orders][UPDATE_ERROR]', JSON.stringify({ id, message: err.message, code: err.code }));
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Rota publica para o cliente acompanhar um pedido apos voltar do pagamento.
+router.get('/status/public/:slug/:id', async (req, res) => {
+  try {
+    const slug = String(req.params.slug || '').toLowerCase();
+    const store = await prisma.user.findUnique({ where: { slug }, select: { id: true } });
+    if (!store) return res.status(404).json({ error: 'Loja não encontrada.' });
+
+    const order = await prisma.order.findFirst({
+      where: { id: req.params.id, userId: store.id },
+      select: {
+        id: true,
+        product: true,
+        variation: true,
+        totalValue: true,
+        status: true,
+        paymentStatus: true,
+        paymentMethod: true,
+        type: true,
+        createdAt: true,
+        scheduledDate: true,
+        scheduledTime: true
+      }
+    });
+    if (!order) return res.status(404).json({ error: 'Pedido não encontrado.' });
+
+    res.json({
+      ...order,
+      totalValue: Number(order.totalValue || 0),
+      shortId: String(order.id).slice(-4).toUpperCase()
+    });
+  } catch (err) {
+    console.error('[Public Order Status] Error:', err.message);
+    res.status(500).json({ error: 'Não foi possível consultar o pedido.' });
   }
 });
 

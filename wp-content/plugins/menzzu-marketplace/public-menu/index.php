@@ -1076,6 +1076,17 @@ try {
             </div>
         </div>
 
+        <div id="order-status-modal" class="modal hidden" aria-modal="true" role="dialog" aria-labelledby="order-status-title">
+            <div class="modal-overlay"></div>
+            <div class="modal-content" style="max-width: 520px;">
+                <div class="history-modal-header">
+                    <h3 id="order-status-title">Acompanhar pedido</h3>
+                    <button class="close-modal-btn" type="button" onclick="closeOrderStatusModal()" aria-label="Fechar acompanhamento"><i data-lucide="x"></i></button>
+                </div>
+                <div id="order-status-content" style="padding: 8px 2px 12px;"></div>
+            </div>
+        </div>
+
         <div id="review-modal" class="modal hidden">
             <div class="modal-overlay"></div>
             <div class="modal-content" style="max-width: 520px;">

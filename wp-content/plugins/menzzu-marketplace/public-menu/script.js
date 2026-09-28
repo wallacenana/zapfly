@@ -106,6 +106,8 @@ let state = {
     orderDetailsInfo: '',
     reviewModalOrderId: null,
     reviewModalRating: 0,
+    trackedOrderId: null,
+    orderStatusRefreshTimer: null,
     storeReviewSummary: window.__SSR__?.reviewSummary || {
         averageRating: 5,
         reviewCount: 0,
@@ -1670,7 +1672,16 @@ function moveCarousel(delta) {
 function closeWithAnimation(modalId) {
     const modal = document.getElementById(modalId);
     modal.classList.add('hidden');
-    const anyVisibleModal = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal', 'review-modal']
+    if (modalId === 'order-status-modal') {
+        if (state.orderStatusRefreshTimer) clearInterval(state.orderStatusRefreshTimer);
+        state.orderStatusRefreshTimer = null;
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('pedido')) {
+            url.searchParams.delete('pedido');
+            window.history.replaceState({}, '', url.toString());
+        }
+    }
+    const anyVisibleModal = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal', 'review-modal', 'order-status-modal']
         .some(id => {
             const el = document.getElementById(id);
             return el && !el.classList.contains('hidden');
@@ -2158,7 +2169,7 @@ function collectCheckoutExtraStep() {
 }
 
 function closeModal(modalId = null) {
-    const ids = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal', 'review-modal'];
+    const ids = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal', 'review-modal', 'order-status-modal'];
     ids.forEach(id => {
         const m = document.getElementById(id);
         if (m && !m.classList.contains('hidden')) {
@@ -2169,7 +2180,7 @@ function closeModal(modalId = null) {
 }
 
 function openModal(id) {
-    const ids = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal', 'review-modal'];
+    const ids = ['item-detail-modal', 'checkout-modal', 'history-modal', 'order-schedule-modal', 'review-modal', 'order-status-modal'];
     lockBodyScroll();
     ids.forEach(modalId => {
         const m = document.getElementById(modalId);
@@ -2327,8 +2338,13 @@ function initEventListeners() {
 
     bindClick('history-toggle-btn', () => {
         openModal('history-modal');
-        renderPreviousOrders();
+        fetchPreviousOrders();
     });
+
+    const trackedOrderId = new URLSearchParams(window.location.search).get('pedido');
+    if (/^[a-f0-9-]{16,}$/i.test(String(trackedOrderId || ''))) {
+        setTimeout(() => openPublicOrderStatus(trackedOrderId), 0);
+    }
 
     bindClick('view-cart-btn', () => {
         restoreCheckoutState();
@@ -3207,9 +3223,8 @@ async function handlePlaceOrder() {
                     confirmButtonText: 'Ver meus pedidos'
                 }).then(() => {
                     setActiveCart([]);
-                    openModal('history-modal');
+                    openPublicOrderStatus(data.id);
                     fetchPreviousOrders();
-                    location.reload();
                 });
             } else {
                 btn.disabled = false;
@@ -3240,6 +3255,90 @@ async function fetchPreviousOrders() {
         renderPreviousOrders();
     }
 }
+
+function getOrderStatusStages(order) {
+    const isDelivery = String(order?.type || '').toLowerCase() === 'delivery';
+    return [
+        { id: 'waiting_payment', label: 'Aguardando pagamento' },
+        { id: 'pending', label: 'Pagamento confirmado' },
+        { id: 'accepted', label: 'Pedido aceito' },
+        { id: 'production', label: 'Em preparação' },
+        { id: 'ready', label: isDelivery ? 'Saiu para entrega' : 'Pronto para retirada' },
+        { id: 'completed', label: 'Finalizado' }
+    ];
+}
+
+function renderPublicOrderStatus(order) {
+    const target = document.getElementById('order-status-content');
+    if (!target) return;
+
+    const currentStatus = String(order?.status || 'waiting_payment').toLowerCase();
+    const isCancelled = currentStatus === 'cancelled' || currentStatus === 'canceled';
+    const stages = getOrderStatusStages(order);
+    const currentIndex = stages.findIndex(stage => stage.id === currentStatus);
+    const shortId = String(order?.shortId || order?.id || '').slice(-4).toUpperCase();
+    const paymentConfirmed = ['confirmed', 'paid'].includes(String(order?.paymentStatus || '').toLowerCase());
+    const isCashPayment = ['dinheiro', 'cash'].includes(String(order?.paymentMethod || '').trim().toLowerCase());
+    const paymentLabel = isCashPayment
+        ? 'Pagamento na entrega'
+        : paymentConfirmed ? 'Pagamento confirmado' : 'Pagamento em análise';
+    const paymentColors = isCashPayment
+        ? { background: '#dbeafe', color: '#1d4ed8' }
+        : paymentConfirmed ? { background: '#dcfce7', color: '#166534' } : { background: '#fef3c7', color: '#92400e' };
+
+    if (isCancelled) {
+        target.innerHTML = `<div style="padding: 22px; text-align: center; background: #fff5f5; border: 1px solid #fecaca; border-radius: 16px; color: #991b1b;"><strong style="display:block; font-size: 18px;">Pedido #${shortId} cancelado</strong><p style="margin: 8px 0 0; line-height: 1.5;">Entre em contato com a loja se precisar de ajuda.</p></div>`;
+        return;
+    }
+
+    target.innerHTML = `
+        <div style="padding: 18px; border-radius: 16px; background: #f7faf7; border: 1px solid rgba(17,24,39,.08);">
+            <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;"><div><div style="font-size:12px; font-weight:800; color:var(--text-gray); text-transform:uppercase; letter-spacing:.06em;">Pedido #${shortId}</div><strong style="display:block; margin-top:4px; font-size:18px; color:var(--text-main);">${stages[Math.max(0, currentIndex)]?.label || 'Atualizando pedido'}</strong></div><span style="padding:6px 9px; border-radius:999px; background:${paymentColors.background}; color:${paymentColors.color}; font-size:12px; font-weight:800;">${paymentLabel}</span></div>
+            <p style="margin:12px 0 0; color:var(--text-gray); font-size:13px; line-height:1.55;">Esta página é atualizada automaticamente enquanto a loja atualiza seu pedido.</p>
+        </div>
+        <div style="margin:22px 4px 6px; display:grid; gap:0;">
+            ${stages.map((stage, index) => {
+                const done = currentIndex >= index;
+                const active = currentIndex === index;
+                return `<div style="display:grid; grid-template-columns:26px 1fr; gap:10px; min-height:48px; opacity:${done ? 1 : .45};"><div style="display:flex; flex-direction:column; align-items:center;"><span style="width:22px; height:22px; display:grid; place-items:center; border-radius:50%; background:${done ? 'var(--primary-color)' : '#e5e7eb'}; color:${done ? '#fff' : '#94a3b8'}; font-size:12px; font-weight:900;">${done ? '&#10003;' : index + 1}</span>${index < stages.length - 1 ? `<span style="width:2px; flex:1; min-height:20px; background:${currentIndex > index ? 'var(--primary-color)' : '#e5e7eb'};"></span>` : ''}</div><div style="padding:2px 0 14px;"><strong style="display:block; color:var(--text-main); font-size:14px;">${stage.label}</strong>${active ? '<span style="font-size:12px; color:var(--text-gray);">Status atual</span>' : ''}</div></div>`;
+            }).join('')}
+        </div>`;
+}
+
+async function refreshPublicOrderStatus() {
+    if (!state.trackedOrderId) return;
+    const target = document.getElementById('order-status-content');
+    try {
+        const response = await fetch(`${API_BASE}/orders/status/public/${STORE_SLUG}/${encodeURIComponent(state.trackedOrderId)}`);
+        const order = await response.json();
+        if (!response.ok) throw new Error(order?.error || 'Pedido não encontrado.');
+        renderPublicOrderStatus(order);
+        if (['completed', 'cancelled', 'canceled'].includes(String(order.status || '').toLowerCase()) && state.orderStatusRefreshTimer) {
+            clearInterval(state.orderStatusRefreshTimer);
+            state.orderStatusRefreshTimer = null;
+        }
+    } catch (error) {
+        if (target) target.innerHTML = `<p style="padding:22px; text-align:center; color:var(--text-gray);">${error.message || 'Não foi possível atualizar o pedido agora.'}</p>`;
+    }
+}
+
+function openPublicOrderStatus(orderId) {
+    if (!orderId) return;
+    state.trackedOrderId = orderId;
+    if (state.orderStatusRefreshTimer) clearInterval(state.orderStatusRefreshTimer);
+    openModal('order-status-modal');
+    const target = document.getElementById('order-status-content');
+    if (target) target.innerHTML = '<p style="padding:30px; text-align:center; color:var(--text-gray);">Atualizando pedido...</p>';
+    refreshPublicOrderStatus();
+    state.orderStatusRefreshTimer = setInterval(refreshPublicOrderStatus, 7000);
+}
+
+function closeOrderStatusModal() {
+    closeWithAnimation('order-status-modal');
+}
+
+window.openPublicOrderStatus = openPublicOrderStatus;
+window.closeOrderStatusModal = closeOrderStatusModal;
 
 function getStarSvg(filled = true) {
     return `
@@ -3380,30 +3479,28 @@ function renderPreviousOrders() {
         return;
     }
 
-    // Pegar apenas itens únicos para não repetir
-    const uniqueItems = [];
-    const seen = new Set();
-    state.previousOrders.forEach(o => {
-        const key = `${o.product}-${o.variation || ''}`;
-        if (!seen.has(key)) {
-            seen.add(key);
-            uniqueItems.push(o);
-        }
-    });
-
-    list.innerHTML = uniqueItems.slice(0, 6).map(o => `
-                    <div class="history-card" onclick="reorderItem('${o.id}')">
+    list.innerHTML = state.previousOrders.slice(0, 10).map(o => {
+        const shortId = String(o.id || '').slice(-4).toUpperCase();
+        const status = String(o.status || 'waiting_payment').toLowerCase();
+        const statusLabel = ({
+            waiting_payment: 'Aguardando pagamento', pending: 'Pagamento confirmado', accepted: 'Pedido aceito',
+            production: 'Em preparação', ready: o.type === 'delivery' ? 'Saiu para entrega' : 'Pronto para retirada',
+            completed: 'Finalizado', cancelled: 'Cancelado', canceled: 'Cancelado'
+        })[status] || 'Atualizando';
+        return `
+                    <div class="history-card" onclick="openPublicOrderStatus('${o.id}')">
                         <div class="history-card-info">
-                            <strong>${o.product}</strong>
-                            ${o.variation ? `<p>${o.variation}</p>` : ''}
+                            <strong>Pedido #${shortId}</strong>
+                            <p>${statusLabel}</p>
                         </div>
                         <div class="history-card-action">
                             ${o.reviewed ? '<span class="history-reviewed-badge">Avaliado</span>' : (o.canReview ? `<button type="button" class="history-review-btn" onclick="event.stopPropagation(); openReviewModal('${o.id}')">Avaliar</button>` : '')}
-                            <span>Pedir de novo</span>
+                            <span>Acompanhar</span>
                             <i data-lucide="chevron-right"></i>
                         </div>
                     </div>
-                `).join('');
+                `;
+    }).join('');
     lucide.createIcons();
 }
 
