@@ -18,6 +18,6 @@ CREATE TABLE `coupon` (
   INDEX `coupon_userId_active_idx`(`userId`, `active`),
   PRIMARY KEY (`id`),
   CONSTRAINT `coupon_userId_fkey` FOREIGN KEY (`userId`) REFERENCES `user`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE
-);
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 ALTER TABLE `order` ADD COLUMN `couponCode` VARCHAR(191) NULL, ADD COLUMN `couponDiscount` DOUBLE NOT NULL DEFAULT 0;
