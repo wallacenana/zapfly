@@ -298,6 +298,7 @@ model Order {
   addons          String?      @db.Text
   customFields    String?      @db.Text
   cartItems       String?      @db.Text
+  stockDeducted   Boolean      @default(false)
   calendarEventId String?
   instanceId      String?      @default("global")
   reminderSent    Boolean      @default(false)

@@ -616,6 +616,92 @@ function hasRequestedProductStock(product, variationName, subItemName) {
     || (Array.isArray(variation.subItems) && variation.subItems.some((item) => Number(item?.stock) > 0)));
 }
 
+function getOrderStockItems(order) {
+  const cartItems = safeJsonParse(order?.cartItems, []);
+  if (Array.isArray(cartItems) && cartItems.length > 0) return cartItems;
+
+  // Orders saved during a schema rollout may have the cart in the legacy field.
+  const legacyAddons = safeJsonParse(order?.addons, {});
+  if (Array.isArray(legacyAddons?.cartItems) && legacyAddons.cartItems.length > 0) {
+    return legacyAddons.cartItems;
+  }
+
+  return order?.productId ? [{
+    productId: order.productId,
+    variation: order.variation,
+    quantity: order.quantity
+  }] : [];
+}
+
+async function deductOrderStockAfterPayment(order) {
+  if (!order || String(order.type || '').toLowerCase() !== 'delivery' || order.stockDeducted) return order;
+
+  // Claim the order first. This makes Mercado Pago webhook retries and manual
+  // payment confirmations idempotent without relying on process memory.
+  const claimed = await prisma.order.updateMany({
+    where: { id: order.id, stockDeducted: false },
+    data: { stockDeducted: true }
+  });
+  if (claimed.count !== 1) return prisma.order.findUnique({ where: { id: order.id } });
+
+  const deducted = [];
+  try {
+    const requestedItems = getOrderStockItems(order);
+    const productIds = [...new Set(requestedItems.map((item) => item?.productId).filter(Boolean))];
+    const products = productIds.length > 0
+      ? await prisma.product.findMany({ where: { userId: order.userId, id: { in: productIds } } })
+      : [];
+    const productsById = new Map(products.map((product) => [product.id, product]));
+
+    for (const item of requestedItems) {
+      const product = productsById.get(item?.productId);
+      if (!product?.trackStock) continue;
+
+      const quantity = Math.max(1, parseInt(item?.quantity, 10) || 1);
+      const variations = safeJsonParse(product.variations, []);
+      if (Array.isArray(variations) && variations.length > 0) {
+        const nextVariations = JSON.parse(JSON.stringify(variations));
+        const variation = nextVariations.find((entry) => String(entry?.name || '') === String(item?.variation || ''));
+        if (!variation) throw new Error('A variacao selecionada nao esta mais disponivel.');
+
+        const subItems = Array.isArray(variation.subItems) ? variation.subItems : [];
+        if (subItems.length > 0) {
+          const subItem = subItems.find((entry) => String(entry?.name || '') === String(item?.subItem || ''));
+          if (!subItem || Number(subItem.stock) < quantity) throw new Error('O item selecionado esta sem estoque.');
+          subItem.stock = Number(subItem.stock) - quantity;
+        } else {
+          if (Number(variation.stock) < quantity) throw new Error('A variacao selecionada esta sem estoque.');
+          variation.stock = Number(variation.stock) - quantity;
+        }
+
+        await prisma.product.update({ where: { id: product.id }, data: { variations: JSON.stringify(nextVariations) } });
+        deducted.push({ id: product.id, previousVariations: product.variations });
+        product.variations = JSON.stringify(nextVariations);
+        continue;
+      }
+
+      const updated = await prisma.product.updateMany({
+        where: { id: product.id, userId: order.userId, active: true, stock: { gte: quantity } },
+        data: { stock: { decrement: quantity } }
+      });
+      if (updated.count !== 1) throw new Error('O produto selecionado esta sem estoque.');
+      deducted.push({ id: product.id, quantity });
+    }
+
+    return prisma.order.findUnique({ where: { id: order.id } });
+  } catch (error) {
+    for (const item of deducted.reverse()) {
+      if (item.previousVariations !== undefined) {
+        await prisma.product.update({ where: { id: item.id }, data: { variations: item.previousVariations } }).catch(() => {});
+      } else {
+        await prisma.product.update({ where: { id: item.id }, data: { stock: { increment: item.quantity } } }).catch(() => {});
+      }
+    }
+    await prisma.order.update({ where: { id: order.id }, data: { stockDeducted: false } }).catch(() => {});
+    throw error;
+  }
+}
+
 function getOrderRecipientJid(order) {
   const storedJid = String(order?.clientJid || '').trim();
   if (storedJid.includes('@') && !storedJid.startsWith('manual_')) return storedJid;
@@ -1697,10 +1783,10 @@ router.post('/', async (req, res) => {
         return res.status(409).json({ error: 'Este produto está esgotado no momento.' });
       }
 
-      // Reserva estoque simples de forma condicional para evitar venda acima do limite
-      // quando dois clientes finalizam pedidos ao mesmo tempo.
+      // Pedidos manuais já nascem confirmados. Públicos aguardam o pagamento
+      // e só têm o estoque descontado pela confirmação posterior.
       const reservedStock = [];
-      try {
+      if (isManual) try {
         for (const item of requestedItems) {
           const productRecord = productsById.get(item?.productId);
           const variations = safeJsonParse(productRecord?.variations, []);
@@ -1839,6 +1925,7 @@ router.post('/', async (req, res) => {
       addons: addons || null,
       customFields,
       cartItems: Array.isArray(cartItems) ? JSON.stringify(cartItems) : null,
+      stockDeducted: isManual && orderType === 'delivery',
       // Pedido público só entra na operação depois da confirmação do pagamento.
       status: isManual ? 'accepted' : (isCashPayment ? 'pending' : 'waiting_payment'),
       paymentStatus: isManual ? 'confirmed' : 'pending',
@@ -1854,7 +1941,7 @@ router.post('/', async (req, res) => {
       // Compatibilidade durante o deploy: permite criar pedidos enquanto a
       // colunas novas ainda nao foram aplicadas no banco de producao.
       const unavailableColumns = createError?.code === 'P2022'
-        || /Unknown argument `(cartItems|customFields|deliveryLatitude|deliveryLongitude|cashChangeFor)`|column `(cartItems|customFields|deliveryLatitude|deliveryLongitude|cashChangeFor)` does not exist/i.test(String(createError?.message || ''));
+        || /Unknown argument `(cartItems|customFields|deliveryLatitude|deliveryLongitude|cashChangeFor|stockDeducted)`|column `(cartItems|customFields|deliveryLatitude|deliveryLongitude|cashChangeFor|stockDeducted)` does not exist/i.test(String(createError?.message || ''));
       if (!unavailableColumns) throw createError;
       console.warn('[Orders] Colunas novas ausentes; criando pedido em modo de compatibilidade. Aplique prisma migrate deploy.');
       const legacyOrderData = { ...orderData };
@@ -1863,6 +1950,7 @@ router.post('/', async (req, res) => {
       delete legacyOrderData.deliveryLatitude;
       delete legacyOrderData.deliveryLongitude;
       delete legacyOrderData.cashChangeFor;
+      delete legacyOrderData.stockDeducted;
       // Usa um campo legado existente para nao perder os demais itens durante
       // o periodo em que a migracao ainda nao foi aplicada.
       legacyOrderData.addons = JSON.stringify({
@@ -2558,6 +2646,16 @@ router.patch('/:id', authenticate, async (req, res) => {
       updateData.reminderSent = false;
     }
 
+    const isConfirmingPayment = String(updateData.paymentStatus || '').toLowerCase() === 'confirmed'
+      && String(existing.paymentStatus || '').toLowerCase() !== 'confirmed';
+    if (isConfirmingPayment) {
+      try {
+        await deductOrderStockAfterPayment(existing);
+      } catch (stockError) {
+        return res.status(409).json({ error: `Pagamento não registrado: ${stockError.message}` });
+      }
+    }
+
     // A IA atualiza o pedido à medida que coleta os dados. Reconstroi os campos
     // extras aqui para vincular as imagens recebidas pelo WhatsApp ao pedido.
     if (Object.prototype.hasOwnProperty.call(updateData, 'notes')
@@ -2703,4 +2801,4 @@ router.delete('/:id', authenticate, async (req, res) => {
   }
 });
 
-module.exports = { router, setupCronJobs, syncCalendarEvents, sendDailyReport, checkAvailability, calculateOrderBreakdown, calculateOrderTotal, resolveEffectivePrice, isSameDayOrderAllowed, buildAvailabilityByPeriod, updateCalendarEvent };
+module.exports = { router, setupCronJobs, syncCalendarEvents, sendDailyReport, checkAvailability, calculateOrderBreakdown, calculateOrderTotal, resolveEffectivePrice, isSameDayOrderAllowed, buildAvailabilityByPeriod, updateCalendarEvent, deductOrderStockAfterPayment };

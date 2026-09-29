@@ -320,7 +320,7 @@ const {
 const { upsertStoreProfile, mergeStoreProfile } = require('./lib/storeProfile');
 const { buildHomeDirectoryData, renderCategoryCards, renderHeroRestaurants, renderRestaurantCards, escapeHtml } = require('./lib/home');
 
-const { router: ordersRouter, setupCronJobs, checkAvailability, updateCalendarEvent } = require('./routes/orders');
+const { router: ordersRouter, setupCronJobs, checkAvailability, updateCalendarEvent, deductOrderStockAfterPayment } = require('./routes/orders');
 const reviewsRouter = require('./routes/reviews');
 const app = express();
 const server = http.createServer(app);
@@ -1557,6 +1557,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
 
                     // Trava de seguranca no DB: Se ja foi confirmado, ignora
                     if (order && order.paymentStatus !== 'confirmed') {
+                        await deductOrderStockAfterPayment(order);
 
                         const updatedOrder = await prisma.order.update({
                             where: { id: orderId },
@@ -1609,7 +1610,10 @@ app.post('/mercadopago/webhook', async (req, res) => {
         res.sendStatus(200);
     } catch (err) {
         console.error('[MercadoPago Webhook Error]', err.message);
-        res.sendStatus(200);
+        // A aprovação só é reconhecida depois que o estoque foi baixado.
+        // Retornar erro permite que o Mercado Pago reenvie o webhook em caso
+        // de falha temporária no banco ou no controle de estoque.
+        res.sendStatus(500);
     }
 });
 
