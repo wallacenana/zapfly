@@ -41,6 +41,7 @@ model User {
   seasonalCatalogs       SeasonalCatalog[]
   flows                  Flow[]
   availableSlots         AvailableSlot[]
+  coupons                Coupon[]
   addonGroups            AddonGroup[]
   deliveryRecords        DeliveryRecord[]
   subscription           Subscription?
@@ -285,6 +286,8 @@ model Order {
   paymentLink     String?      @db.Text
   deliveryFee     Float        @default(0)
   totalValue      Float        @default(0)
+  couponCode      String?
+  couponDiscount  Float        @default(0)
   status          String       @default("pending")
   massa           String?
   recheio         String?
@@ -304,6 +307,28 @@ model Order {
   updatedAt       DateTime     @default(now()) @updatedAt
 
   @@map("order")
+}
+
+model Coupon {
+  id              String   @id @default(uuid())
+  code            String
+  name            String?
+  discountType    String   @default("fixed")
+  discountValue   Float    @default(0)
+  active          Boolean  @default(true)
+  usageLimit      Int?
+  usedCount       Int      @default(0)
+  validFrom       DateTime?
+  validUntil      DateTime?
+  orderSlots      String?  @db.Text
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, code])
+  @@index([userId, active])
+  @@map("coupon")
 }
 
 model DeliveryRecord {

@@ -3650,6 +3650,33 @@ app.get('/instances/:id/chats', authenticate, async (req, res) => {
     res.json({ chats: chatsWithFlow, total, hasMore: skip + take < total });
 });
 
+app.get('/coupons', authenticate, async (req, res) => {
+    const coupons = await prisma.coupon.findMany({ where: { userId: req.user.id }, orderBy: { createdAt: 'desc' } });
+    res.json(coupons);
+});
+
+app.post('/coupons', authenticate, async (req, res) => {
+    try {
+        const code = String(req.body.code || '').trim().toUpperCase().replace(/\s+/g, '');
+        if (!code) return res.status(400).json({ error: 'Informe o código do cupom.' });
+        const discountType = req.body.discountType === 'percent' ? 'percent' : 'fixed';
+        const discountValue = Math.max(0, Number(req.body.discountValue) || 0);
+        if (discountValue <= 0) return res.status(400).json({ error: 'Informe um desconto maior que zero.' });
+        const orderSlots = Array.isArray(req.body.orderSlots) ? JSON.stringify(req.body.orderSlots) : null;
+        const coupon = await prisma.coupon.upsert({
+            where: { userId_code: { userId: req.user.id, code } },
+            create: { userId: req.user.id, code, name: String(req.body.name || '').trim() || null, discountType, discountValue, active: req.body.active !== false, usageLimit: Number.isInteger(req.body.usageLimit) && req.body.usageLimit > 0 ? req.body.usageLimit : null, orderSlots },
+            update: { name: String(req.body.name || '').trim() || null, discountType, discountValue, active: req.body.active !== false, usageLimit: Number.isInteger(req.body.usageLimit) && req.body.usageLimit > 0 ? req.body.usageLimit : null, orderSlots }
+        });
+        res.json(coupon);
+    } catch (error) { res.status(400).json({ error: error.code === 'P2002' ? 'Código já cadastrado.' : error.message }); }
+});
+
+app.delete('/coupons/:id', authenticate, async (req, res) => {
+    await prisma.coupon.deleteMany({ where: { id: req.params.id, userId: req.user.id } });
+    res.status(204).end();
+});
+
 app.get('/instances/:id/resolve-chat/:jid', authenticate, async (req, res) => {
     const instance = await prisma.instance.findUnique({ where: { id: req.params.id, userId: req.user.id } });
     if (!instance) return res.status(404).json({ error: 'Instância não encontrada' });

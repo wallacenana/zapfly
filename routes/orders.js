@@ -1055,6 +1055,25 @@ async function calculateOrderTotal(data, userId) {
   return (await calculateOrderBreakdown(data, userId)).total;
 }
 
+async function resolveCoupon(userId, rawCode) {
+  const code = String(rawCode || '').trim().toUpperCase();
+  if (!code) return null;
+  const coupon = await prisma.coupon.findUnique({ where: { userId_code: { userId, code } } });
+  if (!coupon || !coupon.active) throw Object.assign(new Error('Cupom inválido ou inativo.'), { status: 400 });
+  const now = new Date();
+  if (coupon.validFrom && coupon.validFrom > now) throw Object.assign(new Error('Este cupom ainda não está válido.'), { status: 400 });
+  if (coupon.validUntil && coupon.validUntil < now) throw Object.assign(new Error('Este cupom expirou.'), { status: 400 });
+  if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) throw Object.assign(new Error('Este cupom atingiu o limite de uso.'), { status: 400 });
+  return coupon;
+}
+
+function getCouponDiscount(coupon, subtotal) {
+  if (!coupon) return 0;
+  const value = Math.max(0, Number(coupon.discountValue) || 0);
+  const discount = coupon.discountType === 'percent' ? subtotal * (Math.min(value, 100) / 100) : value;
+  return Math.min(Math.max(0, discount), subtotal);
+}
+
 // ─── MERCADO PAGO ───────────────────────────────────────────────────────────
 
 async function createPaymentLink(order, settings) {
@@ -1137,7 +1156,7 @@ async function refundConfirmedPayment(order, settings) {
 }
 
 // Verifica disponibilidade num dia/hora
-async function checkAvailability(userId, date, time, type = 'order', costToUse = 1) {
+async function checkAvailability(userId, date, time, type = 'order', costToUse = 1, couponCode = '') {
   try {
     const settings = await getSettings(userId);
     const dailyLimit = settings?.dailyMaxOrders || 10;
@@ -1209,9 +1228,14 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
       where: { userId, dayOfWeek, slotType: 'order' },
       orderBy: [{ startTime: 'asc' }, { endTime: 'asc' }]
     });
+    const coupon = await resolveCoupon(userId, couponCode);
+    const couponSlots = Array.isArray(safeJsonParse(coupon?.orderSlots, []))
+      ? safeJsonParse(coupon?.orderSlots, []).filter(slot => Number(slot?.dayOfWeek) === Number(dayOfWeek))
+      : [];
+    const schedulingSlots = [...availableSlots, ...couponSlots];
 
     if (!time) {
-      if (!availableSlots.length) {
+      if (!schedulingSlots.length) {
         const reason = 'A loja está fechada neste dia.';
         return { available: false, reason, date, times: [] };
       }
@@ -1232,8 +1256,8 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
       const today = getBrazilDateString();
       const nowMinutes = parseTimeToMinutes(getBrazilTimeString());
 
-      const times = buildOrderTimeOptions(availableSlots).map(slotTime => {
-        const matchingSlots = availableSlots.filter(slot => timeFitsSlot(slotTime, slot));
+      const times = buildOrderTimeOptions(schedulingSlots).map(slotTime => {
+        const matchingSlots = schedulingSlots.filter(slot => timeFitsSlot(slotTime, slot));
         if (matchingSlots.length === 0) {
           return { time: slotTime, available: false, reason: 'Fora do horário de atendimento.' };
         }
@@ -1287,7 +1311,7 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
       };
     }
 
-    const matchingSlots = availableSlots.filter(slot => timeFitsSlot(time, slot));
+    const matchingSlots = schedulingSlots.filter(slot => timeFitsSlot(time, slot));
     if (!matchingSlots.length) {
       return { available: false, reason: 'Fora do horário de atendimento.' };
     }
@@ -1540,7 +1564,7 @@ router.get('/', authenticate, async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    let { instanceId, slug, productId, product, variation, subItem, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, clientPhone, type, deliveryAddress, paymentMethod, deliveryFee, totalValue, massa, recheio, topo, addons, carrinho_itens_extras, cartItems } = req.body;
+    let { instanceId, slug, productId, product, variation, subItem, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, clientPhone, type, deliveryAddress, paymentMethod, deliveryFee, totalValue, massa, recheio, topo, addons, carrinho_itens_extras, cartItems, couponCode } = req.body;
 
     let userId = req.user?.id;
     if (!userId && instanceId) {
@@ -1601,7 +1625,7 @@ router.post('/', async (req, res) => {
       if (!scheduledTime) {
         return res.status(400).json({ error: 'Horário da encomenda é obrigatório.' });
       }
-      const availability = await checkAvailability(userId, scheduledDate, scheduledTime, orderType);
+      const availability = await checkAvailability(userId, scheduledDate, scheduledTime, orderType, 1, couponCode);
       if (!availability.available) {
         return res.status(400).json({ error: availability.reason || 'Horário indisponível.' });
       }
@@ -1713,7 +1737,9 @@ router.post('/', async (req, res) => {
     const catalogProduct = await findCatalogProduct(userId, productId, product);
     if (!productId && catalogProduct) productId = catalogProduct.id;
     const breakdown = await calculateOrderBreakdown({ ...req.body, productId }, userId);
-    const computedTotal = breakdown.total;
+    const coupon = await resolveCoupon(userId, couponCode);
+    const couponDiscount = getCouponDiscount(coupon, breakdown.total);
+    const computedTotal = Math.max(0, breakdown.total - couponDiscount);
     console.log('[Orders][CREATE_CALCULATED]', JSON.stringify({
       productId, product, variation, quantity: qtyNum, ...breakdown
     }));
@@ -1751,6 +1777,8 @@ router.post('/', async (req, res) => {
       paymentMethod: isCashPayment ? 'dinheiro' : (paymentMethod || 'A definir'),
       deliveryFee: parseFloat(deliveryFee) || 0,
       totalValue: computedTotal,
+      couponCode: coupon?.code || null,
+      couponDiscount,
       addons: addons || null,
       customFields,
       cartItems: Array.isArray(cartItems) ? JSON.stringify(cartItems) : null,
@@ -1763,6 +1791,7 @@ router.post('/', async (req, res) => {
     let order;
     try {
       order = await prisma.order.create({ data: orderData });
+      if (coupon) await prisma.coupon.update({ where: { id: coupon.id }, data: { usedCount: { increment: 1 } } });
       console.log('[Orders][CREATE_SAVED]', JSON.stringify({ id: order.id, productId: order.productId, totalValue: order.totalValue }));
     } catch (createError) {
       // Compatibilidade durante o deploy: permite criar pedidos enquanto a
@@ -1823,14 +1852,14 @@ router.post('/', async (req, res) => {
 });
 
 router.get('/availability', async (req, res) => {
-  const { date, time, slug, type } = req.query;
+  const { date, time, slug, type, couponCode } = req.query;
   let userId = req.user?.id;
   if (!userId && slug) {
     const user = await prisma.user.findUnique({ where: { slug } });
     userId = user?.id;
   }
   if (!userId) return res.status(400).json({ error: 'User ID não identificado.' });
-  const result = await checkAvailability(userId, date, time, type || 'order');
+  const result = await checkAvailability(userId, date, time, type || 'order', 1, couponCode);
   res.json(result);
 });
 
