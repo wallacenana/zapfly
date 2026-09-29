@@ -1603,7 +1603,7 @@ router.get('/', authenticate, async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    let { instanceId, slug, productId, product, variation, subItem, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, clientPhone, type, deliveryAddress, paymentMethod, deliveryFee, totalValue, massa, recheio, topo, addons, carrinho_itens_extras, cartItems, couponCode } = req.body;
+    let { instanceId, slug, productId, product, variation, subItem, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, clientPhone, type, deliveryAddress, deliveryLatitude, deliveryLongitude, paymentMethod, deliveryFee, totalValue, massa, recheio, topo, addons, carrinho_itens_extras, cartItems, couponCode } = req.body;
 
     let userId = req.user?.id;
     if (!userId && instanceId) {
@@ -1625,6 +1625,12 @@ router.post('/', async (req, res) => {
     const orderType = type || 'order';
     const normalizedPaymentMethod = String(paymentMethod || '').trim().toLowerCase();
     const isCashPayment = ['dinheiro', 'cash'].includes(normalizedPaymentMethod);
+    const hasDeliveryCoordinates = Number.isFinite(Number(deliveryLatitude))
+      && Number.isFinite(Number(deliveryLongitude));
+    const normalizedDeliveryLatitude = hasDeliveryCoordinates ? Number(deliveryLatitude) : null;
+    const normalizedDeliveryLongitude = hasDeliveryCoordinates ? Number(deliveryLongitude) : null;
+    const normalizedDeliveryAddress = String(deliveryAddress || '').trim();
+    const isStoreFulfillment = ['retirada na loja', 'consumo no local'].includes(normalizedDeliveryAddress.toLowerCase());
     // Dinheiro no delivery nao depende de configuracao do gateway para criar o pedido.
     const settings = (orderType === 'order' || !isCashPayment) ? await getSettings(userId) : null;
 
@@ -1655,6 +1661,10 @@ router.post('/', async (req, res) => {
 
     if (orderType === 'order' && settings?.acceptOrders === false && !isManual) {
       return res.status(403).json({ error: 'As encomendas estão desativadas no momento.' });
+    }
+
+    if (orderType === 'delivery' && !isManual && !isStoreFulfillment && (!normalizedDeliveryAddress || !hasDeliveryCoordinates)) {
+      return res.status(400).json({ error: 'Informe o endereço completo e confirme a localização no mapa antes de finalizar.' });
     }
 
     if (orderType === 'order' && !isManual) {
@@ -1812,7 +1822,9 @@ router.post('/', async (req, res) => {
       clientJid: finalClientJid,
       clientPhone: clientPhone || (finalClientJid && finalClientJid.includes('@') ? finalClientJid.split('@')[0] : null),
       type: orderType,
-      deliveryAddress: deliveryAddress || null,
+      deliveryAddress: normalizedDeliveryAddress || null,
+      deliveryLatitude: normalizedDeliveryLatitude,
+      deliveryLongitude: normalizedDeliveryLongitude,
       paymentMethod: isCashPayment ? 'dinheiro' : (paymentMethod || 'A definir'),
       deliveryFee: parseFloat(deliveryFee) || 0,
       totalValue: computedTotal,
@@ -1836,12 +1848,14 @@ router.post('/', async (req, res) => {
       // Compatibilidade durante o deploy: permite criar pedidos enquanto a
       // colunas novas ainda nao foram aplicadas no banco de producao.
       const unavailableColumns = createError?.code === 'P2022'
-        || /Unknown argument `(cartItems|customFields)`|column `(cartItems|customFields)` does not exist/i.test(String(createError?.message || ''));
+        || /Unknown argument `(cartItems|customFields|deliveryLatitude|deliveryLongitude)`|column `(cartItems|customFields|deliveryLatitude|deliveryLongitude)` does not exist/i.test(String(createError?.message || ''));
       if (!unavailableColumns) throw createError;
       console.warn('[Orders] Colunas novas ausentes; criando pedido em modo de compatibilidade. Aplique prisma migrate deploy.');
       const legacyOrderData = { ...orderData };
       delete legacyOrderData.cartItems;
       delete legacyOrderData.customFields;
+      delete legacyOrderData.deliveryLatitude;
+      delete legacyOrderData.deliveryLongitude;
       // Usa um campo legado existente para nao perder os demais itens durante
       // o periodo em que a migracao ainda nao foi aplicada.
       legacyOrderData.addons = JSON.stringify({

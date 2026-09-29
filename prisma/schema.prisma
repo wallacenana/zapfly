@@ -281,6 +281,8 @@ model Order {
   clientPhone     String?
   type            String       @default("order")
   deliveryAddress String?      @db.Text
+  deliveryLatitude Float?
+  deliveryLongitude Float?
   paymentMethod   String?
   paymentStatus   String       @default("pending")
   paymentLink     String?      @db.Text

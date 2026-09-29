@@ -734,12 +734,18 @@ const Production = () => {
       });
     };
 
-    const handleMaps = (address) => {
-      if (!address) {
+    const handleMaps = (targetOrder) => {
+      const address = String(targetOrder?.deliveryAddress || '').trim();
+      const latitude = Number(targetOrder?.deliveryLatitude);
+      const longitude = Number(targetOrder?.deliveryLongitude);
+      if (!address && (!Number.isFinite(latitude) || !Number.isFinite(longitude))) {
         Swal.fire('Erro', 'Este pedido não possui endereço de entrega.', 'error');
         return;
       }
-      const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+      const destination = Number.isFinite(latitude) && Number.isFinite(longitude)
+        ? `${latitude},${longitude}`
+        : address;
+      const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`;
       window.open(mapsUrl, '_blank');
     };
 
@@ -863,7 +869,7 @@ const Production = () => {
         if (printBtn) printBtn.onclick = () => handlePrint(order);
 
         const mapsBtn = document.getElementById('btn-maps-order');
-        if (mapsBtn) mapsBtn.onclick = () => handleMaps(order.deliveryAddress);
+        if (mapsBtn) mapsBtn.onclick = () => handleMaps(order);
       },
       html: `
         <div style="text-align: left; font-family: 'Inter', sans-serif; color: #0f172a;">
