@@ -3674,12 +3674,19 @@ app.post('/coupons', authenticate, async (req, res) => {
         const discountType = req.body.discountType === 'percent' ? 'percent' : 'fixed';
         const discountValue = Math.max(0, Number(req.body.discountValue) || 0);
         const freeDelivery = req.body.freeDelivery === true;
-        if (discountValue <= 0 && !freeDelivery) return res.status(400).json({ error: 'Informe um desconto maior que zero ou habilite frete grátis.' });
-        const orderSlots = Array.isArray(req.body.orderSlots) ? JSON.stringify(req.body.orderSlots) : null;
+        const orderSlotsData = Array.isArray(req.body.orderSlots) ? req.body.orderSlots : [];
+        if (discountValue <= 0 && !freeDelivery && orderSlotsData.length === 0) return res.status(400).json({ error: 'Informe um desconto, frete grátis ou um horário especial.' });
+        const orderSlots = orderSlotsData.length > 0 ? JSON.stringify(orderSlotsData) : null;
+        const usageLimitValue = Number(req.body.usageLimit);
+        const usageLimit = Number.isInteger(usageLimitValue) && usageLimitValue > 0 ? usageLimitValue : null;
+        const validFrom = req.body.validFrom ? new Date(`${req.body.validFrom}T00:00:00`) : null;
+        const validUntil = req.body.validUntil ? new Date(`${req.body.validUntil}T23:59:59.999`) : null;
+        if ((validFrom && Number.isNaN(validFrom.getTime())) || (validUntil && Number.isNaN(validUntil.getTime()))) return res.status(400).json({ error: 'Informe datas de validade válidas.' });
+        if (validFrom && validUntil && validUntil < validFrom) return res.status(400).json({ error: 'A validade final deve ser posterior à inicial.' });
         const coupon = await prisma.coupon.upsert({
             where: { userId_code: { userId: req.user.id, code } },
-            create: { userId: req.user.id, code, name: String(req.body.name || '').trim() || null, discountType, discountValue, freeDelivery, active: req.body.active !== false, usageLimit: Number.isInteger(req.body.usageLimit) && req.body.usageLimit > 0 ? req.body.usageLimit : null, orderSlots },
-            update: { name: String(req.body.name || '').trim() || null, discountType, discountValue, freeDelivery, active: req.body.active !== false, usageLimit: Number.isInteger(req.body.usageLimit) && req.body.usageLimit > 0 ? req.body.usageLimit : null, orderSlots }
+            create: { userId: req.user.id, code, name: String(req.body.name || '').trim() || null, discountType, discountValue, freeDelivery, active: req.body.active !== false, usageLimit, validFrom, validUntil, orderSlots },
+            update: { name: String(req.body.name || '').trim() || null, discountType, discountValue, freeDelivery, active: req.body.active !== false, usageLimit, validFrom, validUntil, orderSlots }
         });
         res.json(coupon);
     } catch (error) { res.status(400).json({ error: error.code === 'P2002' ? 'Código já cadastrado.' : error.message }); }

@@ -29,6 +29,7 @@ import Plans from './pages/Plans';
 import BillingSettings from './pages/BillingSettings';
 import ImageReference from './pages/ImageReference';
 import Deliveries from './pages/Deliveries';
+import Coupons from './pages/Coupons';
 
 const FullScreenLoader = () => (
   <div style={{
@@ -113,6 +114,7 @@ function AppRoutes() {
         <Route path="inventory" element={<Navigate to="/estoque" replace />} />
         <Route path="production" element={<Production />} />
         <Route path="entregas" element={<Deliveries />} />
+        <Route path="cupons" element={<Coupons />} />
         <Route path="agenda" element={<Agenda />} />
         <Route path="connections" element={<Connections />} />
         <Route path="chat" element={<Chat />} />
