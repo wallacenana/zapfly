@@ -315,6 +315,7 @@ model Coupon {
   name            String?
   discountType    String   @default("fixed")
   discountValue   Float    @default(0)
+  freeDelivery    Boolean  @default(false)
   active          Boolean  @default(true)
   usageLimit      Int?
   usedCount       Int      @default(0)

@@ -3661,12 +3661,13 @@ app.post('/coupons', authenticate, async (req, res) => {
         if (!code) return res.status(400).json({ error: 'Informe o código do cupom.' });
         const discountType = req.body.discountType === 'percent' ? 'percent' : 'fixed';
         const discountValue = Math.max(0, Number(req.body.discountValue) || 0);
-        if (discountValue <= 0) return res.status(400).json({ error: 'Informe um desconto maior que zero.' });
+        const freeDelivery = req.body.freeDelivery === true;
+        if (discountValue <= 0 && !freeDelivery) return res.status(400).json({ error: 'Informe um desconto maior que zero ou habilite frete grátis.' });
         const orderSlots = Array.isArray(req.body.orderSlots) ? JSON.stringify(req.body.orderSlots) : null;
         const coupon = await prisma.coupon.upsert({
             where: { userId_code: { userId: req.user.id, code } },
-            create: { userId: req.user.id, code, name: String(req.body.name || '').trim() || null, discountType, discountValue, active: req.body.active !== false, usageLimit: Number.isInteger(req.body.usageLimit) && req.body.usageLimit > 0 ? req.body.usageLimit : null, orderSlots },
-            update: { name: String(req.body.name || '').trim() || null, discountType, discountValue, active: req.body.active !== false, usageLimit: Number.isInteger(req.body.usageLimit) && req.body.usageLimit > 0 ? req.body.usageLimit : null, orderSlots }
+            create: { userId: req.user.id, code, name: String(req.body.name || '').trim() || null, discountType, discountValue, freeDelivery, active: req.body.active !== false, usageLimit: Number.isInteger(req.body.usageLimit) && req.body.usageLimit > 0 ? req.body.usageLimit : null, orderSlots },
+            update: { name: String(req.body.name || '').trim() || null, discountType, discountValue, freeDelivery, active: req.body.active !== false, usageLimit: Number.isInteger(req.body.usageLimit) && req.body.usageLimit > 0 ? req.body.usageLimit : null, orderSlots }
         });
         res.json(coupon);
     } catch (error) { res.status(400).json({ error: error.code === 'P2002' ? 'Código já cadastrado.' : error.message }); }

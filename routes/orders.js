@@ -637,11 +637,41 @@ async function notifyOrderAccepted(order, sockGetter, jidResolver) {
     jid = await jidResolver(jid, order.instanceId || 'global');
   }
 
-  const product = String(order.product || 'seu pedido').replace(/\s*\[[^\]]+\]\s*$/, '').trim();
+  const itemsSummary = getOrderItemsSummary(order);
   const message = `✅ *Pedido aceito!*
 
-Olá, *${order.clientName || 'cliente'}*! Seu pedido de *${product}* foi aceito e já entrou na nossa fila de produção. Avisaremos você assim que estiver pronto. 🎂`;
+Olá, *${order.clientName || 'cliente'}*! Seu pedido foi aceito e já entrou na nossa fila de produção.
+
+*Itens do pedido:*
+${itemsSummary}
+
+Avisaremos você assim que estiver pronto. 🎂`;
   await sock.sendMessage(jid, { text: message });
+}
+
+function getOrderItemsSummary(order) {
+  let items = safeJsonParse(order?.cartItems, []);
+
+  // Pedidos salvos durante a migração podem ter o carrinho dentro de addons.
+  if (!Array.isArray(items) || items.length === 0) {
+    const legacyAddons = safeJsonParse(order?.addons, {});
+    if (Array.isArray(legacyAddons?.cartItems)) items = legacyAddons.cartItems;
+  }
+
+  const lines = (Array.isArray(items) ? items : [])
+    .map((item) => {
+      const name = String(item?.name || '').trim();
+      if (!name) return '';
+      const quantity = Math.max(1, Number.parseInt(item?.quantity, 10) || 1);
+      return `- ${quantity}x ${name}`;
+    })
+    .filter(Boolean);
+
+  if (lines.length > 0) return lines.join('\n');
+
+  const product = String(order?.product || 'seu pedido').replace(/\s*\[[^\]]+\]\s*$/, '').trim();
+  const quantity = Math.max(1, Number.parseInt(order?.quantity, 10) || 1);
+  return `- ${quantity}x ${product}`;
 }
 
 function getOrderCustomFieldsSummary(order) {
@@ -665,13 +695,16 @@ function getOrderCustomFieldsSummary(order) {
 
 async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
   const isDelivery = String(order?.type || '').toLowerCase() === 'delivery';
-  const isLocalConsumption = String(order?.deliveryAddress || '').trim().toLowerCase() === 'consumo no local';
+  const fulfillmentLocation = String(order?.deliveryAddress || '').trim().toLowerCase();
+  const isLocalConsumption = fulfillmentLocation === 'consumo no local';
+  const isStorePickup = fulfillmentLocation === 'retirada na loja' || fulfillmentLocation === 'retirada';
+  const isCourierDelivery = isDelivery && !isLocalConsumption && !isStorePickup;
   const messages = {
     accepted: isDelivery
       ? ['Pedido aceito!', 'Seu pedido foi aceito e entrou na fila de produção.']
       : ['Pedido de encomenda aceito!', 'Seu pedido de encomenda foi aceito. Quando chegar o horário agendado, vamos prepará-lo com todo carinho.'],
     production: ['Pedido em preparação!', 'Seu pedido já está sendo preparado.'],
-    ready: isDelivery
+    ready: isCourierDelivery
       ? ['Pedido saiu para entrega!', 'Seu pedido saiu para entrega.']
       : (isLocalConsumption
           ? ['Pedido pronto!', 'Seu pedido está pronto para consumo no local.']
@@ -722,13 +755,13 @@ async function notifyOrderStatus(order, status, sockGetter, jidResolver) {
     }
   }
 
-  const product = String(order.product || 'seu pedido').replace(/\s*\[[^\]]+\]\s*$/, '').trim();
+  const itemsSummary = getOrderItemsSummary(order);
   const orderId = String(order.id || '').slice(-4).toUpperCase();
   const normalizedStatus = String(status || '').toLowerCase();
   const statusIcon = normalizedStatus === 'cancelled'
     ? '❌'
-    : (isDelivery && normalizedStatus === 'ready' ? '🚚' : '✅');
-  const productSummary = normalizedStatus === 'accepted' ? '' : `\nPedido de *${product}*.\n`;
+    : (isCourierDelivery && normalizedStatus === 'ready' ? '🚚' : '✅');
+  const productSummary = `\n*Itens do pedido:*\n${itemsSummary}\n`;
   let message = `${statusIcon} *${messageData[0]}* (#${orderId})
 
 Olá, *${order.clientName || 'cliente'}*! ${messageData[1]}${productSummary}
@@ -740,7 +773,6 @@ Se precisar, pode me perguntar aqui mais informações sobre o pedido.`;
     const reminderLabel = `${reminderHours} ${reminderHours === 1 ? 'hora' : 'horas'}`;
     const scheduledDay = formatScheduledDateForCustomer(order.scheduledDate);
     const scheduledTime = String(order.scheduledTime || '').trim();
-    const itemDescription = [product, order.variation].filter(Boolean).join(' - ');
     const extras = getOrderCustomFieldsSummary(order);
     const extrasMessage = extras.length
       ? ['', '', '*Informações extras:*', ...extras].join('\n')
@@ -750,7 +782,8 @@ Se precisar, pode me perguntar aqui mais informações sobre o pedido.`;
 
 Olá, *${order.clientName || 'cliente'}*! Sua encomenda para *${scheduledDay}*${scheduledTime ? `, às *${scheduledTime}*` : ''} foi aceita.
 
-Seu pedido é *${itemDescription || 'a encomenda solicitada'}*.${extrasMessage}
+*Itens do pedido:*
+${itemsSummary}${extrasMessage}
 
 Não se preocupe, já está tudo certo. Vamos enviar uma mensagem *${reminderLabel} antes* do horário agendado para confirmar que continua tudo bem.
 
@@ -1067,11 +1100,15 @@ async function resolveCoupon(userId, rawCode) {
   return coupon;
 }
 
-function getCouponDiscount(coupon, subtotal) {
+function getCouponDiscount(coupon, subtotal, deliveryFee = 0) {
   if (!coupon) return 0;
   const value = Math.max(0, Number(coupon.discountValue) || 0);
-  const discount = coupon.discountType === 'percent' ? subtotal * (Math.min(value, 100) / 100) : value;
-  return Math.min(Math.max(0, discount), subtotal);
+  const productSubtotal = Math.max(0, Number(subtotal) - Math.max(0, Number(deliveryFee) || 0));
+  const productDiscount = coupon.discountType === 'percent'
+    ? productSubtotal * (Math.min(value, 100) / 100)
+    : value;
+  const freeDeliveryDiscount = coupon.freeDelivery ? Math.max(0, Number(deliveryFee) || 0) : 0;
+  return Math.min(Math.min(Math.max(0, productDiscount), productSubtotal) + freeDeliveryDiscount, subtotal);
 }
 
 // ─── MERCADO PAGO ───────────────────────────────────────────────────────────
@@ -1738,7 +1775,7 @@ router.post('/', async (req, res) => {
     if (!productId && catalogProduct) productId = catalogProduct.id;
     const breakdown = await calculateOrderBreakdown({ ...req.body, productId }, userId);
     const coupon = await resolveCoupon(userId, couponCode);
-    const couponDiscount = getCouponDiscount(coupon, breakdown.total);
+    const couponDiscount = getCouponDiscount(coupon, breakdown.total, breakdown.deliveryFee);
     const computedTotal = Math.max(0, breakdown.total - couponDiscount);
     console.log('[Orders][CREATE_CALCULATED]', JSON.stringify({
       productId, product, variation, quantity: qtyNum, ...breakdown

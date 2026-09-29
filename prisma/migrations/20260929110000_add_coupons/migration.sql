@@ -4,6 +4,7 @@ CREATE TABLE `coupon` (
   `name` VARCHAR(191) NULL,
   `discountType` VARCHAR(191) NOT NULL DEFAULT 'fixed',
   `discountValue` DOUBLE NOT NULL DEFAULT 0,
+  `freeDelivery` BOOLEAN NOT NULL DEFAULT false,
   `active` BOOLEAN NOT NULL DEFAULT true,
   `usageLimit` INTEGER NULL,
   `usedCount` INTEGER NOT NULL DEFAULT 0,
