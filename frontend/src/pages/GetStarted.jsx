@@ -110,7 +110,8 @@ export default function GetStarted() {
       const products = Array.isArray(productsResponse.data) ? productsResponse.data : [];
       setHasProducts(products.some((product) => product && product.active !== false && String(product.type || '').toLowerCase() !== 'addon'));
       setForm((current) => ({ ...current, openai: data.openai || '', claude: data.claude || '', activeModel: data.activeModel || 'openai', logoUrl: data.logoUrl || '', maxDeliveryKm: data.maxDeliveryKm || 15, businessName: data.businessName || '', businessCategory: normalizeBusinessCategory(data.businessCategory || ''), prepTime: data.prepTime || '', acceptOrders: data.acceptOrders !== false, dailyDeliveryItems: deliveryOptions, dailyMaxOrders: data.dailyMaxOrders || 10, deliveryMode: data.deliveryMode || 'hibrido', allowCashOnDelivery: data.allowCashOnDelivery !== false, pixReceiverKey: data.pixReceiverKey || '', businessAddress: data.businessAddress || '', businessPlaceId: data.businessPlaceId || '', businessLat: data.businessLat ?? null, businessLng: data.businessLng ?? null, businessMapsUrl: data.businessMapsUrl || '', slug: data.slug || '', googleApiKey: data.googleApiKey || '' }));
-      setSlots(Array.isArray(slotsResponse.data) ? slotsResponse.data : []);
+      const loadedSlots = Array.isArray(slotsResponse.data) ? slotsResponse.data : [];
+      setSlots(loadedSlots.filter((slot) => !slot?.slotType || slot.slotType === 'delivery'));
     }).catch(() => toast.error('Não foi possível carregar sua configuração.')).finally(() => setLoading(false));
   }, []);
 

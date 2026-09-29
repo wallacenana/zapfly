@@ -870,7 +870,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                 _count: { _all: true }
             }),
             prisma.availableSlot.findMany({
-                where: { userId },
+                where: { userId, slotType: 'delivery' },
                 select: { id: true, dayOfWeek: true, startTime: true, endTime: true, maxOrders: true },
                 orderBy: [{ dayOfWeek: 'asc' }, { startTime: 'asc' }]
             }),
@@ -1622,7 +1622,9 @@ app.get('/public/menu/:slug', async (req, res) => {
                 categories: {
                     orderBy: { order: 'asc' }
                 },
-                availableSlots: true
+                availableSlots: {
+                    where: { slotType: 'delivery' }
+                }
             }
         });
 
@@ -3440,7 +3442,10 @@ app.post('/config/keys', authenticate, async (req, res) => {
 
 app.get('/config/slots', authenticate, async (req, res) => {
     try {
-        const slots = await prisma.availableSlot.findMany({ where: { userId: req.user.id }, orderBy: { dayOfWeek: 'asc' } });
+        const slots = await prisma.availableSlot.findMany({
+            where: { userId: req.user.id },
+            orderBy: [{ slotType: 'asc' }, { dayOfWeek: 'asc' }, { startTime: 'asc' }]
+        });
         res.json(slots);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -3449,16 +3454,28 @@ app.get('/config/slots', authenticate, async (req, res) => {
 
 app.post('/config/slots', authenticate, async (req, res) => {
     try {
-        const { slots } = req.body;
+        const { slots, deliverySlots, orderSlots } = req.body;
+        const normalizeSlots = (items, slotType) => (Array.isArray(items) ? items : [])
+            .filter(slot => slot?.startTime && slot?.endTime)
+            .map(slot => ({
+                userId: req.user.id,
+                dayOfWeek: parseInt(slot.dayOfWeek),
+                startTime: String(slot.startTime).slice(0, 5),
+                endTime: String(slot.endTime).slice(0, 5),
+                maxOrders: 10,
+                slotType
+            }));
 
-        if (!Array.isArray(slots)) return res.status(400).json({ error: 'Slots deve ser um array.' });
-        const validSlots = slots.filter(s => s.startTime && s.endTime).map(s => ({
-            userId: req.user.id,
-            dayOfWeek: parseInt(s.dayOfWeek),
-            startTime: s.startTime,
-            endTime: s.endTime,
-            maxOrders: 10
-        }));
+        // Legacy clients send one schedule. Preserve the former behavior by
+        // applying it to both operation types until the owner configures them.
+        const legacySlots = Array.isArray(slots) ? slots : null;
+        if (!legacySlots && !Array.isArray(deliverySlots) && !Array.isArray(orderSlots)) {
+            return res.status(400).json({ error: 'Informe os horários de delivery e/ou encomendas.' });
+        }
+        const validSlots = [
+            ...normalizeSlots(deliverySlots ?? legacySlots, 'delivery'),
+            ...normalizeSlots(orderSlots ?? legacySlots, 'order')
+        ];
         await prisma.availableSlot.deleteMany({ where: { userId: req.user.id } });
         if (validSlots.length > 0) {
             const created = await prisma.availableSlot.createMany({ data: validSlots });

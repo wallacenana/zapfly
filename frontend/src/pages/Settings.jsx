@@ -220,7 +220,8 @@ const Settings = () => {
     acceptSameDayOrders: false,
     allowCashOnDelivery: true
   });
-  const [slots, setSlots] = useState([]);
+  const [deliverySlots, setDeliverySlots] = useState([]);
+  const [orderSlots, setOrderSlots] = useState([]);
   const [, setLoadingSlots] = useState(true);
   const [marketingAssets, setMarketingAssets] = useState([]);
   const [uploadName, setUploadName] = useState('');
@@ -400,7 +401,13 @@ const Settings = () => {
             endTime: String(slot.endTime).slice(0, 5)
           }))
         : [];
-      setSlots(nextSlots);
+      const legacySlots = nextSlots.filter(slot => !slot.slotType);
+      setDeliverySlots(nextSlots.filter(slot => slot.slotType === 'delivery').length > 0
+        ? nextSlots.filter(slot => slot.slotType === 'delivery')
+        : legacySlots);
+      setOrderSlots(nextSlots.filter(slot => slot.slotType === 'order').length > 0
+        ? nextSlots.filter(slot => slot.slotType === 'order')
+        : legacySlots);
     } catch (err) {
       console.error(err);
     } finally {
@@ -466,14 +473,17 @@ const Settings = () => {
       didOpen: () => Swal.showLoading()
     });
     try {
-      const validSlots = (Array.isArray(slots) ? slots : [])
+      const normalizeSlots = (slots) => (Array.isArray(slots) ? slots : [])
         .filter(slot => slot && slot.startTime && slot.endTime)
         .map(slot => ({
           dayOfWeek: Number(slot.dayOfWeek),
           startTime: String(slot.startTime).slice(0, 5),
           endTime: String(slot.endTime).slice(0, 5)
         }));
-      await api.post('/config/slots', { slots: validSlots });
+      await api.post('/config/slots', {
+        deliverySlots: normalizeSlots(deliverySlots),
+        orderSlots: normalizeSlots(orderSlots)
+      });
       Swal.close();
       Swal.fire({ title: 'Horários Atualizados!', icon: 'success', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
     } catch (err) {
@@ -953,90 +963,11 @@ const Settings = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
               <div style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '15px', marginBottom: '10px' }}>
                 <h3 style={{ fontWeight: 800, fontSize: '20px' }}>Horários de Funcionamento</h3>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Defina quando a Lily pode aceitar pedidos e as regras de retirada.</p>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Defina separadamente a janela da pronta entrega e os horários disponíveis para encomendas.</p>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                {['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((day, idx) => {
-                  const daySlots = slots.filter(s => Number(s.dayOfWeek) === idx);
-                  const slot = daySlots[0];
-                  return (
-                    <div key={idx} style={{ ...ruleRow, gridTemplateColumns: '120px 1fr 1fr auto' }}>
-                      <span style={{ fontWeight: 700 }}>{day}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Abre:</label>
-                        <input
-                          {...inp}
-                          style={smallInp}
-                          type="time"
-                          value={slot?.startTime || '09:00'}
-                          onChange={e => {
-                            if (slot) setSlots(current => current.map(item => item === slot ? { ...item, startTime: e.target.value } : item));
-                          }}
-                        />
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <label style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Fecha:</label>
-                        <input
-                          {...inp}
-                          style={smallInp}
-                          type="time"
-                          value={slot?.endTime || '20:00'}
-                          onChange={e => {
-                            if (slot) setSlots(current => current.map(item => item === slot ? { ...item, endTime: e.target.value } : item));
-                          }}
-                        />
-                      </div>
-                      {daySlots.slice(1).map((extraSlot, extraIndex) => (
-                        <div key={extraSlot.id || `${idx}-extra-${extraIndex}`} style={{ gridColumn: '2 / 4', display: 'flex', alignItems: 'center', gap: '10px', marginTop: '-8px' }}>
-                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Intervalo:</span>
-                          <input {...inp} style={smallInp} type="time" value={extraSlot.startTime || ''} onChange={e => setSlots(current => current.map(item => item === extraSlot ? { ...item, startTime: e.target.value } : item))} />
-                          <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>até</span>
-                          <input {...inp} style={smallInp} type="time" value={extraSlot.endTime || ''} onChange={e => setSlots(current => current.map(item => item === extraSlot ? { ...item, endTime: e.target.value } : item))} />
-                          <button type="button" onClick={() => setSlots(current => current.filter(item => item !== extraSlot))} aria-label="Remover intervalo" style={{ border: 0, background: 'transparent', color: '#ef4444', cursor: 'pointer', padding: '6px' }}><Trash2 size={16} /></button>
-                        </div>
-                      ))}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        {slot && <button type="button" onClick={() => setSlots(current => [...current, { dayOfWeek: idx, startTime: '14:00', endTime: '18:00' }])} style={{ border: 0, background: 'transparent', color: 'var(--accent-color)', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>+ Adicionar horário</button>}
-                        <span style={{ fontSize: '12px', fontWeight: 700, color: slot ? '#3b82f6' : 'var(--text-muted)' }}>
-                          {slot ? 'ABERTO' : 'FECHADO'}
-                        </span>
-                        <button
-                          onClick={() => {
-                            if (slot) {
-                              setSlots(slots.filter(s => s.dayOfWeek !== idx));
-                            } else {
-                              setSlots([...slots, { dayOfWeek: idx, startTime: '09:00', endTime: '20:00' }].sort((a, b) => a.dayOfWeek - b.dayOfWeek));
-                            }
-                          }}
-                          style={{
-                            width: '44px',
-                            height: '22px',
-                            backgroundColor: slot ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)',
-                            border: `1px solid ${slot ? '#3b82f6' : 'var(--border-color)'}`,
-                            borderRadius: '20px',
-                            position: 'relative',
-                            cursor: 'pointer',
-                            transition: 'all 0.3s'
-                          }}
-                        >
-                          <div style={{
-                            width: '14px',
-                            height: '14px',
-                            backgroundColor: slot ? '#3b82f6' : 'var(--text-muted)',
-                            borderRadius: '50%',
-                            position: 'absolute',
-                            top: '3px',
-                            left: slot ? '25px' : '3px',
-                            transition: 'all 0.3s',
-                            boxShadow: slot ? '0 0 10px rgba(59, 130, 246, 0.5)' : 'none'
-                          }} />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <ScheduleEditor title="Pronta entrega" description="Controla quando o delivery, retirada e consumo imediato ficam disponíveis." slots={deliverySlots} setSlots={setDeliverySlots} />
+              <ScheduleEditor title="Encomendas" description="Define os horários que o cliente pode escolher ao agendar uma encomenda." slots={orderSlots} setSlots={setOrderSlots} />
             </div>
           )}
           {activeTab === 'bot' && (
@@ -1634,6 +1565,44 @@ const subCard = { backgroundColor: 'rgba(255,255,255,0.03)', padding: '25px', bo
 const ruleRow = { display: 'grid', gridTemplateColumns: 'auto 90px auto auto 100px auto', gap: '15px', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.04)', padding: '15px 20px', borderRadius: '12px' };
 const smallInp = { ...inp.style, padding: '10px 15px', textAlign: 'center' };
 const smallLink = { border: 'none', background: 'none', color: '#3b82f6', fontWeight: 800, fontSize: '14px', cursor: 'pointer' };
+
+const ScheduleEditor = ({ title, description, slots, setSlots }) => (
+  <section className="settings-subcard" style={{ ...subCard, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+    <div>
+      <h4 style={{ margin: 0, fontSize: '16px', fontWeight: 800 }}>{title}</h4>
+      <p style={{ margin: '5px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>{description}</p>
+    </div>
+    {['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((day, dayOfWeek) => {
+      const daySlots = slots.filter(slot => Number(slot.dayOfWeek) === dayOfWeek);
+      const primarySlot = daySlots[0];
+      const updateSlot = (target, field, value) => setSlots(current => current.map(slot => slot === target ? { ...slot, [field]: value } : slot));
+      return (
+        <div key={day} style={{ ...ruleRow, gridTemplateColumns: '115px 1fr 1fr auto' }}>
+          <span style={{ fontWeight: 700 }}>{day}</span>
+          <input {...inp} style={smallInp} type="time" disabled={!primarySlot} value={primarySlot?.startTime || '09:00'} onChange={event => updateSlot(primarySlot, 'startTime', event.target.value)} />
+          <input {...inp} style={smallInp} type="time" disabled={!primarySlot} value={primarySlot?.endTime || '20:00'} onChange={event => updateSlot(primarySlot, 'endTime', event.target.value)} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {primarySlot && <button type="button" onClick={() => setSlots(current => [...current, { dayOfWeek, startTime: '14:00', endTime: '18:00' }])} style={smallLink}>+ Intervalo</button>}
+            <button type="button" aria-label={`${primarySlot ? 'Fechar' : 'Abrir'} ${day}`} onClick={() => setSlots(current => primarySlot
+              ? current.filter(slot => Number(slot.dayOfWeek) !== dayOfWeek)
+              : [...current, { dayOfWeek, startTime: '09:00', endTime: '20:00' }].sort((a, b) => a.dayOfWeek - b.dayOfWeek))} style={{ width: '44px', height: '22px', backgroundColor: primarySlot ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)', border: `1px solid ${primarySlot ? '#3b82f6' : 'var(--border-color)'}`, borderRadius: '20px', position: 'relative', cursor: 'pointer' }}>
+              <span style={{ width: '14px', height: '14px', backgroundColor: primarySlot ? '#3b82f6' : 'var(--text-muted)', borderRadius: '50%', position: 'absolute', top: '3px', left: primarySlot ? '25px' : '3px', transition: 'all .2s' }} />
+            </button>
+          </div>
+          {daySlots.slice(1).map((slot, index) => (
+            <div key={slot.id || `${dayOfWeek}-${index}`} style={{ gridColumn: '2 / 4', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Intervalo:</span>
+              <input {...inp} style={smallInp} type="time" value={slot.startTime} onChange={event => updateSlot(slot, 'startTime', event.target.value)} />
+              <span style={{ color: 'var(--text-muted)', fontSize: '12px' }}>até</span>
+              <input {...inp} style={smallInp} type="time" value={slot.endTime} onChange={event => updateSlot(slot, 'endTime', event.target.value)} />
+              <button type="button" onClick={() => setSlots(current => current.filter(item => item !== slot))} aria-label="Remover intervalo" style={{ border: 0, background: 'transparent', color: '#ef4444', cursor: 'pointer', padding: '6px' }}><Trash2 size={16} /></button>
+            </div>
+          ))}
+        </div>
+      );
+    })}
+  </section>
+);
 const delBtn = { background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', marginLeft: 'auto', padding: '5px' };
 
 export default Settings;

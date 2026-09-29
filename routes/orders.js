@@ -1206,7 +1206,7 @@ async function checkAvailability(userId, date, time, type = 'order', costToUse =
 
     const dayOfWeek = getDayOfWeekFromDateString(date);
     const availableSlots = await prisma.availableSlot.findMany({
-      where: { userId, dayOfWeek },
+      where: { userId, dayOfWeek, slotType: 'order' },
       orderBy: [{ startTime: 'asc' }, { endTime: 'asc' }]
     });
 

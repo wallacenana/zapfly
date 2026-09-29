@@ -113,6 +113,7 @@ model AvailableSlot {
   startTime String
   endTime   String
   maxOrders Int      @default(10)
+  slotType  String   @default("delivery")
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
