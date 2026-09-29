@@ -826,6 +826,8 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                     scheduledTime: true,
                     createdAt: true,
                     paymentStatus: true,
+                    paymentMethod: true,
+                    cashChangeFor: true,
                     deliveryFee: true,
                     productId: true,
                     productRelation: {
@@ -919,7 +921,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                     createdAt: { gte: chartStart, lte: chartEnd },
                     NOT: { status: { in: ['cancelled', 'canceled'] } }
                 },
-                select: { totalValue: true, deliveryFee: true, paymentStatus: true, paymentMethod: true, status: true }
+                select: { totalValue: true, deliveryFee: true, paymentStatus: true, paymentMethod: true, cashChangeFor: true, status: true }
             }),
             prisma.order.findMany({
                 where: {
@@ -1093,6 +1095,8 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
             scheduledDate: order.scheduledDate || '',
             scheduledTime: order.scheduledTime || '',
             paymentStatus: order.paymentStatus || 'pending',
+            paymentMethod: order.paymentMethod || '',
+            cashChangeFor: Number(order.cashChangeFor || 0),
             createdAt: order.createdAt,
             deliveryFee: Number(order.deliveryFee || 0),
             imageUrl: order.productRelation?.imageUrl || order.productRelation?.image || '',
@@ -1108,6 +1112,9 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
         const cashReceivedValue = receivedOrdersInPeriod
             .filter((order) => ['dinheiro', 'cash'].includes(String(order.paymentMethod || '').trim().toLowerCase()))
             .reduce((sum, order) => sum + (Number(order.totalValue) || 0), 0);
+        const cashChangeDueValue = receivedOrdersInPeriod
+            .filter((order) => ['dinheiro', 'cash'].includes(String(order.paymentMethod || '').trim().toLowerCase()))
+            .reduce((sum, order) => sum + Math.max(0, (Number(order.cashChangeFor) || 0) - (Number(order.totalValue) || 0)), 0);
         const deliveryFeesInPeriodValue = receivedOrdersInPeriod
             .reduce((sum, order) => sum + (Number(order.deliveryFee) || 0), 0);
         const storeRevenueInPeriodValue = Math.max(0, receivedInPeriodValue - deliveryFeesInPeriodValue);
@@ -1212,6 +1219,7 @@ app.get('/dashboard/summary', authenticate, async (req, res) => {
                 receivedInPeriodValue: Number(receivedInPeriodValue.toFixed(2)),
                 mercadoPagoReceivedValue: Number(mercadoPagoReceivedValue.toFixed(2)),
                 cashReceivedValue: Number(cashReceivedValue.toFixed(2)),
+                cashChangeDueValue: Number(cashChangeDueValue.toFixed(2)),
                 receivedOrdersCount: receivedOrdersInPeriod.length,
                 deliveryFeesInPeriodValue: Number(deliveryFeesInPeriodValue.toFixed(2)),
                 storeRevenueInPeriodValue: Number(storeRevenueInPeriodValue.toFixed(2)),

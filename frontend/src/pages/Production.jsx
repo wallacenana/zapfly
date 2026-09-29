@@ -492,6 +492,8 @@ const Production = () => {
     // O detalhamento do carrinho e a fonte de verdade para pedidos com varios itens.
     // Pedidos antigos podem ter salvo apenas o valor do primeiro item em totalValue.
     const finalTotal = itemsSubtotal > 0 ? (itemsSubtotal + freightValue) : Number(order.totalValue || 0);
+    const cashChangeFor = Number(order.cashChangeFor) || 0;
+    const cashChangeDue = isCashPayment && cashChangeFor > finalTotal ? cashChangeFor - finalTotal : 0;
 
     const totalValueStr = finalTotal.toFixed(2);
     const subtotalStr = itemsSubtotal.toFixed(2);
@@ -690,6 +692,7 @@ const Production = () => {
             content += `<p style="font-size: 16px; margin: 10px 0;"><b>ENDEREÇO:</b> ${order.deliveryAddress || 'Retirada na loja'}</p>`;
             content += `<div style="margin-top: 15px; border-top: 2px solid #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 22px;">TAXA DE ENTREGA: R$ ${freightValue.toFixed(2)}</h2></div>`;
             if (isCashPayment) content += `<div style="margin-top: 12px; border-top: 1px dashed #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 22px;">RECEBER: R$ ${finalTotal.toFixed(2)}</h2></div>`;
+            if (cashChangeDue > 0) content += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #000;"><h2 style="margin: 0; text-align: right; font-size: 20px;">TROCO: R$ ${cashChangeDue.toFixed(2)}</h2><p style="margin: 4px 0 0; text-align: right; font-size: 14px;">Cliente paga com R$ ${cashChangeFor.toFixed(2)}</p></div>`;
           } else {
             if (opts.client) content += `<p style="font-size: 18px; margin: 8px 0;"><b>👤 CLIENTE:</b> ${order.clientName}</p>`;
             if (opts.prod) content += printItemsHtml;
@@ -750,7 +753,7 @@ const Production = () => {
     };
 
     Swal.fire({
-      background: isCashPayment ? '#fff5f5' : '#ffffff',
+      background: isCashPayment ? '#ffe4e6' : '#ffffff',
       color: '#0f172a',
       width: '550px',
       showCloseButton: true,
@@ -939,7 +942,9 @@ const Production = () => {
               <div style="font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-bottom: 5px;">💰 Pagamento</div>
               ${acceptedWithoutPayment
                 ? `<div style="background: #fee2e2; color: #b91c1c; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 900; display: inline-block; margin-top: 2px;">⚠️ ACEITO SEM PAGAMENTO</div><div style="font-size: 11px; color: #64748b; margin-top: 5px;">${order.paymentMethod || 'A COMBINAR'}</div>`
-                : `<div style="background: #fbbf24; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 900; display: inline-block; margin-top: 2px;">${order.paymentMethod || 'A COMBINAR'}</div>`}
+                : isCashPayment
+                  ? `<div style="background: #e11d48; color: #fff; padding: 5px 9px; border-radius: 5px; font-size: 12px; font-weight: 900; display: inline-block; margin-top: 2px;">DINHEIRO${cashChangeDue > 0 ? ` · TROCO R$ ${cashChangeDue.toFixed(2)}` : ''}</div>${cashChangeDue > 0 ? `<div style="font-size: 11px; color: #9f1239; margin-top: 5px; font-weight: 700;">Cliente paga com R$ ${cashChangeFor.toFixed(2)}</div>` : ''}`
+                  : `<div style="background: #fbbf24; color: #000; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 900; display: inline-block; margin-top: 2px;">${order.paymentMethod || 'A COMBINAR'}</div>`}
             </div>
           </div>
 
@@ -1234,17 +1239,17 @@ const KanbanColumn = ({ col, orders, updateStatus, openDetails, height = '100%' 
       minWidth: '320px', height: height, overflow: 'hidden'
     }}>
       <div style={{
-        padding: '15px 20px', borderBottom: '1px solid var(--border-color)',
+        padding: '11px 14px', borderBottom: '1px solid var(--border-color)',
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         backgroundColor: 'rgba(255,255,255,0.02)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ color: col.color }}>{col.icon}</span>
-          <span style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)' }}>{col.title}</span>
+          <span style={{ fontSize: '13px', fontWeight: 800, color: 'var(--text-primary)' }}>{col.title}</span>
         </div>
         <span style={{
-          backgroundColor: 'rgba(255,255,255,0.05)', padding: '2px 10px',
-          borderRadius: '10px', fontSize: '12px', fontWeight: 800, color: col.color
+          backgroundColor: 'rgba(255,255,255,0.05)', padding: '2px 8px',
+          borderRadius: '10px', fontSize: '11px', fontWeight: 800, color: col.color
         }}>
           {colOrders.length}
         </span>
@@ -1254,12 +1259,12 @@ const KanbanColumn = ({ col, orders, updateStatus, openDetails, height = '100%' 
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => updateStatus(e.dataTransfer.getData("orderId"), col.id)}
         style={{
-          padding: '15px',
+          padding: '8px',
           overflowY: 'auto',
           flex: 1,
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
-          gap: '12px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '6px',
           alignContent: 'start'
         }}>
         {colOrders.map(order => (
@@ -1269,34 +1274,33 @@ const KanbanColumn = ({ col, orders, updateStatus, openDetails, height = '100%' 
             onClick={() => openDetails(order)}
             style={{
               backgroundColor: 'var(--bg-secondary)',
-              padding: '12px',
-              borderRadius: '12px',
+              padding: '8px 10px',
+              borderRadius: '9px',
               border: hasAcceptedPendingPayment(order) ? '1px solid #f97316' : '1px solid var(--border-color)',
               boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
               cursor: 'pointer',
-              textAlign: 'center',
+              textAlign: 'left',
               transition: 'transform 0.1s',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
+              display: 'grid',
+              gridTemplateColumns: '64px minmax(0, 1fr) auto',
               alignItems: 'center',
-              minHeight: '100px',
+              minHeight: '52px',
               position: 'relative'
             }}
             onDragStart={(e) => e.dataTransfer.setData("orderId", order.id)}
             draggable
           >
             <div style={{
-              fontSize: '18px',
+              fontSize: '14px',
               fontWeight: 900,
               color: 'var(--text-primary)',
-              marginBottom: '4px'
+              marginBottom: 0
             }}>
               #{order.id.slice(-4).toUpperCase()}
             </div>
 
             <div style={{
-              fontSize: '11px',
+              fontSize: '10px',
               color: 'var(--text-muted)',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
@@ -1308,19 +1312,21 @@ const KanbanColumn = ({ col, orders, updateStatus, openDetails, height = '100%' 
             </div>
 
             <div style={{
-              marginTop: '8px',
-              fontSize: '10px',
+              marginTop: 0,
+              fontSize: '9px',
               color: col.color,
               fontWeight: 800,
               display: 'flex',
               alignItems: 'center',
-              gap: '4px'
+              gap: '3px',
+              justifyContent: 'flex-end',
+              whiteSpace: 'nowrap'
             }}>
               <Clock size={10} />
               {order.scheduledTime}
             </div>
             {hasAcceptedPendingPayment(order) && (
-              <div style={{ marginTop: '7px', padding: '3px 6px', borderRadius: '5px', background: '#fff7ed', color: '#c2410c', fontSize: '9px', fontWeight: 900 }}>
+              <div style={{ gridColumn: '2 / 4', marginTop: '2px', padding: '2px 5px', borderRadius: '4px', background: '#fff7ed', color: '#c2410c', fontSize: '8px', fontWeight: 900, width: 'fit-content' }}>
                 ⚠️ SEM PAGAMENTO
               </div>
             )}

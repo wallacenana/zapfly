@@ -234,7 +234,7 @@ export default function Dashboard() {
         <Panel eyebrow="Financeiro" title="Recebimentos por método" description="Valores recebidos no período selecionado. Taxas e repasses ficam detalhados na tela Entregas." actions={<Button variant="secondary" size="sm" onClick={() => navigate('/entregas')}>Ver entregas <ExternalLink size={14} /></Button>}>
           <div className="dashboard-finance-summary">
             <div className="dashboard-finance-card dashboard-finance-card--received"><span>Mercado Pago</span><strong>{money.format(safeNumber(finance.mercadoPagoReceivedValue))}</strong><small>Pagamentos confirmados, com entrega</small></div>
-            <div className="dashboard-finance-card dashboard-finance-card--cash"><span>Dinheiro</span><strong>{money.format(safeNumber(finance.cashReceivedValue))}</strong><small>Pedidos finalizados, com entrega</small></div>
+            <div className="dashboard-finance-card dashboard-finance-card--cash"><span>Dinheiro</span><strong>{money.format(safeNumber(finance.cashReceivedValue))}</strong><small>Troco a separar: {money.format(safeNumber(finance.cashChangeDueValue))}</small></div>
             <div className="dashboard-finance-card dashboard-finance-card--net"><span>Total recebido</span><strong>{money.format(safeNumber(finance.receivedInPeriodValue))}</strong><small>Produtos e taxas de entrega</small></div>
             <div className="dashboard-finance-card dashboard-finance-card--count"><span>Quantidade de pedidos</span><strong>{integer.format(safeNumber(finance.receivedOrdersCount))}</strong><small>Pedidos com valor recebido</small></div>
           </div>
@@ -251,7 +251,7 @@ export default function Dashboard() {
               {visibleRecentOrders.length ? visibleRecentOrders.map(order => (
                 <div className="dashboard-order-row" key={order.id}>
                   <span className="dashboard-order-icon"><Package size={16} /></span>
-                  <div className="dashboard-order-main"><strong>{safeText(order.product, 'Produto')}</strong><span>{safeText(order.clientName, 'Cliente')} · {order.type === 'delivery' ? 'Delivery' : 'Encomenda'}</span><small>{order.createdAt ? new Date(order.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Data não informada'}</small></div>
+                  <div className="dashboard-order-main"><strong>{safeText(order.product, 'Produto')}</strong><span>{safeText(order.clientName, 'Cliente')} · {order.type === 'delivery' ? 'Delivery' : 'Encomenda'}</span><small>{order.paymentMethod === 'dinheiro' && safeNumber(order.cashChangeFor) > safeNumber(order.totalValue) ? `Dinheiro · troco de ${money.format(safeNumber(order.cashChangeFor) - safeNumber(order.totalValue))}` : (order.createdAt ? new Date(order.createdAt).toLocaleString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Data não informada')}</small></div>
                   <div className="dashboard-order-value"><strong>{money.format(safeNumber(order.totalValue))}</strong><span className="dashboard-order-status">{safeText(order.status)}</span></div>
                 </div>
               )) : <div className="dashboard-empty">Nenhum pedido recente.</div>}

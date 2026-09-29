@@ -1603,7 +1603,7 @@ router.get('/', authenticate, async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    let { instanceId, slug, productId, product, variation, subItem, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, clientPhone, type, deliveryAddress, deliveryLatitude, deliveryLongitude, paymentMethod, deliveryFee, totalValue, massa, recheio, topo, addons, carrinho_itens_extras, cartItems, couponCode } = req.body;
+    let { instanceId, slug, productId, product, variation, subItem, quantity, notes, scheduledDate, scheduledTime, clientName, clientJid, clientPhone, type, deliveryAddress, deliveryLatitude, deliveryLongitude, paymentMethod, cashChangeFor, deliveryFee, totalValue, massa, recheio, topo, addons, carrinho_itens_extras, cartItems, couponCode } = req.body;
 
     let userId = req.user?.id;
     if (!userId && instanceId) {
@@ -1789,6 +1789,11 @@ router.post('/', async (req, res) => {
     const coupon = await resolveCoupon(userId, couponCode);
     const couponDiscount = getCouponDiscount(coupon, breakdown.total, breakdown.deliveryFee);
     const computedTotal = Math.max(0, breakdown.total - couponDiscount);
+    const rawCashChangeFor = String(cashChangeFor ?? '').trim();
+    const requestedCashChangeFor = isCashPayment && rawCashChangeFor ? Number(rawCashChangeFor) : null;
+    if (requestedCashChangeFor !== null && (!Number.isFinite(requestedCashChangeFor) || requestedCashChangeFor < computedTotal)) {
+      return res.status(400).json({ error: 'O valor informado para troco deve ser maior ou igual ao total do pedido.' });
+    }
     console.log('[Orders][CREATE_CALCULATED]', JSON.stringify({
       productId, product, variation, quantity: qtyNum, ...breakdown
     }));
@@ -1826,6 +1831,7 @@ router.post('/', async (req, res) => {
       deliveryLatitude: normalizedDeliveryLatitude,
       deliveryLongitude: normalizedDeliveryLongitude,
       paymentMethod: isCashPayment ? 'dinheiro' : (paymentMethod || 'A definir'),
+      cashChangeFor: requestedCashChangeFor,
       deliveryFee: parseFloat(deliveryFee) || 0,
       totalValue: computedTotal,
       couponCode: coupon?.code || null,
@@ -1848,7 +1854,7 @@ router.post('/', async (req, res) => {
       // Compatibilidade durante o deploy: permite criar pedidos enquanto a
       // colunas novas ainda nao foram aplicadas no banco de producao.
       const unavailableColumns = createError?.code === 'P2022'
-        || /Unknown argument `(cartItems|customFields|deliveryLatitude|deliveryLongitude)`|column `(cartItems|customFields|deliveryLatitude|deliveryLongitude)` does not exist/i.test(String(createError?.message || ''));
+        || /Unknown argument `(cartItems|customFields|deliveryLatitude|deliveryLongitude|cashChangeFor)`|column `(cartItems|customFields|deliveryLatitude|deliveryLongitude|cashChangeFor)` does not exist/i.test(String(createError?.message || ''));
       if (!unavailableColumns) throw createError;
       console.warn('[Orders] Colunas novas ausentes; criando pedido em modo de compatibilidade. Aplique prisma migrate deploy.');
       const legacyOrderData = { ...orderData };
@@ -1856,6 +1862,7 @@ router.post('/', async (req, res) => {
       delete legacyOrderData.customFields;
       delete legacyOrderData.deliveryLatitude;
       delete legacyOrderData.deliveryLongitude;
+      delete legacyOrderData.cashChangeFor;
       // Usa um campo legado existente para nao perder os demais itens durante
       // o periodo em que a migracao ainda nao foi aplicada.
       legacyOrderData.addons = JSON.stringify({

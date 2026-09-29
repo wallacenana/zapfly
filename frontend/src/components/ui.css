@@ -123,8 +123,8 @@
 .dashboard-finance-card small { color: #708178; font-size: 12px; }
 .dashboard-finance-card--received { border-color: #b8eedb; background: #f1fcf7; }
 .dashboard-finance-card--received strong { color: #087a52; }
-.dashboard-finance-card--cash { border-color: #fed7aa; background: #fffaf3; }
-.dashboard-finance-card--cash strong { color: #c2410c; }
+.dashboard-finance-card--cash { border-color: #fda4af; background: #fff1f2; }
+.dashboard-finance-card--cash strong { color: #be123c; }
 .dashboard-finance-card--count { border-color: #e9d5ff; background: #faf7ff; }
 .dashboard-finance-card--count strong { color: #7e22ce; }
 .dashboard-finance-net-total { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; border: 1px solid #bfdbfe; border-radius: 11px; background: #f5f9ff; }

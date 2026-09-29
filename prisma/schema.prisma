@@ -284,6 +284,7 @@ model Order {
   deliveryLatitude Float?
   deliveryLongitude Float?
   paymentMethod   String?
+  cashChangeFor   Float?
   paymentStatus   String       @default("pending")
   paymentLink     String?      @db.Text
   deliveryFee     Float        @default(0)
