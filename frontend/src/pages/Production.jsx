@@ -490,8 +490,10 @@ const Production = () => {
       ? orderItems.reduce((sum, item) => sum + ((Number(item.price) || 0) * (Number(item.quantity) || 1)), 0)
       : unitPrice * quantity;
     // O detalhamento do carrinho e a fonte de verdade para pedidos com varios itens.
-    // Pedidos antigos podem ter salvo apenas o valor do primeiro item em totalValue.
-    const finalTotal = itemsSubtotal > 0 ? (itemsSubtotal + freightValue) : Number(order.totalValue || 0);
+    // Quando há cupom, o valor salvo pelo backend já contém o desconto aplicado.
+    const grossTotal = itemsSubtotal > 0 ? (itemsSubtotal + freightValue) : Number(order.totalValue || 0);
+    const couponDiscount = Math.min(Math.max(0, Number(order.couponDiscount) || 0), grossTotal);
+    const finalTotal = couponDiscount > 0 ? Math.max(0, grossTotal - couponDiscount) : grossTotal;
     const cashChangeFor = Number(order.cashChangeFor) || 0;
     const cashChangeDue = isCashPayment && cashChangeFor > finalTotal ? cashChangeFor - finalTotal : 0;
 
@@ -557,10 +559,7 @@ const Production = () => {
       if (itemVariation && itemName.endsWith(`(${itemVariation})`)) {
         itemName = itemName.slice(0, -(itemVariation.length + 2)).trim();
       }
-      const itemExtras = extrasMatch ? extrasMatch[1] : '';
-      const itemDetailsHtml = index === 0
-        ? notesHtml
-        : (itemExtras ? `<div style="font-size: 13px; color: #475569; margin-top: 10px;">Extras: ${itemExtras}</div>` : '');
+      const itemDetailsHtml = index === 0 ? notesHtml : '';
 
       return `
                 <tr${index > 0 ? ' style="border-top: 1px dashed rgba(15,23,42,0.08);"' : ''}>
@@ -578,7 +577,7 @@ const Production = () => {
                   <td style="font-size: 14px; vertical-align: top; padding-top: 20px; text-align: right;">
                     R$ ${(itemPrice * itemQuantity).toFixed(2)}
                   </td>
-                </tr>`;
+                </tr>${index === 0 ? selectionTableRowsHtml : ''}`;
     }).join('');
 
     let actionBtnHtml = '';
@@ -658,7 +657,6 @@ const Production = () => {
               <div style="font-size: 18px; font-weight: 900;">ITEM ${itemQuantity}x</div>
               <div style="font-size: 20px; margin-top: 5px; font-weight: 900;">${itemName}</div>
               ${itemVariation ? `<div style="font-size: 16px;">Variacao: ${itemVariation}</div>` : ''}
-              ${extrasMatch ? `<div style="font-size: 15px;">Extras: ${extrasMatch[1]}</div>` : ''}
               <div style="font-size: 16px; text-align: right;">Subtotal: R$ ${(itemPrice * itemQuantity).toFixed(2)}</div>
             </div>`;
           }).join('');
@@ -679,6 +677,7 @@ const Production = () => {
             if (opts.notes && cleanNotes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>OBS:</b> ${cleanNotes}</p>`;
             if (opts.addr && order.deliveryAddress) content += `<p style="font-size: 16px; margin: 10px 0;"><b>ENTREGA:</b> ${order.deliveryAddress}</p>`;
             if (freightValue > 0) content += `<p style="font-size: 16px; margin: 10px 0;"><b>TAXA DE ENTREGA:</b> R$ ${freightValue.toFixed(2)}</p>`;
+            if (couponDiscount > 0) content += `<p style="font-size: 16px; margin: 10px 0;"><b>CUPOM ${order.couponCode || ''}:</b> - R$ ${couponDiscount.toFixed(2)}</p>`;
             if (opts.value) content += `<div style="margin-top: 15px; border-top: 2px solid #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 24px;">TOTAL: R$ ${finalTotal.toFixed(2)}</h2></div>`;
             content += `</div><div style="break-before: page; page-break-before: always; height: 1px;"></div>
               <div style="font-family: 'Inter', Arial, sans-serif; width: 100%; max-width: 280px; margin: 0 auto; color: #000; line-height: 1.4;">
@@ -701,6 +700,7 @@ const Production = () => {
             if (opts.notes && cleanNotes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>📝 OBS:</b> ${cleanNotes}</p>`;
             if (opts.addr && order.deliveryAddress) content += `<p style="font-size: 16px; margin: 10px 0;"><b>📍 ENTREGA:</b> ${order.deliveryAddress}</p>`;
             if (freightValue > 0) content += `<p style="font-size: 16px; margin: 10px 0;"><b>TAXA DE ENTREGA:</b> R$ ${freightValue.toFixed(2)}</p>`;
+            if (couponDiscount > 0) content += `<p style="font-size: 16px; margin: 10px 0;"><b>CUPOM ${order.couponCode || ''}:</b> - R$ ${couponDiscount.toFixed(2)}</p>`;
             if (opts.value) content += `<div style="margin-top: 15px; border-top: 2px solid #000; padding-top: 10px;"><h2 style="margin: 0; text-align: right; font-size: 24px;">TOTAL: R$ ${finalTotal.toFixed(2)}</h2></div>`;
           }
 
@@ -899,7 +899,6 @@ const Production = () => {
               </thead>
               <tbody>
                 ${orderItemsHtml}
-                ${selectionTableRowsHtml}
                 <tr style="display: none;">
                   <td style="padding: 20px 0; vertical-align: top;">
                     <div style="background: #3b82f6; color: #fff; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 20px; font-weight: 900;">
@@ -922,6 +921,13 @@ const Production = () => {
                   <td style="padding: 10px 0;"></td>
                   <td style="padding: 10px 10px; font-size: 13px; color: #64748b; font-weight: 600;">Taxa de Entrega (Uber)</td>
                   <td style="padding: 10px 0; text-align: right; font-weight: 700; font-size: 15px; color: #f59e0b;">R$ ${freightStr}</td>
+                </tr>
+                ` : ''}
+                ${couponDiscount > 0 ? `
+                <tr style="border-top: 1px dashed rgba(15,23,42,0.08);">
+                  <td style="padding: 10px 0;"></td>
+                  <td style="padding: 10px 10px; font-size: 13px; color: #07865d; font-weight: 700;">Cupom ${order.couponCode || ''}</td>
+                  <td style="padding: 10px 0; text-align: right; font-weight: 800; font-size: 15px; color: #07865d;">- R$ ${couponDiscount.toFixed(2)}</td>
                 </tr>
                 ` : ''}
               </tbody>
