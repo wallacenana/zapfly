@@ -2011,6 +2011,27 @@ router.get('/availability', async (req, res) => {
   res.json(result);
 });
 
+router.get('/coupon-preview', async (req, res) => {
+  try {
+    const slug = String(req.query.slug || '').trim().toLowerCase();
+    const couponCode = String(req.query.couponCode || '').trim();
+    if (!slug || !couponCode) return res.status(400).json({ error: 'Informe a loja e o cupom.' });
+
+    const user = await prisma.user.findUnique({ where: { slug }, select: { id: true } });
+    if (!user) return res.status(404).json({ error: 'Loja não encontrada.' });
+
+    const coupon = await resolveCoupon(user.id, couponCode);
+    res.json({
+      code: coupon.code,
+      discountType: coupon.discountType,
+      discountValue: Number(coupon.discountValue) || 0,
+      freeDelivery: Boolean(coupon.freeDelivery)
+    });
+  } catch (error) {
+    res.status(error.status || 400).json({ error: error.message || 'Cupom inválido.' });
+  }
+});
+
 router.get('/stock', authenticate, async (req, res) => {
   const userId = req.user.id;
   const items = await prisma.stockItem.findMany({ where: { userId }, orderBy: { name: 'asc' } });
