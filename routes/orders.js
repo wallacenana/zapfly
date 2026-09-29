@@ -2781,6 +2781,7 @@ router.get('/status/public/:slug/:id', async (req, res) => {
         paymentStatus: true,
         paymentMethod: true,
         type: true,
+        deliveryAddress: true,
         createdAt: true,
         scheduledDate: true,
         scheduledTime: true
