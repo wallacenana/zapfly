@@ -1012,6 +1012,14 @@ const Production = () => {
   const waitingPageSize = 8;
   const waitingPageCount = Math.max(1, Math.ceil(waitingOrders.length / waitingPageSize));
   const paginatedWaitingOrders = waitingOrders.slice(waitingPage * waitingPageSize, (waitingPage + 1) * waitingPageSize);
+  const countTabOrdersForSelectedDate = (type) => orders.filter((order) => {
+    const orderType = order.type || 'order';
+    return orderType === type
+      && order.scheduledDate === selectedDate
+      && !['completed', 'cancelled', 'canceled'].includes(String(order.status || '').toLowerCase());
+  }).length;
+  const deliveryTabCount = countTabOrdersForSelectedDate('delivery');
+  const orderTabCount = countTabOrdersForSelectedDate('order');
 
   if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#fff' }}>Carregando Produção...</div>;
 
@@ -1036,9 +1044,9 @@ const Production = () => {
               style={{ ...tabBtn, backgroundColor: activeType === 'delivery' ? '#3b82f6' : '#ffffff', color: activeType === 'delivery' ? '#ffffff' : 'var(--text-primary)', border: '1px solid var(--border-color)', position: 'relative' }}
             >
               <Truck size={16} /> Pronta Entrega
-              {orders.filter(o => o.type === 'delivery' && o.status !== 'completed' && o.status !== 'cancelled').length > 0 && (
+              {deliveryTabCount > 0 && (
                 <span style={badgeStyle}>
-                  {orders.filter(o => o.type === 'delivery' && o.status !== 'completed' && o.status !== 'cancelled').length}
+                  {deliveryTabCount}
                 </span>
               )}
             </button>
@@ -1047,9 +1055,9 @@ const Production = () => {
               style={{ ...tabBtn, backgroundColor: activeType === 'order' ? '#f59e0b' : '#ffffff', color: activeType === 'order' ? '#ffffff' : 'var(--text-primary)', border: '1px solid var(--border-color)', position: 'relative' }}
             >
               <CalendarIcon size={16} /> Encomendas
-              {orders.filter(o => (o.type === 'order' || !o.type) && o.status !== 'completed' && o.status !== 'cancelled').length > 0 && (
+              {orderTabCount > 0 && (
                 <span style={badgeStyle}>
-                  {orders.filter(o => (o.type === 'order' || !o.type) && o.status !== 'completed' && o.status !== 'cancelled').length}
+                  {orderTabCount}
                 </span>
               )}
             </button>
