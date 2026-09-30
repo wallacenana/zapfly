@@ -315,7 +315,7 @@ const Production = () => {
 
   const updateStatus = async (orderId, newStatus) => {
     const targetOrder = orders.find(order => order.id === orderId);
-    if (!targetOrder) return;
+    if (!targetOrder) return false;
 
     // A delivery must be accepted before it can reach production, even by drag and drop.
     if (targetOrder.type === 'delivery'
@@ -336,14 +336,36 @@ const Production = () => {
         cancelButtonText: 'Voltar',
         confirmButtonColor: '#ef4444'
       });
-      if (!result.isConfirmed) return;
+      if (!result.isConfirmed) return false;
+    }
+
+    const isCashOrder = ['dinheiro', 'cash'].includes(String(targetOrder.paymentMethod || '').trim().toLowerCase());
+    const isPaymentConfirmed = String(targetOrder.paymentStatus || '').toLowerCase() === 'confirmed';
+    let paymentStatus = targetOrder.paymentStatus;
+    if (newStatus === 'completed' && (isCashOrder || !isPaymentConfirmed)) {
+      const paymentDecision = await Swal.fire({
+        title: 'Pagamento recebido?',
+        text: isCashOrder
+          ? 'Confirme se o dinheiro foi recebido para contabilizar este pedido.'
+          : 'Este pedido foi aceito sem pagamento confirmado. Confirme se o valor foi recebido.',
+        icon: 'question',
+        showCancelButton: true,
+        showDenyButton: true,
+        confirmButtonText: 'Sim, marcar como pago',
+        denyButtonText: 'Não, finalizar em aberto',
+        cancelButtonText: 'Voltar',
+        confirmButtonColor: '#16a34a',
+        denyButtonColor: '#f59e0b'
+      });
+      if (!paymentDecision.isConfirmed && !paymentDecision.isDenied) return false;
+      paymentStatus = paymentDecision.isConfirmed ? 'confirmed' : 'pending';
     }
 
     // 1. Guarda o estado antigo caso dê erro no banco
     const previousOrders = [...orders];
 
     // 2. Atualiza a interface IMEDIATAMENTE (Magia do Optimistic UI)
-    const updatedOrders = orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o);
+    const updatedOrders = orders.map(o => o.id === orderId ? { ...o, status: newStatus, paymentStatus } : o);
     setOrders(updatedOrders);
 
     // 3. Dispara alerta visual instantâneo para QUALQUER coluna
@@ -359,11 +381,13 @@ const Production = () => {
 
     try {
       // 4. Salva no banco de forma silenciosa e invisível para o usuário
-      await api.patch(`/orders/${orderId}`, { status: newStatus });
+      await api.patch(`/orders/${orderId}`, { status: newStatus, ...(paymentStatus !== targetOrder.paymentStatus ? { paymentStatus } : {}) });
+      return true;
     } catch (err) {
       // 5. Se o banco falhar, devolvemos o card pro lugar original e avisamos o erro
       setOrders(previousOrders);
       Swal.fire('Erro na Conexão', 'Não foi possível salvar a alteração no banco de dados. O card foi revertido.', 'error');
+      return false;
     }
   };
 
@@ -856,8 +880,8 @@ const Production = () => {
             };
             const nextStatus = nextStatusMap[order.status];
             if (nextStatus) {
-              updateStatus(order.id, nextStatus);
               Swal.close();
+              await updateStatus(order.id, nextStatus);
             }
           };
         }
