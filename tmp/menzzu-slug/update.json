@@ -1,0 +1,23 @@
+{
+  "name": "Menzzu Marketplace",
+  "slug": "menzzu-marketplace",
+  "version": "3.1.186",
+  "homepage": "https://menzzu.com/",
+  "download_url": "https://github.com/wallacenana/menzzu-marketplace/archive/refs/heads/main.zip",
+  "requires": "6.0",
+  "tested": "7.0.2",
+  "requires_php": "7.4",
+  "author": "Menzzu",
+  "author_url": "https://github.com/wallacenana",
+  "last_updated": "2026-10-01",
+  "icons": {
+    "1x": "https://cdn.jsdelivr.net/gh/wallacenana/menzzu-marketplace@main/assets/img/menzzu-logo.png",
+    "2x": "https://cdn.jsdelivr.net/gh/wallacenana/menzzu-marketplace@main/assets/img/menzzu-logo.png"
+  },
+  "sections": {
+    "description": "Marketplace e cardápio público do Menzzu.",
+    "installation": "Atualize diretamente pelo painel do WordPress.",
+    "changelog": "Encurta os links dos produtos usando nomes amigáveis, diferencia nomes repetidos e mantém compatibilidade com os links antigos. Atualiza o cache do cardápio quando o script é alterado.",
+    "faq": "O pacote é distribuído pelo repositório público do Menzzu."
+  }
+}
