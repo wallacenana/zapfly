@@ -19,7 +19,6 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const cors = require('cors');
-const OpenAI = require('openai');
 const fs = require('fs');
 const crypto = require('crypto');
 
@@ -45,7 +44,7 @@ const { ensureRestaurantGreeting, getClosedDeliveryMessage, isSimpleGreeting } =
 const { isDeliveryOrderFollowUp, isCatalogRequest, isFinalOrderConfirmation, findSelectedProduct } = require('./lib/utils');
 const { initFlows, handleFlows, runFlowNode, startFlowMonitor } = require('./lib/flows');
 const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODEL_MAP } = require('./lib/ai');
-const { downloadContentFromMessage } = require('@whiskeysockets/baileys');
+const { getIncomingAudioMessage, transcribeIncomingAudio } = require('./lib/incoming-audio');
 const multer = require('multer');
 const axios = require('axios');
 const { getStatusImage } = require('./lib/status-media');
@@ -2072,32 +2071,20 @@ async function initInstance(instanceId) {
             msg.message?.documentMessage?.caption || '';
 
         // TRANSCRICAO DE AUDIO (Lily ou Clientes)
-        if (!text && msg.message?.audioMessage) {
+        const incomingAudio = getIncomingAudioMessage(msg);
+        if (!text && incomingAudio) {
             try {
-                const ai = await getOpenAI();
-                if (ai) {
-                    const stream = await downloadContentFromMessage(msg.message.audioMessage, 'audio');
-                    let buffer = Buffer.from([]);
-                    for await (const chunk of stream) {
-                        buffer = Buffer.concat([buffer, chunk]);
-                    }
-
-                    const transcription = await ai.audio.transcriptions.create({
-                        file: await OpenAI.toFile(buffer, 'audio.ogg'),
-                        model: 'whisper-1',
-                    });
-                    // Salva apenas o texto para a IA não se confundir
-                    text = transcription.text;
-                }
+                // This text is persisted and passed to both customer and admin agents.
+                text = await transcribeIncomingAudio(msg, instanceId);
             } catch (err) {
-                console.error('[Audio Error]', err.message);
+                console.error('[Audio Error]', { instanceId, msgId: msg.key.id, error: err.message });
                 text = "[Audio (Erro na transcricao)]";
             }
         }
 
         const isMedia = !!(isIncomingImage(msg) ||
             msg.message?.videoMessage ||
-            msg.message?.audioMessage ||
+            incomingAudio ||
             msg.message?.documentMessage ||
             msg.message?.viewOnceMessageV2 ||
             msg.message?.viewOnceMessage);
@@ -2111,7 +2098,7 @@ async function initInstance(instanceId) {
             if (!text && isMedia) {
                 if (isIncomingImage(msg)) text = "[Imagem]";
                 else if (msg.message?.videoMessage) text = "[Video]";
-                else if (msg.message?.audioMessage) text = "[Audio]";
+                else if (incomingAudio) text = "[Audio]";
                 else if (msg.message?.documentMessage) text = "[Documento]";
             }
 
