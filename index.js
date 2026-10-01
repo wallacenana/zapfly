@@ -40,10 +40,10 @@ const makeInMemoryStore = Baileys.makeInMemoryStore || (() => {
 const prisma = require('./lib/prisma');
 const { calculateFee } = require('./lib/maps');
 const { getStoreStatus, sendRichMessage, formatProduct, hasAvailableProductStock, getDeliveryCatalog, getOrderCatalog } = require('./lib/utils');
-const { ensureRestaurantGreeting, getClosedDeliveryMessage, isSimpleGreeting } = require('./lib/utils');
+const { ensureRestaurantGreeting, getClosedDeliveryMessage, isSimpleGreeting, formatConversationHistoryMessage } = require('./lib/utils');
 const { isDeliveryOrderFollowUp, isCatalogRequest, isFinalOrderConfirmation, findSelectedProduct } = require('./lib/utils');
 const { initFlows, handleFlows, runFlowNode, startFlowMonitor } = require('./lib/flows');
-const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODEL_MAP } = require('./lib/ai');
+const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODEL_MAP, hasCustomAssistantInstructions } = require('./lib/ai');
 const { getIncomingAudioMessage, transcribeIncomingAudio } = require('./lib/incoming-audio');
 const multer = require('multer');
 const axios = require('axios');
@@ -314,7 +314,8 @@ async function saveIncomingOrderImage(sock, message, instanceId) {
 const {
     getSettings,
     invalidateSettingsCache,
-    getCachedInstance
+    getCachedInstance,
+    invalidateInstanceCache
 } = require('./lib/cache');
 const { upsertStoreProfile, mergeStoreProfile } = require('./lib/storeProfile');
 const { buildHomeDirectoryData, renderCategoryCards, renderHeroRestaurants, renderRestaurantCards, escapeHtml } = require('./lib/home');
@@ -2311,10 +2312,7 @@ async function initInstance(instanceId) {
                                 const historyMessages = history
                                     .reverse()
                                     .filter(m => !messagesToProcess.some(entry => entry.msg?.key?.id === m.msgId))
-                                    .map(m => ({
-                                        role: m.fromMe ? 'assistant' : 'user',
-                                        content: m.text || '[Imagem/Arquivo]'
-                                    }));
+                                    .map(formatConversationHistoryMessage);
 
                                 const finalSystemPrompt = await buildLilyPrompt(instanceId, jid, '', storeInfo, msg.pushName, userId);
                                 const messages = [
@@ -2550,7 +2548,7 @@ async function initInstance(instanceId) {
                                     const isMediaRequest = /foto|fotos|imagem|imagens|exemplo|exemplos|mostra|mostrar/i.test(lastUserMsg);
 
                                     // Pronta-entrega nunca deve ser respondida com estoque antigo quando a loja fechou.
-                                    if (statusLoja === "FECHADA" && isDeliveryRequest && !isOrderRequest) {
+                                    if (statusLoja === "FECHADA" && isDeliveryRequest && !isOrderRequest && !hasCustomAssistantInstructions(instanceData)) {
                                         await sendDailyGreeting();
                                         await sendRichMessage(sock, jid, getClosedDeliveryMessage(settings));
                                         return;
@@ -2569,6 +2567,9 @@ async function initInstance(instanceId) {
                                     if (isMediaRequest && forcedToolChoice === "auto") {
                                         forcedToolChoice = { type: "function", function: { name: "get_marketing_media" } };
                                     }
+
+                                    // Let the model apply the store's restrictions before choosing any tool.
+                                    if (hasCustomAssistantInstructions(instanceData)) forcedToolChoice = 'auto';
 
                                     const modelToUse = (settings && settings.activeModel) ? (MODEL_MAP[settings.activeModel] || 'gpt-4o') : 'gpt-4o';
 
@@ -3524,6 +3525,7 @@ app.patch('/instances/:id', authenticate, async (req, res) => {
         where: { id, userId: req.user.id },
         data: { name, color, assistantName: String(assistantName || 'Lily').trim() || 'Lily', botPrompt, knowledge }
     });
+    invalidateInstanceCache(id);
     res.json(instance);
 });
 
