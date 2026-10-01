@@ -4,8 +4,55 @@ const {
     formatProductAddonGroups,
     formatProductCustomFields,
     getEnabledFulfillmentMethods,
-    formatFulfillmentMethods
+    formatFulfillmentMethods,
+    formatAdminProductCatalog
 } = require('../lib/ai');
+
+test('uses variation prices in the administrative catalog when the base price is zero', () => {
+    const text = formatAdminProductCatalog([{
+        name: 'Coxinha de morango',
+        price: 0,
+        variations: JSON.stringify([
+            { name: 'Unidade', price: 10, hidden: false },
+            { name: 'Caixa', price: 25, hidden: false }
+        ])
+    }]);
+
+    assert.match(text, /Coxinha de morango/);
+    assert.match(text, /Unidade: R\$ 10\.00/);
+    assert.match(text, /Caixa: R\$ 25\.00/);
+    assert.doesNotMatch(text, /R\$\s*0(?:\.00)?\b/);
+});
+
+test('uses the base price when a product has no variations', () => {
+    const text = formatAdminProductCatalog([{ name: 'Brigadeiro', price: 7.5, variations: '[]' }]);
+    assert.match(text, /Brigadeiro.*R\$ 7\.50/);
+});
+
+test('keeps hidden variation prices visible to the administrator instead of using the base price', () => {
+    const text = formatAdminProductCatalog([{
+        name: 'Coxinha de morango', price: 0,
+        variations: [{ name: 'Ninho com Nutella', price: 10, hidden: true }]
+    }]);
+    assert.match(text, /Ninho com Nutella: R\$ 10\.00/);
+    assert.match(text, /INVISÍVEL/);
+    assert.doesNotMatch(text, /R\$\s*0\.00/);
+});
+
+test('ignores stale base prices and uses variation promotions and subitem prices', () => {
+    const text = formatAdminProductCatalog([{
+        name: 'Coxinha de morango', price: 999, promoPrice: 888,
+        variations: [
+            { name: 'Ferrero rocher', price: 10, promoPrice: 8,
+                subItems: [{ name: 'Tradicional', price: 0 }, { name: 'Especial', price: 15 }] },
+            { name: 'Sem preço', price: 0 }
+        ]
+    }]);
+    assert.match(text, /Ferrero rocher: R\$ 8\.00/);
+    assert.match(text, /Tradicional: R\$ 8\.00/);
+    assert.match(text, /Especial: R\$ 15\.00/);
+    assert.doesNotMatch(text, /999|888|R\$ 0\.00|Sem preço: R\$/);
+});
 
 test('formats add-on prices as increments and omits zero values', () => {
     const groups = new Map([['group-1', {
