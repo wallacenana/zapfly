@@ -94,6 +94,25 @@ const getOrderSelectionRows = (order) => {
     });
   } catch (e) { }
 
+  // Alguns checkouts antigos nao preencheram `addons`, mas salvaram as
+  // escolhas no nome de cada item do carrinho: Produto [Opcao 1, Opcao 2].
+  // Reconstroi essas escolhas para que aparecam no painel e na impressao.
+  if (!rows.length) {
+    getOrderItems(order).forEach((item) => {
+      const rawName = String(item?.name || '').trim();
+      const extrasMatch = rawName.match(/\s*\[([^\]]+)\]\s*$/);
+      if (extrasMatch) {
+        extrasMatch[1].split(/,\s*/).map(value => value.trim()).filter(Boolean).forEach((value) => {
+          addRow(getLegacyGroupName(order, value) || 'Adicionais', value);
+        });
+      }
+      const subItem = String(item?.subItem || '').trim();
+      if (subItem && !extrasMatch?.[1]?.split(/,\s*/).some(value => value.trim() === subItem)) {
+        addRow('Opcao', subItem);
+      }
+    });
+  }
+
   if (!rows.length) {
     productParts.extras.forEach(extra => {
       const separator = extra.indexOf(':');
