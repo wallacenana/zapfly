@@ -147,6 +147,50 @@ const getOrderSelectionSections = (order) => {
   return sections;
 };
 
+const getOrderItemSelectionSections = (order, item, itemIndex, itemCount) => {
+  const rows = [];
+  const addRow = (label, value, price = 0) => {
+    const cleanLabel = String(label || '').trim();
+    const cleanValue = String(value || '').trim();
+    if (cleanLabel && cleanValue && !rows.some(([rowLabel, rowValue]) => rowLabel === cleanLabel && rowValue === cleanValue)) {
+      rows.push([cleanLabel, cleanValue, false, false, Math.max(0, Number(price) || 0)]);
+    }
+  };
+
+  const rawName = String(item?.name || '').trim();
+  const extrasMatch = rawName.match(/\s*\[([^\]]+)\]\s*$/);
+  const extras = extrasMatch
+    ? extrasMatch[1].split(/,\s*/).map(value => value.trim()).filter(Boolean)
+    : [];
+  extras.forEach(value => addRow(getLegacyGroupName(order, value) || 'Adicionais', value));
+
+  // Quando addons foi salvo separadamente, um pedido de um item recebe todos
+  // os adicionais; em carrinhos com varios itens, o nome entre colchetes e a
+  // fonte de verdade de cada item.
+  if (!extras.length && (itemCount === 1 || itemIndex === 0)) {
+    try {
+      const parsedAddons = typeof order.addons === 'string' ? JSON.parse(order.addons) : order.addons;
+      const addons = Array.isArray(parsedAddons) ? parsedAddons : parsedAddons?.addons;
+      (Array.isArray(addons) ? addons : []).forEach(addon => addRow(
+        addon.groupName || 'Adicionais',
+        addon.name,
+        (Number(addon?.price) || 0) * (Number(addon?.quantity) || 1)
+      ));
+    } catch (e) { }
+  }
+
+  const sections = [];
+  rows.forEach(([label, value, isAttachment, isCustomField, price]) => {
+    let section = sections.find(item => item.label === label);
+    if (!section) {
+      section = { label, values: [] };
+      sections.push(section);
+    }
+    section.values.push([value, isAttachment, price]);
+  });
+  return sections;
+};
+
 const getEditSelectionValue = (order, aliases, fallback = '') => {
   const aliasList = aliases.map(alias => alias.toLowerCase());
   const rows = getOrderSelectionRows(order);
@@ -592,6 +636,19 @@ const Production = () => {
     }
 
     // Botão de ação baseado no status
+    const renderItemSelectionTableRows = (item, itemIndex) => getOrderItemSelectionSections(order, item, itemIndex, orderItems.length).map((section, sectionIndex) => `
+      <tr${sectionIndex ? ' style="border-top: 1px dashed rgba(15,23,42,0.08);"' : ''}>
+        <td style="padding: 8px 0 2px;"></td>
+        <td style="padding: 8px 10px 2px; font-size: 13px; color: #475569; font-weight: 700;">${section.label}:</td>
+        <td></td>
+      </tr>
+      ${section.values.map(([value, isAttachment, price]) => `
+        <tr>
+          <td style="padding: 2px 0;"></td>
+          <td style="padding: 2px 10px 2px 18px; font-size: 13px; color: #475569;">${isAttachment || getAttachmentUrls(value).length ? renderAttachmentGallery(value) : value}</td>
+          <td style="padding: 2px 0; text-align: right; white-space: nowrap; font-weight: 700; font-size: 14px; color: #f59e0b;">${price > 0 ? `R$ ${price.toFixed(2)}` : ''}</td>
+        </tr>`).join('')}`).join('');
+
     const orderItemsHtml = orderItems.map((item, index) => {
       const itemQuantity = Number(item.quantity) || 1;
       const itemPrice = Number(item.price) || 0;
@@ -620,7 +677,7 @@ const Production = () => {
                   <td style="font-size: 14px; vertical-align: top; padding-top: 20px; text-align: right;">
                     R$ ${(itemPrice * itemQuantity).toFixed(2)}
                   </td>
-                </tr>${index === 0 ? selectionTableRowsHtml : ''}`;
+                </tr>${renderItemSelectionTableRows(item, index)}`;
     }).join('');
 
     let actionBtnHtml = '';
@@ -686,6 +743,7 @@ const Production = () => {
           const printParts = getPrintableOrderParts(order);
 
           const printItems = getOrderItems(order);
+          const hasItemSelections = printItems.some((item, index) => getOrderItemSelectionSections(order, item, index, printItems.length).length > 0);
           const printItemsHtml = printItems.map((item) => {
             const itemQuantity = Number(item.quantity) || 1;
             const itemPrice = Number(item.price) || 0;
@@ -696,10 +754,12 @@ const Production = () => {
             if (itemVariation && itemName.endsWith(`(${itemVariation})`)) {
               itemName = itemName.slice(0, -(itemVariation.length + 2)).trim();
             }
+            const itemSelectionHtml = getOrderItemSelectionSections(order, item, printItems.indexOf(item), printItems.length).map(section => `<div style="margin: 4px 0 0 8px; font-size: 16px;"><b>${section.label}:</b> ${section.values.map(([value]) => value).join(', ')}</div>`).join('');
             return `<div style="margin: 10px 0; padding-bottom: 10px; border-bottom: 1px solid #000;">
               <div style="display: inline-block; background: #000; color: #fff; padding: 5px 10px; border-radius: 3px; font-size: 18px; font-weight: 900; letter-spacing: .5px;">QTD ${itemQuantity}x</div>
               <div style="font-size: 20px; margin-top: 5px; font-weight: 900;">${itemName}</div>
               ${itemVariation ? `<div style="font-size: 16px;">Variacao: ${itemVariation}</div>` : ''}
+              ${itemSelectionHtml}
               <div style="font-size: 16px; text-align: right;">Subtotal: R$ ${(itemPrice * itemQuantity).toFixed(2)}</div>
             </div>`;
           }).join('');
@@ -716,7 +776,7 @@ const Production = () => {
             // Keep the regular kitchen receipt, then append a dedicated driver copy.
             if (opts.client) content += `<p style="font-size: 18px; margin: 8px 0;"><b>CLIENTE:</b> ${order.clientName}</p>`;
             if (opts.prod) content += printItemsHtml;
-            if (opts.massa && printSelectionHtml) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${printSelectionHtml}</div>`;
+            if (opts.massa && !hasItemSelections && printSelectionHtml) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${printSelectionHtml}</div>`;
             if (opts.notes && cleanNotes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>OBS:</b> ${cleanNotes}</p>`;
             if (opts.addr && order.deliveryAddress) content += `<p style="font-size: 16px; margin: 10px 0;"><b>ENTREGA:</b> ${order.deliveryAddress}</p>`;
             if (freightValue > 0) content += `<p style="font-size: 16px; margin: 10px 0;"><b>TAXA DE ENTREGA:</b> R$ ${freightValue.toFixed(2)}</p>`;
@@ -738,8 +798,8 @@ const Production = () => {
           } else {
             if (opts.client) content += `<p style="font-size: 18px; margin: 8px 0;"><b>👤 CLIENTE:</b> ${order.clientName}</p>`;
             if (opts.prod) content += printItemsHtml;
+            if (opts.massa && !hasItemSelections && printSelectionHtml) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${printSelectionHtml}</div>`;
 
-            if (opts.massa && printSelectionHtml) content += `<div style="margin: 10px 0; padding: 10px; border-top: 1px dashed #000; border-bottom: 1px dashed #000; font-size: 16px;">${printSelectionHtml}</div>`;
             if (opts.notes && cleanNotes) content += `<p style="font-size: 16px; margin: 10px 0; padding: 8px; background: #f3f4f6; border-radius: 5px;"><b>📝 OBS:</b> ${cleanNotes}</p>`;
             if (opts.addr && order.deliveryAddress) content += `<p style="font-size: 16px; margin: 10px 0;"><b>📍 ENTREGA:</b> ${order.deliveryAddress}</p>`;
             if (freightValue > 0) content += `<p style="font-size: 16px; margin: 10px 0;"><b>TAXA DE ENTREGA:</b> R$ ${freightValue.toFixed(2)}</p>`;
