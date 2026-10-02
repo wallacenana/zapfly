@@ -2379,7 +2379,9 @@ async function initInstance(instanceId) {
                                                 properties: {
                                                     productId: { type: "string" }, product: { type: "string" }, variation: { type: "string" }, subItem: { type: "string" }, quantity: { type: "string", default: "1" },
                                                     addons: { type: "array", items: { type: "object", properties: { groupId: { type: "string" }, groupName: { type: "string" }, name: { type: "string" }, price: { type: "number" }, quantity: { type: "number", default: 1 } } } },
-                                                    carrinho_itens_extras: { type: "array", items: { type: "object" } }, deliveryFee: { type: "number" }, type: { type: "string", enum: ["order", "delivery"] }
+                                                    carrinho_itens_extras: { type: "array", items: { type: "object" } },
+                                                    cartItems: { type: "array", description: "Todos os itens do pedido quando houver mais de um produto. Cada item deve ter productId, name, variation, subItem, quantity, price e addons.", items: { type: "object", properties: { productId: { type: "string" }, name: { type: "string" }, variation: { type: "string" }, subItem: { type: "string" }, quantity: { type: "number" }, price: { type: "number" }, addons: { type: "array", items: { type: "object" } } }, required: ["name", "quantity"] } },
+                                                    deliveryFee: { type: "number" }, type: { type: "string", enum: ["order", "delivery"] }
                                                 },
                                                 required: ["product"]
                                             }
@@ -2410,6 +2412,7 @@ async function initInstance(instanceId) {
                                                     recheio: { type: "string", description: "Sabor do recheio escolhido, somente quando identificado explicitamente como recheio" },
                                                     topo: { type: "string", description: "Informações sobre o topo do bolo" },
                                                     carrinho_itens_extras: { type: "array", items: { type: "string" }, description: "Produtos ADICIONAIS. IMPORTANTE: Para Kits/Combos, NAO coloque aqui os itens que ja fazem parte do kit, senao o cliente sera cobrado em dobro. Use apenas para itens extras comprados a parte." },
+                                                    cartItems: { type: "array", description: "Use para pedidos com dois ou mais produtos. Nao use carrinho_itens_extras para representar um segundo produto.", items: { type: "object", properties: { productId: { type: "string" }, name: { type: "string" }, variation: { type: "string" }, subItem: { type: "string" }, quantity: { type: "number" }, price: { type: "number" }, addons: { type: "array", items: { type: "object" } } }, required: ["name", "quantity"] } },
                                                     notes: { type: "string", description: "Observações e respostas dos campos extras, sempre no formato 'Nome do campo: resposta'. Para imagem, use 'Nome do campo: X imagens recebidas' com a quantidade real recebida." }
                                                 },
                                                 required: ["product"],

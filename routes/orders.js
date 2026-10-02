@@ -1743,6 +1743,18 @@ router.post('/', async (req, res) => {
       }
     }
 
+    const normalizedCartItems = Array.isArray(cartItems)
+      ? cartItems.filter(item => item && typeof item === 'object' && String(item.name || '').trim())
+      : [];
+    const firstCartItem = normalizedCartItems[0];
+    if (firstCartItem) {
+      productId = productId || firstCartItem.productId || null;
+      product = product || firstCartItem.name;
+      variation = variation || firstCartItem.variation || null;
+      subItem = subItem || firstCartItem.subItem || null;
+      quantity = quantity || firstCartItem.quantity || 1;
+    }
+
     const qtyNum = parseOrderQuantity(quantity);
     const finalClientJid = (clientJid && clientJid.trim() !== "") ? clientJid.trim() : 'manual_LOJA';
     const isManual = finalClientJid === 'manual_LOJA';
@@ -1926,7 +1938,7 @@ router.post('/', async (req, res) => {
       couponDiscount,
       addons: addons || null,
       customFields,
-      cartItems: Array.isArray(cartItems) ? JSON.stringify(cartItems) : null,
+      cartItems: normalizedCartItems.length > 0 ? JSON.stringify(normalizedCartItems) : null,
       stockDeducted: isManual && orderType === 'delivery',
       // Pedido público só entra na operação depois da confirmação do pagamento.
       status: isManual ? 'accepted' : (isCashPayment ? 'pending' : 'waiting_payment'),
