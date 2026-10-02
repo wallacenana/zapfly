@@ -634,7 +634,9 @@ function getOrderStockItems(order) {
 }
 
 async function deductOrderStockAfterPayment(order) {
-  if (!order || String(order.type || '').toLowerCase() !== 'delivery' || order.stockDeducted) return order;
+  // A baixa vale para qualquer tipo de pedido. O produto decide se participa
+  // do controle por meio de `trackStock` abaixo.
+  if (!order || order.stockDeducted) return order;
 
   // Claim the order first. This makes Mercado Pago webhook retries and manual
   // payment confirmations idempotent without relying on process memory.
@@ -2669,7 +2671,9 @@ router.patch('/:id', authenticate, async (req, res) => {
 
     const isConfirmingPayment = String(updateData.paymentStatus || '').toLowerCase() === 'confirmed'
       && String(existing.paymentStatus || '').toLowerCase() !== 'confirmed';
-    if (isConfirmingPayment) {
+    const isMovingToPending = String(updateData.status || '').toLowerCase() === 'pending'
+      && String(existing.status || '').toLowerCase() === 'waiting_payment';
+    if (isConfirmingPayment || isMovingToPending) {
       try {
         await deductOrderStockAfterPayment(existing);
       } catch (stockError) {

@@ -45,6 +45,7 @@ const { isDeliveryOrderFollowUp, isCatalogRequest, isFinalOrderConfirmation, fin
 const { initFlows, handleFlows, runFlowNode, startFlowMonitor } = require('./lib/flows');
 const { getOpenAI, buildLilyPrompt, executeChamarGerente, handleAdminAgent, MODEL_MAP, hasCustomAssistantInstructions } = require('./lib/ai');
 const { getIncomingAudioMessage, transcribeIncomingAudio } = require('./lib/incoming-audio');
+const { prepareAssistantReply, formatStoreLocation } = require('./lib/assistant-output');
 const multer = require('multer');
 const axios = require('axios');
 const { getStatusImage } = require('./lib/status-media');
@@ -2605,6 +2606,7 @@ async function initInstance(instanceId) {
                                         messages.push(responseMessage);
                                         let lastDeliveryFee = 0; // Fallback se a IA esquecer de passar no create_order
                                         let pendingMarketingMedia = null;
+                                        let pendingStoreLocation = null;
 
                                         for (const toolCall of responseMessage.tool_calls) {
                                             const functionName = toolCall.function.name;
@@ -2789,22 +2791,8 @@ async function initInstance(instanceId) {
                                                 }
                                             }
                                             else if (functionName === "get_store_location") {
-                                                result = {
-                                                    address: settings?.businessAddress || "Endereco nao configurado.",
-                                                                                                        locationLink: (() => {
-                                                        const raw = settings?.businessLocation;
-                                                        if (!raw) return "Link não disponível.";
-                                                        if (typeof raw === 'object') {
-                                                            return raw.mapsUrl || raw.locationLink || "Link não disponível.";
-                                                        }
-                                                        try {
-                                                            const parsed = JSON.parse(raw);
-                                                            return parsed?.mapsUrl || parsed?.locationLink || raw;
-                                                        } catch (error) {
-                                                            return raw;
-                                                        }
-                                                    })()
-                                                };
+                                                pendingStoreLocation = formatStoreLocation(settings);
+                                                result = { message: pendingStoreLocation };
                                             }
                                             else if (functionName === "solicitar_cancelamento") {
                                                 const { reason } = args;
@@ -2938,13 +2926,18 @@ async function initInstance(instanceId) {
                                             return; // FIM IMEDIATO
                                         }
 
+                                        if (pendingStoreLocation) {
+                                            await sendRichMessage(sock, jid, pendingStoreLocation);
+                                            return;
+                                        }
+
                                         const secondResponse = await ai.chat.completions.create({
                                             model: MODEL_MAP[settings?.activeModel] || 'gpt-4o',
                                             messages,
                                         });
 
                                         if (currentToken.cancelled) return;
-                                        let aiFinalText = secondResponse.choices[0].message.content || "";
+                                        let aiFinalText = prepareAssistantReply(secondResponse.choices[0].message.content);
 
                                         // Se houver um catálogo pendente, vamos dividir a resposta da IA em Intro e CTA usando o separador ---
                                         if (pendingCatalogMessage) {
@@ -2986,7 +2979,7 @@ async function initInstance(instanceId) {
                                     return;
                                 }
 
-                                let replyText = responseMessage.content;
+                                let replyText = prepareAssistantReply(responseMessage.content);
                                 if (replyText) {
                                     if (currentToken.cancelled) return;
                                     // LIMPEZA AGRESSIVA DE FORMATACAO
@@ -3048,7 +3041,7 @@ async function initInstance(instanceId) {
                                                 messages: [...messages, { role: 'user', content: ctaPrompt }],
                                                 ...(ctaModel === 'gpt-5-mini' ? { max_completion_tokens: 60 } : { max_tokens: 60 })
                                             });
-                                            let ctaText = ctaResponse.choices[0].message.content?.trim();
+                                            let ctaText = prepareAssistantReply(ctaResponse.choices[0].message.content, 'Quais itens você gostaria de pedir?');
                                             if (ctaText) {
                                                 ctaText = ctaText.replace(/\*/g, '').replace(/#/g, '').replace(/_/g, '').trim();
 

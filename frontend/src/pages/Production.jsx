@@ -588,8 +588,8 @@ const Production = () => {
       return `
                 <tr${index > 0 ? ' style="border-top: 1px dashed rgba(15,23,42,0.08);"' : ''}>
                   <td style="padding: 20px 0; vertical-align: top;">
-                    <div style="background: #3b82f6; color: #fff; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 10px; font-size: 20px; font-weight: 900;">
-                      ${itemQuantity}
+                    <div style="background: #000; color: #fff; min-width: 82px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 7px; padding: 0 10px; font-size: 16px; font-weight: 900; letter-spacing: .4px; white-space: nowrap;">
+                      QTD ${itemQuantity}x
                     </div>
                   </td>
                   <td style="padding: 20px 10px; vertical-align: top;">
@@ -678,7 +678,7 @@ const Production = () => {
               itemName = itemName.slice(0, -(itemVariation.length + 2)).trim();
             }
             return `<div style="margin: 10px 0; padding-bottom: 10px; border-bottom: 1px solid #000;">
-              <div style="font-size: 18px; font-weight: 900;">ITEM ${itemQuantity}x</div>
+              <div style="display: inline-block; background: #000; color: #fff; padding: 5px 10px; border-radius: 3px; font-size: 18px; font-weight: 900; letter-spacing: .5px;">QTD ${itemQuantity}x</div>
               <div style="font-size: 20px; margin-top: 5px; font-weight: 900;">${itemName}</div>
               ${itemVariation ? `<div style="font-size: 16px;">Variacao: ${itemVariation}</div>` : ''}
               <div style="font-size: 16px; text-align: right;">Subtotal: R$ ${(itemPrice * itemQuantity).toFixed(2)}</div>

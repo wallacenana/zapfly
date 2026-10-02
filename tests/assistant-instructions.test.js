@@ -22,6 +22,7 @@ function promptBuilder(instances) {
                 customer: { findUnique: async () => null }
             };
             if (name === './utils') return require('../lib/utils');
+            if (name === './assistant-output') return require('../lib/assistant-output');
             if (['openai', 'axios', './status-media', './maps'].includes(name)) return {};
             throw new Error(`Unexpected dependency: ${name}`);
         }
