@@ -2686,13 +2686,17 @@ router.patch('/:id', authenticate, async (req, res) => {
       && String(existing.paymentStatus || '').toLowerCase() !== 'confirmed';
     const isMovingToPending = String(updateData.status || '').toLowerCase() === 'pending'
       && String(existing.status || '').toLowerCase() === 'waiting_payment';
+    let stockWarning = '';
     if (isConfirmingPayment || isMovingToPending) {
       try {
         await deductOrderStockAfterPayment(existing);
       } catch (stockError) {
-        return res.status(409).json({ error: `Pagamento não registrado: ${stockError.message}` });
+        stockWarning = `Estoque nao baixado automaticamente: ${stockError.message}`;
+        console.error(`[Orders][STOCK_WARNING] pedido=${existing.id} ${stockWarning}`);
       }
     }
+
+    if (stockWarning) updateData.notes = [existing.notes, updateData.notes, stockWarning].filter(Boolean).join(' | ');
 
     // A IA atualiza o pedido à medida que coleta os dados. Reconstroi os campos
     // extras aqui para vincular as imagens recebidas pelo WhatsApp ao pedido.
