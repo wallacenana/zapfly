@@ -601,19 +601,20 @@ function buildOrderSystemLink(order) {
   return `${getFrontendUrl()}/production?${params.toString()}`;
 }
 
-function hasRequestedProductStock(product, variationName, subItemName) {
+function hasRequestedProductStock(product, variationName, subItemName, requestedQuantity = 1) {
   if (!product?.trackStock) return true;
+  const quantity = Math.max(1, parseInt(requestedQuantity, 10) || 1);
   const variations = safeJsonParse(product.variations, []);
-  if (!Array.isArray(variations) || variations.length === 0) return Number(product.stock) > 0;
+  if (!Array.isArray(variations) || variations.length === 0) return Number(product.stock) >= quantity;
   const visibleVariations = variations.filter((variation) => !variation?.hidden);
   const selected = visibleVariations.find((variation) => String(variation.name || '') === String(variationName || ''));
   const candidates = selected ? [selected] : visibleVariations;
   if (selected && subItemName && Array.isArray(selected.subItems) && selected.subItems.length > 0) {
     const subItem = selected.subItems.find(item => String(item?.name || '') === String(subItemName || ''));
-    return !!subItem && (!product.trackStock || Number(subItem.stock) > 0);
+    return !!subItem && (!product.trackStock || Number(subItem.stock) >= quantity);
   }
-  return candidates.some((variation) => Number(variation.stock) > 0
-    || (Array.isArray(variation.subItems) && variation.subItems.some((item) => Number(item?.stock) > 0)));
+  return candidates.some((variation) => Number(variation.stock) >= quantity
+    || (Array.isArray(variation.subItems) && variation.subItems.some((item) => Number(item?.stock) >= quantity)));
 }
 
 function getOrderStockItems(order) {
@@ -1791,7 +1792,7 @@ router.post('/', async (req, res) => {
       const productsById = new Map(productsForStock.map((item) => [item.id, item]));
       const unavailable = requestedItems.find((item) => {
         const productRecord = productsById.get(item?.productId);
-        return productRecord && (productRecord.active === false || !hasRequestedProductStock(productRecord, item?.variation, item?.subItem));
+        return productRecord && (productRecord.active === false || !hasRequestedProductStock(productRecord, item?.variation, item?.subItem, item?.quantity));
       });
       if (unavailable) {
         return res.status(409).json({ error: 'Este produto está esgotado no momento.' });

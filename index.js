@@ -1558,7 +1558,16 @@ app.post('/mercadopago/webhook', async (req, res) => {
 
                     // Trava de seguranca no DB: Se ja foi confirmado, ignora
                     if (order && order.paymentStatus !== 'confirmed') {
-                        await deductOrderStockAfterPayment(order);
+                        let stockWarning = '';
+                        try {
+                            await deductOrderStockAfterPayment(order);
+                        } catch (stockError) {
+                            // O pagamento aprovado nao pode virar falha de webhook
+                            // por falta de estoque. Mantemos o pedido pendente e
+                            // registramos o alerta para a loja tratar manualmente.
+                            stockWarning = `Estoque nao baixado automaticamente: ${stockError.message}`;
+                            console.error(`[MercadoPago Webhook] ${stockWarning} pedido=${order.id}`);
+                        }
 
                         const updatedOrder = await prisma.order.update({
                             where: { id: orderId },
@@ -1566,7 +1575,8 @@ app.post('/mercadopago/webhook', async (req, res) => {
                                 // A confirmação financeira não substitui o aceite da loja.
                                 // Todo pedido pago entra em pendentes e só vai à produção manualmente.
                                 status: 'pending',
-                                paymentStatus: 'confirmed'
+                                paymentStatus: 'confirmed',
+                                ...(stockWarning ? { notes: [order.notes, stockWarning].filter(Boolean).join(' | ') } : {})
                             }
                         });
 
@@ -1611,9 +1621,9 @@ app.post('/mercadopago/webhook', async (req, res) => {
         res.sendStatus(200);
     } catch (err) {
         console.error('[MercadoPago Webhook Error]', err.message);
-        // A aprovação só é reconhecida depois que o estoque foi baixado.
-        // Retornar erro permite que o Mercado Pago reenvie o webhook em caso
-        // de falha temporária no banco ou no controle de estoque.
+        // Retornar erro apenas para falhas reais de infraestrutura permite que
+        // o Mercado Pago reenvie o webhook. Falhas de estoque sao tratadas
+        // acima sem negar um pagamento que ja foi aprovado.
         res.sendStatus(500);
     }
 });
