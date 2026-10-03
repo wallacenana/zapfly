@@ -380,13 +380,6 @@ const Production = () => {
     const targetOrder = orders.find(order => order.id === orderId);
     if (!targetOrder) return false;
 
-    // A delivery must be accepted before it can reach production, even by drag and drop.
-    if (targetOrder.type === 'delivery'
-      && targetOrder.status === 'pending'
-      && newStatus === 'production') {
-      newStatus = 'accepted';
-    }
-
     if (newStatus === 'cancelled') {
       const result = await Swal.fire({
         title: 'Cancelar pedido?',
@@ -684,7 +677,7 @@ const Production = () => {
     if (order.status === 'waiting_payment') {
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #8b5cf6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">ACEITAR PEDIDO</button>`;
     } else if (order.status === 'pending') {
-      const nextLabel = 'ACEITAR PEDIDO';
+      const nextLabel = order.type === 'delivery' ? 'EM PRODUÇÃO' : 'ACEITAR PEDIDO';
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #8b5cf6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">${nextLabel}</button>`;
     } else if (order.status === 'accepted') {
       actionBtnHtml = `<button id="btn-action-next" style="flex: 1; background: #3b82f6; color: #fff; border: none; padding: 12px; border-radius: 10px; font-weight: 800; cursor: pointer;">INICIAR PRODUÇÃO</button>`;
@@ -952,7 +945,7 @@ const Production = () => {
 
             const nextStatusMap = {
               'waiting_payment': order.type === 'order' ? 'accepted' : 'pending',
-              'pending': 'accepted',
+              'pending': order.type === 'delivery' ? 'production' : 'accepted',
               'accepted': 'production',
               'production': 'ready',
               'ready': 'completed'
